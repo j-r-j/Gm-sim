@@ -90,10 +90,7 @@ export function createPlayerViewModel(
   // Get scheme fit description (vague, not precise)
   let schemeFitDescription = 'Unknown fit';
   if (currentScheme) {
-    schemeFitDescription = getSchemeFitDescription(
-      player.schemeFits,
-      currentScheme
-    );
+    schemeFitDescription = getSchemeFitDescription(player.schemeFits, currentScheme);
   }
 
   return {
@@ -170,9 +167,7 @@ export function getSkillRangeMidpoint(range: SkillRange): number {
 /**
  * Gets a confidence level based on how narrow the skill range is
  */
-export function getSkillConfidence(
-  range: SkillRange
-): 'high' | 'medium' | 'low' {
+export function getSkillConfidence(range: SkillRange): 'high' | 'medium' | 'low' {
   const spread = range.max - range.min;
   if (spread <= 5) return 'high';
   if (spread <= 15) return 'medium';

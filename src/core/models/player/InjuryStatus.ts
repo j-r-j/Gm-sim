@@ -87,11 +87,7 @@ export function canPlay(status: InjuryStatus): boolean {
  * Checks if a player is on long-term injured status
  */
 export function isLongTermInjured(status: InjuryStatus): boolean {
-  return (
-    status.severity === 'ir' ||
-    status.severity === 'pup' ||
-    status.severity === 'nfi'
-  );
+  return status.severity === 'ir' || status.severity === 'pup' || status.severity === 'nfi';
 }
 
 /**
@@ -112,10 +108,7 @@ export function getInjuryDisplayString(status: InjuryStatus): string {
     nfi: 'NFI',
   };
 
-  const typeDisplay =
-    status.type !== 'none' && status.type !== 'other'
-      ? ` (${status.type})`
-      : '';
+  const typeDisplay = status.type !== 'none' && status.type !== 'other' ? ` (${status.type})` : '';
 
   return `${severityDisplay[status.severity]}${typeDisplay}`;
 }

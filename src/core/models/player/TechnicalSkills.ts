@@ -50,59 +50,12 @@ export const SKILL_NAMES_BY_POSITION = {
     'passProtection',
     'fumbleProtection',
   ],
-  WR: [
-    'routeRunning',
-    'catching',
-    'separation',
-    'yac',
-    'blocking',
-    'contested',
-    'tracking',
-  ],
-  TE: [
-    'blocking',
-    'routeRunning',
-    'catching',
-    'yac',
-    'contested',
-    'sealing',
-  ],
-  OL: [
-    'passBlock',
-    'runBlock',
-    'awareness',
-    'footwork',
-    'power',
-    'sustain',
-    'pullAbility',
-  ],
-  DL: [
-    'passRush',
-    'runDefense',
-    'power',
-    'finesse',
-    'awareness',
-    'stamina',
-    'pursuit',
-  ],
-  LB: [
-    'tackling',
-    'coverage',
-    'blitzing',
-    'pursuit',
-    'awareness',
-    'shedBlocks',
-    'zoneCoverage',
-  ],
-  DB: [
-    'manCoverage',
-    'zoneCoverage',
-    'tackling',
-    'ballSkills',
-    'awareness',
-    'closing',
-    'press',
-  ],
+  WR: ['routeRunning', 'catching', 'separation', 'yac', 'blocking', 'contested', 'tracking'],
+  TE: ['blocking', 'routeRunning', 'catching', 'yac', 'contested', 'sealing'],
+  OL: ['passBlock', 'runBlock', 'awareness', 'footwork', 'power', 'sustain', 'pullAbility'],
+  DL: ['passRush', 'runDefense', 'power', 'finesse', 'awareness', 'stamina', 'pursuit'],
+  LB: ['tackling', 'coverage', 'blitzing', 'pursuit', 'awareness', 'shedBlocks', 'zoneCoverage'],
+  DB: ['manCoverage', 'zoneCoverage', 'tackling', 'ballSkills', 'awareness', 'closing', 'press'],
   K: ['kickPower', 'kickAccuracy', 'clutch'],
   P: ['puntPower', 'puntAccuracy', 'hangTime', 'directional'],
 } as const;
@@ -138,9 +91,7 @@ export function validateTechnicalSkills(skills: TechnicalSkills): boolean {
 /**
  * Gets the perceived skill range (what the UI shows)
  */
-export function getPerceivedRange(
-  skill: SkillValue
-): { min: number; max: number } {
+export function getPerceivedRange(skill: SkillValue): { min: number; max: number } {
   return {
     min: skill.perceivedMin,
     max: skill.perceivedMax,

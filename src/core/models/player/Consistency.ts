@@ -33,10 +33,7 @@ export interface ConsistencyProfile {
 /**
  * Variance ranges for each consistency tier
  */
-export const CONSISTENCY_VARIANCE: Record<
-  ConsistencyTier,
-  { min: number; max: number }
-> = {
+export const CONSISTENCY_VARIANCE: Record<ConsistencyTier, { min: number; max: number }> = {
   metronome: { min: -2, max: 2 },
   steady: { min: -4, max: 4 },
   average: { min: -7, max: 7 },
@@ -68,9 +65,7 @@ export function createDefaultConsistencyProfile(): ConsistencyProfile {
 /**
  * Validates a consistency profile
  */
-export function validateConsistencyProfile(
-  profile: ConsistencyProfile
-): boolean {
+export function validateConsistencyProfile(profile: ConsistencyProfile): boolean {
   const validTiers: ConsistencyTier[] = [
     'metronome',
     'steady',
@@ -93,15 +88,12 @@ export function validateConsistencyProfile(
  * FOR ENGINE USE ONLY.
  * Returns a value to add/subtract from base performance.
  */
-export function calculatePerformanceVariance(
-  profile: ConsistencyProfile
-): number {
+export function calculatePerformanceVariance(profile: ConsistencyProfile): number {
   const variance = CONSISTENCY_VARIANCE[profile.tier];
   const streakMod = STREAK_MODIFIERS[profile.currentStreak];
 
   // Random variance within the tier's range
-  const baseVariance =
-    Math.random() * (variance.max - variance.min) + variance.min;
+  const baseVariance = Math.random() * (variance.max - variance.min) + variance.min;
 
   return baseVariance + streakMod;
 }

@@ -142,13 +142,7 @@ export function getSchemeFitDescription(
  * Validates scheme fits structure
  */
 export function validateSchemeFits(fits: SchemeFits): boolean {
-  const validFitLevels: FitLevel[] = [
-    'perfect',
-    'good',
-    'neutral',
-    'poor',
-    'terrible',
-  ];
+  const validFitLevels: FitLevel[] = ['perfect', 'good', 'neutral', 'poor', 'terrible'];
 
   for (const scheme of ALL_OFFENSIVE_SCHEMES) {
     if (!validFitLevels.includes(fits.offensive[scheme])) {

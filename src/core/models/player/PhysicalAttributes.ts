@@ -54,9 +54,7 @@ export const PHYSICAL_ATTRIBUTE_RANGES = {
 /**
  * Validates that physical attributes are within acceptable ranges
  */
-export function validatePhysicalAttributes(
-  attrs: PhysicalAttributes
-): boolean {
+export function validatePhysicalAttributes(attrs: PhysicalAttributes): boolean {
   const ranges = PHYSICAL_ATTRIBUTE_RANGES;
 
   return (
