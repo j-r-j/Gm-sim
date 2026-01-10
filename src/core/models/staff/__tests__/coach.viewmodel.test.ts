@@ -3,11 +3,7 @@
  * Tests that CoachViewModel properly hides sensitive attributes
  */
 
-import {
-  Coach,
-  createDefaultCoach,
-  createCoachViewModel,
-} from '../Coach';
+import { Coach, createDefaultCoach, createCoachViewModel } from '../Coach';
 import { createCoachContract } from '../CoachContract';
 import { createDefaultOffensiveTendencies } from '../CoordinatorTendencies';
 

@@ -270,10 +270,7 @@ export function isPositionCoach(coach: Coach): boolean {
  * Gets career winning percentage
  */
 export function getCareerWinningPercentage(coach: Coach): number | null {
-  const totalGames = coach.careerHistory.reduce(
-    (sum, entry) => sum + entry.wins + entry.losses,
-    0
-  );
+  const totalGames = coach.careerHistory.reduce((sum, entry) => sum + entry.wins + entry.losses, 0);
 
   if (totalGames === 0) return null;
 

@@ -82,10 +82,7 @@ export function validateScoutAttributes(attributes: ScoutAttributes): boolean {
 /**
  * Calculates evaluation accuracy bonus for a position (FOR ENGINE USE ONLY)
  */
-export function getPositionSpecialtyBonus(
-  attributes: ScoutAttributes,
-  position: Position
-): number {
+export function getPositionSpecialtyBonus(attributes: ScoutAttributes, position: Position): number {
   if (attributes.positionSpecialty === position) {
     // 10-20% bonus based on evaluation skill
     return 0.1 + (attributes.evaluation / 100) * 0.1;
@@ -96,10 +93,7 @@ export function getPositionSpecialtyBonus(
 /**
  * Calculates evaluation accuracy bonus for a region (FOR ENGINE USE ONLY)
  */
-export function getRegionKnowledgeBonus(
-  attributes: ScoutAttributes,
-  region: ScoutRegion
-): number {
+export function getRegionKnowledgeBonus(attributes: ScoutAttributes, region: ScoutRegion): number {
   if (attributes.regionKnowledge === region) {
     // 5-15% bonus based on experience
     return 0.05 + Math.min(attributes.experience / 20, 0.1);

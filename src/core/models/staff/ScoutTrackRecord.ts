@@ -202,10 +202,7 @@ export function determineWeaknesses(
 /**
  * Updates a track record with new data (FOR ENGINE USE ONLY)
  */
-export function updateTrackRecord(
-  record: ScoutTrackRecord,
-  newYear: boolean
-): ScoutTrackRecord {
+export function updateTrackRecord(record: ScoutTrackRecord, newYear: boolean): ScoutTrackRecord {
   const yearsOfData = newYear ? record.yearsOfData + 1 : record.yearsOfData;
   const overallHitRate = calculateOverallHitRate(record.evaluations);
   const positionAccuracy = calculatePositionAccuracy(record.evaluations);

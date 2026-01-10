@@ -210,10 +210,7 @@ export function removeFocusProspect(scout: Scout, prospectId: string): Scout {
 /**
  * Creates a scout contract
  */
-export function createScoutContract(
-  salary: number,
-  yearsTotal: number
-): ScoutContract {
+export function createScoutContract(salary: number, yearsTotal: number): ScoutContract {
   return {
     salary,
     yearsTotal,

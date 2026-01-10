@@ -130,20 +130,14 @@ export const ALL_TREE_NAMES: TreeName[] = [
 /**
  * Calculates tree chemistry between two coaches (FOR ENGINE USE ONLY)
  */
-export function calculateTreeChemistry(
-  tree1: CoachingTree,
-  tree2: CoachingTree
-): ChemistryRange {
+export function calculateTreeChemistry(tree1: CoachingTree, tree2: CoachingTree): ChemistryRange {
   // Same tree, same generation - best chemistry
   if (tree1.treeName === tree2.treeName && tree1.generation === tree2.generation) {
     return DEFAULT_TREE_CHEMISTRY.sameTreeSameGen;
   }
 
   // Same tree, adjacent generation
-  if (
-    tree1.treeName === tree2.treeName &&
-    Math.abs(tree1.generation - tree2.generation) === 1
-  ) {
+  if (tree1.treeName === tree2.treeName && Math.abs(tree1.generation - tree2.generation) === 1) {
     return DEFAULT_TREE_CHEMISTRY.sameTreeAdjacentGen;
   }
 

@@ -3,12 +3,7 @@
  * Tests that ScoutViewModel properly hides evaluation until reliability revealed
  */
 
-import {
-  Scout,
-  createDefaultScout,
-  createScoutViewModel,
-  createScoutContract,
-} from '../Scout';
+import { Scout, createDefaultScout, createScoutViewModel, createScoutContract } from '../Scout';
 import {
   ScoutEvaluation,
   MIN_EVALUATIONS_FOR_RELIABILITY,
