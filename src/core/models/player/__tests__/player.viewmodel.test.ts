@@ -1,6 +1,5 @@
 import {
   Player,
-  PlayerViewModel,
   createPlayerViewModel,
   getExperienceDisplay,
   getSkillRangeMidpoint,
@@ -146,7 +145,7 @@ describe('PlayerViewModel', () => {
       const viewModel = createPlayerViewModel(player);
 
       // Check each skill in skillRanges
-      for (const [_skillName, range] of Object.entries(viewModel.skillRanges)) {
+      for (const range of Object.values(viewModel.skillRanges)) {
         expect(range).toHaveProperty('min');
         expect(range).toHaveProperty('max');
         expect(range).not.toHaveProperty('trueValue');
