@@ -92,7 +92,10 @@ export function getJobSecurityStatus(
 ): 'secure' | 'stable' | 'warm seat' | 'hot seat' | 'danger' {
   const level = getJobSecurityLevel(patienceValue);
 
-  const statusMap: Record<JobSecurityLevel, 'secure' | 'stable' | 'warm seat' | 'hot seat' | 'danger'> = {
+  const statusMap: Record<
+    JobSecurityLevel,
+    'secure' | 'stable' | 'warm seat' | 'hot seat' | 'danger'
+  > = {
     secure: 'secure',
     stable: 'stable',
     warmSeat: 'warm seat',

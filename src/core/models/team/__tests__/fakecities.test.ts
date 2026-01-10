@@ -218,7 +218,9 @@ describe('FakeCities', () => {
     });
 
     it('should include Honolulu Volcanoes', () => {
-      const volcanoes = FAKE_CITIES.find((c) => c.city === 'Honolulu' && c.nickname === 'Volcanoes');
+      const volcanoes = FAKE_CITIES.find(
+        (c) => c.city === 'Honolulu' && c.nickname === 'Volcanoes'
+      );
       expect(volcanoes).toBeDefined();
       expect(volcanoes?.conference).toBe('NFC');
       expect(volcanoes?.division).toBe('West');

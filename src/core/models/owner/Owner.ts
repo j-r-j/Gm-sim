@@ -70,22 +70,42 @@ export interface Owner {
 /**
  * Patience description for view model
  */
-export type PatienceDescription = 'very impatient' | 'impatient' | 'moderate' | 'patient' | 'very patient';
+export type PatienceDescription =
+  | 'very impatient'
+  | 'impatient'
+  | 'moderate'
+  | 'patient'
+  | 'very patient';
 
 /**
  * Spending description for view model
  */
-export type SpendingDescription = 'frugal' | 'budget-conscious' | 'moderate' | 'generous' | 'lavish';
+export type SpendingDescription =
+  | 'frugal'
+  | 'budget-conscious'
+  | 'moderate'
+  | 'generous'
+  | 'lavish';
 
 /**
  * Control description for view model
  */
-export type ControlDescription = 'hands-off' | 'occasional input' | 'involved' | 'controlling' | 'micromanager';
+export type ControlDescription =
+  | 'hands-off'
+  | 'occasional input'
+  | 'involved'
+  | 'controlling'
+  | 'micromanager';
 
 /**
  * Loyalty description for view model
  */
-export type LoyaltyDescription = 'ruthless' | 'results-driven' | 'fair' | 'loyal' | 'extremely loyal';
+export type LoyaltyDescription =
+  | 'ruthless'
+  | 'results-driven'
+  | 'fair'
+  | 'loyal'
+  | 'extremely loyal';
 
 /**
  * View model - what player sees (no raw numbers for personality)
@@ -145,7 +165,13 @@ export function getPatienceDescription(value: number): PatienceDescription {
  * Gets spending description from raw value
  */
 export function getSpendingDescription(value: number): SpendingDescription {
-  return getTraitDescription(value, ['frugal', 'budget-conscious', 'moderate', 'generous', 'lavish']);
+  return getTraitDescription(value, [
+    'frugal',
+    'budget-conscious',
+    'moderate',
+    'generous',
+    'lavish',
+  ]);
 }
 
 /**
@@ -165,7 +191,13 @@ export function getControlDescription(value: number): ControlDescription {
  * Gets loyalty description from raw value
  */
 export function getLoyaltyDescription(value: number): LoyaltyDescription {
-  return getTraitDescription(value, ['ruthless', 'results-driven', 'fair', 'loyal', 'extremely loyal']);
+  return getTraitDescription(value, [
+    'ruthless',
+    'results-driven',
+    'fair',
+    'loyal',
+    'extremely loyal',
+  ]);
 }
 
 /**
@@ -207,7 +239,13 @@ export function validateOwnerDemand(demand: OwnerDemand): boolean {
   if (typeof demand.deadline !== 'number' || demand.deadline < 0) return false;
   if (typeof demand.issuedWeek !== 'number' || demand.issuedWeek < 0) return false;
 
-  const validTypes: OwnerDemandType[] = ['signPlayer', 'fireCoach', 'draftPlayer', 'tradeFor', 'other'];
+  const validTypes: OwnerDemandType[] = [
+    'signPlayer',
+    'fireCoach',
+    'draftPlayer',
+    'tradeFor',
+    'other',
+  ];
   if (!validTypes.includes(demand.type)) return false;
 
   return true;

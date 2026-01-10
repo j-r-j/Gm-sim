@@ -16,7 +16,12 @@ export type FieldSurface = 'grass' | 'turf';
 /**
  * All stadium types
  */
-export const ALL_STADIUM_TYPES: StadiumType[] = ['domeFixed', 'domeRetractable', 'outdoorWarm', 'outdoorCold'];
+export const ALL_STADIUM_TYPES: StadiumType[] = [
+  'domeFixed',
+  'domeRetractable',
+  'outdoorWarm',
+  'outdoorCold',
+];
 
 /**
  * All field surface types
@@ -89,7 +94,8 @@ export function validateStadium(stadium: Stadium): boolean {
     return false;
 
   // Location validation
-  if (typeof stadium.latitude !== 'number' || stadium.latitude < -90 || stadium.latitude > 90) return false;
+  if (typeof stadium.latitude !== 'number' || stadium.latitude < -90 || stadium.latitude > 90)
+    return false;
   if (typeof stadium.elevation !== 'number' || stadium.elevation < 0 || stadium.elevation > 10000)
     return false;
 
@@ -98,7 +104,11 @@ export function validateStadium(stadium: Stadium): boolean {
   if (typeof stadium.averageDecemberTemp !== 'number') return false;
 
   // Home field factors
-  if (typeof stadium.noiseFactor !== 'number' || stadium.noiseFactor < 1 || stadium.noiseFactor > 10)
+  if (
+    typeof stadium.noiseFactor !== 'number' ||
+    stadium.noiseFactor < 1 ||
+    stadium.noiseFactor > 10
+  )
     return false;
   if (
     typeof stadium.intimidationFactor !== 'number' ||
@@ -144,7 +154,11 @@ export function getWeatherExposure(stadium: Stadium): WeatherExposure {
  * @param month The month (1-12)
  * @param baseTemp The outside temperature
  */
-export function getEffectiveGameTemperature(stadium: Stadium, month: number, baseTemp: number): number {
+export function getEffectiveGameTemperature(
+  stadium: Stadium,
+  month: number,
+  baseTemp: number
+): number {
   // Domes always have controlled temperature
   if (stadium.type === 'domeFixed') {
     return DOME_TEMPERATURE;

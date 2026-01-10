@@ -6,7 +6,11 @@
 import { Stadium, createDefaultStadium, validateStadium } from './Stadium';
 import { TeamFinances, createDefaultTeamFinances, validateTeamFinances } from './TeamFinances';
 import { Conference, Division, FakeCity, MarketSize } from './FakeCities';
-import { StaffHierarchy, createEmptyStaffHierarchy, validateStaffHierarchy } from '../staff/StaffHierarchy';
+import {
+  StaffHierarchy,
+  createEmptyStaffHierarchy,
+  validateStaffHierarchy,
+} from '../staff/StaffHierarchy';
 
 /**
  * Team record for a season

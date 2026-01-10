@@ -30,10 +30,7 @@ import {
   DEFAULT_SALARY_CAP,
 } from '../TeamFinances';
 
-import {
-  validateStadium,
-  createDefaultStadium,
-} from '../Stadium';
+import { validateStadium, createDefaultStadium } from '../Stadium';
 
 import { FAKE_CITIES, FakeCity } from '../FakeCities';
 
@@ -340,7 +337,9 @@ describe('Team', () => {
       it('should throw when roster is full', () => {
         const city = getTestCity();
         const team = createTeamFromCity('team-1', city, 'owner-1', DEFAULT_SALARY_CAP);
-        team.rosterPlayerIds = Array(MAX_ACTIVE_ROSTER_SIZE).fill(0).map((_, i) => `player-${i}`);
+        team.rosterPlayerIds = Array(MAX_ACTIVE_ROSTER_SIZE)
+          .fill(0)
+          .map((_, i) => `player-${i}`);
         expect(() => addPlayerToRoster(team, 'player-new')).toThrow('Roster is full');
       });
 
@@ -389,7 +388,9 @@ describe('Team', () => {
       it('should return false when roster is full', () => {
         const city = getTestCity();
         const team = createTeamFromCity('team-1', city, 'owner-1', DEFAULT_SALARY_CAP);
-        team.rosterPlayerIds = Array(MAX_ACTIVE_ROSTER_SIZE).fill(0).map((_, i) => `player-${i}`);
+        team.rosterPlayerIds = Array(MAX_ACTIVE_ROSTER_SIZE)
+          .fill(0)
+          .map((_, i) => `player-${i}`);
         expect(hasRosterSpace(team)).toBe(false);
       });
     });
@@ -404,7 +405,9 @@ describe('Team', () => {
       it('should return false when practice squad is full', () => {
         const city = getTestCity();
         const team = createTeamFromCity('team-1', city, 'owner-1', DEFAULT_SALARY_CAP);
-        team.practiceSquadIds = Array(MAX_PRACTICE_SQUAD_SIZE).fill(0).map((_, i) => `player-${i}`);
+        team.practiceSquadIds = Array(MAX_PRACTICE_SQUAD_SIZE)
+          .fill(0)
+          .map((_, i) => `player-${i}`);
         expect(hasPracticeSquadSpace(team)).toBe(false);
       });
     });

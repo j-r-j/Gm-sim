@@ -48,7 +48,12 @@ export interface TeamFinances {
 /**
  * Valid cap penalty reasons
  */
-export const ALL_CAP_PENALTY_REASONS: CapPenaltyReason[] = ['cut', 'trade', 'restructure', 'retirement'];
+export const ALL_CAP_PENALTY_REASONS: CapPenaltyReason[] = [
+  'cut',
+  'trade',
+  'restructure',
+  'retirement',
+];
 
 /**
  * Default salary cap value (in thousands)
@@ -95,8 +100,10 @@ export function validateTeamFinances(finances: TeamFinances): boolean {
   if (Math.abs(finances.capSpace - expectedCapSpace) > 1) return false;
 
   // Future commitments
-  if (typeof finances.nextYearCommitted !== 'number' || finances.nextYearCommitted < 0) return false;
-  if (typeof finances.twoYearsOutCommitted !== 'number' || finances.twoYearsOutCommitted < 0) return false;
+  if (typeof finances.nextYearCommitted !== 'number' || finances.nextYearCommitted < 0)
+    return false;
+  if (typeof finances.twoYearsOutCommitted !== 'number' || finances.twoYearsOutCommitted < 0)
+    return false;
   if (typeof finances.threeYearsOutCommitted !== 'number' || finances.threeYearsOutCommitted < 0)
     return false;
 
@@ -117,7 +124,10 @@ export function validateTeamFinances(finances: TeamFinances): boolean {
 /**
  * Creates default team finances
  */
-export function createDefaultTeamFinances(teamId: string, salaryCap: number = DEFAULT_SALARY_CAP): TeamFinances {
+export function createDefaultTeamFinances(
+  teamId: string,
+  salaryCap: number = DEFAULT_SALARY_CAP
+): TeamFinances {
   return {
     teamId,
     salaryCap,

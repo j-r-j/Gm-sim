@@ -11,7 +11,12 @@ export type SeasonPhase = 'preseason' | 'regularSeason' | 'playoffs' | 'offseaso
 /**
  * All season phases
  */
-export const ALL_SEASON_PHASES: SeasonPhase[] = ['preseason', 'regularSeason', 'playoffs', 'offseason'];
+export const ALL_SEASON_PHASES: SeasonPhase[] = [
+  'preseason',
+  'regularSeason',
+  'playoffs',
+  'offseason',
+];
 
 /**
  * Season calendar tracking
@@ -289,7 +294,8 @@ export function validatePlayoffMatchup(matchup: PlayoffMatchup): boolean {
  */
 export function validateLeagueEvent(event: LeagueEvent): boolean {
   if (!event.id || typeof event.id !== 'string') return false;
-  if (!['injury', 'trade', 'signing', 'firing', 'award', 'other'].includes(event.type)) return false;
+  if (!['injury', 'trade', 'signing', 'firing', 'award', 'other'].includes(event.type))
+    return false;
   if (typeof event.week !== 'number' || event.week < 0) return false;
   if (!event.description || typeof event.description !== 'string') return false;
   if (!Array.isArray(event.involvedTeamIds)) return false;
