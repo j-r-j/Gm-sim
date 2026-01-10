@@ -26,7 +26,7 @@ export {
   endCareerTeamEntry,
   updateCareerStatsAfterSeason,
   getCurrentTeamEntry,
-  getCareerWinningPercentage,
+  getCareerStatsWinningPercentage,
   serializeGameState,
   deserializeGameState,
   getGameStateSummary,

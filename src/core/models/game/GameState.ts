@@ -402,9 +402,9 @@ export function getCurrentTeamEntry(stats: CareerStats): CareerTeamEntry | null 
 }
 
 /**
- * Gets career winning percentage
+ * Gets career winning percentage for GM career stats
  */
-export function getCareerWinningPercentage(stats: CareerStats): number {
+export function getCareerStatsWinningPercentage(stats: CareerStats): number {
   const totalGames = stats.totalWins + stats.totalLosses;
   if (totalGames === 0) return 0;
   return stats.totalWins / totalGames;

@@ -23,7 +23,7 @@ import {
   endCareerTeamEntry,
   updateCareerStatsAfterSeason,
   getCurrentTeamEntry,
-  getCareerWinningPercentage,
+  getCareerStatsWinningPercentage,
   getGameStateSummary,
 } from '../GameState';
 
@@ -270,17 +270,17 @@ describe('CareerStats', () => {
     });
   });
 
-  describe('getCareerWinningPercentage', () => {
+  describe('getCareerStatsWinningPercentage', () => {
     it('should return 0 for no games', () => {
       const stats = createDefaultCareerStats();
-      expect(getCareerWinningPercentage(stats)).toBe(0);
+      expect(getCareerStatsWinningPercentage(stats)).toBe(0);
     });
 
     it('should calculate winning percentage', () => {
-      let stats = createDefaultCareerStats();
+      const stats = createDefaultCareerStats();
       stats.totalWins = 100;
       stats.totalLosses = 50;
-      expect(getCareerWinningPercentage(stats)).toBeCloseTo(0.667, 2);
+      expect(getCareerStatsWinningPercentage(stats)).toBeCloseTo(0.667, 2);
     });
   });
 });
