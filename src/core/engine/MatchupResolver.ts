@@ -218,7 +218,12 @@ export function resolvePlayMatchup(
     const offPlayer = offensivePlayers[i];
     const defPlayer = defensivePlayers[i];
 
-    const result = resolveMatchup(offPlayer.player, offPlayer.effective, defPlayer.player, defPlayer.effective);
+    const result = resolveMatchup(
+      offPlayer.player,
+      offPlayer.effective,
+      defPlayer.player,
+      defPlayer.effective
+    );
 
     matchups.push(result);
   }

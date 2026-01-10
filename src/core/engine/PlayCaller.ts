@@ -4,10 +4,7 @@
  * User never sees this - it just happens based on their OC/DC.
  */
 
-import {
-  OffensiveTendencies,
-  DefensiveTendencies,
-} from '../models/staff/CoordinatorTendencies';
+import { OffensiveTendencies, DefensiveTendencies } from '../models/staff/CoordinatorTendencies';
 import { PlayType } from './OutcomeTables';
 import { WeatherCondition } from './EffectiveRatingCalculator';
 
@@ -77,7 +74,10 @@ void _DEEP_PASS_TYPES;
 /**
  * Calculate run probability based on tendencies and situation
  */
-function calculateRunProbability(tendencies: OffensiveTendencies, context: PlayCallContext): number {
+function calculateRunProbability(
+  tendencies: OffensiveTendencies,
+  context: PlayCallContext
+): number {
   let baseProbability = tendencies.runPassSplit.run / 100;
 
   // Apply situational modifiers
@@ -439,10 +439,7 @@ export function selectDefensivePlay(
 /**
  * Should attempt field goal based on situation
  */
-export function shouldAttemptFieldGoal(
-  context: PlayCallContext,
-  kickerRange: number
-): boolean {
+export function shouldAttemptFieldGoal(context: PlayCallContext, kickerRange: number): boolean {
   // Can't kick if not in range
   const kickDistance = 100 - context.fieldPosition + 17; // Add 17 for endzone + snap
   if (kickDistance > kickerRange) return false;

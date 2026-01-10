@@ -295,16 +295,17 @@ function getPrimaryPlayers(
     const tackler = defensivePlayers.length > 0 ? defensivePlayers[0] : null;
 
     return {
-      offensive: (playType === 'qb_sneak' || playType === 'qb_scramble' ? qb?.player.id : rb?.player.id) || offensivePlayers[0]?.player.id || '',
+      offensive:
+        (playType === 'qb_sneak' || playType === 'qb_scramble' ? qb?.player.id : rb?.player.id) ||
+        offensivePlayers[0]?.player.id ||
+        '',
       defensive: tackler?.player.id || null,
     };
   }
 
   // For pass plays, QB is primary offensive, receiver/defender are secondary
   const qb = offensivePlayers.find((p) => p.player.position === 'QB');
-  const receiver = offensivePlayers.find((p) =>
-    ['WR', 'TE', 'RB'].includes(p.player.position)
-  );
+  const receiver = offensivePlayers.find((p) => ['WR', 'TE', 'RB'].includes(p.player.position));
   const defender = defensivePlayers.find((p) =>
     ['CB', 'FS', 'SS', 'OLB', 'ILB'].includes(p.player.position)
   );
@@ -335,9 +336,7 @@ export function resolvePlay(
 
   // Determine stakes
   const stakes: GameStakes =
-    context.quarter === 4 && Math.abs(context.scoreDifferential) <= 7
-      ? 'playoff'
-      : 'regular';
+    context.quarter === 4 && Math.abs(context.scoreDifferential) <= 7 ? 'playoff' : 'regular';
 
   // Get players involved in the play
   const offensivePlayers = getPlayersForPlayType(offensiveTeam, true, playType);
@@ -394,7 +393,11 @@ export function resolvePlay(
   const shouldCheckInjury = roll.secondaryEffects.includes('injury_check');
 
   // Process injuries if needed
-  let injuryInfo = { injured: false, playerId: null as string | null, result: createNoInjuryResult() };
+  let injuryInfo = {
+    injured: false,
+    playerId: null as string | null,
+    result: createNoInjuryResult(),
+  };
   if (shouldCheckInjury) {
     // Check offensive players first
     injuryInfo = processInjuries(
@@ -425,11 +428,9 @@ export function resolvePlay(
 
   // Calculate new game state
   let yardsGained = roll.yards;
-  const turnover =
-    roll.outcome === 'interception' || roll.outcome === 'fumble_lost';
+  const turnover = roll.outcome === 'interception' || roll.outcome === 'fumble_lost';
   const touchdown =
-    roll.outcome === 'touchdown' ||
-    (yardsGained > 0 && context.fieldPosition + yardsGained >= 100);
+    roll.outcome === 'touchdown' || (yardsGained > 0 && context.fieldPosition + yardsGained >= 100);
 
   // Adjust yards for touchdown
   if (touchdown && roll.outcome !== 'touchdown') {
@@ -478,9 +479,10 @@ export function resolvePlay(
       team,
       type: penalty.type,
       yards: penalty.yards,
-      playerId: team === 'offense'
-        ? offensivePlayers[Math.floor(Math.random() * offensivePlayers.length)]?.id || null
-        : defensivePlayers[Math.floor(Math.random() * defensivePlayers.length)]?.id || null,
+      playerId:
+        team === 'offense'
+          ? offensivePlayers[Math.floor(Math.random() * offensivePlayers.length)]?.id || null
+          : defensivePlayers[Math.floor(Math.random() * defensivePlayers.length)]?.id || null,
       declined: false,
     };
 
@@ -492,7 +494,9 @@ export function resolvePlay(
       // Defensive penalty - automatic first down on most
       yardsGained = penalty.yards;
       newFieldPosition = Math.min(99, context.fieldPosition + penalty.yards);
-      if (['Pass Interference', 'Defensive Holding', 'Roughing the Passer'].includes(penalty.type)) {
+      if (
+        ['Pass Interference', 'Defensive Holding', 'Roughing the Passer'].includes(penalty.type)
+      ) {
         newDown = 1;
         newDistance = 10;
         firstDown = true;

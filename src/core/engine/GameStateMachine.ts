@@ -167,12 +167,9 @@ export class GameStateMachine {
     const { clock, field, score, weather } = this.state;
 
     const scoreDiff =
-      field.possession === 'home'
-        ? score.home - score.away
-        : score.away - score.home;
+      field.possession === 'home' ? score.home - score.away : score.away - score.home;
 
-    const isTwoMinute =
-      (clock.quarter === 2 || clock.quarter === 4) && clock.timeRemaining <= 120;
+    const isTwoMinute = (clock.quarter === 2 || clock.quarter === 4) && clock.timeRemaining <= 120;
 
     // Calculate remaining time in game (for urgency calculations)
     let remainingGameTime = clock.timeRemaining;
@@ -222,11 +219,13 @@ export class GameStateMachine {
     // Update state
     this.state.field = {
       ...field,
-      ballPosition: kickoffTeam === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
+      ballPosition:
+        kickoffTeam === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
       possession: kickoffTeam === 'home' ? 'away' : 'home',
       down: 1,
       yardsToGo: 10,
-      yardsToEndzone: kickoffTeam === 'home' ? result.newFieldPosition : 100 - result.newFieldPosition,
+      yardsToEndzone:
+        kickoffTeam === 'home' ? result.newFieldPosition : 100 - result.newFieldPosition,
     };
 
     this.state.needsKickoff = false;
@@ -258,7 +257,8 @@ export class GameStateMachine {
       possession: newPossession,
       down: 1,
       yardsToGo: 10,
-      yardsToEndzone: newPossession === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
+      yardsToEndzone:
+        newPossession === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
     };
 
     this.state.plays.push(result);
@@ -340,7 +340,8 @@ export class GameStateMachine {
     this.state.needsKickoff = true;
     this.state.kickoffTeam = field.possession;
 
-    result.description = result.outcome === 'field_goal_made' ? 'Extra point is GOOD' : 'Extra point NO GOOD';
+    result.description =
+      result.outcome === 'field_goal_made' ? 'Extra point is GOOD' : 'Extra point NO GOOD';
     this.state.plays.push(result);
 
     return result;
@@ -371,10 +372,15 @@ export class GameStateMachine {
       offensivePlay.formation
     );
 
-    const result = resolvePlay(offensiveTeam, defensiveTeam, {
-      offensive: offensivePlay,
-      defensive: defensivePlay,
-    }, context);
+    const result = resolvePlay(
+      offensiveTeam,
+      defensiveTeam,
+      {
+        offensive: offensivePlay,
+        defensive: defensivePlay,
+      },
+      context
+    );
 
     if (result.touchdown) {
       if (field.possession === 'home') {
@@ -421,12 +427,7 @@ export class GameStateMachine {
       }
 
       // Check if should punt
-      if (
-        shouldPunt(
-          context,
-          offensiveTeam.offensiveTendencies.fourthDownAggressiveness
-        )
-      ) {
+      if (shouldPunt(context, offensiveTeam.offensiveTendencies.fourthDownAggressiveness)) {
         return this.handlePunt();
       }
     }
@@ -482,24 +483,18 @@ export class GameStateMachine {
         down: 1,
         yardsToGo: 10,
         yardsToEndzone:
-          newPossession === 'home'
-            ? 100 - result.newFieldPosition
-            : result.newFieldPosition,
+          newPossession === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
       };
     } else {
       // Normal play update
       this.state.field = {
         ...field,
         ballPosition:
-          field.possession === 'home'
-            ? result.newFieldPosition
-            : 100 - result.newFieldPosition,
+          field.possession === 'home' ? result.newFieldPosition : 100 - result.newFieldPosition,
         down: result.newDown as 1 | 2 | 3 | 4,
         yardsToGo: result.newDistance,
         yardsToEndzone:
-          field.possession === 'home'
-            ? 100 - result.newFieldPosition
-            : result.newFieldPosition,
+          field.possession === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
       };
     }
 
@@ -544,10 +539,7 @@ export class GameStateMachine {
     if (clock.timeRemaining <= 0) {
       if (clock.quarter === 4 || clock.quarter === 'OT') {
         // Check for overtime or end of game
-        if (
-          this.state.score.home === this.state.score.away &&
-          clock.quarter === 4
-        ) {
+        if (this.state.score.home === this.state.score.away && clock.quarter === 4) {
           // Go to overtime
           clock.quarter = 'OT';
           clock.timeRemaining = 600; // 10 minute OT
@@ -670,10 +662,7 @@ export class GameStateMachine {
   simulateQuarter(): LiveGameState {
     const targetQuarter = this.state.clock.quarter;
 
-    while (
-      !this.isGameOver() &&
-      this.state.clock.quarter === targetQuarter
-    ) {
+    while (!this.isGameOver() && this.state.clock.quarter === targetQuarter) {
       this.executePlay();
     }
 

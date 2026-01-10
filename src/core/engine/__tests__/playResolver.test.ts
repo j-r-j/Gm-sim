@@ -1,5 +1,9 @@
 import { resolvePlay, resolveSpecialTeamsPlay } from '../PlayResolver';
-import { createDefaultPlayCallContext, selectOffensivePlay, selectDefensivePlay } from '../PlayCaller';
+import {
+  createDefaultPlayCallContext,
+  selectOffensivePlay,
+  selectDefensivePlay,
+} from '../PlayCaller';
 import { TeamGameState } from '../TeamGameState';
 import { generatePlayer, generateRoster } from '../../generators/player/PlayerGenerator';
 import { Position } from '../../models/player/Position';
@@ -14,21 +18,24 @@ function createTestTeamGameState(teamId: string): TeamGameState {
   const roster = generateRoster(teamId);
 
   // Find players by position
-  const qb = roster.find(p => p.position === Position.QB) || generatePlayer({ position: Position.QB });
-  const rbs = roster.filter(p => p.position === Position.RB);
-  const wrs = roster.filter(p => p.position === Position.WR);
-  const tes = roster.filter(p => p.position === Position.TE);
-  const ols = roster.filter(p => ['LT', 'LG', 'C', 'RG', 'RT'].includes(p.position));
+  const qb =
+    roster.find((p) => p.position === Position.QB) || generatePlayer({ position: Position.QB });
+  const rbs = roster.filter((p) => p.position === Position.RB);
+  const wrs = roster.filter((p) => p.position === Position.WR);
+  const tes = roster.filter((p) => p.position === Position.TE);
+  const ols = roster.filter((p) => ['LT', 'LG', 'C', 'RG', 'RT'].includes(p.position));
 
-  const dls = roster.filter(p => ['DE', 'DT'].includes(p.position));
-  const lbs = roster.filter(p => ['OLB', 'ILB'].includes(p.position));
-  const dbs = roster.filter(p => ['CB', 'FS', 'SS'].includes(p.position));
+  const dls = roster.filter((p) => ['DE', 'DT'].includes(p.position));
+  const lbs = roster.filter((p) => ['OLB', 'ILB'].includes(p.position));
+  const dbs = roster.filter((p) => ['CB', 'FS', 'SS'].includes(p.position));
 
-  const k = roster.find(p => p.position === Position.K) || generatePlayer({ position: Position.K });
-  const p = roster.find(p => p.position === Position.P) || generatePlayer({ position: Position.P });
+  const k =
+    roster.find((p) => p.position === Position.K) || generatePlayer({ position: Position.K });
+  const p =
+    roster.find((p) => p.position === Position.P) || generatePlayer({ position: Position.P });
 
   const allPlayers = new Map<string, typeof qb>();
-  roster.forEach(player => allPlayers.set(player.id, player));
+  roster.forEach((player) => allPlayers.set(player.id, player));
 
   const oc = createDefaultCoach('oc-1', 'John', 'Smith', 'offensiveCoordinator');
   const dc = createDefaultCoach('dc-1', 'Jane', 'Doe', 'defensiveCoordinator');
@@ -332,8 +339,18 @@ describe('PlayResolver', () => {
       const attempts = 100;
 
       for (let i = 0; i < attempts; i++) {
-        const shortResult = resolveSpecialTeamsPlay(homeTeam, awayTeam, 'field_goal', shortKickContext);
-        const longResult = resolveSpecialTeamsPlay(homeTeam, awayTeam, 'field_goal', longKickContext);
+        const shortResult = resolveSpecialTeamsPlay(
+          homeTeam,
+          awayTeam,
+          'field_goal',
+          shortKickContext
+        );
+        const longResult = resolveSpecialTeamsPlay(
+          homeTeam,
+          awayTeam,
+          'field_goal',
+          longKickContext
+        );
 
         if (shortResult.outcome === 'field_goal_made') shortMade++;
         if (longResult.outcome === 'field_goal_made') longMade++;

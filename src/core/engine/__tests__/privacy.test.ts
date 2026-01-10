@@ -21,25 +21,32 @@ import {
   createDefaultOffensiveTendencies,
   createDefaultDefensiveTendencies,
 } from '../../models/staff/CoordinatorTendencies';
-import { selectOffensivePlay, selectDefensivePlay, createDefaultPlayCallContext } from '../PlayCaller';
+import {
+  selectOffensivePlay,
+  selectDefensivePlay,
+  createDefaultPlayCallContext,
+} from '../PlayCaller';
 
 // Helper to create team game state
 function createTestTeamGameState(teamId: string): TeamGameState {
   const roster = generateRoster(teamId);
 
-  const qb = roster.find(p => p.position === Position.QB) || generatePlayer({ position: Position.QB });
-  const rbs = roster.filter(p => p.position === Position.RB);
-  const wrs = roster.filter(p => p.position === Position.WR);
-  const tes = roster.filter(p => p.position === Position.TE);
-  const ols = roster.filter(p => ['LT', 'LG', 'C', 'RG', 'RT'].includes(p.position));
-  const dls = roster.filter(p => ['DE', 'DT'].includes(p.position));
-  const lbs = roster.filter(p => ['OLB', 'ILB'].includes(p.position));
-  const dbs = roster.filter(p => ['CB', 'FS', 'SS'].includes(p.position));
-  const k = roster.find(p => p.position === Position.K) || generatePlayer({ position: Position.K });
-  const punter = roster.find(p => p.position === Position.P) || generatePlayer({ position: Position.P });
+  const qb =
+    roster.find((p) => p.position === Position.QB) || generatePlayer({ position: Position.QB });
+  const rbs = roster.filter((p) => p.position === Position.RB);
+  const wrs = roster.filter((p) => p.position === Position.WR);
+  const tes = roster.filter((p) => p.position === Position.TE);
+  const ols = roster.filter((p) => ['LT', 'LG', 'C', 'RG', 'RT'].includes(p.position));
+  const dls = roster.filter((p) => ['DE', 'DT'].includes(p.position));
+  const lbs = roster.filter((p) => ['OLB', 'ILB'].includes(p.position));
+  const dbs = roster.filter((p) => ['CB', 'FS', 'SS'].includes(p.position));
+  const k =
+    roster.find((p) => p.position === Position.K) || generatePlayer({ position: Position.K });
+  const punter =
+    roster.find((p) => p.position === Position.P) || generatePlayer({ position: Position.P });
 
   const allPlayers = new Map<string, typeof qb>();
-  roster.forEach(player => allPlayers.set(player.id, player));
+  roster.forEach((player) => allPlayers.set(player.id, player));
 
   return {
     teamId,
@@ -249,7 +256,7 @@ describe('Privacy Tests - Engine Internals Not Exposed', () => {
       const serialized = JSON.stringify(rollResult);
 
       expect(serialized).not.toContain('probability');
-      expect(serialized).not.toContain('0.');  // Probability values are decimals
+      expect(serialized).not.toContain('0.'); // Probability values are decimals
 
       // Only outcome, yards, and secondaryEffects
       expect(rollResult).toHaveProperty('outcome');

@@ -146,7 +146,14 @@ describe('WeeklyVarianceCalculator', () => {
     });
 
     it('should return valid streak state', () => {
-      const tiers: ConsistencyTier[] = ['metronome', 'steady', 'average', 'streaky', 'volatile', 'chaotic'];
+      const tiers: ConsistencyTier[] = [
+        'metronome',
+        'steady',
+        'average',
+        'streaky',
+        'volatile',
+        'chaotic',
+      ];
 
       for (const tier of tiers) {
         const profile: ConsistencyProfile = {
@@ -217,8 +224,10 @@ describe('WeeklyVarianceCalculator', () => {
         streakGamesRemaining: 0,
       };
 
-      let metronomeMin = 0, metronomeMax = 0;
-      let chaoticMin = 0, chaoticMax = 0;
+      let metronomeMin = 0,
+        metronomeMax = 0;
+      let chaoticMin = 0,
+        chaoticMax = 0;
 
       for (let i = 0; i < 100; i++) {
         const metronomeResult = calculateWeeklyVariance(metronomeProfile);

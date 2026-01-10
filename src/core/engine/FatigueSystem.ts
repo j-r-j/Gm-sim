@@ -199,10 +199,7 @@ export function calculateFatigueRecovery(
  * @param playerCondition - Player's physical condition
  * @returns New fatigue level after halftime
  */
-export function calculateHalftimeRecovery(
-  currentFatigue: number,
-  playerCondition: number
-): number {
+export function calculateHalftimeRecovery(currentFatigue: number, playerCondition: number): number {
   // Base recovery of 40%
   const baseRecoveryPercent = 0.4;
 

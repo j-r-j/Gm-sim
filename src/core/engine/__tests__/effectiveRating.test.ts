@@ -30,7 +30,7 @@ describe('EffectiveRatingCalculator', () => {
       const player = generatePlayer({ position: Position.RB });
       const schemes = ['powerRun', 'zoneRun', 'westCoast', 'airRaid'] as const;
 
-      const modifiers = schemes.map(s => calculateSchemeFitModifier(player, s));
+      const modifiers = schemes.map((s) => calculateSchemeFitModifier(player, s));
 
       // All modifiers should be defined numbers
       for (const mod of modifiers) {
@@ -257,9 +257,18 @@ describe('EffectiveRatingCalculator', () => {
 
     it('should return reasonable values across all positions', () => {
       const positions = [
-        Position.QB, Position.RB, Position.WR, Position.TE,
-        Position.LT, Position.C, Position.DE, Position.DT,
-        Position.OLB, Position.ILB, Position.CB, Position.FS,
+        Position.QB,
+        Position.RB,
+        Position.WR,
+        Position.TE,
+        Position.LT,
+        Position.C,
+        Position.DE,
+        Position.DT,
+        Position.OLB,
+        Position.ILB,
+        Position.CB,
+        Position.FS,
       ];
 
       for (const position of positions) {

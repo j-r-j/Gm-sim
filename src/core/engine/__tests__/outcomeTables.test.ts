@@ -13,9 +13,16 @@ describe('OutcomeTables', () => {
   describe('generateOutcomeTable', () => {
     it('should always sum probabilities to 1.0', () => {
       const playTypes: PlayType[] = [
-        'run_inside', 'run_outside', 'run_draw', 'run_sweep',
-        'pass_short', 'pass_medium', 'pass_deep', 'pass_screen',
-        'play_action_short', 'play_action_deep',
+        'run_inside',
+        'run_outside',
+        'run_draw',
+        'run_sweep',
+        'pass_short',
+        'pass_medium',
+        'pass_deep',
+        'pass_screen',
+        'play_action_short',
+        'play_action_deep',
       ];
 
       for (const playType of playTypes) {
@@ -80,14 +87,20 @@ describe('OutcomeTables', () => {
       );
 
       // Calculate positive outcome probability for each
-      const positiveOutcomes: PlayOutcome[] = ['touchdown', 'big_gain', 'good_gain', 'moderate_gain', 'short_gain'];
+      const positiveOutcomes: PlayOutcome[] = [
+        'touchdown',
+        'big_gain',
+        'good_gain',
+        'moderate_gain',
+        'short_gain',
+      ];
 
       const highAdvantagePositive = highAdvantageTable
-        .filter(e => positiveOutcomes.includes(e.outcome))
+        .filter((e) => positiveOutcomes.includes(e.outcome))
         .reduce((sum, e) => sum + e.probability, 0);
 
       const lowAdvantagePositive = lowAdvantageTable
-        .filter(e => positiveOutcomes.includes(e.outcome))
+        .filter((e) => positiveOutcomes.includes(e.outcome))
         .reduce((sum, e) => sum + e.probability, 0);
 
       // Higher offensive advantage should have more positive outcomes
@@ -116,11 +129,11 @@ describe('OutcomeTables', () => {
       const turnovers: PlayOutcome[] = ['interception', 'fumble', 'fumble_lost'];
 
       const defAdvantageTurnovers = defAdvantageTable
-        .filter(e => turnovers.includes(e.outcome))
+        .filter((e) => turnovers.includes(e.outcome))
         .reduce((sum, e) => sum + e.probability, 0);
 
       const offAdvantageTurnovers = offAdvantageTable
-        .filter(e => turnovers.includes(e.outcome))
+        .filter((e) => turnovers.includes(e.outcome))
         .reduce((sum, e) => sum + e.probability, 0);
 
       // Defensive advantage should have more turnovers
@@ -146,8 +159,8 @@ describe('OutcomeTables', () => {
         85
       );
 
-      const normalTD = normalTable.find(e => e.outcome === 'touchdown')?.probability ?? 0;
-      const redZoneTD = redZoneTable.find(e => e.outcome === 'touchdown')?.probability ?? 0;
+      const normalTD = normalTable.find((e) => e.outcome === 'touchdown')?.probability ?? 0;
+      const redZoneTD = redZoneTable.find((e) => e.outcome === 'touchdown')?.probability ?? 0;
 
       // Red zone should have higher TD probability
       expect(redZoneTD).toBeGreaterThan(normalTD);
@@ -188,7 +201,7 @@ describe('OutcomeTables', () => {
         expect(result).toHaveProperty('secondaryEffects');
 
         // Check outcome is in the table
-        const outcomes = table.map(e => e.outcome);
+        const outcomes = table.map((e) => e.outcome);
         expect(outcomes).toContain(result.outcome);
       }
     });
@@ -204,7 +217,7 @@ describe('OutcomeTables', () => {
 
       for (let i = 0; i < 100; i++) {
         const result = rollOutcome(table);
-        const entry = table.find(e => e.outcome === result.outcome);
+        const entry = table.find((e) => e.outcome === result.outcome);
 
         if (entry) {
           expect(result.yards).toBeGreaterThanOrEqual(entry.yardsRange.min);
@@ -232,7 +245,7 @@ describe('OutcomeTables', () => {
     it('should have high probability for short field goals', () => {
       const table = generateFieldGoalTable(80, 25, 0);
 
-      const madeProb = table.find(e => e.outcome === 'field_goal_made')?.probability ?? 0;
+      const madeProb = table.find((e) => e.outcome === 'field_goal_made')?.probability ?? 0;
 
       expect(madeProb).toBeGreaterThan(0.9);
     });
@@ -240,7 +253,7 @@ describe('OutcomeTables', () => {
     it('should have lower probability for long field goals', () => {
       const table = generateFieldGoalTable(80, 55, 0);
 
-      const madeProb = table.find(e => e.outcome === 'field_goal_made')?.probability ?? 0;
+      const madeProb = table.find((e) => e.outcome === 'field_goal_made')?.probability ?? 0;
 
       // Long field goals (55+ yards) should have lower probability
       expect(madeProb).toBeLessThan(0.7);
@@ -250,8 +263,10 @@ describe('OutcomeTables', () => {
       const goodKickerTable = generateFieldGoalTable(90, 45, 0);
       const badKickerTable = generateFieldGoalTable(50, 45, 0);
 
-      const goodKickerProb = goodKickerTable.find(e => e.outcome === 'field_goal_made')?.probability ?? 0;
-      const badKickerProb = badKickerTable.find(e => e.outcome === 'field_goal_made')?.probability ?? 0;
+      const goodKickerProb =
+        goodKickerTable.find((e) => e.outcome === 'field_goal_made')?.probability ?? 0;
+      const badKickerProb =
+        badKickerTable.find((e) => e.outcome === 'field_goal_made')?.probability ?? 0;
 
       expect(goodKickerProb).toBeGreaterThan(badKickerProb);
     });
@@ -260,8 +275,8 @@ describe('OutcomeTables', () => {
       const normalTable = generateFieldGoalTable(80, 45, 0);
       const windyTable = generateFieldGoalTable(80, 45, -10);
 
-      const normalProb = normalTable.find(e => e.outcome === 'field_goal_made')?.probability ?? 0;
-      const windyProb = windyTable.find(e => e.outcome === 'field_goal_made')?.probability ?? 0;
+      const normalProb = normalTable.find((e) => e.outcome === 'field_goal_made')?.probability ?? 0;
+      const windyProb = windyTable.find((e) => e.outcome === 'field_goal_made')?.probability ?? 0;
 
       expect(normalProb).toBeGreaterThan(windyProb);
     });

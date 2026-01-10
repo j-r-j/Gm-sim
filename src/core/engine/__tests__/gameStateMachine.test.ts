@@ -1,8 +1,4 @@
-import {
-  GameStateMachine,
-  createGame,
-  createDefaultGameConfig,
-} from '../GameStateMachine';
+import { GameStateMachine, createGame, createDefaultGameConfig } from '../GameStateMachine';
 import { TeamGameState } from '../TeamGameState';
 import { generatePlayer, generateRoster } from '../../generators/player/PlayerGenerator';
 import { Position } from '../../models/player/Position';
@@ -16,21 +12,24 @@ import {
 function createTestTeamGameState(teamId: string): TeamGameState {
   const roster = generateRoster(teamId);
 
-  const qb = roster.find(p => p.position === Position.QB) || generatePlayer({ position: Position.QB });
-  const rbs = roster.filter(p => p.position === Position.RB);
-  const wrs = roster.filter(p => p.position === Position.WR);
-  const tes = roster.filter(p => p.position === Position.TE);
-  const ols = roster.filter(p => ['LT', 'LG', 'C', 'RG', 'RT'].includes(p.position));
+  const qb =
+    roster.find((p) => p.position === Position.QB) || generatePlayer({ position: Position.QB });
+  const rbs = roster.filter((p) => p.position === Position.RB);
+  const wrs = roster.filter((p) => p.position === Position.WR);
+  const tes = roster.filter((p) => p.position === Position.TE);
+  const ols = roster.filter((p) => ['LT', 'LG', 'C', 'RG', 'RT'].includes(p.position));
 
-  const dls = roster.filter(p => ['DE', 'DT'].includes(p.position));
-  const lbs = roster.filter(p => ['OLB', 'ILB'].includes(p.position));
-  const dbs = roster.filter(p => ['CB', 'FS', 'SS'].includes(p.position));
+  const dls = roster.filter((p) => ['DE', 'DT'].includes(p.position));
+  const lbs = roster.filter((p) => ['OLB', 'ILB'].includes(p.position));
+  const dbs = roster.filter((p) => ['CB', 'FS', 'SS'].includes(p.position));
 
-  const k = roster.find(p => p.position === Position.K) || generatePlayer({ position: Position.K });
-  const punter = roster.find(p => p.position === Position.P) || generatePlayer({ position: Position.P });
+  const k =
+    roster.find((p) => p.position === Position.K) || generatePlayer({ position: Position.K });
+  const punter =
+    roster.find((p) => p.position === Position.P) || generatePlayer({ position: Position.P });
 
   const allPlayers = new Map<string, typeof qb>();
-  roster.forEach(player => allPlayers.set(player.id, player));
+  roster.forEach((player) => allPlayers.set(player.id, player));
 
   const oc = createDefaultCoach('oc-' + teamId, 'John', 'Smith', 'offensiveCoordinator');
   const dc = createDefaultCoach('dc-' + teamId, 'Jane', 'Doe', 'defensiveCoordinator');
@@ -193,8 +192,13 @@ describe('GameStateMachine', () => {
       expect(driveResult).toHaveProperty('result');
       expect(driveResult.plays.length).toBeGreaterThan(0);
       expect([
-        'touchdown', 'field_goal', 'punt', 'turnover',
-        'turnover_on_downs', 'end_of_half', 'safety'
+        'touchdown',
+        'field_goal',
+        'punt',
+        'turnover',
+        'turnover_on_downs',
+        'end_of_half',
+        'safety',
       ]).toContain(driveResult.result);
     });
   });
@@ -212,10 +216,7 @@ describe('GameStateMachine', () => {
       const newState = machine.getState();
 
       // Should have advanced past the first quarter or finished the game
-      expect(
-        newState.clock.quarter !== initialQuarter ||
-        newState.isComplete
-      ).toBe(true);
+      expect(newState.clock.quarter !== initialQuarter || newState.isComplete).toBe(true);
     });
   });
 

@@ -30,12 +30,21 @@ export type GameplayInjuryType =
  * Severity of a gameplay injury
  * (Distinct from InjurySeverity in models which is for roster status)
  */
-export type GameplayInjurySeverity = 'minor' | 'moderate' | 'significant' | 'severe' | 'season_ending';
+export type GameplayInjurySeverity =
+  | 'minor'
+  | 'moderate'
+  | 'significant'
+  | 'severe'
+  | 'season_ending';
 
 /**
  * Permanent effects that can result from injuries
  */
-export type PermanentInjuryEffect = 'speed_reduction' | 'agility_reduction' | 'reinjury_risk' | 'none';
+export type PermanentInjuryEffect =
+  | 'speed_reduction'
+  | 'agility_reduction'
+  | 'reinjury_risk'
+  | 'none';
 
 /**
  * Parameters for injury check
@@ -203,7 +212,10 @@ const DEFAULT_INJURY_TYPES: Partial<Record<GameplayInjuryType, number>> = {
 /**
  * Weeks out by injury type and severity
  */
-const INJURY_DURATION: Record<GameplayInjuryType, Record<GameplayInjurySeverity, { min: number; max: number }>> = {
+const INJURY_DURATION: Record<
+  GameplayInjuryType,
+  Record<GameplayInjurySeverity, { min: number; max: number }>
+> = {
   concussion: {
     minor: { min: 1, max: 1 },
     moderate: { min: 1, max: 2 },
@@ -387,7 +399,10 @@ function determineInjurySeverity(
 /**
  * Calculate weeks out based on injury type and severity
  */
-function calculateWeeksOut(injuryType: GameplayInjuryType, severity: GameplayInjurySeverity): number {
+function calculateWeeksOut(
+  injuryType: GameplayInjuryType,
+  severity: GameplayInjurySeverity
+): number {
   const duration = INJURY_DURATION[injuryType][severity];
   const range = duration.max - duration.min;
   return duration.min + Math.floor(Math.random() * (range + 1));

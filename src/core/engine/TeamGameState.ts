@@ -196,11 +196,7 @@ export function getPlayerFatigue(state: TeamGameState, playerId: string): number
 /**
  * Update player fatigue level
  */
-export function updatePlayerFatigue(
-  state: TeamGameState,
-  playerId: string,
-  fatigue: number
-): void {
+export function updatePlayerFatigue(state: TeamGameState, playerId: string, fatigue: number): void {
   state.fatigueLevels.set(playerId, Math.max(0, Math.min(100, fatigue)));
 }
 
@@ -280,8 +276,7 @@ export function validateTeamGameState(state: TeamGameState): boolean {
   if (state.offense.ol.length < 5) return false;
 
   // Check defense (minimum 11 players)
-  const defenseCount =
-    state.defense.dl.length + state.defense.lb.length + state.defense.db.length;
+  const defenseCount = state.defense.dl.length + state.defense.lb.length + state.defense.db.length;
   if (defenseCount < 11) return false;
 
   // Check special teams
