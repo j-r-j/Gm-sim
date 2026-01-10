@@ -1,0 +1,44 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Player Privacy Tests Snapshot test for hidden fields should match expected PlayerViewModel structure (snapshot) 1`] = `
+{
+  "age": 26,
+  "draftInfo": {
+    "pick": 35,
+    "round": 2,
+    "year": 2021,
+  },
+  "experience": 3,
+  "id": "player-sensitive-001",
+  "injuryDisplay": "Questionable (knee)",
+  "knownTraits": [
+    "leader",
+  ],
+  "name": "Test Player",
+  "physical": {
+    "acceleration": 82,
+    "agility": 78,
+    "armLength": 31,
+    "handSize": 9.25,
+    "height": 73,
+    "speed": 4.55,
+    "strength": 70,
+    "verticalJump": 34,
+    "weight": 215,
+    "wingspan": 76,
+  },
+  "position": "QB",
+  "roleFitDescription": "Comfortable in role",
+  "schemeFitDescription": "Good fit",
+  "skillRanges": {
+    "footwork": {
+      "max": 75,
+      "min": 60,
+    },
+    "throwing": {
+      "max": 95,
+      "min": 85,
+    },
+  },
+}
+`;
