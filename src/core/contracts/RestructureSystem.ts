@@ -3,11 +3,7 @@
  * Convert salary to bonus, calculate proration, and project future impact
  */
 
-import {
-  PlayerContract,
-  ContractYear,
-  getCapHitForYear,
-} from './Contract';
+import { PlayerContract, ContractYear, getCapHitForYear } from './Contract';
 
 /**
  * Restructure type
@@ -207,7 +203,11 @@ export function restructureContract(
   }
 
   // Calculate proration
-  const proratedAmounts = calculateProration(amountToConvert, contract.yearsRemaining, voidYearsToAdd);
+  const proratedAmounts = calculateProration(
+    amountToConvert,
+    contract.yearsRemaining,
+    voidYearsToAdd
+  );
 
   // Build new yearly breakdown
   const newBreakdown: ContractYear[] = [];
@@ -476,7 +476,12 @@ export function projectRestructureImpact(
   deadMoneyRisk: number;
 } {
   const preview = previewRestructure(contract, currentYear, amountToConvert, voidYearsToAdd);
-  const yearByYear: { year: number; originalCapHit: number; newCapHit: number; difference: number }[] = [];
+  const yearByYear: {
+    year: number;
+    originalCapHit: number;
+    newCapHit: number;
+    difference: number;
+  }[] = [];
 
   // Current year
   yearByYear.push({

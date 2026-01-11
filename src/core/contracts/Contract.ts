@@ -124,10 +124,7 @@ export function createContractId(playerId: string, signedYear: number): string {
 /**
  * Calculates yearly breakdown from contract offer
  */
-export function calculateYearlyBreakdown(
-  offer: ContractOffer,
-  signedYear: number
-): ContractYear[] {
+export function calculateYearlyBreakdown(offer: ContractOffer, signedYear: number): ContractYear[] {
   const breakdown: ContractYear[] = [];
   const proratedBonusPerYear = offer.signingBonus / (offer.years + offer.voidYears);
   let currentSalary = offer.firstYearSalary;
@@ -288,7 +285,10 @@ export function calculateCapSavings(contract: PlayerContract, currentYear: numbe
 /**
  * Calculates dead money for post-June 1 cut
  */
-export function calculatePostJune1DeadMoney(contract: PlayerContract, currentYear: number): {
+export function calculatePostJune1DeadMoney(
+  contract: PlayerContract,
+  currentYear: number
+): {
   year1DeadMoney: number;
   year2DeadMoney: number;
 } {
@@ -297,12 +297,14 @@ export function calculatePostJune1DeadMoney(contract: PlayerContract, currentYea
   const currentYearData = contract.yearlyBreakdown.find((y) => y.year === currentYear);
   const futureYears = contract.yearlyBreakdown.filter((y) => y.year > currentYear);
 
-  const year1DeadMoney = (currentYearData?.prorationedBonus ?? 0) +
+  const year1DeadMoney =
+    (currentYearData?.prorationedBonus ?? 0) +
     contract.yearlyBreakdown
       .filter((y) => y.year === currentYear && y.isGuaranteed && !y.isVoidYear)
       .reduce((sum, y) => sum + y.baseSalary, 0);
 
-  const year2DeadMoney = futureYears.reduce((sum, y) => sum + y.prorationedBonus, 0) +
+  const year2DeadMoney =
+    futureYears.reduce((sum, y) => sum + y.prorationedBonus, 0) +
     futureYears
       .filter((y) => y.isGuaranteed && !y.isVoidYear)
       .reduce((sum, y) => sum + y.baseSalary, 0);
@@ -371,10 +373,7 @@ export interface ContractSummary {
 /**
  * Gets contract summary for display (PUBLIC INFO)
  */
-export function getContractSummary(
-  contract: PlayerContract,
-  currentYear: number
-): ContractSummary {
+export function getContractSummary(contract: PlayerContract, currentYear: number): ContractSummary {
   const formatMoney = (value: number): string => {
     if (value >= 1000) {
       return `$${(value / 1000).toFixed(1)}M`;
@@ -452,14 +451,14 @@ export function validatePlayerContract(contract: PlayerContract): boolean {
  * Minimum salary by experience (thousands)
  */
 export const VETERAN_MINIMUM_SALARY: Record<number, number> = {
-  0: 795,    // Rookies
-  1: 915,    // 1 year
-  2: 990,    // 2 years
-  3: 1065,   // 3 years
-  4: 1145,   // 4 years
-  5: 1215,   // 5 years
-  6: 1215,   // 6 years
-  7: 1215,   // 7+ years
+  0: 795, // Rookies
+  1: 915, // 1 year
+  2: 990, // 2 years
+  3: 1065, // 3 years
+  4: 1145, // 4 years
+  5: 1215, // 5 years
+  6: 1215, // 6 years
+  7: 1215, // 7+ years
 };
 
 /**

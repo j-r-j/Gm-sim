@@ -14,10 +14,7 @@ import {
   getCutSummary,
   validateCut,
 } from '../CutCalculator';
-import {
-  createPlayerContract,
-  ContractOffer,
-} from '../Contract';
+import { createPlayerContract, ContractOffer } from '../Contract';
 
 describe('CutCalculator', () => {
   const createTestContract = (
@@ -36,14 +33,7 @@ describe('CutCalculator', () => {
       voidYears: 0,
     };
 
-    return createPlayerContract(
-      'player-1',
-      'John Doe',
-      'team-1',
-      Position.QB,
-      offer,
-      signedYear
-    );
+    return createPlayerContract('player-1', 'John Doe', 'team-1', Position.QB, offer, signedYear);
   };
 
   describe('analyzeStandardCut', () => {
@@ -146,9 +136,7 @@ describe('CutCalculator', () => {
 
       const breakdown = getCutBreakdown(contract, 2024);
 
-      expect(['standard', 'post_june_1', 'designated_post_june_1']).toContain(
-        breakdown.bestOption
-      );
+      expect(['standard', 'post_june_1', 'designated_post_june_1']).toContain(breakdown.bestOption);
     });
   });
 

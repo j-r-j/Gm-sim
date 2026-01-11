@@ -4,12 +4,7 @@
  */
 
 import { Position } from '../models/player/Position';
-import {
-  PlayerContract,
-  ContractOffer,
-  ContractYear,
-  VETERAN_MINIMUM_SALARY,
-} from './Contract';
+import { PlayerContract, ContractOffer, ContractYear, VETERAN_MINIMUM_SALARY } from './Contract';
 import { getFranchiseTagValue } from './FranchiseTagSystem';
 
 /**
@@ -130,7 +125,13 @@ function getExpectedContractYears(tier: MarketTier, age: number): { min: number;
  */
 export function determineMarketTier(overallRating: number, position: Position): MarketTier {
   // Position adjustments - premium positions have higher bars
-  const isPremiumPosition = [Position.QB, Position.DE, Position.CB, Position.LT, Position.WR].includes(position);
+  const isPremiumPosition = [
+    Position.QB,
+    Position.DE,
+    Position.CB,
+    Position.LT,
+    Position.WR,
+  ].includes(position);
   const adjustedRating = isPremiumPosition ? overallRating : overallRating + 3;
 
   if (adjustedRating >= 90) return 'elite';
@@ -256,10 +257,7 @@ export function generatePlayerDemands(
 /**
  * Evaluates an offer against player demands
  */
-export function evaluateOffer(
-  offer: ContractOffer,
-  demands: PlayerDemands
-): NegotiationResult {
+export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): NegotiationResult {
   // Calculate how close each component is to demands
   const aavScore = Math.min(1, offer.totalValue / offer.years / demands.preferredAAV);
   const yearsScore = Math.min(1, offer.years / demands.preferredYears);
@@ -292,7 +290,7 @@ export function evaluateOffer(
     } else if (!meetsMinimumGuaranteed) {
       response = 'We need more guaranteed money to provide security.';
     } else {
-      response = 'The contract length doesn\'t meet our requirements.';
+      response = "The contract length doesn't meet our requirements.";
     }
 
     return {
@@ -305,15 +303,18 @@ export function evaluateOffer(
   }
 
   // Above minimums - check if close enough to accept
-  const acceptanceThreshold = demands.flexibilityLevel === 'flexible' ? 0.85
-    : demands.flexibilityLevel === 'moderate' ? 0.9
-    : 0.95;
+  const acceptanceThreshold =
+    demands.flexibilityLevel === 'flexible'
+      ? 0.85
+      : demands.flexibilityLevel === 'moderate'
+        ? 0.9
+        : 0.95;
 
   if (closeness >= acceptanceThreshold) {
     return {
       accepted: true,
       counterOffer: null,
-      playerResponse: 'We\'re happy with the terms. Let\'s finalize the deal.',
+      playerResponse: "We're happy with the terms. Let's finalize the deal.",
       negotiationRound: 1,
       closeness,
     };
@@ -334,7 +335,7 @@ export function evaluateOffer(
   return {
     accepted: false,
     counterOffer,
-    playerResponse: 'We\'re close, but need some adjustments to the terms.',
+    playerResponse: "We're close, but need some adjustments to the terms.",
     negotiationRound: 1,
     closeness,
   };
@@ -417,9 +418,7 @@ export function extendContract(
   }
 
   // Combine all years
-  const pastYears = existingContract.yearlyBreakdown.filter(
-    (y) => y.year < currentYear
-  );
+  const pastYears = existingContract.yearlyBreakdown.filter((y) => y.year < currentYear);
   const allYears = [...pastYears, ...updatedRemainingYears, ...newExtensionYears];
 
   const totalYears = existingContract.yearsRemaining + newYears;
@@ -520,7 +519,11 @@ export function getExtensionSummary(
   };
 
   const currentRemaining = existingContract.yearlyBreakdown
-    .filter((y) => y.year >= existingContract.signedYear + existingContract.totalYears - existingContract.yearsRemaining)
+    .filter(
+      (y) =>
+        y.year >=
+        existingContract.signedYear + existingContract.totalYears - existingContract.yearsRemaining
+    )
     .reduce((sum, y) => sum + y.capHit, 0);
 
   const newTotalYears = existingContract.yearsRemaining + proposedOffer.years;
@@ -529,7 +532,8 @@ export function getExtensionSummary(
 
   let capImpactDescription: string;
   if (proposedOffer.signingBonus > 0) {
-    const proratedPerYear = proposedOffer.signingBonus / (existingContract.yearsRemaining + proposedOffer.years);
+    const proratedPerYear =
+      proposedOffer.signingBonus / (existingContract.yearsRemaining + proposedOffer.years);
     capImpactDescription = `Signing bonus prorated at ${formatMoney(proratedPerYear)}/year`;
   } else {
     capImpactDescription = 'No signing bonus - straightforward cap charges';

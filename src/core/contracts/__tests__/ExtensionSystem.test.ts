@@ -13,10 +13,7 @@ import {
   calculateRecommendedOffer,
   getExtensionSummary,
 } from '../ExtensionSystem';
-import {
-  createPlayerContract,
-  ContractOffer,
-} from '../Contract';
+import { createPlayerContract, ContractOffer } from '../Contract';
 
 describe('ExtensionSystem', () => {
   const createTestContract = (years: number = 4, yearsRemaining: number = 1) => {

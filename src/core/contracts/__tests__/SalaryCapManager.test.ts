@@ -21,10 +21,7 @@ import {
   validateSalaryCapState,
   CapPenalty,
 } from '../SalaryCapManager';
-import {
-  createPlayerContract,
-  ContractOffer,
-} from '../Contract';
+import { createPlayerContract, ContractOffer } from '../Contract';
 import { DEFAULT_SALARY_CAP } from '../../models/team/TeamFinances';
 
 describe('SalaryCapManager', () => {

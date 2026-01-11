@@ -4,7 +4,11 @@
  */
 
 import { PlayerContract, getCapHitForYear, advanceContractYear } from './Contract';
-import { TeamFinances, DEFAULT_SALARY_CAP, SALARY_FLOOR_PERCENTAGE } from '../models/team/TeamFinances';
+import {
+  TeamFinances,
+  DEFAULT_SALARY_CAP,
+  SALARY_FLOOR_PERCENTAGE,
+} from '../models/team/TeamFinances';
 
 /**
  * Cap penalty from a transaction
@@ -85,10 +89,7 @@ export function createSalaryCapState(
 /**
  * Adds a contract to cap tracking
  */
-export function addContract(
-  state: SalaryCapState,
-  contract: PlayerContract
-): SalaryCapState {
+export function addContract(state: SalaryCapState, contract: PlayerContract): SalaryCapState {
   const newContracts = new Map(state.contracts);
   newContracts.set(contract.id, contract);
 
@@ -101,10 +102,7 @@ export function addContract(
 /**
  * Removes a contract from cap tracking
  */
-export function removeContract(
-  state: SalaryCapState,
-  contractId: string
-): SalaryCapState {
+export function removeContract(state: SalaryCapState, contractId: string): SalaryCapState {
   const newContracts = new Map(state.contracts);
   newContracts.delete(contractId);
 
@@ -117,10 +115,7 @@ export function removeContract(
 /**
  * Adds a cap penalty
  */
-export function addCapPenalty(
-  state: SalaryCapState,
-  penalty: CapPenalty
-): SalaryCapState {
+export function addCapPenalty(state: SalaryCapState, penalty: CapPenalty): SalaryCapState {
   return {
     ...state,
     penalties: [...state.penalties, penalty],
@@ -172,9 +167,7 @@ export function getTop51CapHits(state: SalaryCapState, year: number): number {
  * Calculates dead money for a year
  */
 export function calculateDeadMoney(state: SalaryCapState, year: number): number {
-  return state.penalties
-    .filter((p) => p.year === year)
-    .reduce((sum, p) => sum + p.amount, 0);
+  return state.penalties.filter((p) => p.year === year).reduce((sum, p) => sum + p.amount, 0);
 }
 
 /**
@@ -258,10 +251,7 @@ export function calculateRollover(state: SalaryCapState): number {
 /**
  * Advances to next year with rollover
  */
-export function advanceCapYear(
-  state: SalaryCapState,
-  newBaselineCap: number
-): SalaryCapState {
+export function advanceCapYear(state: SalaryCapState, newBaselineCap: number): SalaryCapState {
   // Calculate rollover from unused cap
   const rollover = calculateRollover(state);
 
@@ -317,10 +307,7 @@ export function getContractsByCapHit(
 /**
  * Gets expiring contracts for a year
  */
-export function getExpiringContracts(
-  state: SalaryCapState,
-  year?: number
-): PlayerContract[] {
+export function getExpiringContracts(state: SalaryCapState, year?: number): PlayerContract[] {
   const targetYear = year ?? state.currentYear;
   const expiring: PlayerContract[] = [];
 
@@ -337,10 +324,7 @@ export function getExpiringContracts(
 /**
  * Checks if team can afford a new contract
  */
-export function canAffordContract(
-  state: SalaryCapState,
-  firstYearCapHit: number
-): boolean {
+export function canAffordContract(state: SalaryCapState, firstYearCapHit: number): boolean {
   const status = getCapStatus(state);
   return status.capSpace >= firstYearCapHit;
 }
@@ -457,10 +441,7 @@ export function validateSalaryCapState(state: SalaryCapState): boolean {
 /**
  * Updates team finances from cap state
  */
-export function syncTeamFinances(
-  finances: TeamFinances,
-  capState: SalaryCapState
-): TeamFinances {
+export function syncTeamFinances(finances: TeamFinances, capState: SalaryCapState): TeamFinances {
   const status = getCapStatus(capState);
   const projections = projectCap(capState, 3);
 

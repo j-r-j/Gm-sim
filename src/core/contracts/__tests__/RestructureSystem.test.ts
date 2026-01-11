@@ -12,11 +12,7 @@ import {
   getRestructureOptions,
   projectRestructureImpact,
 } from '../RestructureSystem';
-import {
-  createPlayerContract,
-  ContractOffer,
-  getCapHitForYear,
-} from '../Contract';
+import { createPlayerContract, ContractOffer, getCapHitForYear } from '../Contract';
 
 describe('RestructureSystem', () => {
   const createTestContract = (baseSalary: number = 20000, years: number = 4) => {
@@ -31,14 +27,7 @@ describe('RestructureSystem', () => {
       voidYears: 0,
     };
 
-    return createPlayerContract(
-      'player-1',
-      'John Doe',
-      'team-1',
-      Position.QB,
-      offer,
-      2024
-    );
+    return createPlayerContract('player-1', 'John Doe', 'team-1', Position.QB, offer, 2024);
   };
 
   describe('getMaxRestructureAmount', () => {

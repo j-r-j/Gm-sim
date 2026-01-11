@@ -4,11 +4,7 @@
  */
 
 import { Position } from '../models/player/Position';
-import {
-  PlayerContract,
-  ContractOffer,
-  createPlayerContract,
-} from './Contract';
+import { PlayerContract, ContractOffer, createPlayerContract } from './Contract';
 
 /**
  * Franchise tag type
@@ -51,28 +47,28 @@ export interface TeamTagStatus {
  */
 export const FRANCHISE_TAG_VALUES: Record<Position, number> = {
   // Offense - Premium positions
-  [Position.QB]: 32400,   // $32.4M
-  [Position.WR]: 21000,   // $21.0M
-  [Position.LT]: 19800,   // $19.8M
-  [Position.RT]: 18000,   // $18.0M
-  [Position.TE]: 14200,   // $14.2M
-  [Position.RB]: 10400,   // $10.4M
-  [Position.LG]: 16500,   // $16.5M
-  [Position.RG]: 16500,   // $16.5M
-  [Position.C]: 14500,    // $14.5M
+  [Position.QB]: 32400, // $32.4M
+  [Position.WR]: 21000, // $21.0M
+  [Position.LT]: 19800, // $19.8M
+  [Position.RT]: 18000, // $18.0M
+  [Position.TE]: 14200, // $14.2M
+  [Position.RB]: 10400, // $10.4M
+  [Position.LG]: 16500, // $16.5M
+  [Position.RG]: 16500, // $16.5M
+  [Position.C]: 14500, // $14.5M
 
   // Defense
-  [Position.DE]: 23000,   // $23.0M
-  [Position.DT]: 18500,   // $18.5M
-  [Position.OLB]: 20400,  // $20.4M
-  [Position.ILB]: 16800,  // $16.8M
-  [Position.CB]: 20000,   // $20.0M
-  [Position.FS]: 15200,   // $15.2M
-  [Position.SS]: 15200,   // $15.2M
+  [Position.DE]: 23000, // $23.0M
+  [Position.DT]: 18500, // $18.5M
+  [Position.OLB]: 20400, // $20.4M
+  [Position.ILB]: 16800, // $16.8M
+  [Position.CB]: 20000, // $20.0M
+  [Position.FS]: 15200, // $15.2M
+  [Position.SS]: 15200, // $15.2M
 
   // Special Teams
-  [Position.K]: 5700,     // $5.7M
-  [Position.P]: 5300,     // $5.3M
+  [Position.K]: 5700, // $5.7M
+  [Position.P]: 5300, // $5.3M
 };
 
 /**
@@ -83,7 +79,7 @@ const TRANSITION_TAG_MULTIPLIER = 0.85;
 /**
  * Second consecutive tag is 120% of first
  */
-const SECOND_TAG_MULTIPLIER = 1.20;
+const SECOND_TAG_MULTIPLIER = 1.2;
 
 /**
  * Third consecutive tag is 144% of first (1.2 * 1.2)
@@ -378,10 +374,7 @@ export interface TagDifferences {
 /**
  * Gets the differences between tag types
  */
-export function getTagDifferences(
-  position: Position,
-  year: number = 2024
-): TagDifferences[] {
+export function getTagDifferences(position: Position, year: number = 2024): TagDifferences[] {
   const franchiseValue = getFranchiseTagValue(position, 1, year);
   const transitionValue = getTransitionTagValue(position, year);
 

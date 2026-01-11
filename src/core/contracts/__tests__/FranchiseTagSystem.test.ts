@@ -110,13 +110,7 @@ describe('FranchiseTagSystem', () => {
     it('should successfully apply exclusive franchise tag', () => {
       const status = createTeamTagStatus('team-1', 2024);
 
-      const result = applyFranchiseTag(
-        status,
-        'player-1',
-        'John Doe',
-        Position.QB,
-        'exclusive'
-      );
+      const result = applyFranchiseTag(status, 'player-1', 'John Doe', Position.QB, 'exclusive');
 
       expect(result.success).toBe(true);
       expect(result.tag).not.toBeNull();
@@ -146,13 +140,7 @@ describe('FranchiseTagSystem', () => {
     it('should successfully apply transition tag', () => {
       const status = createTeamTagStatus('team-1', 2024);
 
-      const result = applyFranchiseTag(
-        status,
-        'player-1',
-        'John Doe',
-        Position.CB,
-        'transition'
-      );
+      const result = applyFranchiseTag(status, 'player-1', 'John Doe', Position.CB, 'transition');
 
       expect(result.success).toBe(true);
       expect(result.tag!.type).toBe('transition');
@@ -164,13 +152,7 @@ describe('FranchiseTagSystem', () => {
       let status = createTeamTagStatus('team-1', 2024);
       status = { ...status, hasUsedFranchiseTag: true };
 
-      const result = applyFranchiseTag(
-        status,
-        'player-1',
-        'John Doe',
-        Position.QB,
-        'exclusive'
-      );
+      const result = applyFranchiseTag(status, 'player-1', 'John Doe', Position.QB, 'exclusive');
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Already used');

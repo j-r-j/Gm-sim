@@ -71,10 +71,7 @@ export interface CutResult {
 /**
  * Analyzes a standard (pre-June 1) cut
  */
-export function analyzeStandardCut(
-  contract: PlayerContract,
-  currentYear: number
-): CutAnalysis {
+export function analyzeStandardCut(contract: PlayerContract, currentYear: number): CutAnalysis {
   const currentCapHit = getCapHitForYear(contract, currentYear);
   const deadMoney = calculateDeadMoney(contract, currentYear);
   const capSavings = calculateCapSavings(contract, currentYear);
@@ -110,10 +107,7 @@ export function analyzeStandardCut(
 /**
  * Analyzes a post-June 1 cut
  */
-export function analyzePostJune1Cut(
-  contract: PlayerContract,
-  currentYear: number
-): CutAnalysis {
+export function analyzePostJune1Cut(contract: PlayerContract, currentYear: number): CutAnalysis {
   const currentCapHit = getCapHitForYear(contract, currentYear);
   const { year1DeadMoney, year2DeadMoney } = calculatePostJune1DeadMoney(contract, currentYear);
 
@@ -181,10 +175,7 @@ export function analyzeDesignatedPostJune1Cut(
 /**
  * Gets full cut breakdown for a contract
  */
-export function getCutBreakdown(
-  contract: PlayerContract,
-  currentYear: number
-): CutBreakdown {
+export function getCutBreakdown(contract: PlayerContract, currentYear: number): CutBreakdown {
   const standardCut = analyzeStandardCut(contract, currentYear);
   const postJune1Cut = analyzePostJune1Cut(contract, currentYear);
   const designatedPostJune1Cut = analyzeDesignatedPostJune1Cut(contract, currentYear);
@@ -194,7 +185,11 @@ export function getCutBreakdown(
   let bestOptionReason: string;
 
   // Compare cap savings and advisability
-  if (!standardCut.isAdvisable && !postJune1Cut.isAdvisable && !designatedPostJune1Cut.isAdvisable) {
+  if (
+    !standardCut.isAdvisable &&
+    !postJune1Cut.isAdvisable &&
+    !designatedPostJune1Cut.isAdvisable
+  ) {
     bestOption = 'standard';
     bestOptionReason = 'No cut option creates positive cap savings - keep player or restructure';
   } else if (standardCut.capSavings >= postJune1Cut.capSavings && standardCut.isAdvisable) {
@@ -298,11 +293,12 @@ export function executeCut(
     };
   }
 
-  const analysis = cutType === 'standard'
-    ? analyzeStandardCut(contract, currentYear)
-    : cutType === 'post_june_1'
-      ? analyzePostJune1Cut(contract, currentYear)
-      : analyzeDesignatedPostJune1Cut(contract, currentYear);
+  const analysis =
+    cutType === 'standard'
+      ? analyzeStandardCut(contract, currentYear)
+      : cutType === 'post_june_1'
+        ? analyzePostJune1Cut(contract, currentYear)
+        : analyzeDesignatedPostJune1Cut(contract, currentYear);
 
   const penalties = createCutPenalties(contract, currentYear, cutType);
 
@@ -348,11 +344,12 @@ export function rankCutCandidates(
     if (contract.status !== 'active') continue;
 
     const breakdown = getCutBreakdown(contract, currentYear);
-    const bestAnalysis = breakdown.bestOption === 'standard'
-      ? breakdown.standardCut
-      : breakdown.bestOption === 'post_june_1'
-        ? breakdown.postJune1Cut
-        : breakdown.designatedPostJune1Cut;
+    const bestAnalysis =
+      breakdown.bestOption === 'standard'
+        ? breakdown.standardCut
+        : breakdown.bestOption === 'post_june_1'
+          ? breakdown.postJune1Cut
+          : breakdown.designatedPostJune1Cut;
 
     if (bestAnalysis.capSavings < minSavings) continue;
 
@@ -380,11 +377,12 @@ export function getCutSummary(breakdown: CutBreakdown): {
   deadMoneyDescription: string;
   timingAdvice: string;
 } {
-  const bestAnalysis = breakdown.bestOption === 'standard'
-    ? breakdown.standardCut
-    : breakdown.bestOption === 'post_june_1'
-      ? breakdown.postJune1Cut
-      : breakdown.designatedPostJune1Cut;
+  const bestAnalysis =
+    breakdown.bestOption === 'standard'
+      ? breakdown.standardCut
+      : breakdown.bestOption === 'post_june_1'
+        ? breakdown.postJune1Cut
+        : breakdown.designatedPostJune1Cut;
 
   let recommendedAction: string;
   if (!bestAnalysis.isAdvisable) {
