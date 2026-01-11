@@ -5,11 +5,7 @@
 
 import { Position } from '../models/player/Position';
 import { ContractOffer } from '../contracts/Contract';
-import {
-  FreeAgencyState,
-  FreeAgent,
-  TeamFABudget,
-} from './FreeAgencyManager';
+import { FreeAgencyState, FreeAgent, TeamFABudget } from './FreeAgencyManager';
 import { MarketValueResult } from './MarketValueCalculator';
 import { LegalTamperingState, convertVerbalAgreementsToOffers } from './LegalTamperingPhase';
 
@@ -372,7 +368,7 @@ export function simulateTeamBid(
   }
 
   if (needLevel === 'critical') {
-    premium += 0.10;
+    premium += 0.1;
   } else if (needLevel === 'moderate') {
     premium += 0.05;
   }
@@ -400,10 +396,7 @@ export function simulateTeamBid(
 /**
  * Advances the frenzy by specified minutes
  */
-export function advanceFrenzyTime(
-  state: Day1FrenzyState,
-  minutes: number
-): Day1FrenzyState {
+export function advanceFrenzyTime(state: Day1FrenzyState, minutes: number): Day1FrenzyState {
   return {
     ...state,
     elapsedMinutes: state.elapsedMinutes + minutes,
@@ -414,20 +407,24 @@ export function advanceFrenzyTime(
  * Gets active bidding wars
  */
 export function getActiveBiddingWars(state: Day1FrenzyState): BiddingWar[] {
-  return Array.from(state.biddingWars.values()).filter(w => w.isActive);
+  return Array.from(state.biddingWars.values()).filter((w) => w.isActive);
 }
 
 /**
  * Gets team's frenzy activity
  */
-export function getTeamFrenzyActivity(state: Day1FrenzyState, teamId: string): {
+export function getTeamFrenzyActivity(
+  state: Day1FrenzyState,
+  teamId: string
+): {
   signings: number;
   activeBidding: number;
   totalSpent: number;
 } {
-  const signings = state.signings.filter(s => s.teamId === teamId);
-  const activeBidding = getActiveBiddingWars(state)
-    .filter(w => w.participatingTeams.includes(teamId)).length;
+  const signings = state.signings.filter((s) => s.teamId === teamId);
+  const activeBidding = getActiveBiddingWars(state).filter((w) =>
+    w.participatingTeams.includes(teamId)
+  ).length;
   const totalSpent = signings.reduce((sum, s) => sum + s.contractValue / s.contractYears, 0);
 
   return {
@@ -477,7 +474,7 @@ export function getFrenzySummary(state: Day1FrenzyState): FrenzySummary {
   const recentSignings = state.signings
     .slice(-10)
     .reverse()
-    .map(s => ({
+    .map((s) => ({
       playerName: s.playerName,
       position: s.position,
       teamId: s.teamId,

@@ -6,10 +6,7 @@
 
 import { Position } from '../models/player/Position';
 import { ContractOffer, VETERAN_MINIMUM_SALARY } from '../contracts/Contract';
-import {
-  FreeAgent,
-  TeamFABudget,
-} from './FreeAgencyManager';
+import { FreeAgent, TeamFABudget } from './FreeAgencyManager';
 import { MarketValueResult, ProductionTier } from './MarketValueCalculator';
 
 /**
@@ -359,7 +356,7 @@ export function getBargainsByPosition(
   freeAgents: Map<string, FreeAgent>,
   position: Position
 ): BargainOpportunity[] {
-  return state.bargainOpportunities.filter(opp => {
+  return state.bargainOpportunities.filter((opp) => {
     const fa = freeAgents.get(opp.freeAgentId);
     return fa && fa.position === position;
   });
@@ -373,10 +370,17 @@ export function getRemainingQualityPlayers(
   marketValues: Map<string, MarketValueResult>,
   minTier: ProductionTier = 'quality'
 ): FreeAgent[] {
-  const tierOrder: ProductionTier[] = ['elite', 'pro_bowl', 'starter', 'quality', 'depth', 'minimum'];
+  const tierOrder: ProductionTier[] = [
+    'elite',
+    'pro_bowl',
+    'starter',
+    'quality',
+    'depth',
+    'minimum',
+  ];
   const minTierIndex = tierOrder.indexOf(minTier);
 
-  return freeAgents.filter(fa => {
+  return freeAgents.filter((fa) => {
     if (fa.status !== 'available') return false;
 
     const marketValue = marketValues.get(fa.playerId);
@@ -403,8 +407,8 @@ export function simulateTeamTrickleActivity(
 
   // Check for bargain opportunities at need positions
   for (const need of teamBudget.priorityPositions) {
-    const positionBargains = bargains.filter(b => {
-      const fa = availablePlayers.find(p => p.id === b.freeAgentId);
+    const positionBargains = bargains.filter((b) => {
+      const fa = availablePlayers.find((p) => p.id === b.freeAgentId);
       return fa && fa.position === need && b.discountPercentage >= 15;
     });
 
@@ -423,8 +427,8 @@ export function simulateTeamTrickleActivity(
     if (teamBudget.remaining >= minSalary) {
       // Find any available player at need position
       for (const need of teamBudget.priorityPositions) {
-        const available = availablePlayers.find(p =>
-          p.position === need && p.status === 'available'
+        const available = availablePlayers.find(
+          (p) => p.position === need && p.status === 'available'
         );
         if (available) {
           return { targetPlayerId: available.id, offerType: 'minimum' };
@@ -465,21 +469,20 @@ export function getTricklePhaseSummary(
     return `$${value}K`;
   };
 
-  const avgDiscount = state.bargainOpportunities.length > 0
-    ? state.bargainOpportunities.reduce((sum, b) => sum + b.discountPercentage, 0) /
-      state.bargainOpportunities.length
-    : 0;
+  const avgDiscount =
+    state.bargainOpportunities.length > 0
+      ? state.bargainOpportunities.reduce((sum, b) => sum + b.discountPercentage, 0) /
+        state.bargainOpportunities.length
+      : 0;
 
-  const topBargains = state.bargainOpportunities
-    .slice(0, 5)
-    .map(b => {
-      const fa = freeAgents.get(b.freeAgentId);
-      return {
-        playerName: fa?.playerName || 'Unknown',
-        discount: `${b.discountPercentage.toFixed(0)}%`,
-        askingPrice: formatMoney(b.currentAskingPrice),
-      };
-    });
+  const topBargains = state.bargainOpportunities.slice(0, 5).map((b) => {
+    const fa = freeAgents.get(b.freeAgentId);
+    return {
+      playerName: fa?.playerName || 'Unknown',
+      discount: `${b.discountPercentage.toFixed(0)}%`,
+      askingPrice: formatMoney(b.currentAskingPrice),
+    };
+  });
 
   const subPhaseDescriptions: Record<TrickleSubPhase, string> = {
     early: 'Early Trickle: Quality players still available',

@@ -115,16 +115,21 @@ describe('FreeAgencyManager', () => {
     it('adds a free agent to the pool', () => {
       let state = createFreeAgencyState(2025, ['team1']);
 
-      state = addFreeAgent(state, {
-        playerId: 'player1',
-        playerName: 'John Doe',
-        position: Position.QB,
-        age: 28,
-        experience: 5,
-        overallRating: 85,
-        previousTeamId: 'team1',
-        previousContractAAV: 25000,
-      }, 'UFA', 30000);
+      state = addFreeAgent(
+        state,
+        {
+          playerId: 'player1',
+          playerName: 'John Doe',
+          position: Position.QB,
+          age: 28,
+          experience: 5,
+          overallRating: 85,
+          previousTeamId: 'team1',
+          previousContractAAV: 25000,
+        },
+        'UFA',
+        30000
+      );
 
       expect(state.freeAgents.size).toBe(1);
       const fa = Array.from(state.freeAgents.values())[0];
@@ -179,16 +184,21 @@ describe('FreeAgencyManager', () => {
       state = advancePhase(state); // legal_tampering
       state = advancePhase(state); // day1_frenzy
 
-      state = addFreeAgent(state, {
-        playerId: 'player1',
-        playerName: 'John Doe',
-        position: Position.QB,
-        age: 28,
-        experience: 5,
-        overallRating: 85,
-        previousTeamId: 'team1',
-        previousContractAAV: 25000,
-      }, 'UFA', 30000);
+      state = addFreeAgent(
+        state,
+        {
+          playerId: 'player1',
+          playerName: 'John Doe',
+          position: Position.QB,
+          age: 28,
+          experience: 5,
+          overallRating: 85,
+          previousTeamId: 'team1',
+          previousContractAAV: 25000,
+        },
+        'UFA',
+        30000
+      );
 
       const faId = Array.from(state.freeAgents.keys())[0];
 
@@ -219,16 +229,21 @@ describe('FreeAgencyManager', () => {
       let state = createFreeAgencyState(2025, ['team1', 'team2']);
       state = advancePhase(state); // legal_tampering
 
-      state = addFreeAgent(state, {
-        playerId: 'player1',
-        playerName: 'John Doe',
-        position: Position.QB,
-        age: 28,
-        experience: 5,
-        overallRating: 85,
-        previousTeamId: 'team1',
-        previousContractAAV: 25000,
-      }, 'UFA', 30000);
+      state = addFreeAgent(
+        state,
+        {
+          playerId: 'player1',
+          playerName: 'John Doe',
+          position: Position.QB,
+          age: 28,
+          experience: 5,
+          overallRating: 85,
+          previousTeamId: 'team1',
+          previousContractAAV: 25000,
+        },
+        'UFA',
+        30000
+      );
 
       const faId = Array.from(state.freeAgents.keys())[0];
 
@@ -498,7 +513,14 @@ describe('Day1FrenzySimulator', () => {
         voidYears: 0,
       };
 
-      state = initiateBiddingWar(state, 'fa1', ['team1', 'team2', 'team3'], initialOffer, 'team1', config);
+      state = initiateBiddingWar(
+        state,
+        'fa1',
+        ['team1', 'team2', 'team3'],
+        initialOffer,
+        'team1',
+        config
+      );
       expect(state.biddingWars.size).toBe(1);
 
       const activeWars = getActiveBiddingWars(state);
@@ -735,7 +757,7 @@ describe('CompensatoryPickCalculator', () => {
       });
 
       const entitlements = calculateTeamEntitlements(state, 'team1');
-      const unmatchedLosses = entitlements.filter(e => !e.matchedWithGain);
+      const unmatchedLosses = entitlements.filter((e) => !e.matchedWithGain);
 
       // Should be offset - no unmatched losses
       expect(unmatchedLosses.length).toBe(0);
@@ -818,17 +840,20 @@ describe('AIFreeAgencyLogic', () => {
       };
 
       const conditions = createDefaultMarketConditions(2025, 255000);
-      const marketValue = calculateMarketValue({
-        playerId: 'player1',
-        position: Position.DE,
-        age: 27,
-        experience: 4,
-        overallRating: 80,
-        recentPerformance: 78,
-        durability: 90,
-        primeYearsRemaining: 3,
-        trajectory: 'peak',
-      }, conditions);
+      const marketValue = calculateMarketValue(
+        {
+          playerId: 'player1',
+          position: Position.DE,
+          age: 27,
+          experience: 4,
+          overallRating: 80,
+          recentPerformance: 78,
+          durability: 90,
+          primeYearsRemaining: 3,
+          trajectory: 'peak',
+        },
+        conditions
+      );
 
       const decision = evaluateFreeAgent(freeAgent, marketValue, needs, profile, budget);
 

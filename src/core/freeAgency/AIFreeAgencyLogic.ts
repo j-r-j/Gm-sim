@@ -6,11 +6,7 @@
 
 import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../models/player/Position';
 import { ContractOffer } from '../contracts/Contract';
-import {
-  FreeAgencyState,
-  FreeAgent,
-  TeamFABudget,
-} from './FreeAgencyManager';
+import { FreeAgencyState, FreeAgent, TeamFABudget } from './FreeAgencyManager';
 import { MarketValueResult } from './MarketValueCalculator';
 
 /**
@@ -150,13 +146,14 @@ export function createDefaultAIProfile(
   }
 
   // Adjust risk tolerance and value premium based on strategy
-  const strategySettings: Record<FAStrategy, { risk: number; premium: number; maxYears: number }> = {
-    aggressive: { risk: 0.7, premium: 1.15, maxYears: 5 },
-    balanced: { risk: 0.5, premium: 1.0, maxYears: 4 },
-    value: { risk: 0.3, premium: 0.9, maxYears: 3 },
-    rebuild: { risk: 0.6, premium: 0.85, maxYears: 2 },
-    contend: { risk: 0.8, premium: 1.25, maxYears: 4 },
-  };
+  const strategySettings: Record<FAStrategy, { risk: number; premium: number; maxYears: number }> =
+    {
+      aggressive: { risk: 0.7, premium: 1.15, maxYears: 5 },
+      balanced: { risk: 0.5, premium: 1.0, maxYears: 4 },
+      value: { risk: 0.3, premium: 0.9, maxYears: 3 },
+      rebuild: { risk: 0.6, premium: 0.85, maxYears: 2 },
+      contend: { risk: 0.8, premium: 1.25, maxYears: 4 },
+    };
 
   const settings = strategySettings[strategy];
 
@@ -174,7 +171,9 @@ export function createDefaultAIProfile(
 /**
  * Gets preferred age tiers based on strategy
  */
-function getPreferredAgeTiers(strategy: FAStrategy): Array<{ minAge: number; maxAge: number; preference: number }> {
+function getPreferredAgeTiers(
+  strategy: FAStrategy
+): Array<{ minAge: number; maxAge: number; preference: number }> {
   switch (strategy) {
     case 'contend':
       return [
@@ -229,11 +228,12 @@ export function analyzeRosterComposition(
   for (const [position, posPlayers] of byPosition) {
     positionCounts.set(position, posPlayers.length);
 
-    const starters = posPlayers.filter(p => p.isStarter);
-    const backups = posPlayers.filter(p => !p.isStarter);
+    const starters = posPlayers.filter((p) => p.isStarter);
+    const backups = posPlayers.filter((p) => !p.isStarter);
 
     if (starters.length > 0) {
-      const avgStarterRating = starters.reduce((sum, p) => sum + p.overallRating, 0) / starters.length;
+      const avgStarterRating =
+        starters.reduce((sum, p) => sum + p.overallRating, 0) / starters.length;
       starterQuality.set(position, avgStarterRating);
     }
 
@@ -435,9 +435,12 @@ export function evaluateFreeAgent(
 
   // Determine offer parameters
   const positionMultiplier = profile.positionValueMultipliers.get(freeAgent.position) || 1.0;
-  const needMultiplier = positionNeed === 'critical' ? 1.1 : positionNeed === 'moderate' ? 1.0 : 0.9;
+  const needMultiplier =
+    positionNeed === 'critical' ? 1.1 : positionNeed === 'moderate' ? 1.0 : 0.9;
 
-  const offerAAV = Math.round(marketValue.projectedAAV * profile.valuePremium * positionMultiplier * needMultiplier);
+  const offerAAV = Math.round(
+    marketValue.projectedAAV * profile.valuePremium * positionMultiplier * needMultiplier
+  );
   const years = Math.min(marketValue.projectedYears, profile.maxContractYears);
   const totalValue = offerAAV * years;
   const guaranteedMoney = Math.round(totalValue * (profile.riskTolerance * 0.4 + 0.2));
@@ -455,7 +458,10 @@ export function evaluateFreeAgent(
 
   // Determine priority
   let priority: AIOfferDecision['priority'] = 'medium';
-  if (positionNeed === 'critical' && marketValue.tier === 'starter' || marketValue.tier === 'pro_bowl') {
+  if (
+    (positionNeed === 'critical' && marketValue.tier === 'starter') ||
+    marketValue.tier === 'pro_bowl'
+  ) {
     priority = 'high';
   } else if (positionNeed === 'depth' || marketValue.tier === 'depth') {
     priority = 'low';
@@ -484,7 +490,7 @@ export function generateDailyTargets(
   const targets: AISigningTarget[] = [];
 
   // Filter to available free agents
-  const available = freeAgents.filter(fa => fa.status === 'available');
+  const available = freeAgents.filter((fa) => fa.status === 'available');
 
   // Evaluate each free agent
   for (const fa of available) {
@@ -497,23 +503,23 @@ export function generateDailyTargets(
     const offer = decision.offer;
     const offerAAV = offer.totalValue / offer.years;
 
-    const willingness = decision.priority === 'high' ? 0.9 :
-                        decision.priority === 'medium' ? 0.6 : 0.3;
+    const willingness =
+      decision.priority === 'high' ? 0.9 : decision.priority === 'medium' ? 0.6 : 0.3;
 
     // Find alternative players at same position
     const alternatives = available
-      .filter(other =>
-        other.id !== fa.id &&
-        other.position === fa.position &&
-        (marketValues.get(other.playerId)?.projectedAAV || 0) < offerAAV
+      .filter(
+        (other) =>
+          other.id !== fa.id &&
+          other.position === fa.position &&
+          (marketValues.get(other.playerId)?.projectedAAV || 0) < offerAAV
       )
       .slice(0, 3)
-      .map(a => a.id);
+      .map((a) => a.id);
 
     targets.push({
       freeAgentId: fa.id,
-      priority: decision.priority === 'high' ? 10 :
-                decision.priority === 'medium' ? 6 : 3,
+      priority: decision.priority === 'high' ? 10 : decision.priority === 'medium' ? 6 : 3,
       maxOffer: decision.offer,
       willingness,
       alternativePlayers: alternatives,
@@ -592,8 +598,9 @@ export function simulateTeamFADay(
     if (!fa) continue;
 
     // Check for competition
-    const pendingOffers = Array.from(faState.offers.values())
-      .filter(o => o.freeAgentId === target.freeAgentId && o.status === 'pending');
+    const pendingOffers = Array.from(faState.offers.values()).filter(
+      (o) => o.freeAgentId === target.freeAgentId && o.status === 'pending'
+    );
 
     const adjustedOffer = adjustOfferForCompetition(
       target.maxOffer,
@@ -645,9 +652,7 @@ export function getAIDecisionSummary(
     contend: 'Making win-now moves',
   };
 
-  const primaryNeeds = needs.priorityPositions
-    .slice(0, 3)
-    .map(p => p.toString());
+  const primaryNeeds = needs.priorityPositions.slice(0, 3).map((p) => p.toString());
 
   const budgetUsedPercent = (budget.spent / budget.totalBudget) * 100;
   let budgetStatus: string;

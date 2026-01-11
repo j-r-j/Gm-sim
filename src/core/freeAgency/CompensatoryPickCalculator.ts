@@ -221,11 +221,7 @@ export function determineCompPickRound(aav: number): CompensatoryRound | null {
  * Calculates net value for comp pick consideration
  * Factors in AAV, age, and production
  */
-export function calculateCompValue(
-  aav: number,
-  age: number,
-  overallRating: number
-): number {
+export function calculateCompValue(aav: number, age: number, overallRating: number): number {
   let value = aav;
 
   // Age adjustments
@@ -256,9 +252,7 @@ export function getTeamQualifyingDepartures(
   state: CompPickCalculatorState,
   teamId: string
 ): FADeparture[] {
-  return state.departures.filter(
-    d => d.previousTeamId === teamId && d.qualifyingContract
-  );
+  return state.departures.filter((d) => d.previousTeamId === teamId && d.qualifyingContract);
 }
 
 /**
@@ -268,9 +262,7 @@ export function getTeamQualifyingAcquisitions(
   state: CompPickCalculatorState,
   teamId: string
 ): FAAcquisition[] {
-  return state.acquisitions.filter(
-    a => a.newTeamId === teamId && a.qualifyingContract
-  );
+  return state.acquisitions.filter((a) => a.newTeamId === teamId && a.qualifyingContract);
 }
 
 /**
@@ -284,14 +276,16 @@ export function calculateTeamEntitlements(
   const acquisitions = getTeamQualifyingAcquisitions(state, teamId);
 
   // Sort both by value (highest first)
-  departures.sort((a, b) =>
-    calculateCompValue(b.contractAAV, b.age, b.overallRating) -
-    calculateCompValue(a.contractAAV, a.age, a.overallRating)
+  departures.sort(
+    (a, b) =>
+      calculateCompValue(b.contractAAV, b.age, b.overallRating) -
+      calculateCompValue(a.contractAAV, a.age, a.overallRating)
   );
 
-  acquisitions.sort((a, b) =>
-    calculateCompValue(b.contractAAV, b.age, b.overallRating) -
-    calculateCompValue(a.contractAAV, a.age, a.overallRating)
+  acquisitions.sort(
+    (a, b) =>
+      calculateCompValue(b.contractAAV, b.age, b.overallRating) -
+      calculateCompValue(a.contractAAV, a.age, a.overallRating)
   );
 
   const entitlements: CompPickEntitlement[] = [];
@@ -471,7 +465,7 @@ export function getTeamAwardedPicks(
   state: CompPickCalculatorState,
   teamId: string
 ): CompensatoryPickAward[] {
-  return state.awardedPicks.filter(p => p.teamId === teamId);
+  return state.awardedPicks.filter((p) => p.teamId === teamId);
 }
 
 /**
@@ -481,20 +475,17 @@ export function getPicksByRound(
   state: CompPickCalculatorState,
   round: CompensatoryRound
 ): CompensatoryPickAward[] {
-  return state.awardedPicks.filter(p => p.round === round);
+  return state.awardedPicks.filter((p) => p.round === round);
 }
 
 /**
  * Estimates comp pick value based on current departures (pre-calculation)
  */
-export function estimateCompPicksForDeparture(
-  departure: FADeparture
-): { round: CompensatoryRound | null; likelihood: 'likely' | 'possible' | 'unlikely' } {
-  const value = calculateCompValue(
-    departure.contractAAV,
-    departure.age,
-    departure.overallRating
-  );
+export function estimateCompPicksForDeparture(departure: FADeparture): {
+  round: CompensatoryRound | null;
+  likelihood: 'likely' | 'possible' | 'unlikely';
+} {
+  const value = calculateCompValue(departure.contractAAV, departure.age, departure.overallRating);
 
   const round = determineCompPickRound(value);
 
@@ -544,14 +535,14 @@ export function getCompPickSummary(state: CompPickCalculatorState): CompPickSumm
 
   // Top losses
   const qualifyingDepartures = state.departures
-    .filter(d => d.qualifyingContract)
+    .filter((d) => d.qualifyingContract)
     .sort((a, b) => b.contractAAV - a.contractAAV)
     .slice(0, 10);
 
-  const topLosses = qualifyingDepartures.map(d => {
+  const topLosses = qualifyingDepartures.map((d) => {
     const entitlement = Array.from(state.teamSummaries.values())
-      .flatMap(s => s.entitlements)
-      .find(e => e.lostPlayerId === d.playerId);
+      .flatMap((s) => s.entitlements)
+      .find((e) => e.lostPlayerId === d.playerId);
 
     return {
       playerName: d.playerName,
@@ -563,8 +554,8 @@ export function getCompPickSummary(state: CompPickCalculatorState): CompPickSumm
 
   return {
     year: state.year,
-    totalDepartures: state.departures.filter(d => d.qualifyingContract).length,
-    totalAcquisitions: state.acquisitions.filter(a => a.qualifyingContract).length,
+    totalDepartures: state.departures.filter((d) => d.qualifyingContract).length,
+    totalAcquisitions: state.acquisitions.filter((a) => a.qualifyingContract).length,
     totalPicksAwarded: state.awardedPicks.length,
     picksByRound,
     topLosses,

@@ -4,7 +4,12 @@
  */
 
 import { Position } from '../models/player/Position';
-import { PlayerContract, ContractOffer, createPlayerContract, ContractType } from '../contracts/Contract';
+import {
+  PlayerContract,
+  ContractOffer,
+  createPlayerContract,
+  ContractType,
+} from '../contracts/Contract';
 
 /**
  * Free agent classification
@@ -124,10 +129,7 @@ export interface TeamFABudget {
 /**
  * Creates initial free agency state
  */
-export function createFreeAgencyState(
-  currentYear: number,
-  teamIds: string[]
-): FreeAgencyState {
+export function createFreeAgencyState(currentYear: number, teamIds: string[]): FreeAgencyState {
   const teamBudgets = new Map<string, TeamFABudget>();
 
   for (const teamId of teamIds) {
@@ -167,12 +169,12 @@ export function createDefaultTeamBudget(teamId: string): TeamFABudget {
 export function createDefaultDeadlines(_year: number): FreeAgencyDeadlines {
   // NFL calendar approximations (days from year start)
   return {
-    legalTamperingStart: 68,  // ~March 9
-    freeAgencyStart: 70,       // ~March 11 (league year)
-    rfaTenderDeadline: 60,     // Before FA starts
+    legalTamperingStart: 68, // ~March 9
+    freeAgencyStart: 70, // ~March 11 (league year)
+    rfaTenderDeadline: 60, // Before FA starts
     rfaOfferSheetDeadline: 130, // ~May 10
-    rfaMatchDeadline: 137,      // 7 days after offer sheet
-    trainingCampStart: 200,     // ~July 19
+    rfaMatchDeadline: 137, // 7 days after offer sheet
+    trainingCampStart: 200, // ~July 19
   };
 }
 
@@ -239,21 +241,21 @@ export function removeFreeAgent(state: FreeAgencyState, freeAgentId: string): Fr
  * Gets all free agents of a specific type
  */
 export function getFreeAgentsByType(state: FreeAgencyState, type: FreeAgentType): FreeAgent[] {
-  return Array.from(state.freeAgents.values()).filter(fa => fa.type === type);
+  return Array.from(state.freeAgents.values()).filter((fa) => fa.type === type);
 }
 
 /**
  * Gets all free agents at a specific position
  */
 export function getFreeAgentsByPosition(state: FreeAgencyState, position: Position): FreeAgent[] {
-  return Array.from(state.freeAgents.values()).filter(fa => fa.position === position);
+  return Array.from(state.freeAgents.values()).filter((fa) => fa.position === position);
 }
 
 /**
  * Gets available free agents (not signed)
  */
 export function getAvailableFreeAgents(state: FreeAgencyState): FreeAgent[] {
-  return Array.from(state.freeAgents.values()).filter(fa => fa.status === 'available');
+  return Array.from(state.freeAgents.values()).filter((fa) => fa.status === 'available');
 }
 
 /**
@@ -261,7 +263,7 @@ export function getAvailableFreeAgents(state: FreeAgencyState): FreeAgent[] {
  */
 export function getTopFreeAgents(state: FreeAgencyState, limit: number = 25): FreeAgent[] {
   return Array.from(state.freeAgents.values())
-    .filter(fa => fa.status === 'available')
+    .filter((fa) => fa.status === 'available')
     .sort((a, b) => b.marketValue - a.marketValue)
     .slice(0, limit);
 }
@@ -382,10 +384,7 @@ export function submitOffer(
 /**
  * Accepts an offer and signs the player
  */
-export function acceptOffer(
-  state: FreeAgencyState,
-  offerId: string
-): FreeAgencyState {
+export function acceptOffer(state: FreeAgencyState, offerId: string): FreeAgencyState {
   const offer = state.offers.get(offerId);
   if (!offer || offer.status !== 'pending') {
     return state;
@@ -488,8 +487,9 @@ export function rejectOffer(state: FreeAgencyState, offerId: string): FreeAgency
   // Check if player has any remaining pending offers
   const freeAgent = state.freeAgents.get(offer.freeAgentId);
   if (freeAgent) {
-    const hasPendingOffers = Array.from(newOffers.values())
-      .some(o => o.freeAgentId === freeAgent.id && o.status === 'pending');
+    const hasPendingOffers = Array.from(newOffers.values()).some(
+      (o) => o.freeAgentId === freeAgent.id && o.status === 'pending'
+    );
 
     if (!hasPendingOffers) {
       const updatedFreeAgent: FreeAgent = {
@@ -555,7 +555,7 @@ export function setTeamInterest(
   };
 
   // Remove existing interest from this team
-  const filteredInterest = freeAgent.interest.filter(i => i.teamId !== teamId);
+  const filteredInterest = freeAgent.interest.filter((i) => i.teamId !== teamId);
 
   const updatedFreeAgent: FreeAgent = {
     ...freeAgent,
@@ -615,42 +615,36 @@ export function updateTeamBudget(
  * Gets team's pending offers
  */
 export function getTeamOffers(state: FreeAgencyState, teamId: string): FreeAgentOffer[] {
-  return Array.from(state.offers.values())
-    .filter(offer => offer.teamId === teamId);
+  return Array.from(state.offers.values()).filter((offer) => offer.teamId === teamId);
 }
 
 /**
  * Gets pending offers for a free agent
  */
 export function getFreeAgentOffers(state: FreeAgencyState, freeAgentId: string): FreeAgentOffer[] {
-  return Array.from(state.offers.values())
-    .filter(offer => offer.freeAgentId === freeAgentId && offer.status === 'pending');
+  return Array.from(state.offers.values()).filter(
+    (offer) => offer.freeAgentId === freeAgentId && offer.status === 'pending'
+  );
 }
 
 /**
  * Gets recent events
  */
 export function getRecentEvents(state: FreeAgencyState, limit: number = 50): FreeAgencyEvent[] {
-  return state.events
-    .slice(-limit)
-    .reverse();
+  return state.events.slice(-limit).reverse();
 }
 
 /**
  * Gets signings for a team
  */
 export function getTeamSignings(state: FreeAgencyState, teamId: string): FreeAgent[] {
-  return Array.from(state.freeAgents.values())
-    .filter(fa => fa.signedTeamId === teamId);
+  return Array.from(state.freeAgents.values()).filter((fa) => fa.signedTeamId === teamId);
 }
 
 /**
  * Classifies a player's free agent type based on experience
  */
-export function classifyFreeAgentType(
-  experience: number,
-  wasDrafted: boolean
-): FreeAgentType {
+export function classifyFreeAgentType(experience: number, wasDrafted: boolean): FreeAgentType {
   // ERFA: Less than 3 accrued seasons
   if (experience < 3 && wasDrafted) {
     return 'ERFA';
@@ -735,14 +729,14 @@ export function getFreeAgencySummary(state: FreeAgencyState): FreeAgencySummary 
   };
 
   const allFreeAgents = Array.from(state.freeAgents.values());
-  const available = allFreeAgents.filter(fa => fa.status === 'available');
-  const signed = allFreeAgents.filter(fa => fa.status === 'signed');
-  const pendingOffers = Array.from(state.offers.values()).filter(o => o.status === 'pending');
+  const available = allFreeAgents.filter((fa) => fa.status === 'available');
+  const signed = allFreeAgents.filter((fa) => fa.status === 'signed');
+  const pendingOffers = Array.from(state.offers.values()).filter((o) => o.status === 'pending');
 
   const topAvailable = available
     .sort((a, b) => b.marketValue - a.marketValue)
     .slice(0, 5)
-    .map(fa => ({
+    .map((fa) => ({
       name: fa.playerName,
       position: fa.position,
       marketValue: formatMoney(fa.marketValue),

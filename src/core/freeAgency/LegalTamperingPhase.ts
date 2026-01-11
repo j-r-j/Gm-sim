@@ -5,11 +5,7 @@
  */
 
 import { ContractOffer } from '../contracts/Contract';
-import {
-  FreeAgencyState,
-  FreeAgent,
-  submitOffer,
-} from './FreeAgencyManager';
+import { FreeAgencyState, FreeAgent, submitOffer } from './FreeAgencyManager';
 import { MarketValueResult } from './MarketValueCalculator';
 
 /**
@@ -207,7 +203,7 @@ export function getTeamVerbalAgreements(
   state: LegalTamperingState,
   teamId: string
 ): VerbalAgreement[] {
-  return state.verbalAgreements.filter(va => va.teamId === teamId);
+  return state.verbalAgreements.filter((va) => va.teamId === teamId);
 }
 
 /**
@@ -217,17 +213,14 @@ export function getFreeAgentVerbalAgreements(
   state: LegalTamperingState,
   freeAgentId: string
 ): VerbalAgreement[] {
-  return state.verbalAgreements.filter(va => va.freeAgentId === freeAgentId);
+  return state.verbalAgreements.filter((va) => va.freeAgentId === freeAgentId);
 }
 
 /**
  * Checks if a free agent has a verbal agreement
  */
-export function hasVerbalAgreement(
-  state: LegalTamperingState,
-  freeAgentId: string
-): boolean {
-  return state.verbalAgreements.some(va => va.freeAgentId === freeAgentId);
+export function hasVerbalAgreement(state: LegalTamperingState, freeAgentId: string): boolean {
+  return state.verbalAgreements.some((va) => va.freeAgentId === freeAgentId);
 }
 
 /**
@@ -252,8 +245,7 @@ export function getTeamNegotiations(
   state: LegalTamperingState,
   teamId: string
 ): TamperingNegotiation[] {
-  return Array.from(state.negotiationsInProgress.values())
-    .filter(n => n.teamId === teamId);
+  return Array.from(state.negotiationsInProgress.values()).filter((n) => n.teamId === teamId);
 }
 
 /**
@@ -263,8 +255,9 @@ export function getFreeAgentNegotiations(
   state: LegalTamperingState,
   freeAgentId: string
 ): TamperingNegotiation[] {
-  return Array.from(state.negotiationsInProgress.values())
-    .filter(n => n.freeAgentId === freeAgentId);
+  return Array.from(state.negotiationsInProgress.values()).filter(
+    (n) => n.freeAgentId === freeAgentId
+  );
 }
 
 /**
@@ -354,7 +347,7 @@ export function getTamperingSummary(
   // Get recent agreements
   const recentAgreements = state.verbalAgreements
     .slice(-5)
-    .map(va => {
+    .map((va) => {
       const fa = freeAgents.get(va.freeAgentId);
       return {
         playerName: fa?.playerName || 'Unknown',
@@ -383,8 +376,9 @@ export function convertVerbalAgreementsToOffers(
   let updatedState = faState;
 
   // Sort by priority to process first agreements first
-  const sortedAgreements = [...tamperingState.verbalAgreements]
-    .sort((a, b) => a.priority - b.priority);
+  const sortedAgreements = [...tamperingState.verbalAgreements].sort(
+    (a, b) => a.priority - b.priority
+  );
 
   for (const agreement of sortedAgreements) {
     const freeAgent = updatedState.freeAgents.get(agreement.freeAgentId);

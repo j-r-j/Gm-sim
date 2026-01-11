@@ -4,7 +4,12 @@
  */
 
 import { Position } from '../models/player/Position';
-import { ContractOffer, createPlayerContract, PlayerContract, ContractType } from '../contracts/Contract';
+import {
+  ContractOffer,
+  createPlayerContract,
+  PlayerContract,
+  ContractType,
+} from '../contracts/Contract';
 
 /**
  * RFA tender level
@@ -75,9 +80,9 @@ export interface RFADeadlines {
  * Tender value percentages relative to cap
  */
 const TENDER_PERCENTAGES: Record<TenderLevel, number> = {
-  first_round: 0.085,      // ~$20M on $255M cap
-  second_round: 0.05,      // ~$12M
-  original_round: 0.03,    // ~$8M
+  first_round: 0.085, // ~$20M on $255M cap
+  second_round: 0.05, // ~$12M
+  original_round: 0.03, // ~$8M
   right_of_first_refusal: 0.02, // ~$5M
 };
 
@@ -100,19 +105,16 @@ export function createRFASystemState(currentYear: number): RFASystemState {
  */
 export function createDefaultRFADeadlines(): RFADeadlines {
   return {
-    tenderDeadline: 60,        // ~March 1
-    offerSheetDeadline: 130,   // ~May 10
-    matchingPeriodDays: 7,     // 7 days to match
+    tenderDeadline: 60, // ~March 1
+    offerSheetDeadline: 130, // ~May 10
+    matchingPeriodDays: 7, // 7 days to match
   };
 }
 
 /**
  * Calculates tender value for a level
  */
-export function calculateTenderValue(
-  level: TenderLevel,
-  salaryCap: number
-): number {
+export function calculateTenderValue(level: TenderLevel, salaryCap: number): number {
   const percentage = TENDER_PERCENTAGES[level];
   return Math.round(salaryCap * percentage);
 }
@@ -179,9 +181,7 @@ export function submitTender(
     ? 795 // ERFA minimum
     : calculateTenderValue(level as TenderLevel, salaryCap);
 
-  const draftCompensation = isERFA
-    ? null
-    : getTenderDraftCompensation(level as TenderLevel);
+  const draftCompensation = isERFA ? null : getTenderDraftCompensation(level as TenderLevel);
 
   const tender: TenderOffer = {
     id: `tender-${playerId}-${state.currentYear}`,
@@ -238,8 +238,9 @@ export function getPlayerTender(state: RFASystemState, playerId: string): Tender
  * Gets all active tenders for a team
  */
 export function getTeamTenders(state: RFASystemState, teamId: string): TenderOffer[] {
-  return Array.from(state.tenders.values())
-    .filter(t => t.teamId === teamId && t.status === 'active');
+  return Array.from(state.tenders.values()).filter(
+    (t) => t.teamId === teamId && t.status === 'active'
+  );
 }
 
 /**
@@ -318,7 +319,10 @@ export function matchOfferSheet(state: RFASystemState, offerSheetId: string): RF
 /**
  * Original team declines to match (player signs with offering team)
  */
-export function declineToMatch(state: RFASystemState, offerSheetId: string): {
+export function declineToMatch(
+  state: RFASystemState,
+  offerSheetId: string
+): {
   state: RFASystemState;
   draftCompensation: string | null;
 } {
@@ -359,32 +363,23 @@ export function declineToMatch(state: RFASystemState, offerSheetId: string): {
 /**
  * Gets pending offer sheets for a team's RFAs
  */
-export function getPendingOfferSheetsForTeam(
-  state: RFASystemState,
-  teamId: string
-): OfferSheet[] {
-  return Array.from(state.offerSheets.values())
-    .filter(os => os.originalTeamId === teamId && os.status === 'pending');
+export function getPendingOfferSheetsForTeam(state: RFASystemState, teamId: string): OfferSheet[] {
+  return Array.from(state.offerSheets.values()).filter(
+    (os) => os.originalTeamId === teamId && os.status === 'pending'
+  );
 }
 
 /**
  * Gets offer sheets submitted by a team
  */
-export function getOfferSheetsSubmittedByTeam(
-  state: RFASystemState,
-  teamId: string
-): OfferSheet[] {
-  return Array.from(state.offerSheets.values())
-    .filter(os => os.offeringTeamId === teamId);
+export function getOfferSheetsSubmittedByTeam(state: RFASystemState, teamId: string): OfferSheet[] {
+  return Array.from(state.offerSheets.values()).filter((os) => os.offeringTeamId === teamId);
 }
 
 /**
  * Checks if offer sheet deadline has passed
  */
-export function isOfferSheetDeadlinePassed(
-  state: RFASystemState,
-  currentDay: number
-): boolean {
+export function isOfferSheetDeadlinePassed(state: RFASystemState, currentDay: number): boolean {
   return currentDay > state.deadlines.offerSheetDeadline;
 }
 
@@ -508,9 +503,7 @@ export function analyzeOfferSheetMatch(
     '2nd round pick': 10000,
     'Original draft round pick': 5000,
   };
-  const pickValue = tender.draftCompensation
-    ? draftPickValues[tender.draftCompensation] || 0
-    : 0;
+  const pickValue = tender.draftCompensation ? draftPickValues[tender.draftCompensation] || 0 : 0;
 
   const alternativeCost = replacementAAV + pickValue;
 
@@ -562,11 +555,11 @@ export interface RFASummary {
 }
 
 export function getRFASummary(state: RFASystemState): RFASummary {
-  const activeTenders = Array.from(state.tenders.values())
-    .filter(t => t.status === 'active');
+  const activeTenders = Array.from(state.tenders.values()).filter((t) => t.status === 'active');
 
-  const pendingOfferSheets = Array.from(state.offerSheets.values())
-    .filter(os => os.status === 'pending');
+  const pendingOfferSheets = Array.from(state.offerSheets.values()).filter(
+    (os) => os.status === 'pending'
+  );
 
   // Count tenders by level
   const tendersByLevel: Record<string, number> = {};
@@ -577,9 +570,7 @@ export function getRFASummary(state: RFASystemState): RFASummary {
   // Upcoming deadlines
   const upcomingDeadlines: string[] = [];
   for (const os of pendingOfferSheets) {
-    const daysLeft = Math.ceil(
-      (os.matchDeadline - Date.now()) / (24 * 60 * 60 * 1000)
-    );
+    const daysLeft = Math.ceil((os.matchDeadline - Date.now()) / (24 * 60 * 60 * 1000));
     if (daysLeft <= 3) {
       upcomingDeadlines.push(`Match deadline in ${daysLeft} days`);
     }

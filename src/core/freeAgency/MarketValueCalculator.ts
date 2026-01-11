@@ -65,21 +65,21 @@ export interface MarketValueResult {
 const POSITION_VALUE_MULTIPLIERS: Record<Position, number> = {
   [Position.QB]: 1.0,
   [Position.DE]: 0.95,
-  [Position.CB]: 0.90,
+  [Position.CB]: 0.9,
   [Position.LT]: 0.88,
   [Position.WR]: 0.85,
   [Position.DT]: 0.82,
-  [Position.OLB]: 0.80,
+  [Position.OLB]: 0.8,
   [Position.FS]: 0.78,
   [Position.SS]: 0.78,
   [Position.TE]: 0.75,
   [Position.ILB]: 0.72,
-  [Position.RB]: 0.70,
+  [Position.RB]: 0.7,
   [Position.LG]: 0.68,
   [Position.RG]: 0.68,
   [Position.C]: 0.65,
   [Position.RT]: 0.85,
-  [Position.K]: 0.40,
+  [Position.K]: 0.4,
   [Position.P]: 0.35,
 };
 
@@ -215,12 +215,11 @@ export function updateMarketConditions(
 /**
  * Determines production tier from rating
  */
-export function determineProductionTier(
-  overallRating: number,
-  position: Position
-): ProductionTier {
+export function determineProductionTier(overallRating: number, position: Position): ProductionTier {
   // Premium positions have higher standards
-  const isPremium = [Position.QB, Position.DE, Position.CB, Position.LT, Position.WR].includes(position);
+  const isPremium = [Position.QB, Position.DE, Position.CB, Position.LT, Position.WR].includes(
+    position
+  );
   const adjustedRating = isPremium ? overallRating : overallRating + 3;
 
   if (adjustedRating >= 92) return 'elite';
@@ -401,7 +400,8 @@ export function calculateMarketValue(
   const finalValue = Math.round(durabilityAdjustedValue * trajectoryAdjustment);
 
   // Ensure minimum salary floor
-  const minSalary = VETERAN_MINIMUM_SALARY[Math.min(production.experience, 7)] ?? VETERAN_MINIMUM_SALARY[7];
+  const minSalary =
+    VETERAN_MINIMUM_SALARY[Math.min(production.experience, 7)] ?? VETERAN_MINIMUM_SALARY[7];
   const projectedAAV = Math.max(finalValue, minSalary);
 
   // Calculate contract structure
@@ -440,9 +440,8 @@ export function calculateMarketValue(
     reasoningParts.push('declining trajectory');
   }
 
-  const reasoning = reasoningParts.length > 0
-    ? reasoningParts.join(', ')
-    : 'Standard market valuation';
+  const reasoning =
+    reasoningParts.length > 0 ? reasoningParts.join(', ') : 'Standard market valuation';
 
   return {
     baseValue,
@@ -575,11 +574,27 @@ export function compareOfferToMarket(
  */
 export function validatePlayerProduction(production: PlayerProduction): boolean {
   if (!production.playerId || typeof production.playerId !== 'string') return false;
-  if (typeof production.age !== 'number' || production.age < 20 || production.age > 45) return false;
+  if (typeof production.age !== 'number' || production.age < 20 || production.age > 45)
+    return false;
   if (typeof production.experience !== 'number' || production.experience < 0) return false;
-  if (typeof production.overallRating !== 'number' || production.overallRating < 0 || production.overallRating > 100) return false;
-  if (typeof production.recentPerformance !== 'number' || production.recentPerformance < 0 || production.recentPerformance > 100) return false;
-  if (typeof production.durability !== 'number' || production.durability < 0 || production.durability > 100) return false;
+  if (
+    typeof production.overallRating !== 'number' ||
+    production.overallRating < 0 ||
+    production.overallRating > 100
+  )
+    return false;
+  if (
+    typeof production.recentPerformance !== 'number' ||
+    production.recentPerformance < 0 ||
+    production.recentPerformance > 100
+  )
+    return false;
+  if (
+    typeof production.durability !== 'number' ||
+    production.durability < 0 ||
+    production.durability > 100
+  )
+    return false;
 
   return true;
 }
