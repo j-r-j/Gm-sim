@@ -287,10 +287,7 @@ describe('Personality Effects', () => {
     });
 
     it('should generate qualitative description', () => {
-      const coaches = [
-        createTestCoach('1', 'playersCoach'),
-        createTestCoach('2', 'playersCoach'),
-      ];
+      const coaches = [createTestCoach('1', 'playersCoach'), createTestCoach('2', 'playersCoach')];
 
       const result = calculateStaffChemistry(coaches);
 
@@ -301,10 +298,7 @@ describe('Personality Effects', () => {
     });
 
     it('should not expose raw chemistry numbers in description', () => {
-      const coaches = [
-        createTestCoach('1', 'analytical'),
-        createTestCoach('2', 'conservative'),
-      ];
+      const coaches = [createTestCoach('1', 'analytical'), createTestCoach('2', 'conservative')];
 
       const result = calculateStaffChemistry(coaches);
 
@@ -315,10 +309,7 @@ describe('Personality Effects', () => {
 
   describe('calculateStaffChemistryImpact', () => {
     it('should return positive modifiers for good chemistry', () => {
-      const coaches = [
-        createTestCoach('1', 'playersCoach'),
-        createTestCoach('2', 'playersCoach'),
-      ];
+      const coaches = [createTestCoach('1', 'playersCoach'), createTestCoach('2', 'playersCoach')];
 
       const chemistry = calculateStaffChemistry(coaches);
       const impact = calculateStaffChemistryImpact(chemistry);

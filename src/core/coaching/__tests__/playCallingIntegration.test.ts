@@ -205,7 +205,11 @@ describe('Play Calling Integration', () => {
 
       const result = selectOffensivePlayWithTendencies(context);
 
-      expect(result.situationalOverrides.some((o) => o.toLowerCase().includes('snow') || o.toLowerCase().includes('wind'))).toBe(true);
+      expect(
+        result.situationalOverrides.some(
+          (o) => o.toLowerCase().includes('snow') || o.toLowerCase().includes('wind')
+        )
+      ).toBe(true);
     });
   });
 

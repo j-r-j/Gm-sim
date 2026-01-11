@@ -43,7 +43,9 @@ function createTestGameState(overrides: Partial<GameStateContext> = {}): GameSta
 }
 
 // Helper to create tendency generation factors
-function createTestFactors(overrides: Partial<TendencyGenerationFactors> = {}): TendencyGenerationFactors {
+function createTestFactors(
+  overrides: Partial<TendencyGenerationFactors> = {}
+): TendencyGenerationFactors {
   return {
     treeName: 'belichick',
     treePhilosophy: {
@@ -281,7 +283,12 @@ describe('Tendency Profile Manager', () => {
       const probs = calculatePlayCallProbabilities(adjusted);
 
       const total =
-        probs.run + probs.passShort + probs.passMedium + probs.passDeep + probs.playAction + probs.screen;
+        probs.run +
+        probs.passShort +
+        probs.passMedium +
+        probs.passDeep +
+        probs.playAction +
+        probs.screen;
 
       // Allow some tolerance due to calculation methods
       expect(total).toBeGreaterThan(0.9);

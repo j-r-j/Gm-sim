@@ -515,10 +515,7 @@ export function updateTeamChemistry(
  * Gets the average chemistry between a coach and all their players
  * Returns qualitative description only
  */
-export function getAverageTeamChemistry(
-  coach: Coach,
-  playerIds: string[]
-): ChemistryDescription {
+export function getAverageTeamChemistry(coach: Coach, playerIds: string[]): ChemistryDescription {
   if (playerIds.length === 0) {
     return {
       level: 'neutral',

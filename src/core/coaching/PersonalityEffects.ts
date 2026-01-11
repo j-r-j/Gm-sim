@@ -191,7 +191,7 @@ const SYNERGY_DESCRIPTIONS: Record<SynergyType, string[]> = {
   complementary_skills: [
     'Skills that enhance each other',
     'Balanced expertise across areas',
-    'Filling gaps in each other\'s knowledge',
+    "Filling gaps in each other's knowledge",
   ],
   mentorship: [
     'Veteran guidance benefiting younger coach',
@@ -441,14 +441,16 @@ export function calculateStaffChemistry(coaches: Coach[]): StaffChemistryResult 
       const conflict = detectConflict(coach1, coach2);
       if (conflict) {
         conflicts.push(conflict);
-        totalChemistry -= conflict.severity === 'severe' ? 3 : conflict.severity === 'moderate' ? 2 : 1;
+        totalChemistry -=
+          conflict.severity === 'severe' ? 3 : conflict.severity === 'moderate' ? 2 : 1;
       }
 
       // Check for synergies
       const synergy = detectSynergy(coach1, coach2);
       if (synergy) {
         synergies.push(synergy);
-        totalChemistry += synergy.strength === 'strong' ? 3 : synergy.strength === 'moderate' ? 2 : 1;
+        totalChemistry +=
+          synergy.strength === 'strong' ? 3 : synergy.strength === 'moderate' ? 2 : 1;
       }
 
       // Add base compatibility
@@ -585,9 +587,7 @@ export function calculateStaffChemistryImpact(chemistry: StaffChemistryResult): 
 /**
  * Suggests coaching hires that would improve staff chemistry
  */
-export function suggestCompatiblePersonalities(
-  currentStaff: Coach[]
-): PersonalityType[] {
+export function suggestCompatiblePersonalities(currentStaff: Coach[]): PersonalityType[] {
   if (currentStaff.length === 0) {
     return ['analytical', 'playersCoach']; // Good foundation personalities
   }
@@ -664,5 +664,12 @@ export function wouldCreateConflict(
  * Validates personality type
  */
 export function isValidPersonalityType(type: string): type is PersonalityType {
-  return ['analytical', 'aggressive', 'conservative', 'innovative', 'oldSchool', 'playersCoach'].includes(type);
+  return [
+    'analytical',
+    'aggressive',
+    'conservative',
+    'innovative',
+    'oldSchool',
+    'playersCoach',
+  ].includes(type);
 }

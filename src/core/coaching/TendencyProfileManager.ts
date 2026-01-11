@@ -725,7 +725,7 @@ function getDefensiveTendencyDescription(tendencies: DefensiveTendencies): Tende
   if (tendencies.blitzRate >= 40 && tendencies.manCoverageRate >= 55) {
     overall = 'Attacking, high-risk high-reward defense';
   } else if (tendencies.blitzRate <= 20 && tendencies.manCoverageRate <= 40) {
-    overall = 'Bend-but-don\'t-break mentality';
+    overall = "Bend-but-don't-break mentality";
   } else {
     overall = 'Adaptable defensive system';
   }

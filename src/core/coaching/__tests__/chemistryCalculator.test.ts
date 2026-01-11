@@ -25,7 +25,13 @@ import { createDefaultSchemeFits } from '../../models/player/SchemeFit';
 // Helper to create a test coach
 function createTestCoach(
   id: string,
-  personality: 'analytical' | 'aggressive' | 'conservative' | 'innovative' | 'oldSchool' | 'playersCoach',
+  personality:
+    | 'analytical'
+    | 'aggressive'
+    | 'conservative'
+    | 'innovative'
+    | 'oldSchool'
+    | 'playersCoach',
   scheme: 'westCoast' | 'powerRun' | null = null
 ): Coach {
   const coach = createDefaultCoach(id, 'Test', 'Coach', 'headCoach');

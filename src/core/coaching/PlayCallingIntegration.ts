@@ -333,9 +333,7 @@ export function selectDefensivePlayWithTendencies(
     situationalOverrides.push('Third and long situation');
   }
   if (Math.abs(gameState.scoreDifferential) >= 14) {
-    situationalOverrides.push(
-      gameState.scoreDifferential > 0 ? 'Protecting lead' : 'Need stops'
-    );
+    situationalOverrides.push(gameState.scoreDifferential > 0 ? 'Protecting lead' : 'Need stops');
   }
 
   // Calculate probabilities
@@ -557,7 +555,10 @@ export function getPlayTypeDistribution(
 
   // Play action
   distribution.set('play_action_short', probabilities.playAction * 0.5);
-  distribution.set('play_action_deep', probabilities.playAction * 0.5 + probabilities.passDeep * 0.4);
+  distribution.set(
+    'play_action_deep',
+    probabilities.playAction * 0.5 + probabilities.passDeep * 0.4
+  );
 
   // Edge cases
   distribution.set('qb_sneak', 0.01);
