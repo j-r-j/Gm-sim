@@ -274,11 +274,13 @@ export function generateLeaguePlayers(): Player[] {
 }
 
 /**
- * Generates a draft class (pool of prospects).
+ * Generates a simple draft class (pool of prospects) - basic version.
+ * For full draft class with college programs, combine data, etc., use the draft module.
  * @param size - Number of prospects to generate (default 300)
  * @returns Array of draft-eligible players
+ * @deprecated Use generateDraftClass from the draft module for full features
  */
-export function generateDraftClass(size: number = 300): Player[] {
+export function generateSimpleDraftClass(size: number = 300): Player[] {
   const prospects: Player[] = [];
 
   // Distribution of skill tiers in a draft class

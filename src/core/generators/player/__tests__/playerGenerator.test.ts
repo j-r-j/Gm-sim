@@ -11,8 +11,9 @@ import {
   generatePlayer,
   generateRoster,
   generateLeaguePlayers,
-  generateDraftClass,
+  generateSimpleDraftClass,
 } from '../PlayerGenerator';
+import { Player } from '../../../models/player/Player';
 
 describe('PlayerGenerator', () => {
   describe('generatePlayer', () => {
@@ -225,19 +226,19 @@ describe('PlayerGenerator', () => {
     });
   });
 
-  describe('generateDraftClass', () => {
+  describe('generateSimpleDraftClass', () => {
     it('should generate default 300 prospects', () => {
-      const prospects = generateDraftClass();
+      const prospects = generateSimpleDraftClass();
       expect(prospects.length).toBe(300);
     });
 
     it('should respect custom size', () => {
-      const prospects = generateDraftClass(150);
+      const prospects = generateSimpleDraftClass(150);
       expect(prospects.length).toBe(150);
     });
 
     it('should generate valid draft-eligible players', () => {
-      const prospects = generateDraftClass(50);
+      const prospects = generateSimpleDraftClass(50);
 
       for (const prospect of prospects) {
         expect(validatePlayer(prospect)).toBe(true);
@@ -248,14 +249,14 @@ describe('PlayerGenerator', () => {
     });
 
     it('should have a pyramid of skill levels', () => {
-      const prospects = generateDraftClass(300);
+      const prospects = generateSimpleDraftClass(300);
 
-      const eliteCount = prospects.filter((p) => getAverageSkill(p) >= 70).length;
-      const starterCount = prospects.filter((p) => {
+      const eliteCount = prospects.filter((p: Player) => getAverageSkill(p) >= 70).length;
+      const starterCount = prospects.filter((p: Player) => {
         const avg = getAverageSkill(p);
         return avg >= 55 && avg < 70;
       }).length;
-      const fringeCount = prospects.filter((p) => getAverageSkill(p) < 45).length;
+      const fringeCount = prospects.filter((p: Player) => getAverageSkill(p) < 45).length;
 
       // Elite should be rare
       expect(eliteCount).toBeLessThan(50);
@@ -265,9 +266,9 @@ describe('PlayerGenerator', () => {
     });
 
     it('should have all positions represented', () => {
-      const prospects = generateDraftClass(300);
+      const prospects = generateSimpleDraftClass(300);
 
-      const positions = new Set(prospects.map((p) => p.position));
+      const positions = new Set(prospects.map((p: Player) => p.position));
 
       // Should have most positions
       expect(positions.size).toBeGreaterThan(15);
