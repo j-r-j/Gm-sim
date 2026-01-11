@@ -14,7 +14,6 @@ import { TeamGameState } from '../engine/TeamGameState';
 import {
   StatisticsTracker,
   TeamGameStats,
-  PlayerGameStats,
 } from './StatisticsTracker';
 import {
   BoxScore,
@@ -23,11 +22,10 @@ import {
   TeamInfo,
   PlayerInfo,
   GameInfo,
-  createEmptyBoxScore,
 } from './BoxScoreGenerator';
 import { GameConfig, setupGame, GameSetupResult, quickSetup } from './GameSetup';
 import { Team } from '../models/team/Team';
-import { Player, getPlayerFullName } from '../models/player/Player';
+import { Player } from '../models/player/Player';
 import { Coach } from '../models/staff/Coach';
 
 /**

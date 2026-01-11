@@ -5,7 +5,7 @@
  */
 
 import { PlayResult } from '../engine/PlayResolver';
-import { PlayType, PlayOutcome } from '../engine/OutcomeTables';
+import { PlayType } from '../engine/OutcomeTables';
 
 /**
  * Passing statistics for a player
@@ -419,7 +419,7 @@ export class StatisticsTracker {
     play: PlayResult,
     offenseStats: TeamGameStats,
     defenseStats: TeamGameStats,
-    context: { down: number; distance: number; fieldPosition: number }
+    _context: { down: number; distance: number; fieldPosition: number }
   ): void {
     const qbStats = this.getOrCreatePlayerStats(offenseStats, play.primaryOffensivePlayer);
     qbStats.snapsPlayed++;

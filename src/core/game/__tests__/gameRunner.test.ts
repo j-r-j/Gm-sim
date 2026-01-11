@@ -8,6 +8,7 @@ import { TeamGameState } from '../../engine/TeamGameState';
 import { Player } from '../../models/player/Player';
 import { Position } from '../../models/player/Position';
 import { createDefaultOffensiveTendencies, createDefaultDefensiveTendencies } from '../../models/staff/CoordinatorTendencies';
+import { createDefaultCoach } from '../../models/staff/Coach';
 
 // Helper function to create a test player
 function createTestPlayer(id: string, position: Position, firstName: string, lastName: string): Player {
@@ -142,8 +143,8 @@ function createTestTeamGameState(teamId: string, teamName: string): TeamGameStat
     },
     allPlayers,
     coaches: {
-      offensiveCoordinator: { id: 'oc-' + teamId, playerChemistry: {} } as any,
-      defensiveCoordinator: { id: 'dc-' + teamId, playerChemistry: {} } as any,
+      offensiveCoordinator: createDefaultCoach('oc-' + teamId, 'Offensive', 'Coordinator', 'offensiveCoordinator'),
+      defensiveCoordinator: createDefaultCoach('dc-' + teamId, 'Defensive', 'Coordinator', 'defensiveCoordinator'),
       positionCoaches: new Map(),
     },
     offensiveScheme: 'westCoast',

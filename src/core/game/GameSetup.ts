@@ -502,7 +502,7 @@ function getTeamScheme(
  */
 function calculateTeamWeeklyVariances(
   lineup: StartingLineup,
-  allPlayers: Map<string, Player>
+  _allPlayers: Map<string, Player>
 ): Map<string, number> {
   const variances = new Map<string, number>();
 
@@ -669,7 +669,6 @@ export function quickSetup(
   awayTeamState: TeamGameState,
   config?: Partial<{ week: number; isPlayoff: boolean }>
 ): GameSetupResult {
-  const week = config?.week ?? 1;
   const isPlayoff = config?.isPlayoff ?? false;
 
   return {

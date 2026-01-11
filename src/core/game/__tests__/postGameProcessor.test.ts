@@ -9,13 +9,11 @@ import {
   createEmptyCareerStats,
   updateCareerStats,
   PlayerCareerStats,
-  NewsEvent,
 } from '../PostGameProcessor';
-import { GameResult, NotableEvent } from '../GameRunner';
+import { GameResult } from '../GameRunner';
 import {
   createEmptyTeamGameStats,
   createEmptyPlayerGameStats,
-  PlayerGameStats,
 } from '../StatisticsTracker';
 import { createEmptyBoxScore } from '../BoxScoreGenerator';
 
@@ -139,9 +137,9 @@ describe('PostGameProcessor', () => {
 
       const updates = processGameResult(result);
 
-      const injuredPlayerUpdate = updates.playerUpdates.find((u) => u.playerId === 'wr-1');
       // Note: Since wr-1 wasn't in playerStats, no update is created
-      // The injury would be tracked separately
+      // The injury would be tracked separately via updates.injuries
+      expect(updates.playerUpdates.find((u) => u.playerId === 'wr-1')).toBeUndefined();
 
       // Check news events for injury
       const injuryNews = updates.newsEvents.find((n) => n.type === 'injury');

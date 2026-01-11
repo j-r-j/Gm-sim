@@ -5,7 +5,7 @@
  */
 
 import { GameResult, GameInjury, NotableEvent } from './GameRunner';
-import { PlayerGameStats, TeamGameStats } from './StatisticsTracker';
+import { PlayerGameStats } from './StatisticsTracker';
 
 /**
  * Injury update for a player
