@@ -747,32 +747,32 @@ export const DEFENSIVE_SCHEME_DEFINITIONS: Record<DefensiveScheme, DefensiveSche
 /**
  * Gets an offensive scheme definition by ID
  */
-export function getOffensiveSchemeDefinition(
-  scheme: OffensiveScheme
-): OffensiveSchemeDefinition {
+export function getOffensiveSchemeDefinition(scheme: OffensiveScheme): OffensiveSchemeDefinition {
   return OFFENSIVE_SCHEME_DEFINITIONS[scheme];
 }
 
 /**
  * Gets a defensive scheme definition by ID
  */
-export function getDefensiveSchemeDefinition(
-  scheme: DefensiveScheme
-): DefensiveSchemeDefinition {
+export function getDefensiveSchemeDefinition(scheme: DefensiveScheme): DefensiveSchemeDefinition {
   return DEFENSIVE_SCHEME_DEFINITIONS[scheme];
 }
 
 /**
  * Checks if a scheme is offensive
  */
-export function isOffensiveScheme(scheme: OffensiveScheme | DefensiveScheme): scheme is OffensiveScheme {
+export function isOffensiveScheme(
+  scheme: OffensiveScheme | DefensiveScheme
+): scheme is OffensiveScheme {
   return scheme in OFFENSIVE_SCHEME_DEFINITIONS;
 }
 
 /**
  * Checks if a scheme is defensive
  */
-export function isDefensiveScheme(scheme: OffensiveScheme | DefensiveScheme): scheme is DefensiveScheme {
+export function isDefensiveScheme(
+  scheme: OffensiveScheme | DefensiveScheme
+): scheme is DefensiveScheme {
   return scheme in DEFENSIVE_SCHEME_DEFINITIONS;
 }
 

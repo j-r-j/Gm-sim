@@ -102,9 +102,7 @@ export function calculateRawSchemeFitScore(
     : DEFENSIVE_SCHEME_DEFINITIONS[scheme as DefensiveScheme];
 
   // Find position requirements
-  const positionReq = definition.requirements.find(
-    (req) => req.position === player.position
-  );
+  const positionReq = definition.requirements.find((req) => req.position === player.position);
 
   // If position not relevant to scheme, neutral fit
   if (!positionReq) {
@@ -371,16 +369,8 @@ export function compareSchemeFits(
   difference: number;
   betterScheme: OffensiveScheme | DefensiveScheme;
 } {
-  const fit1 = calculateSchemeFitScore(
-    player,
-    scheme1,
-    getYearsInScheme(scheme1, history)
-  );
-  const fit2 = calculateSchemeFitScore(
-    player,
-    scheme2,
-    getYearsInScheme(scheme2, history)
-  );
+  const fit1 = calculateSchemeFitScore(player, scheme1, getYearsInScheme(scheme1, history));
+  const fit2 = calculateSchemeFitScore(player, scheme2, getYearsInScheme(scheme2, history));
 
   return {
     scheme1Fit: fit1,
@@ -430,9 +420,7 @@ export function changeScheme(
 
   // Add current scheme to history if exists
   if (history.currentScheme) {
-    const existingIndex = previousSchemes.findIndex(
-      (p) => p.scheme === history.currentScheme
-    );
+    const existingIndex = previousSchemes.findIndex((p) => p.scheme === history.currentScheme);
     if (existingIndex >= 0) {
       previousSchemes[existingIndex] = {
         scheme: history.currentScheme,
@@ -476,7 +464,7 @@ export function validateSchemeFitScore(score: SchemeFitScore): boolean {
 export function getSchemeFitModifier(fitLevel: FitLevel): number {
   switch (fitLevel) {
     case 'perfect':
-      return 0.10; // +10%
+      return 0.1; // +10%
     case 'good':
       return 0.05; // +5%
     case 'neutral':
@@ -484,7 +472,7 @@ export function getSchemeFitModifier(fitLevel: FitLevel): number {
     case 'poor':
       return -0.05; // -5%
     case 'terrible':
-      return -0.10; // -10%
+      return -0.1; // -10%
   }
 }
 
@@ -492,9 +480,7 @@ export function getSchemeFitModifier(fitLevel: FitLevel): number {
  * Calculates team-wide scheme fit summary
  * Returns qualitative description, not numbers
  */
-export function getTeamSchemeFitSummary(
-  playerFits: SchemeFitScore[]
-): {
+export function getTeamSchemeFitSummary(playerFits: SchemeFitScore[]): {
   overallDescription: string;
   strongFits: number;
   averageFits: number;

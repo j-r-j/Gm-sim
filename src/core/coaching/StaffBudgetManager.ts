@@ -17,7 +17,11 @@ import {
   getBudgetTier,
   getCoachSalaryRange,
 } from '../models/staff/StaffSalary';
-import { StaffHierarchy, updateBudget, getCoachingPositionKeys } from '../models/staff/StaffHierarchy';
+import {
+  StaffHierarchy,
+  updateBudget,
+  getCoachingPositionKeys,
+} from '../models/staff/StaffHierarchy';
 
 /**
  * Budget status
@@ -114,10 +118,7 @@ export function createStaffBudgetState(
 /**
  * Gets current budget status
  */
-export function getBudgetStatus(
-  state: StaffBudgetState,
-  hierarchy: StaffHierarchy
-): BudgetStatus {
+export function getBudgetStatus(state: StaffBudgetState, hierarchy: StaffHierarchy): BudgetStatus {
   const percentUsed =
     hierarchy.staffBudget > 0
       ? ((hierarchy.coachingSpend + hierarchy.scoutingSpend) / hierarchy.staffBudget) * 100
@@ -366,9 +367,7 @@ export function projectBudget(
     const projectedYear = state.currentYear + year;
 
     // Count expiring contracts
-    const expiringContracts = contractList.filter(
-      (c) => c.endYear === projectedYear
-    ).length;
+    const expiringContracts = contractList.filter((c) => c.endYear === projectedYear).length;
 
     // Calculate expected spend (current spend minus expiring)
     let expectedSpend = hierarchy.coachingSpend;
@@ -379,14 +378,10 @@ export function projectBudget(
     }
 
     // Calculate dead money for this year
-    const deadMoneyThisYear = currentDeadMoney.reduce(
-      (total, entry) => total + entry.amount,
-      0
-    );
+    const deadMoneyThisYear = currentDeadMoney.reduce((total, entry) => total + entry.amount, 0);
 
     // Project remaining
-    const projectedRemaining =
-      state.totalBudget - expectedSpend - deadMoneyThisYear;
+    const projectedRemaining = state.totalBudget - expectedSpend - deadMoneyThisYear;
 
     projections.push({
       year: projectedYear,
@@ -422,9 +417,7 @@ export function getExpiringContracts(
 /**
  * Advances all contracts by one year
  */
-export function advanceContractsYear(
-  contracts: Map<string, CoachContract>
-): {
+export function advanceContractsYear(contracts: Map<string, CoachContract>): {
   activeContracts: Map<string, CoachContract>;
   expiredContracts: CoachContract[];
 } {
@@ -487,20 +480,14 @@ export function getBudgetTierDescription(tier: BudgetTier): string {
 /**
  * Checks if team can afford a contract
  */
-export function canAffordContract(
-  hierarchy: StaffHierarchy,
-  annualSalary: number
-): boolean {
+export function canAffordContract(hierarchy: StaffHierarchy, annualSalary: number): boolean {
   return hierarchy.remainingBudget >= annualSalary;
 }
 
 /**
  * Gets maximum affordable salary for a role
  */
-export function getMaxAffordableSalary(
-  hierarchy: StaffHierarchy,
-  role: CoachRole
-): number {
+export function getMaxAffordableSalary(hierarchy: StaffHierarchy, role: CoachRole): number {
   const range = getCoachSalaryRange(role);
   return Math.min(hierarchy.remainingBudget, range.max);
 }

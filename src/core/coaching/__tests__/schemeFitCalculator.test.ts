@@ -27,11 +27,11 @@ import { Position } from '../../models/player/Position';
 import { createDefaultSchemeFits } from '../../models/player/SchemeFit';
 
 // Helper to create a test player
-function createTestPlayer(
-  position: Position,
-  skills: Record<string, number> = {}
-): Player {
-  const technicalSkills: Record<string, { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }> = {};
+function createTestPlayer(position: Position, skills: Record<string, number> = {}): Player {
+  const technicalSkills: Record<
+    string,
+    { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }
+  > = {};
 
   for (const [name, value] of Object.entries(skills)) {
     technicalSkills[name] = {
@@ -263,7 +263,14 @@ describe('Scheme Fit Calculator', () => {
 
       expect(fits.length).toBe(6); // 6 offensive schemes
       fits.forEach((fit) => {
-        expect(['westCoast', 'airRaid', 'spreadOption', 'powerRun', 'zoneRun', 'playAction']).toContain(fit.scheme);
+        expect([
+          'westCoast',
+          'airRaid',
+          'spreadOption',
+          'powerRun',
+          'zoneRun',
+          'playAction',
+        ]).toContain(fit.scheme);
       });
     });
 
@@ -273,7 +280,14 @@ describe('Scheme Fit Calculator', () => {
 
       expect(fits.length).toBe(6); // 6 defensive schemes
       fits.forEach((fit) => {
-        expect(['fourThreeUnder', 'threeFour', 'coverThree', 'coverTwo', 'manPress', 'blitzHeavy']).toContain(fit.scheme);
+        expect([
+          'fourThreeUnder',
+          'threeFour',
+          'coverThree',
+          'coverTwo',
+          'manPress',
+          'blitzHeavy',
+        ]).toContain(fit.scheme);
       });
     });
   });
@@ -407,7 +421,7 @@ describe('Scheme Fit Calculator', () => {
 
   describe('getSchemeFitModifier', () => {
     it('should return positive modifier for good fits', () => {
-      expect(getSchemeFitModifier('perfect')).toBe(0.10);
+      expect(getSchemeFitModifier('perfect')).toBe(0.1);
       expect(getSchemeFitModifier('good')).toBe(0.05);
     });
 
@@ -417,17 +431,45 @@ describe('Scheme Fit Calculator', () => {
 
     it('should return negative modifier for poor fits', () => {
       expect(getSchemeFitModifier('poor')).toBe(-0.05);
-      expect(getSchemeFitModifier('terrible')).toBe(-0.10);
+      expect(getSchemeFitModifier('terrible')).toBe(-0.1);
     });
   });
 
   describe('getTeamSchemeFitSummary', () => {
     it('should summarize team scheme fits', () => {
       const fits: SchemeFitScore[] = [
-        { scheme: 'westCoast', rawScore: 90, fitLevel: 'perfect', yearsInScheme: 3, transitionPenalty: 0, adjustedScore: 90 },
-        { scheme: 'westCoast', rawScore: 80, fitLevel: 'good', yearsInScheme: 3, transitionPenalty: 0, adjustedScore: 80 },
-        { scheme: 'westCoast', rawScore: 60, fitLevel: 'neutral', yearsInScheme: 3, transitionPenalty: 0, adjustedScore: 60 },
-        { scheme: 'westCoast', rawScore: 40, fitLevel: 'poor', yearsInScheme: 3, transitionPenalty: 0, adjustedScore: 40 },
+        {
+          scheme: 'westCoast',
+          rawScore: 90,
+          fitLevel: 'perfect',
+          yearsInScheme: 3,
+          transitionPenalty: 0,
+          adjustedScore: 90,
+        },
+        {
+          scheme: 'westCoast',
+          rawScore: 80,
+          fitLevel: 'good',
+          yearsInScheme: 3,
+          transitionPenalty: 0,
+          adjustedScore: 80,
+        },
+        {
+          scheme: 'westCoast',
+          rawScore: 60,
+          fitLevel: 'neutral',
+          yearsInScheme: 3,
+          transitionPenalty: 0,
+          adjustedScore: 60,
+        },
+        {
+          scheme: 'westCoast',
+          rawScore: 40,
+          fitLevel: 'poor',
+          yearsInScheme: 3,
+          transitionPenalty: 0,
+          adjustedScore: 40,
+        },
       ];
 
       const summary = getTeamSchemeFitSummary(fits);
@@ -439,14 +481,16 @@ describe('Scheme Fit Calculator', () => {
     });
 
     it('should describe excellent fit when majority are strong', () => {
-      const fits: SchemeFitScore[] = Array(10).fill(null).map(() => ({
-        scheme: 'westCoast' as const,
-        rawScore: 90,
-        fitLevel: 'perfect' as const,
-        yearsInScheme: 3,
-        transitionPenalty: 0,
-        adjustedScore: 90,
-      }));
+      const fits: SchemeFitScore[] = Array(10)
+        .fill(null)
+        .map(() => ({
+          scheme: 'westCoast' as const,
+          rawScore: 90,
+          fitLevel: 'perfect' as const,
+          yearsInScheme: 3,
+          transitionPenalty: 0,
+          adjustedScore: 90,
+        }));
 
       const summary = getTeamSchemeFitSummary(fits);
       expect(summary.overallDescription).toContain('Excellent');

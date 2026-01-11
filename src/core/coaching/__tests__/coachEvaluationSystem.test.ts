@@ -223,7 +223,9 @@ describe('Coach Evaluation System', () => {
 
       expect(viewModel.playerName).toBe('John Doe');
       expect(viewModel.coachName).toBe('Mike Smith');
-      expect(['excellent', 'good', 'neutral', 'strained', 'poor']).toContain(viewModel.relationship);
+      expect(['excellent', 'good', 'neutral', 'strained', 'poor']).toContain(
+        viewModel.relationship
+      );
       expect(viewModel.impactDescription).toBeDefined();
       expect(viewModel.developmentOutlook).toBeDefined();
     });
@@ -266,7 +268,9 @@ describe('Coach Evaluation System', () => {
 
       expect(viewModel.coachName).toBe('Mike Smith');
       expect(viewModel.schemeName).toBe('West Coast Offense');
-      expect(['elite', 'excellent', 'good', 'average', 'poor']).toContain(viewModel.teachingQuality);
+      expect(['elite', 'excellent', 'good', 'average', 'poor']).toContain(
+        viewModel.teachingQuality
+      );
       expect(viewModel.progressDescription).toBeDefined();
     });
   });
@@ -441,7 +445,11 @@ describe('Coach Evaluation System', () => {
       const highDevCoach = createTestCoach('coach-1', 'qbCoach', { development: 90 });
       const lowDevCoach = createTestCoach('coach-2', 'qbCoach', { development: 30 });
 
-      const highAsPosition = calculateCombinedStaffDevelopmentBonus(highDevCoach, null, lowDevCoach);
+      const highAsPosition = calculateCombinedStaffDevelopmentBonus(
+        highDevCoach,
+        null,
+        lowDevCoach
+      );
       const highAsHC = calculateCombinedStaffDevelopmentBonus(lowDevCoach, null, highDevCoach);
 
       expect(highAsPosition).toBeGreaterThan(highAsHC);

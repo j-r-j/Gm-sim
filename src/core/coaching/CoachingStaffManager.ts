@@ -106,10 +106,7 @@ export function createCoachingStaffState(teamId: string): CoachingStaffState {
 /**
  * Gets all coaches on staff
  */
-export function getStaffCoaches(
-  state: CoachingStaffState,
-  hierarchy: StaffHierarchy
-): Coach[] {
+export function getStaffCoaches(state: CoachingStaffState, hierarchy: StaffHierarchy): Coach[] {
   const coaches: Coach[] = [];
   const positionKeys = getCoachingPositionKeys();
 
@@ -189,10 +186,7 @@ function getCoachRoleDisplayName(role: CoachRole): string {
  */
 function getVacancyPriority(role: CoachRole): 'critical' | 'important' | 'normal' {
   if (role === 'headCoach') return 'critical';
-  if (
-    role === 'offensiveCoordinator' ||
-    role === 'defensiveCoordinator'
-  ) {
+  if (role === 'offensiveCoordinator' || role === 'defensiveCoordinator') {
     return 'important';
   }
   return 'normal';
@@ -321,9 +315,7 @@ export function assignInterim(
   }
 
   // Remove any existing interim assignment for this role
-  const filteredAssignments = state.interimAssignments.filter(
-    (a) => a.vacantRole !== vacantRole
-  );
+  const filteredAssignments = state.interimAssignments.filter((a) => a.vacantRole !== vacantRole);
 
   const newAssignment: InterimAssignment = {
     vacantRole,
@@ -347,9 +339,7 @@ export function removeInterim(
 ): CoachingStaffState {
   return {
     ...state,
-    interimAssignments: state.interimAssignments.filter(
-      (a) => a.vacantRole !== vacantRole
-    ),
+    interimAssignments: state.interimAssignments.filter((a) => a.vacantRole !== vacantRole),
   };
 }
 
@@ -396,10 +386,7 @@ export function calculateStaffChemistry(
       });
 
       // Personality chemistry
-      const personalityChem = calculatePersonalityChemistry(
-        coach1.personality,
-        coach2.personality
-      );
+      const personalityChem = calculatePersonalityChemistry(coach1.personality, coach2.personality);
       totalPersonalityChemistry += personalityChem;
       details.push({
         coach1Id: coach1.id,
@@ -448,11 +435,7 @@ export function calculateStaffChemistry(
 /**
  * Gets years two coaches have been together
  */
-function getYearsTogether(
-  state: CoachingStaffState,
-  coach1Id: string,
-  coach2Id: string
-): number {
+function getYearsTogether(state: CoachingStaffState, coach1Id: string, coach2Id: string): number {
   const matrix = state.yearsTogetherMatrix.get(coach1Id);
   if (!matrix) return 0;
   return matrix.get(coach2Id) ?? 0;
@@ -485,9 +468,7 @@ export function createStaffChemistryViewModel(
   // Find strongest positive relationship
   const positivePairings = chemistry.details.filter((d) => d.chemistry >= 3);
   if (positivePairings.length > 0) {
-    const strongest = positivePairings.reduce((a, b) =>
-      a.chemistry > b.chemistry ? a : b
-    );
+    const strongest = positivePairings.reduce((a, b) => (a.chemistry > b.chemistry ? a : b));
     const coach1 = coaches.get(strongest.coach1Id);
     const coach2 = coaches.get(strongest.coach2Id);
     if (coach1 && coach2) {
@@ -500,9 +481,7 @@ export function createStaffChemistryViewModel(
   // Find strongest negative relationship
   const negativePairings = chemistry.details.filter((d) => d.chemistry <= -3);
   if (negativePairings.length > 0) {
-    const weakest = negativePairings.reduce((a, b) =>
-      a.chemistry < b.chemistry ? a : b
-    );
+    const weakest = negativePairings.reduce((a, b) => (a.chemistry < b.chemistry ? a : b));
     const coach1 = coaches.get(weakest.coach1Id);
     const coach2 = coaches.get(weakest.coach2Id);
     if (coach1 && coach2) {
@@ -563,16 +542,12 @@ export function advanceStaffYear(state: CoachingStaffState): CoachingStaffState 
 /**
  * Builds coaching tree relationships
  */
-export function buildCoachingTreeRelationships(
-  coaches: Coach[]
-): CoachingTreeRelationship[] {
+export function buildCoachingTreeRelationships(coaches: Coach[]): CoachingTreeRelationship[] {
   const relationships: CoachingTreeRelationship[] = [];
 
   for (const coach of coaches) {
     // Find mentees (coaches with this coach as mentor)
-    const mentees = coaches
-      .filter((c) => c.tree.mentorId === coach.id)
-      .map((c) => c.id);
+    const mentees = coaches.filter((c) => c.tree.mentorId === coach.id).map((c) => c.id);
 
     relationships.push({
       coachId: coach.id,
@@ -589,10 +564,7 @@ export function buildCoachingTreeRelationships(
 /**
  * Gets coaches from the same coaching tree
  */
-export function getSameTreeCoaches(
-  coaches: Coach[],
-  treeName: TreeName
-): Coach[] {
+export function getSameTreeCoaches(coaches: Coach[], treeName: TreeName): Coach[] {
   return coaches.filter((c) => c.tree.treeName === treeName);
 }
 
@@ -604,10 +576,7 @@ export function hasMinimumCoachingStaff(hierarchy: StaffHierarchy): boolean {
   if (!hierarchy.headCoach) return false;
 
   // Must have at least one coordinator
-  if (
-    !hierarchy.offensiveCoordinator &&
-    !hierarchy.defensiveCoordinator
-  ) {
+  if (!hierarchy.offensiveCoordinator && !hierarchy.defensiveCoordinator) {
     return false;
   }
 

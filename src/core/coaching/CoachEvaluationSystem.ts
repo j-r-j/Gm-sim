@@ -9,7 +9,11 @@ import { Position } from '../models/player/Position';
 import { CoachRole } from '../models/staff/StaffSalary';
 import { CoachAttributes } from '../models/staff/CoachAttributes';
 import { OffensiveScheme, DefensiveScheme, FitLevel } from '../models/player/SchemeFit';
-import { isOffensiveScheme, OFFENSIVE_SCHEME_DEFINITIONS, DEFENSIVE_SCHEME_DEFINITIONS } from './SchemeDefinitions';
+import {
+  isOffensiveScheme,
+  OFFENSIVE_SCHEME_DEFINITIONS,
+  DEFENSIVE_SCHEME_DEFINITIONS,
+} from './SchemeDefinitions';
 
 /**
  * Development impact result (HIDDEN from UI)
@@ -161,11 +165,7 @@ function calculateChemistryModifier(chemistry: number): number {
 /**
  * Calculates scheme bonus for development
  */
-function calculateSchemeBonus(
-  player: Player,
-  coach: Coach,
-  schemeFitLevel: FitLevel
-): number {
+function calculateSchemeBonus(player: Player, coach: Coach, schemeFitLevel: FitLevel): number {
   // Good scheme fit accelerates development
   switch (schemeFitLevel) {
     case 'perfect':
@@ -210,9 +210,7 @@ export function calculateDevelopmentImpact(
   // Head coach has reduced direct impact (50%)
   const multiplier = coach.role === 'headCoach' ? 0.5 : 1;
 
-  const totalImpact = Math.round(
-    (baseImpact + chemistryModifier + schemeBonus) * multiplier
-  );
+  const totalImpact = Math.round((baseImpact + chemistryModifier + schemeBonus) * multiplier);
 
   // Determine impact areas based on coach role
   const impactAreas = getImpactAreas(coach.role, player.position);
@@ -459,8 +457,7 @@ export function calculatePlayerCoachChemistry(
   totalChemistry += schemeFitContribution;
 
   // Development contribution (from coach attributes)
-  const developmentContribution =
-    (coach.attributes.development - 50) / 25; // -2 to +2
+  const developmentContribution = (coach.attributes.development - 50) / 25; // -2 to +2
   sources.push({ type: 'development', contribution: developmentContribution });
   totalChemistry += developmentContribution;
 
@@ -536,11 +533,11 @@ export function evaluateCoachOverall(coach: Coach): number {
 
   return Math.round(
     attrs.development * weights.development +
-    attrs.gameDayIQ * weights.gameDayIQ +
-    attrs.schemeTeaching * weights.schemeTeaching +
-    attrs.playerEvaluation * weights.playerEvaluation +
-    attrs.talentID * weights.talentID +
-    attrs.motivation * weights.motivation
+      attrs.gameDayIQ * weights.gameDayIQ +
+      attrs.schemeTeaching * weights.schemeTeaching +
+      attrs.playerEvaluation * weights.playerEvaluation +
+      attrs.talentID * weights.talentID +
+      attrs.motivation * weights.motivation
   );
 }
 

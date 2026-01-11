@@ -267,7 +267,9 @@ describe('Coaching Staff Manager', () => {
       const chemistry = calculateStaffChemistry(result.state, result.hierarchy);
       const viewModel = createStaffChemistryViewModel(chemistry, result.state.coaches);
 
-      expect(['excellent', 'good', 'neutral', 'strained', 'toxic']).toContain(viewModel.staffHarmony);
+      expect(['excellent', 'good', 'neutral', 'strained', 'toxic']).toContain(
+        viewModel.staffHarmony
+      );
       expect(viewModel.overallDescription).toBeDefined();
     });
   });
