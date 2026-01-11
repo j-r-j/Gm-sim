@@ -31,10 +31,7 @@ import { Position } from '../../models/player/Position';
 
 describe('ScoutAccuracySystem', () => {
   // Helper to create scout with track record
-  function createScoutWithTrackRecord(
-    evaluations: ScoutEvaluation[],
-    yearsOfData: number
-  ): Scout {
+  function createScoutWithTrackRecord(evaluations: ScoutEvaluation[], yearsOfData: number): Scout {
     const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
     const completedCount = evaluations.filter((e) => e.wasHit !== null).length;
 
@@ -45,9 +42,10 @@ describe('ScoutAccuracySystem', () => {
         evaluations,
         yearsOfData,
         reliabilityRevealed: completedCount >= MIN_EVALUATIONS_FOR_RELIABILITY,
-        overallHitRate: completedCount >= MIN_EVALUATIONS_FOR_RELIABILITY
-          ? evaluations.filter((e) => e.wasHit === true).length / completedCount
-          : null,
+        overallHitRate:
+          completedCount >= MIN_EVALUATIONS_FOR_RELIABILITY
+            ? evaluations.filter((e) => e.wasHit === true).length / completedCount
+            : null,
       },
     };
   }
@@ -133,9 +131,7 @@ describe('ScoutAccuracySystem', () => {
 
   describe('updateEvaluationsWithResults', () => {
     it('should update evaluation with actual results', () => {
-      const evaluations = [
-        createEvaluation('p1', Position.QB, { min: 70, max: 80 }, null, null),
-      ];
+      const evaluations = [createEvaluation('p1', Position.QB, { min: 70, max: 80 }, null, null)];
       const scout = createScoutWithTrackRecord(evaluations, 1);
 
       const updatedScout = updateEvaluationsWithResults(scout, 'p1', 2, 75);
@@ -145,9 +141,7 @@ describe('ScoutAccuracySystem', () => {
     });
 
     it('should calculate wasHit correctly for miss', () => {
-      const evaluations = [
-        createEvaluation('p1', Position.QB, { min: 70, max: 80 }, null, null),
-      ];
+      const evaluations = [createEvaluation('p1', Position.QB, { min: 70, max: 80 }, null, null)];
       const scout = createScoutWithTrackRecord(evaluations, 1);
 
       const updatedScout = updateEvaluationsWithResults(scout, 'p1', 2, 50); // 50 is outside 70-80
@@ -156,9 +150,7 @@ describe('ScoutAccuracySystem', () => {
     });
 
     it('should calculate wasHit correctly for near miss', () => {
-      const evaluations = [
-        createEvaluation('p1', Position.QB, { min: 70, max: 80 }, null, null),
-      ];
+      const evaluations = [createEvaluation('p1', Position.QB, { min: 70, max: 80 }, null, null)];
       const scout = createScoutWithTrackRecord(evaluations, 1);
 
       const updatedScout = updateEvaluationsWithResults(scout, 'p1', 2, 65); // 65 is within 10 of 70
@@ -339,9 +331,7 @@ describe('ScoutAccuracySystem', () => {
     it('should show accurate info when reliability is revealed', () => {
       const evaluations = Array(25)
         .fill(null)
-        .map((_, i) =>
-          createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true)
-        );
+        .map((_, i) => createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true));
       const scout = createScoutWithTrackRecord(evaluations, 5);
 
       const viewModel = createScoutAccuracyViewModel(scout);
@@ -352,9 +342,7 @@ describe('ScoutAccuracySystem', () => {
     });
 
     it('should show appropriate description for unrevealed scout', () => {
-      const evaluations = [
-        createEvaluation('p1', Position.QB, { min: 70, max: 80 }, 75, true),
-      ];
+      const evaluations = [createEvaluation('p1', Position.QB, { min: 70, max: 80 }, 75, true)];
       const scout = createScoutWithTrackRecord(evaluations, 1);
 
       const viewModel = createScoutAccuracyViewModel(scout);
@@ -377,9 +365,7 @@ describe('ScoutAccuracySystem', () => {
     it('should compare revealed scouts', () => {
       const evals1 = Array(25)
         .fill(null)
-        .map((_, i) =>
-          createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true)
-        );
+        .map((_, i) => createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true));
       const evals2 = Array(25)
         .fill(null)
         .map((_, i) =>
@@ -418,9 +404,7 @@ describe('ScoutAccuracySystem', () => {
     it('should separate revealed and unrevealed scouts', () => {
       const revealedEvals = Array(25)
         .fill(null)
-        .map((_, i) =>
-          createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true)
-        );
+        .map((_, i) => createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true));
       const revealed = createScoutWithTrackRecord(revealedEvals, 5);
       const unrevealed = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
 
@@ -433,9 +417,7 @@ describe('ScoutAccuracySystem', () => {
     it('should sort revealed by hit rate descending', () => {
       const highEvals = Array(25)
         .fill(null)
-        .map((_, i) =>
-          createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true)
-        );
+        .map((_, i) => createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true));
       const lowEvals = Array(25)
         .fill(null)
         .map((_, i) =>
@@ -455,9 +437,7 @@ describe('ScoutAccuracySystem', () => {
     it('should return 0 for revealed scout', () => {
       const evals = Array(25)
         .fill(null)
-        .map((_, i) =>
-          createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true)
-        );
+        .map((_, i) => createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true));
       const scout = createScoutWithTrackRecord(evals, 5);
 
       expect(getYearsUntilRevelation(scout)).toBe(0);

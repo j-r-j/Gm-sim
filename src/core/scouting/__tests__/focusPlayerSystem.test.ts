@@ -18,19 +18,26 @@ import {
   ExtendedProspectData,
   FocusScoutingReport,
 } from '../FocusPlayerSystem';
-import { createDefaultScout, Scout, MAX_FOCUS_PROSPECTS, MIN_FOCUS_PROSPECTS } from '../../models/staff/Scout';
+import {
+  createDefaultScout,
+  Scout,
+  MAX_FOCUS_PROSPECTS,
+  MIN_FOCUS_PROSPECTS,
+} from '../../models/staff/Scout';
 import { Position } from '../../models/player/Position';
 
 describe('FocusPlayerSystem', () => {
   // Helper to create mock extended prospect
-  function createMockExtendedProspect(overrides: Partial<ExtendedProspectData> = {}): ExtendedProspectData {
+  function createMockExtendedProspect(
+    overrides: Partial<ExtendedProspectData> = {}
+  ): ExtendedProspectData {
     return {
       id: 'prospect-1',
       name: 'John Smith',
       position: Position.QB,
       region: 'northeast',
       college: 'State University',
-      height: "6'3\"",
+      height: '6\'3"',
       weight: 215,
       trueOverall: 80,
       truePhysical: 85,
@@ -164,7 +171,9 @@ describe('FocusPlayerSystem', () => {
       const assessment = generateCharacterAssessment(prospect, 70);
 
       expect(['elite', 'good', 'average', 'concerns', 'unknown']).toContain(assessment.workEthic);
-      expect(['captain', 'leader', 'follower', 'loner', 'unknown']).toContain(assessment.leadership);
+      expect(['captain', 'leader', 'follower', 'loner', 'unknown']).toContain(
+        assessment.leadership
+      );
       expect(['excellent', 'good', 'average', 'difficult', 'unknown']).toContain(
         assessment.coachability
       );
@@ -382,11 +391,7 @@ describe('FocusPlayerSystem', () => {
       const scout2 = createScoutWithAttributes(70, 10);
 
       const report1 = generateFocusScoutingReport(prospect, scout1, 202301);
-      const report2 = generateFocusScoutingReport(
-        prospect,
-        { ...scout2, id: 'scout-2' },
-        202302
-      );
+      const report2 = generateFocusScoutingReport(prospect, { ...scout2, id: 'scout-2' }, 202302);
 
       const crossRef = crossReferenceFocusReports([report1, report2])!;
       const singleWidth = report1.overallRange.max - report1.overallRange.min;
@@ -401,11 +406,7 @@ describe('FocusPlayerSystem', () => {
       const scout2 = createScoutWithAttributes(80, 10);
 
       const report1 = generateFocusScoutingReport(prospect, scout1, 202301);
-      const report2 = generateFocusScoutingReport(
-        prospect,
-        { ...scout2, id: 'scout-2' },
-        202302
-      );
+      const report2 = generateFocusScoutingReport(prospect, { ...scout2, id: 'scout-2' }, 202302);
 
       const crossRef = crossReferenceFocusReports([report1, report2])!;
 
@@ -421,11 +422,7 @@ describe('FocusPlayerSystem', () => {
       const scout2 = createScoutWithAttributes(60, 5);
 
       const report1 = generateFocusScoutingReport(prospect, scout1, 202301);
-      const report2 = generateFocusScoutingReport(
-        prospect,
-        { ...scout2, id: 'scout-2' },
-        202302
-      );
+      const report2 = generateFocusScoutingReport(prospect, { ...scout2, id: 'scout-2' }, 202302);
 
       const crossRef = crossReferenceFocusReports([report1, report2])!;
 
@@ -438,11 +435,7 @@ describe('FocusPlayerSystem', () => {
       const scout2 = createScoutWithAttributes(70, 10);
 
       const report1 = generateFocusScoutingReport(prospect, scout1, 202301);
-      const report2 = generateFocusScoutingReport(
-        prospect,
-        { ...scout2, id: 'scout-2' },
-        202302
-      );
+      const report2 = generateFocusScoutingReport(prospect, { ...scout2, id: 'scout-2' }, 202302);
 
       const crossRef = crossReferenceFocusReports([report1, report2])!;
 

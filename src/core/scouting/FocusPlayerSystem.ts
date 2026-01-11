@@ -241,7 +241,10 @@ export function generateCharacterAssessment(
   const perceivedLeadership = Math.max(1, Math.min(100, prospect.trueLeadership + noise()));
   const perceivedCoachability = Math.max(1, Math.min(100, prospect.trueCoachability + noise()));
   const perceivedMaturity = Math.max(1, Math.min(100, prospect.trueMaturity + noise()));
-  const perceivedCompetitiveness = Math.max(1, Math.min(100, prospect.trueCompetitiveness + noise()));
+  const perceivedCompetitiveness = Math.max(
+    1,
+    Math.min(100, prospect.trueCompetitiveness + noise())
+  );
 
   const notes: string[] = [];
 
@@ -590,7 +593,9 @@ export function generateFocusScoutingReport(
 /**
  * Cross-references multiple focus reports to narrow ranges further
  */
-export function crossReferenceFocusReports(reports: FocusScoutingReport[]): FocusScoutingReport | null {
+export function crossReferenceFocusReports(
+  reports: FocusScoutingReport[]
+): FocusScoutingReport | null {
   if (reports.length === 0) return null;
   if (reports.length === 1) return reports[0];
 

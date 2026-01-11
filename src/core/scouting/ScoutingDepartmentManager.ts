@@ -33,8 +33,18 @@ export const TOTAL_SCOUTING_POSITIONS = 8;
 export const SCOUTING_DEPARTMENT_STRUCTURE: ScoutingPosition[] = [
   { role: 'scoutingDirector', displayName: 'Director of Scouting', count: 1 },
   { role: 'nationalScout', displayName: 'National Scout', count: 2 },
-  { role: 'regionalScout', displayName: 'Regional Scout (Northeast)', count: 1, region: 'northeast' },
-  { role: 'regionalScout', displayName: 'Regional Scout (Southeast)', count: 1, region: 'southeast' },
+  {
+    role: 'regionalScout',
+    displayName: 'Regional Scout (Northeast)',
+    count: 1,
+    region: 'northeast',
+  },
+  {
+    role: 'regionalScout',
+    displayName: 'Regional Scout (Southeast)',
+    count: 1,
+    region: 'southeast',
+  },
   { role: 'regionalScout', displayName: 'Regional Scout (Midwest)', count: 1, region: 'midwest' },
   { role: 'regionalScout', displayName: 'Regional Scout (West)', count: 1, region: 'west' },
   { role: 'proScout', displayName: 'Pro Scout', count: 1 },
@@ -89,7 +99,10 @@ export interface ScoutingDepartmentSummary {
 /**
  * Creates an empty scouting department state
  */
-export function createScoutingDepartmentState(teamId: string, budget: number): ScoutingDepartmentState {
+export function createScoutingDepartmentState(
+  teamId: string,
+  budget: number
+): ScoutingDepartmentState {
   return {
     teamId,
     scouts: new Map(),
@@ -292,7 +305,10 @@ export function hireScout(
 /**
  * Fires a scout from the department
  */
-export function fireScout(state: ScoutingDepartmentState, scoutId: string): ScoutingDepartmentState | null {
+export function fireScout(
+  state: ScoutingDepartmentState,
+  scoutId: string
+): ScoutingDepartmentState | null {
   const scout = state.scouts.get(scoutId);
   if (!scout) {
     return null;
@@ -483,7 +499,9 @@ export function advanceScoutingYear(state: ScoutingDepartmentState): {
 /**
  * Gets department summary
  */
-export function getScoutingDepartmentSummary(state: ScoutingDepartmentState): ScoutingDepartmentSummary {
+export function getScoutingDepartmentSummary(
+  state: ScoutingDepartmentState
+): ScoutingDepartmentSummary {
   const scouts = getDepartmentScouts(state);
   const vacancies = getScoutingVacancies(state);
 

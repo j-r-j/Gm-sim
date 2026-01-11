@@ -108,10 +108,7 @@ export function createAccuracyRevelationState(scout: Scout): AccuracyRevelationS
 /**
  * Records a new evaluation from a scout
  */
-export function recordScoutEvaluation(
-  scout: Scout,
-  result: EvaluationResult
-): Scout {
+export function recordScoutEvaluation(scout: Scout, result: EvaluationResult): Scout {
   const evaluation: ScoutEvaluation = {
     prospectId: result.playerId,
     prospectName: result.playerName,
@@ -424,7 +421,9 @@ export function getYearsUntilRevelation(scout: Scout): number | null {
     return 0;
   }
 
-  const completedEvaluations = scout.trackRecord.evaluations.filter((e) => e.wasHit !== null).length;
+  const completedEvaluations = scout.trackRecord.evaluations.filter(
+    (e) => e.wasHit !== null
+  ).length;
   const remaining = MIN_EVALUATIONS_FOR_RELIABILITY - completedEvaluations;
 
   if (remaining <= 0) {

@@ -27,7 +27,7 @@ describe('AutoScoutingSystem', () => {
       position: Position.QB,
       region: 'northeast',
       college: 'State University',
-      height: "6'3\"",
+      height: '6\'3"',
       weight: 215,
       trueOverall: 75,
       truePhysical: 80,
@@ -163,7 +163,7 @@ describe('AutoScoutingSystem', () => {
 
       const report = generateAutoScoutingReport(prospect, scout, 202301);
 
-      expect(report.height).toBe("6'3\"");
+      expect(report.height).toBe('6\'3"');
       expect(report.weight).toBe(215);
       expect(report.college).toBe('State University');
     });
@@ -258,11 +258,7 @@ describe('AutoScoutingSystem', () => {
       const scout2 = createScoutWithEvaluation(70);
 
       const report1 = generateAutoScoutingReport(prospect, scout1, 202301);
-      const report2 = generateAutoScoutingReport(
-        prospect,
-        { ...scout2, id: 'scout-2' },
-        202302
-      );
+      const report2 = generateAutoScoutingReport(prospect, { ...scout2, id: 'scout-2' }, 202302);
 
       const aggregated = aggregateAutoScoutingReports([report1, report2])!;
       const singleWidth = report1.overallRange.max - report1.overallRange.min;
@@ -279,11 +275,7 @@ describe('AutoScoutingSystem', () => {
       const scout2 = createScoutWithEvaluation(70);
 
       const report1 = generateAutoScoutingReport(prospect, scout1, 202301);
-      const report2 = generateAutoScoutingReport(
-        prospect,
-        { ...scout2, id: 'scout-2' },
-        202302
-      );
+      const report2 = generateAutoScoutingReport(prospect, { ...scout2, id: 'scout-2' }, 202302);
 
       const aggregated = aggregateAutoScoutingReports([report1, report2])!;
 
@@ -364,7 +356,7 @@ describe('AutoScoutingSystem', () => {
         position: Position.QB,
         scoutId: 's1',
         reportDate: 202301,
-        height: "6'0\"",
+        height: '6\'0"',
         weight: 200,
         college: 'Test U',
         overallRange: { min: 60, max: 80, confidence: 'medium' },
@@ -388,7 +380,7 @@ describe('AutoScoutingSystem', () => {
         position: Position.QB,
         scoutId: 's1',
         reportDate: 202301,
-        height: "6'0\"",
+        height: '6\'0"',
         weight: 200,
         college: 'Test U',
         overallRange: { min: 40, max: 80, confidence: 'low' },

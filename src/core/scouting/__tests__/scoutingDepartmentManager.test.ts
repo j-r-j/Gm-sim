@@ -42,17 +42,12 @@ describe('ScoutingDepartmentManager', () => {
     it('should have 8 total positions', () => {
       expect(TOTAL_SCOUTING_POSITIONS).toBe(8);
 
-      const totalPositions = SCOUTING_DEPARTMENT_STRUCTURE.reduce(
-        (sum, pos) => sum + pos.count,
-        0
-      );
+      const totalPositions = SCOUTING_DEPARTMENT_STRUCTURE.reduce((sum, pos) => sum + pos.count, 0);
       expect(totalPositions).toBe(8);
     });
 
     it('should have correct structure', () => {
-      const directors = SCOUTING_DEPARTMENT_STRUCTURE.filter(
-        (p) => p.role === 'scoutingDirector'
-      );
+      const directors = SCOUTING_DEPARTMENT_STRUCTURE.filter((p) => p.role === 'scoutingDirector');
       const nationalScouts = SCOUTING_DEPARTMENT_STRUCTURE.filter(
         (p) => p.role === 'nationalScout'
       );

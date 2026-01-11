@@ -219,11 +219,23 @@ export function generateAutoScoutingReport(
 
   // Calculate skill ranges (wide for auto-scouting)
   const overallRange = calculateAutoScoutSkillRange(prospect.trueOverall, scoutEvaluation, config);
-  const physicalRange = calculateAutoScoutSkillRange(prospect.truePhysical, scoutEvaluation, config);
-  const technicalRange = calculateAutoScoutSkillRange(prospect.trueTechnical, scoutEvaluation, config);
+  const physicalRange = calculateAutoScoutSkillRange(
+    prospect.truePhysical,
+    scoutEvaluation,
+    config
+  );
+  const technicalRange = calculateAutoScoutSkillRange(
+    prospect.trueTechnical,
+    scoutEvaluation,
+    config
+  );
 
   // Calculate round range
-  const projectedRound = calculateAutoScoutRoundRange(prospect.projectedRound, scoutEvaluation, config);
+  const projectedRound = calculateAutoScoutRoundRange(
+    prospect.projectedRound,
+    scoutEvaluation,
+    config
+  );
 
   // Determine visible traits
   const { visible: visibleTraits, hiddenCount: hiddenTraitCount } = getVisibleTraitsForAutoScouting(
@@ -316,7 +328,9 @@ export function processWeeklyAutoScouting(
  * Aggregates multiple auto-scouting reports for the same prospect
  * Multiple scouts = slightly narrower ranges
  */
-export function aggregateAutoScoutingReports(reports: AutoScoutingReport[]): AutoScoutingReport | null {
+export function aggregateAutoScoutingReports(
+  reports: AutoScoutingReport[]
+): AutoScoutingReport | null {
   if (reports.length === 0) return null;
   if (reports.length === 1) return reports[0];
 
