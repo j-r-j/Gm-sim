@@ -259,7 +259,8 @@ export function generateOwnerTraits(
   );
 
   const spending = clamp(
-    randomInRange(ranges.spending[0], ranges.spending[1], baseSeed + 1) + marketMod.spendingModifier,
+    randomInRange(ranges.spending[0], ranges.spending[1], baseSeed + 1) +
+      marketMod.spendingModifier,
     1,
     100
   );
@@ -305,10 +306,7 @@ export function generateSecondaryTraits(
   const extraRandom = seed !== undefined ? seededRandom(baseSeed + 10) : Math.random();
   if (extraRandom > 0.7) {
     const available = ALL_SECONDARY_TRAITS.filter(
-      (t) =>
-        !traits.includes(t) &&
-        !hasTraitConflict(t, traits) &&
-        !preferred.includes(t)
+      (t) => !traits.includes(t) && !hasTraitConflict(t, traits) && !preferred.includes(t)
     );
     if (available.length > 0) {
       const index = Math.floor(extraRandom * available.length);
@@ -434,7 +432,8 @@ export function generateOwnerHistory(
 
   // GMs fired based on patience and years
   const baseGMsFired = Math.floor(yearsAsOwner / 5);
-  const patienceModifier = personality.traits.patience < 40 ? 2 : personality.traits.patience > 70 ? -1 : 0;
+  const patienceModifier =
+    personality.traits.patience < 40 ? 2 : personality.traits.patience > 70 ? -1 : 0;
   const previousGMsFired = Math.max(0, baseGMsFired + patienceModifier);
 
   // Championships based on historical success

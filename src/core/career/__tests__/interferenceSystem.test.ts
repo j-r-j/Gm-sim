@@ -228,9 +228,24 @@ describe('InterferenceSystem', () => {
 
     it('should return the most severe trigger', () => {
       const triggers = [
-        { triggered: true, type: 'losingStreak' as const, severity: 'mild' as const, description: 'a' },
-        { triggered: true, type: 'fanApproval' as const, severity: 'severe' as const, description: 'b' },
-        { triggered: true, type: 'mediaScrutiny' as const, severity: 'moderate' as const, description: 'c' },
+        {
+          triggered: true,
+          type: 'losingStreak' as const,
+          severity: 'mild' as const,
+          description: 'a',
+        },
+        {
+          triggered: true,
+          type: 'fanApproval' as const,
+          severity: 'severe' as const,
+          description: 'b',
+        },
+        {
+          triggered: true,
+          type: 'mediaScrutiny' as const,
+          severity: 'moderate' as const,
+          description: 'c',
+        },
       ];
 
       const result = getMostSevereTrigger(triggers);
@@ -322,8 +337,18 @@ describe('InterferenceSystem', () => {
       const owner = createTestOwner();
       owner.patienceMeter = 60;
 
-      const firstDefiance = calculateDefianceConsequence(owner, 'signPlayer', 0, owner.patienceMeter);
-      const thirdDefiance = calculateDefianceConsequence(owner, 'signPlayer', 2, owner.patienceMeter);
+      const firstDefiance = calculateDefianceConsequence(
+        owner,
+        'signPlayer',
+        0,
+        owner.patienceMeter
+      );
+      const thirdDefiance = calculateDefianceConsequence(
+        owner,
+        'signPlayer',
+        2,
+        owner.patienceMeter
+      );
 
       expect(thirdDefiance.patienceChange).toBeLessThan(firstDefiance.patienceChange);
     });
@@ -417,7 +442,11 @@ describe('InterferenceSystem', () => {
 
   describe('getComplianceDescription', () => {
     it('should return appropriate descriptions', () => {
-      const exemplary = { ...createInterferenceState('t'), totalCompliances: 10, totalDefiances: 0 };
+      const exemplary = {
+        ...createInterferenceState('t'),
+        totalCompliances: 10,
+        totalDefiances: 0,
+      };
       expect(getComplianceDescription(exemplary)).toBe('exemplary');
 
       const defiant = { ...createInterferenceState('t'), totalCompliances: 3, totalDefiances: 7 };
@@ -434,7 +463,12 @@ describe('InterferenceSystem', () => {
       owner.personality.traits.control = 50;
 
       const triggers = [
-        { triggered: true, type: 'losingStreak' as const, severity: 'moderate' as const, description: 'a' },
+        {
+          triggered: true,
+          type: 'losingStreak' as const,
+          severity: 'moderate' as const,
+          description: 'a',
+        },
       ];
 
       expect(shouldGenerateDemand(owner, triggers, true)).toBe(false);
@@ -443,7 +477,12 @@ describe('InterferenceSystem', () => {
     it('should generate for severe triggers', () => {
       const owner = createTestOwner();
       const triggers = [
-        { triggered: true, type: 'losingStreak' as const, severity: 'severe' as const, description: 'a' },
+        {
+          triggered: true,
+          type: 'losingStreak' as const,
+          severity: 'severe' as const,
+          description: 'a',
+        },
       ];
 
       expect(shouldGenerateDemand(owner, triggers, false)).toBe(true);

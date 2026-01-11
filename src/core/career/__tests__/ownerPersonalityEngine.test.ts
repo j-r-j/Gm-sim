@@ -215,9 +215,7 @@ describe('OwnerPersonalityEngine', () => {
       const impatientTriggers = generateInterventionTriggers(impatientTraits, 'moderate');
       const patientTriggers = generateInterventionTriggers(patientTraits, 'moderate');
 
-      expect(impatientTriggers.losingStreakLength).toBeLessThan(
-        patientTriggers.losingStreakLength
-      );
+      expect(impatientTriggers.losingStreakLength).toBeLessThan(patientTriggers.losingStreakLength);
     });
   });
 

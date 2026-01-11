@@ -5,11 +5,7 @@
 
 import { Owner } from '../models/owner/Owner';
 import { OwnerPersonality } from '../models/owner/OwnerPersonality';
-import {
-  TeamContext,
-  generateOwner,
-  PersonalityArchetype,
-} from './OwnerPersonalityEngine';
+import { TeamContext, generateOwner, PersonalityArchetype } from './OwnerPersonalityEngine';
 import { OwnerMoodState, createOwnerMoodState } from './OwnerMoodSystem';
 import { InterferenceState, createInterferenceState } from './InterferenceSystem';
 
@@ -52,20 +48,76 @@ export interface LeagueOwnershipState {
  * Common owner first names for generation
  */
 const OWNER_FIRST_NAMES = [
-  'Robert', 'James', 'William', 'Michael', 'David', 'Richard', 'Charles', 'Thomas',
-  'John', 'Daniel', 'Mark', 'Steven', 'Kenneth', 'Edward', 'George', 'Arthur',
-  'Stanley', 'Harold', 'Eugene', 'Philip', 'Lawrence', 'Gerald', 'Raymond', 'Howard',
+  'Robert',
+  'James',
+  'William',
+  'Michael',
+  'David',
+  'Richard',
+  'Charles',
+  'Thomas',
+  'John',
+  'Daniel',
+  'Mark',
+  'Steven',
+  'Kenneth',
+  'Edward',
+  'George',
+  'Arthur',
+  'Stanley',
+  'Harold',
+  'Eugene',
+  'Philip',
+  'Lawrence',
+  'Gerald',
+  'Raymond',
+  'Howard',
 ];
 
 /**
  * Common owner last names for generation
  */
 const OWNER_LAST_NAMES = [
-  'Anderson', 'Williams', 'Johnson', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore',
-  'Taylor', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Garcia',
-  'Martinez', 'Robinson', 'Clark', 'Rodriguez', 'Lewis', 'Lee', 'Walker', 'Hall',
-  'Allen', 'Young', 'King', 'Wright', 'Scott', 'Green', 'Baker', 'Adams',
-  'Nelson', 'Hill', 'Campbell', 'Mitchell', 'Roberts', 'Carter', 'Phillips', 'Evans',
+  'Anderson',
+  'Williams',
+  'Johnson',
+  'Brown',
+  'Davis',
+  'Miller',
+  'Wilson',
+  'Moore',
+  'Taylor',
+  'Thomas',
+  'Jackson',
+  'White',
+  'Harris',
+  'Martin',
+  'Thompson',
+  'Garcia',
+  'Martinez',
+  'Robinson',
+  'Clark',
+  'Rodriguez',
+  'Lewis',
+  'Lee',
+  'Walker',
+  'Hall',
+  'Allen',
+  'Young',
+  'King',
+  'Wright',
+  'Scott',
+  'Green',
+  'Baker',
+  'Adams',
+  'Nelson',
+  'Hill',
+  'Campbell',
+  'Mitchell',
+  'Roberts',
+  'Carter',
+  'Phillips',
+  'Evans',
 ];
 
 /**
@@ -113,7 +165,8 @@ export function calculateOwnershipChangeProbability(
   let probability = 0.008;
 
   // Years since last change
-  const yearsSinceChange = lastChangeSeason !== undefined ? currentSeason - lastChangeSeason : owner.yearsAsOwner;
+  const yearsSinceChange =
+    lastChangeSeason !== undefined ? currentSeason - lastChangeSeason : owner.yearsAsOwner;
 
   // Increase probability after 10+ years
   if (yearsSinceChange > 10) {

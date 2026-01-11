@@ -295,9 +295,7 @@ export function detectAllInterventions(
 /**
  * Gets most severe trigger from list
  */
-export function getMostSevereTrigger(
-  triggers: InterventionTrigger[]
-): InterventionTrigger | null {
+export function getMostSevereTrigger(triggers: InterventionTrigger[]): InterventionTrigger | null {
   if (triggers.length === 0) return null;
 
   const severityOrder = { severe: 3, moderate: 2, mild: 1 };

@@ -143,7 +143,10 @@ export function selectDemandType(
   }
 
   // Adjust based on context availability
-  if (context.availableCoaches.length === 0 || !hasStrugglingCoach(context.teamRoster, context.availableCoaches)) {
+  if (
+    context.availableCoaches.length === 0 ||
+    !hasStrugglingCoach(context.teamRoster, context.availableCoaches)
+  ) {
     baseWeights.fireCoach = Math.max(5, baseWeights.fireCoach - 30);
   }
 
@@ -201,11 +204,15 @@ export function generateSignPlayerDemand(
   if (owner.personality.secondaryTraits.includes('prObsessed')) {
     // Want a star
     const stars = availablePlayers.filter((p) => p.isStar);
-    target = stars.length > 0 ? stars[Math.floor(Math.random() * stars.length)] : availablePlayers[0];
+    target =
+      stars.length > 0 ? stars[Math.floor(Math.random() * stars.length)] : availablePlayers[0];
   } else if (owner.personality.traits.spending < 40) {
     // Want a bargain
     const affordable = availablePlayers.filter((p) => p.overall < 80);
-    target = affordable.length > 0 ? affordable[Math.floor(Math.random() * affordable.length)] : availablePlayers[0];
+    target =
+      affordable.length > 0
+        ? affordable[Math.floor(Math.random() * affordable.length)]
+        : availablePlayers[0];
   } else {
     // Random good player
     const good = availablePlayers.filter((p) => p.overall >= 75);
@@ -410,11 +417,7 @@ function determineConsequence(
   severity: 'mild' | 'moderate' | 'severe'
 ): string {
   const consequences: Record<'mild' | 'moderate' | 'severe', string[]> = {
-    mild: [
-      'The owner will be disappointed',
-      'Trust will be affected',
-      'Expect some pushback',
-    ],
+    mild: ['The owner will be disappointed', 'Trust will be affected', 'Expect some pushback'],
     moderate: [
       'Your job security will decrease significantly',
       'The owner will lose confidence in your leadership',
@@ -475,7 +478,10 @@ export function getDemandUrgency(
 /**
  * Gets demand description for display
  */
-export function getDemandDisplayInfo(demand: OwnerDemand, currentWeek: number): {
+export function getDemandDisplayInfo(
+  demand: OwnerDemand,
+  currentWeek: number
+): {
   title: string;
   urgency: string;
   weeksRemaining: number;

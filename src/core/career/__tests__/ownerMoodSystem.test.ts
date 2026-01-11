@@ -284,9 +284,33 @@ describe('OwnerMoodSystem', () => {
       const state: OwnerMoodState = {
         ...createOwnerMoodState(),
         recentEvents: [
-          { type: 'win', description: '', moodImpact: 5, patienceImpact: 2, trustImpact: 1, week: 1, season: 2024 },
-          { type: 'win', description: '', moodImpact: 5, patienceImpact: 2, trustImpact: 1, week: 2, season: 2024 },
-          { type: 'loss', description: '', moodImpact: -5, patienceImpact: -2, trustImpact: -1, week: 3, season: 2024 },
+          {
+            type: 'win',
+            description: '',
+            moodImpact: 5,
+            patienceImpact: 2,
+            trustImpact: 1,
+            week: 1,
+            season: 2024,
+          },
+          {
+            type: 'win',
+            description: '',
+            moodImpact: 5,
+            patienceImpact: 2,
+            trustImpact: 1,
+            week: 2,
+            season: 2024,
+          },
+          {
+            type: 'loss',
+            description: '',
+            moodImpact: -5,
+            patienceImpact: -2,
+            trustImpact: -1,
+            week: 3,
+            season: 2024,
+          },
         ],
       };
 

@@ -78,38 +78,36 @@ export interface OwnerMoodState {
 /**
  * Base mood impacts for event types
  */
-const MOOD_EVENT_IMPACTS: Record<
-  MoodEventType,
-  { mood: number; patience: number; trust: number }
-> = {
-  win: { mood: 5, patience: 2, trust: 1 },
-  loss: { mood: -5, patience: -3, trust: -1 },
-  blowoutWin: { mood: 10, patience: 4, trust: 2 },
-  blowoutLoss: { mood: -12, patience: -6, trust: -3 },
-  playoffWin: { mood: 20, patience: 10, trust: 5 },
-  playoffLoss: { mood: -15, patience: -8, trust: -4 },
-  superBowlWin: { mood: 50, patience: 30, trust: 15 },
-  superBowlLoss: { mood: -10, patience: -5, trust: -2 },
-  draftSuccess: { mood: 15, patience: 8, trust: 5 },
-  draftDisappointment: { mood: -10, patience: -6, trust: -4 },
-  signingSuccess: { mood: 12, patience: 6, trust: 4 },
-  signingFailure: { mood: -8, patience: -5, trust: -3 },
-  tradeSuccess: { mood: 15, patience: 7, trust: 5 },
-  tradeFailure: { mood: -12, patience: -7, trust: -5 },
-  mediaPositive: { mood: 8, patience: 3, trust: 2 },
-  mediaNegative: { mood: -10, patience: -5, trust: -3 },
-  playerConflict: { mood: -8, patience: -4, trust: -3 },
-  coachConflict: { mood: -10, patience: -5, trust: -4 },
-  fanRally: { mood: 10, patience: 5, trust: 3 },
-  fanProtest: { mood: -15, patience: -8, trust: -5 },
-  rivalryWin: { mood: 15, patience: 5, trust: 3 },
-  rivalryLoss: { mood: -15, patience: -6, trust: -3 },
-  streakWin: { mood: 8, patience: 4, trust: 2 },
-  streakLoss: { mood: -10, patience: -5, trust: -2 },
-  recordBreaking: { mood: 20, patience: 8, trust: 5 },
-  injury: { mood: -5, patience: -2, trust: 0 },
-  scandal: { mood: -25, patience: -12, trust: -8 },
-};
+const MOOD_EVENT_IMPACTS: Record<MoodEventType, { mood: number; patience: number; trust: number }> =
+  {
+    win: { mood: 5, patience: 2, trust: 1 },
+    loss: { mood: -5, patience: -3, trust: -1 },
+    blowoutWin: { mood: 10, patience: 4, trust: 2 },
+    blowoutLoss: { mood: -12, patience: -6, trust: -3 },
+    playoffWin: { mood: 20, patience: 10, trust: 5 },
+    playoffLoss: { mood: -15, patience: -8, trust: -4 },
+    superBowlWin: { mood: 50, patience: 30, trust: 15 },
+    superBowlLoss: { mood: -10, patience: -5, trust: -2 },
+    draftSuccess: { mood: 15, patience: 8, trust: 5 },
+    draftDisappointment: { mood: -10, patience: -6, trust: -4 },
+    signingSuccess: { mood: 12, patience: 6, trust: 4 },
+    signingFailure: { mood: -8, patience: -5, trust: -3 },
+    tradeSuccess: { mood: 15, patience: 7, trust: 5 },
+    tradeFailure: { mood: -12, patience: -7, trust: -5 },
+    mediaPositive: { mood: 8, patience: 3, trust: 2 },
+    mediaNegative: { mood: -10, patience: -5, trust: -3 },
+    playerConflict: { mood: -8, patience: -4, trust: -3 },
+    coachConflict: { mood: -10, patience: -5, trust: -4 },
+    fanRally: { mood: 10, patience: 5, trust: 3 },
+    fanProtest: { mood: -15, patience: -8, trust: -5 },
+    rivalryWin: { mood: 15, patience: 5, trust: 3 },
+    rivalryLoss: { mood: -15, patience: -6, trust: -3 },
+    streakWin: { mood: 8, patience: 4, trust: 2 },
+    streakLoss: { mood: -10, patience: -5, trust: -2 },
+    recordBreaking: { mood: 20, patience: 8, trust: 5 },
+    injury: { mood: -5, patience: -2, trust: 0 },
+    scandal: { mood: -25, patience: -12, trust: -8 },
+  };
 
 /**
  * Creates initial mood state
@@ -358,7 +356,11 @@ export function getRecentEventsSummary(state: OwnerMoodState): {
   const neutralEvents = state.recentEvents.filter((e) => e.moodImpact === 0).length;
 
   const netSentiment: 'positive' | 'neutral' | 'negative' =
-    positiveEvents > negativeEvents ? 'positive' : negativeEvents > positiveEvents ? 'negative' : 'neutral';
+    positiveEvents > negativeEvents
+      ? 'positive'
+      : negativeEvents > positiveEvents
+        ? 'negative'
+        : 'neutral';
 
   return { positiveEvents, negativeEvents, neutralEvents, netSentiment };
 }
