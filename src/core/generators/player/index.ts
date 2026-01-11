@@ -14,7 +14,7 @@ export {
   generatePlayer,
   generateRoster,
   generateLeaguePlayers,
-  generateDraftClass,
+  generateSimpleDraftClass,
   type PlayerGenerationOptions,
 } from './PlayerGenerator';
 
