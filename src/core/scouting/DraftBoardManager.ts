@@ -185,9 +185,7 @@ export function calculateConsensusRound(reports: ScoutReport[]): number {
 /**
  * Calculates average overall range from reports
  */
-export function calculateAverageOverallRange(
-  reports: ScoutReport[]
-): { min: number; max: number } {
+export function calculateAverageOverallRange(reports: ScoutReport[]): { min: number; max: number } {
   if (reports.length === 0) return { min: 1, max: 100 };
 
   let totalMin = 0;
@@ -268,10 +266,7 @@ export function createDraftBoardProspect(
 /**
  * Adds a report to the draft board
  */
-export function addReportToBoard(
-  state: DraftBoardState,
-  report: ScoutReport
-): DraftBoardState {
+export function addReportToBoard(state: DraftBoardState, report: ScoutReport): DraftBoardState {
   if (state.isFinalized) return state; // Cannot modify finalized board
 
   const newProspects = new Map(state.prospects);
@@ -311,10 +306,7 @@ export function addReportToBoard(
 /**
  * Adds multiple reports to the draft board
  */
-export function addReportsToBoard(
-  state: DraftBoardState,
-  reports: ScoutReport[]
-): DraftBoardState {
+export function addReportsToBoard(state: DraftBoardState, reports: ScoutReport[]): DraftBoardState {
   let newState = state;
   for (const report of reports) {
     newState = addReportToBoard(newState, report);
@@ -371,10 +363,7 @@ export function setUserRanking(
 /**
  * Removes user ranking for a prospect
  */
-export function removeUserRanking(
-  state: DraftBoardState,
-  prospectId: string
-): DraftBoardState {
+export function removeUserRanking(state: DraftBoardState, prospectId: string): DraftBoardState {
   if (state.isFinalized) return state;
 
   const prospect = state.prospects.get(prospectId);
@@ -454,10 +443,7 @@ export function setUserTier(
 /**
  * Locks a prospect (prevents further changes)
  */
-export function lockProspect(
-  state: DraftBoardState,
-  prospectId: string
-): DraftBoardState {
+export function lockProspect(state: DraftBoardState, prospectId: string): DraftBoardState {
   const prospect = state.prospects.get(prospectId);
   if (!prospect) return state;
 
@@ -477,10 +463,7 @@ export function lockProspect(
 /**
  * Unlocks a prospect
  */
-export function unlockProspect(
-  state: DraftBoardState,
-  prospectId: string
-): DraftBoardState {
+export function unlockProspect(state: DraftBoardState, prospectId: string): DraftBoardState {
   const prospect = state.prospects.get(prospectId);
   if (!prospect) return state;
 
@@ -500,10 +483,7 @@ export function unlockProspect(
 /**
  * Adds director input for a prospect
  */
-export function addDirectorInput(
-  state: DraftBoardState,
-  input: DirectorInput
-): DraftBoardState {
+export function addDirectorInput(state: DraftBoardState, input: DirectorInput): DraftBoardState {
   if (state.isFinalized) return state;
 
   const prospect = state.prospects.get(input.prospectId);
@@ -519,15 +499,17 @@ export function addDirectorInput(
   });
 
   // Update director recommendations
-  const newRecommendations = state.directorRecommendations.filter(
-    (id) => id !== input.prospectId
-  );
+  const newRecommendations = state.directorRecommendations.filter((id) => id !== input.prospectId);
 
   // Insert at correct position
   let inserted = false;
   for (let i = 0; i < newRecommendations.length; i++) {
     const otherProspect = newProspects.get(newRecommendations[i]);
-    if (otherProspect && otherProspect.directorRank !== null && otherProspect.directorRank > input.rank) {
+    if (
+      otherProspect &&
+      otherProspect.directorRank !== null &&
+      otherProspect.directorRank > input.rank
+    ) {
       newRecommendations.splice(i, 0, input.prospectId);
       inserted = true;
       break;
@@ -730,10 +712,7 @@ export function getDraftBoardView(state: DraftBoardState): DraftBoardViewModel {
 /**
  * Removes a prospect from the draft board
  */
-export function removeProspect(
-  state: DraftBoardState,
-  prospectId: string
-): DraftBoardState {
+export function removeProspect(state: DraftBoardState, prospectId: string): DraftBoardState {
   if (state.isFinalized) return state;
 
   const newProspects = new Map(state.prospects);

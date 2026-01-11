@@ -4,11 +4,7 @@
 
 import { Position } from '../../models/player/Position';
 import { ScoutReport } from '../ScoutReportGenerator';
-import {
-  DraftBoardState,
-  createDraftBoardState,
-  addReportToBoard,
-} from '../DraftBoardManager';
+import { DraftBoardState, createDraftBoardState, addReportToBoard } from '../DraftBoardManager';
 import {
   PositionalNeeds,
   ScoutReliability,
@@ -98,7 +94,13 @@ function createMockReport(
 
 // Helper to create draft board with prospects
 function createDraftBoardWithProspects(
-  prospects: { id: string; position: Position; overallMin: number; overallMax: number; round: number }[]
+  prospects: {
+    id: string;
+    position: Position;
+    overallMin: number;
+    overallMax: number;
+    round: number;
+  }[]
 ): DraftBoardState {
   let state = createDraftBoardState('team-1', 2025);
 

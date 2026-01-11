@@ -5,7 +5,12 @@
 
 import { Position } from '../models/player/Position';
 import { ScoutReport } from './ScoutReportGenerator';
-import { DraftBoardState, DraftBoardProspect, DraftTier, determineDraftTier } from './DraftBoardManager';
+import {
+  DraftBoardState,
+  DraftBoardProspect,
+  DraftTier,
+  determineDraftTier,
+} from './DraftBoardManager';
 
 /**
  * Positional need levels
@@ -190,8 +195,7 @@ export function calculateSkillScore(reports: ScoutReport[]): number {
 
   let totalScore = 0;
   for (const report of reports) {
-    const avgOverall =
-      (report.skillRanges.overall.min + report.skillRanges.overall.max) / 2;
+    const avgOverall = (report.skillRanges.overall.min + report.skillRanges.overall.max) / 2;
     totalScore += avgOverall;
   }
 
@@ -227,8 +231,7 @@ export function calculateWeightedSkillScore(
 
   for (const report of reports) {
     const weight = getScoutReliabilityWeight(report.scoutId, position, reliabilityMap);
-    const avgOverall =
-      (report.skillRanges.overall.min + report.skillRanges.overall.max) / 2;
+    const avgOverall = (report.skillRanges.overall.min + report.skillRanges.overall.max) / 2;
 
     totalWeightedScore += avgOverall * weight;
     totalWeight += weight;
@@ -345,9 +348,7 @@ export function generateProspectRankings(
 /**
  * Generates need-adjusted rankings
  */
-export function generateNeedAdjustedRankings(
-  rankings: ProspectRanking[]
-): ProspectRanking[] {
+export function generateNeedAdjustedRankings(rankings: ProspectRanking[]): ProspectRanking[] {
   const needAdjusted = [...rankings];
 
   // Sort by need-adjusted score (descending)
@@ -530,12 +531,7 @@ export function generateBigBoard(
   config: BigBoardConfig = DEFAULT_BIG_BOARD_CONFIG
 ): BigBoard {
   // Generate base rankings
-  const overallRankings = generateProspectRankings(
-    draftBoard,
-    needs,
-    reliabilityMap,
-    config
-  );
+  const overallRankings = generateProspectRankings(draftBoard, needs, reliabilityMap, config);
 
   // Generate derived rankings
   const needBasedRankings = generateNeedAdjustedRankings(overallRankings);
@@ -622,9 +618,7 @@ export function compareProspects(
 /**
  * Gets position group rankings
  */
-export function getPositionGroupRankings(
-  bigBoard: BigBoard
-): Record<string, ProspectRanking[]> {
+export function getPositionGroupRankings(bigBoard: BigBoard): Record<string, ProspectRanking[]> {
   const groups: Record<string, Position[]> = {
     QB: [Position.QB],
     RB: [Position.RB],
@@ -722,12 +716,8 @@ export function getBigBoardSummary(bigBoard: BigBoard): {
     .slice(0, 5);
 
   // Average confidence
-  const totalConfidence = bigBoard.overallRankings.reduce(
-    (sum, r) => sum + r.confidenceScore,
-    0
-  );
-  const averageConfidence =
-    totalProspects > 0 ? Math.round(totalConfidence / totalProspects) : 0;
+  const totalConfidence = bigBoard.overallRankings.reduce((sum, r) => sum + r.confidenceScore, 0);
+  const averageConfidence = totalProspects > 0 ? Math.round(totalConfidence / totalProspects) : 0;
 
   // Focused percentage
   const focusedCount = bigBoard.overallRankings.filter((r) => r.hasFocusReport).length;

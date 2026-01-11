@@ -198,9 +198,7 @@ describe('DraftBoardManager', () => {
     });
 
     it('should identify focus reports', () => {
-      const reports = [
-        createMockReport('p1', 's1', { reportType: 'focus' }),
-      ];
+      const reports = [createMockReport('p1', 's1', { reportType: 'focus' })];
 
       const prospect = createDraftBoardProspect(reports, Date.now());
 
@@ -394,7 +392,9 @@ describe('DraftBoardManager', () => {
       state = addDirectorInput(state, input);
 
       expect(state.prospects.get('p1')?.directorRank).toBe(3);
-      expect(state.prospects.get('p1')?.directorNotes).toBe('Director thinks highly of this prospect');
+      expect(state.prospects.get('p1')?.directorNotes).toBe(
+        'Director thinks highly of this prospect'
+      );
       expect(state.directorRecommendations).toContain('p1');
     });
 
@@ -600,9 +600,18 @@ describe('DraftBoardManager', () => {
   describe('getProspectsNeedingScouting', () => {
     it('should return prospects needing more scouting', () => {
       let state = createDraftBoardState('team-1', 2025);
-      state = addReportToBoard(state, createMockReport('p1', 's1', { needsMoreScouting: true, reportType: 'auto' }));
-      state = addReportToBoard(state, createMockReport('p2', 's1', { needsMoreScouting: false, reportType: 'focus' }));
-      state = addReportToBoard(state, createMockReport('p3', 's1', { needsMoreScouting: true, reportType: 'auto' }));
+      state = addReportToBoard(
+        state,
+        createMockReport('p1', 's1', { needsMoreScouting: true, reportType: 'auto' })
+      );
+      state = addReportToBoard(
+        state,
+        createMockReport('p2', 's1', { needsMoreScouting: false, reportType: 'focus' })
+      );
+      state = addReportToBoard(
+        state,
+        createMockReport('p3', 's1', { needsMoreScouting: true, reportType: 'auto' })
+      );
 
       const needsScouting = getProspectsNeedingScouting(state);
 
@@ -611,7 +620,10 @@ describe('DraftBoardManager', () => {
 
     it('should exclude prospects with focus reports', () => {
       let state = createDraftBoardState('team-1', 2025);
-      state = addReportToBoard(state, createMockReport('p1', 's1', { needsMoreScouting: true, reportType: 'focus' }));
+      state = addReportToBoard(
+        state,
+        createMockReport('p1', 's1', { needsMoreScouting: true, reportType: 'focus' })
+      );
 
       const needsScouting = getProspectsNeedingScouting(state);
 
@@ -634,8 +646,14 @@ describe('DraftBoardManager', () => {
 
     it('should sort by consensus round', () => {
       let state = createDraftBoardState('team-1', 2025);
-      state = addReportToBoard(state, createMockReport('p1', 's1', { position: Position.WR, roundMin: 3, roundMax: 4 }));
-      state = addReportToBoard(state, createMockReport('p2', 's1', { position: Position.WR, roundMin: 1, roundMax: 1 }));
+      state = addReportToBoard(
+        state,
+        createMockReport('p1', 's1', { position: Position.WR, roundMin: 3, roundMax: 4 })
+      );
+      state = addReportToBoard(
+        state,
+        createMockReport('p2', 's1', { position: Position.WR, roundMin: 1, roundMax: 1 })
+      );
 
       const wrs = getProspectsByPosition(state, Position.WR);
 
@@ -659,7 +677,10 @@ describe('DraftBoardManager', () => {
     it('should respect limit', () => {
       let state = createDraftBoardState('team-1', 2025);
       for (let i = 0; i < 15; i++) {
-        state = addReportToBoard(state, createMockReport(`p${i}`, 's1', { roundMin: 1, roundMax: 1 }));
+        state = addReportToBoard(
+          state,
+          createMockReport(`p${i}`, 's1', { roundMin: 1, roundMax: 1 })
+        );
       }
 
       const topFive = getTopProspectsByTier(state, 'first_round', 5);

@@ -280,33 +280,21 @@ describe('ReportConfidenceSystem', () => {
   describe('calculateConfidenceAdjustment', () => {
     it('should include region bonus for matching region', () => {
       const scout = createMockScout(70, 'northeast');
-      const adjustment = calculateConfidenceAdjustment(
-        scout,
-        'northeast',
-        Position.WR
-      );
+      const adjustment = calculateConfidenceAdjustment(scout, 'northeast', Position.WR);
 
       expect(adjustment.regionKnowledgeBonus).toBeGreaterThan(0);
     });
 
     it('should include position bonus for specialty', () => {
       const scout = createMockScout(70, 'northeast', Position.WR);
-      const adjustment = calculateConfidenceAdjustment(
-        scout,
-        'northeast',
-        Position.WR
-      );
+      const adjustment = calculateConfidenceAdjustment(scout, 'northeast', Position.WR);
 
       expect(adjustment.positionSpecialtyBonus).toBeGreaterThan(0);
     });
 
     it('should calculate total multiplier', () => {
       const scout = createMockScout(70, 'northeast', Position.WR);
-      const adjustment = calculateConfidenceAdjustment(
-        scout,
-        'northeast',
-        Position.WR
-      );
+      const adjustment = calculateConfidenceAdjustment(scout, 'northeast', Position.WR);
 
       expect(adjustment.totalMultiplier).toBeGreaterThanOrEqual(0.5);
       expect(adjustment.totalMultiplier).toBeLessThanOrEqual(1.5);
@@ -571,13 +559,7 @@ describe('ReportConfidenceSystem', () => {
     it('should calculate full confidence with all factors', () => {
       const scout = createMockScout(80, 'northeast', Position.WR);
 
-      const confidence = calculateEnhancedConfidence(
-        scout,
-        'focus',
-        45,
-        'northeast',
-        Position.WR
-      );
+      const confidence = calculateEnhancedConfidence(scout, 'focus', 45, 'northeast', Position.WR);
 
       expect(confidence.level).toBe('high');
       expect(confidence.score).toBeGreaterThan(60);
@@ -587,13 +569,7 @@ describe('ReportConfidenceSystem', () => {
     it('should include all factor types', () => {
       const scout = createMockScout(80, 'northeast', Position.WR);
 
-      const confidence = calculateEnhancedConfidence(
-        scout,
-        'focus',
-        45,
-        'northeast',
-        Position.WR
-      );
+      const confidence = calculateEnhancedConfidence(scout, 'focus', 45, 'northeast', Position.WR);
 
       const factorNames = confidence.factors.map((f) => f.factor);
 

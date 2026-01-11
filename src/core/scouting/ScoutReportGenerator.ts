@@ -377,10 +377,7 @@ export function calculateReportConfidence(
 /**
  * Converts traits to TraitInfo objects
  */
-export function convertTraitsToInfo(
-  traits: string[],
-  includeAnalysis: boolean
-): TraitInfo[] {
+export function convertTraitsToInfo(traits: string[], includeAnalysis: boolean): TraitInfo[] {
   return traits.map((trait) => {
     // Categorize trait
     const lowerTrait = trait.toLowerCase();
@@ -540,11 +537,7 @@ export function generateFocusScoutReport(
   };
 
   // Calculate skill ranges (narrow)
-  const overallRange = calculateFocusSkillRange(
-    prospect.trueOverall,
-    scoutEvaluation,
-    focusConfig
-  );
+  const overallRange = calculateFocusSkillRange(prospect.trueOverall, scoutEvaluation, focusConfig);
   const physicalRange = calculateFocusSkillRange(
     prospect.truePhysical,
     scoutEvaluation,

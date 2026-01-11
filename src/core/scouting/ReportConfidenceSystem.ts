@@ -7,7 +7,12 @@
 import { Scout } from '../models/staff/Scout';
 import { Position } from '../models/player/Position';
 import { SkillRange } from './AutoScoutingSystem';
-import { ScoutReport, ReportType, ReportConfidence, ConfidenceFactor } from './ScoutReportGenerator';
+import {
+  ScoutReport,
+  ReportType,
+  ReportConfidence,
+  ConfidenceFactor,
+} from './ScoutReportGenerator';
 
 /**
  * Scout tendency (optimistic, neutral, pessimistic)
@@ -88,10 +93,7 @@ export function calculateBaseConfidence(scoutEvaluation: number): number {
 /**
  * Calculates scouting time confidence bonus
  */
-export function calculateTimeConfidence(
-  scoutingHours: number,
-  reportType: ReportType
-): number {
+export function calculateTimeConfidence(scoutingHours: number, reportType: ReportType): number {
   // Expected hours by report type
   const expectedHours = reportType === 'focus' ? 45 : 5;
   const maxHours = reportType === 'focus' ? 60 : 10;
@@ -330,8 +332,7 @@ export function calculateConfidenceAdjustment(
     ? calculateTendencyAdjustment(tendencyProfile, config)
     : 0;
 
-  const totalMultiplier =
-    baseMultiplier + regionBonus + positionBonus + tendencyAdjustment;
+  const totalMultiplier = baseMultiplier + regionBonus + positionBonus + tendencyAdjustment;
 
   return {
     baseMultiplier,
