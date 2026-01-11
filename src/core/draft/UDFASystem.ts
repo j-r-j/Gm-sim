@@ -92,9 +92,7 @@ export function createUDFAPool(
   userTeamId: string
 ): UDFAPoolState {
   // Filter out drafted prospects
-  const availableProspects = draftClass.prospects.filter(
-    (p) => !selectedProspectIds.has(p.id)
-  );
+  const availableProspects = draftClass.prospects.filter((p) => !selectedProspectIds.has(p.id));
 
   // Initialize budgets
   const remainingBudget = new Map<string, number>();
@@ -388,10 +386,7 @@ function removeProspectFromPool(
 /**
  * Simulates AI UDFA signings
  */
-export function simulateAISignings(
-  state: UDFAPoolState,
-  rounds: number = 3
-): UDFAPoolState {
+export function simulateAISignings(state: UDFAPoolState, rounds: number = 3): UDFAPoolState {
   let currentState = state;
 
   for (let round = 0; round < rounds; round++) {
@@ -423,11 +418,17 @@ export function simulateAISignings(
       // Sort by interest priority
       interests.sort((a, b) => {
         const scoreA =
-          (a.interest.interestLevel === 'high' ? 3 : a.interest.interestLevel === 'moderate' ? 2 : 1) *
-          a.interest.needPriority;
+          (a.interest.interestLevel === 'high'
+            ? 3
+            : a.interest.interestLevel === 'moderate'
+              ? 2
+              : 1) * a.interest.needPriority;
         const scoreB =
-          (b.interest.interestLevel === 'high' ? 3 : b.interest.interestLevel === 'moderate' ? 2 : 1) *
-          b.interest.needPriority;
+          (b.interest.interestLevel === 'high'
+            ? 3
+            : b.interest.interestLevel === 'moderate'
+              ? 2
+              : 1) * b.interest.needPriority;
         return scoreB - scoreA;
       });
 
@@ -519,9 +520,8 @@ export function getUDFAPoolSummary(state: UDFAPoolState): UDFAPoolSummary {
   }
 
   const qualities = state.availableProspects.map(getProspectQuality);
-  const averageQuality = qualities.length > 0
-    ? qualities.reduce((a, b) => a + b, 0) / qualities.length
-    : 0;
+  const averageQuality =
+    qualities.length > 0 ? qualities.reduce((a, b) => a + b, 0) / qualities.length : 0;
 
   const topProspects = getTopUDFAs(state, 10).map((p) => ({
     name: `${p.player.firstName} ${p.player.lastName}`,

@@ -233,10 +233,7 @@ export function getTimeForPick(round: number, config: DraftTimerConfig): number 
 /**
  * Makes a user pick
  */
-export function makeUserPick(
-  state: DraftRoomState,
-  prospectId: string
-): DraftRoomState {
+export function makeUserPick(state: DraftRoomState, prospectId: string): DraftRoomState {
   if (state.status !== DraftStatus.IN_PROGRESS) {
     throw new Error('Draft is not in progress');
   }
@@ -246,7 +243,7 @@ export function makeUserPick(
   }
 
   if (!state.currentPick.isUserPick) {
-    throw new Error('Not user\'s pick');
+    throw new Error("Not user's pick");
   }
 
   const prospect = state.availableProspects.find((p) => p.id === prospectId);
@@ -467,10 +464,7 @@ export function proposeTradeToAI(
 /**
  * Handles incoming AI trade offer
  */
-export function receiveAITradeOffer(
-  state: DraftRoomState,
-  offer: AITradeOffer
-): DraftRoomState {
+export function receiveAITradeOffer(state: DraftRoomState, offer: AITradeOffer): DraftRoomState {
   const proposal: TradeProposal = {
     picksOffered: offer.picksRequested, // From user perspective
     picksRequested: offer.picksOffered,
@@ -494,10 +488,7 @@ export function receiveAITradeOffer(
 /**
  * Accepts a pending trade offer
  */
-export function acceptTradeOffer(
-  state: DraftRoomState,
-  offerId: number
-): DraftRoomState {
+export function acceptTradeOffer(state: DraftRoomState, offerId: number): DraftRoomState {
   const offer = state.pendingTradeOffers[offerId];
   if (!offer) {
     throw new Error('Trade offer not found');
@@ -522,10 +513,7 @@ export function acceptTradeOffer(
 /**
  * Rejects a pending trade offer
  */
-export function rejectTradeOffer(
-  state: DraftRoomState,
-  offerId: number
-): DraftRoomState {
+export function rejectTradeOffer(state: DraftRoomState, offerId: number): DraftRoomState {
   const newPendingOffers = state.pendingTradeOffers.filter((_, i) => i !== offerId);
 
   return {
@@ -561,14 +549,7 @@ function executeDraftTrade(
   const otherTeamId = userGives[0]?.currentTeamId || userReceives[0]?.currentTeamId;
   if (otherTeamId) {
     for (const pick of userGives) {
-      newOrderState = executeTrade(
-        newOrderState,
-        pick.id,
-        pick.year,
-        otherTeamId,
-        tradeId,
-        0
-      );
+      newOrderState = executeTrade(newOrderState, pick.id, pick.year, otherTeamId, tradeId, 0);
     }
   }
 

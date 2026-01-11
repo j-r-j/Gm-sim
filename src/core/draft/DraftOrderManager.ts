@@ -320,10 +320,7 @@ export function calculateCompensatoryPicks(
 /**
  * Awards compensatory picks to teams
  */
-export function awardCompensatoryPicks(
-  state: DraftOrderState,
-  forYear: number
-): DraftOrderState {
+export function awardCompensatoryPicks(state: DraftOrderState, forYear: number): DraftOrderState {
   const yearState = state.draftYears.get(forYear);
   if (!yearState) {
     throw new Error(`Draft year ${forYear} not found`);

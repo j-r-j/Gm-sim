@@ -386,14 +386,16 @@ export function evaluateTrade(proposal: TradeProposal): TradeEvaluation {
   const requestedValue = _calculateTotalValue(proposal.picksRequested, proposal.currentYear);
 
   const valueDiff = offeredValue - requestedValue;
-  const valueRatio = requestedValue > 0 ? offeredValue / requestedValue : offeredValue > 0 ? 999 : 1;
+  const valueRatio =
+    requestedValue > 0 ? offeredValue / requestedValue : offeredValue > 0 ? 999 : 1;
 
   let assessment: TradeAssessment;
   let description: string;
 
   if (valueRatio < 0.6) {
     assessment = 'heavily_favors_them';
-    description = 'This trade heavily favors the other team. You would be giving up much more value.';
+    description =
+      'This trade heavily favors the other team. You would be giving up much more value.';
   } else if (valueRatio < 0.85) {
     assessment = 'slightly_favors_them';
     description = 'This trade slightly favors the other team. Consider asking for more.';

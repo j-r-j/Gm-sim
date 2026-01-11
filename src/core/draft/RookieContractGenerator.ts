@@ -204,7 +204,7 @@ export function calculateYearlyBreakdown(
   if (round === 1) {
     yearOneSalary = baseSalaryPool * 0.18; // ~18% in year 1 for 1st rounders
   } else if (round === 2) {
-    yearOneSalary = baseSalaryPool * 0.20;
+    yearOneSalary = baseSalaryPool * 0.2;
   } else {
     yearOneSalary = Math.max(ROOKIE_MINIMUM_SALARY, baseSalaryPool * 0.22);
   }
@@ -252,10 +252,7 @@ function calculateGuaranteedMoney(breakdown: YearlyContractBreakdown[]): number 
 /**
  * Creates a 5th year option for first round picks
  */
-function createFifthYearOption(
-  draftYear: number,
-  overallPick: number
-): FifthYearOption {
+function createFifthYearOption(draftYear: number, overallPick: number): FifthYearOption {
   // 5th year option salary is based on pick position
   // Top 10 picks get salary of top 10 at their position
   // Picks 11-32 get average of picks 3-25 at their position
@@ -277,10 +274,7 @@ function createFifthYearOption(
 /**
  * Generates a rookie contract for a draft pick
  */
-export function generateRookieContract(
-  pick: DraftPick,
-  playerId: string
-): RookieContract {
+export function generateRookieContract(pick: DraftPick, playerId: string): RookieContract {
   if (pick.overallPick === null) {
     throw new Error('Pick must have overall pick number assigned');
   }
@@ -312,9 +306,7 @@ export function generateRookieContract(
     yearlyBreakdown,
     signingBonus: slotValues.signingBonus,
     hasFifthYearOption,
-    fifthYearOption: hasFifthYearOption
-      ? createFifthYearOption(pick.year, pick.overallPick)
-      : null,
+    fifthYearOption: hasFifthYearOption ? createFifthYearOption(pick.year, pick.overallPick) : null,
   };
 }
 
@@ -398,10 +390,7 @@ export function getRemainingYears(contract: RookieContract, currentYear: number)
 /**
  * Gets remaining guaranteed money
  */
-export function getRemainingGuaranteed(
-  contract: RookieContract,
-  currentYear: number
-): number {
+export function getRemainingGuaranteed(contract: RookieContract, currentYear: number): number {
   return contract.yearlyBreakdown
     .filter((y) => y.year >= currentYear && y.isGuaranteed)
     .reduce((sum, y) => sum + y.capHit, 0);

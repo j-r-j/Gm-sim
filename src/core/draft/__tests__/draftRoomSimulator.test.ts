@@ -87,26 +87,14 @@ describe('DraftRoomSimulator', () => {
 
   describe('startDraft', () => {
     it('should change status to in progress', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
 
       state = startDraft(state);
       expect(state.status).toBe(DraftStatus.IN_PROGRESS);
     });
 
     it('should set current pick', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
 
       state = startDraft(state);
       expect(state.currentPick).not.toBeNull();
@@ -114,13 +102,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should throw if already started', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
 
       state = startDraft(state);
       expect(() => startDraft(state)).toThrow();
@@ -129,13 +111,7 @@ describe('DraftRoomSimulator', () => {
 
   describe('processAIPick', () => {
     it('should make pick for AI team', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       // First pick is team-4 (worst team picks first)
@@ -149,13 +125,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should advance to next pick', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       state = processAIPick(state);
@@ -166,13 +136,7 @@ describe('DraftRoomSimulator', () => {
 
   describe('makeUserPick', () => {
     it('should record user pick', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       // Process AI picks until user's turn
@@ -189,13 +153,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should throw for non-user pick', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       // First pick is AI team
@@ -205,13 +163,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should throw for unavailable prospect', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       while (state.currentPick && !state.currentPick.isUserPick) {
@@ -224,13 +176,7 @@ describe('DraftRoomSimulator', () => {
 
   describe('pauseDraft and resumeDraft', () => {
     it('should pause and resume draft', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       state = pauseDraft(state);
@@ -241,13 +187,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should throw if not in correct state', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
 
       expect(() => pauseDraft(state)).toThrow();
       expect(() => resumeDraft(state)).toThrow();
@@ -256,13 +196,7 @@ describe('DraftRoomSimulator', () => {
 
   describe('getRoundStatus', () => {
     it('should return correct round status', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       const status = getRoundStatus(state, 1);
@@ -274,13 +208,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should track completed picks', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       // Make some picks
@@ -294,13 +222,7 @@ describe('DraftRoomSimulator', () => {
 
   describe('getAllRoundStatuses', () => {
     it('should return status for all 7 rounds', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
 
       const statuses = getAllRoundStatuses(state);
 
@@ -312,13 +234,7 @@ describe('DraftRoomSimulator', () => {
 
   describe('getDraftSummary', () => {
     it('should provide accurate summary', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       state = processAIPick(state);
@@ -355,13 +271,7 @@ describe('DraftRoomSimulator', () => {
     });
 
     it('should not affect AI picks', () => {
-      let state = createDraftRoomState(
-        currentYear,
-        orderState,
-        draftClass,
-        aiProfiles,
-        userTeamId
-      );
+      let state = createDraftRoomState(currentYear, orderState, draftClass, aiProfiles, userTeamId);
       state = startDraft(state);
 
       // First pick is AI

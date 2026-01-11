@@ -220,8 +220,7 @@ function evaluateProspect(prospect: Prospect, profile: AIDraftProfile): Prospect
   const needsScore = needScores[needLevel];
 
   // Combine scores based on philosophy weight
-  const totalScore =
-    talentScore * (1 - profile.needsWeight) + needsScore * profile.needsWeight;
+  const totalScore = talentScore * (1 - profile.needsWeight) + needsScore * profile.needsWeight;
 
   // Flag risky prospects based on role effectiveness (lower = more uncertainty)
   const isRisky = prospect.player.roleFit.roleEffectiveness < 70;

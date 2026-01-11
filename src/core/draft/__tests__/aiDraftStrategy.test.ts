@@ -148,11 +148,7 @@ describe('AIDraftStrategy', () => {
 
   describe('shouldConsiderTradeUp', () => {
     it('should return boolean', () => {
-      const result = shouldConsiderTradeUp(
-        testProfile,
-        1000,
-        draftClass.prospects.slice(0, 10)
-      );
+      const result = shouldConsiderTradeUp(testProfile, 1000, draftClass.prospects.slice(0, 10));
       expect(typeof result).toBe('boolean');
     });
 
@@ -191,9 +187,7 @@ describe('AIDraftStrategy', () => {
   describe('makeAIPickDecision', () => {
     it('should return decision with selected prospect', () => {
       const pick = assignOverallPick(createDraftPick('pick-1', 2025, 1, 'team-1'), 10);
-      const availablePicks = [
-        assignOverallPick(createDraftPick('pick-2', 2025, 2, 'team-1'), 42),
-      ];
+      const availablePicks = [assignOverallPick(createDraftPick('pick-2', 2025, 2, 'team-1'), 42)];
 
       const decision = makeAIPickDecision(
         testProfile,

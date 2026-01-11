@@ -123,7 +123,9 @@ describe('DraftOrderManager', () => {
 
       const newState = executeTrade(state, pickToTrade.id, 2025, 'team-2', 'trade-1', 1);
 
-      const tradedPick = getTeamPicks(newState, 'team-2', 2025).find((p) => p.id === pickToTrade.id);
+      const tradedPick = getTeamPicks(newState, 'team-2', 2025).find(
+        (p) => p.id === pickToTrade.id
+      );
       expect(tradedPick?.tradeHistory.length).toBe(1);
       expect(tradedPick?.tradeHistory[0].fromTeamId).toBe('team-1');
       expect(tradedPick?.tradeHistory[0].toTeamId).toBe('team-2');
