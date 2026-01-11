@@ -132,10 +132,7 @@ export function createDefaultStandings(teams: Team[]): PreviousYearStandings {
  */
 function getDivisionRivals(team: Team, teams: Team[]): Team[] {
   return teams.filter(
-    (t) =>
-      t.conference === team.conference &&
-      t.division === team.division &&
-      t.id !== team.id
+    (t) => t.conference === team.conference && t.division === team.division && t.id !== team.id
   );
 }
 
@@ -144,9 +141,7 @@ function getDivisionRivals(team: Team, teams: Team[]): Team[] {
  */
 function getIntraConferenceOpponents(team: Team, teams: Team[]): Team[] {
   const targetDivision = INTRA_CONFERENCE_ROTATION[team.conference][team.division];
-  return teams.filter(
-    (t) => t.conference === team.conference && t.division === targetDivision
-  );
+  return teams.filter((t) => t.conference === team.conference && t.division === targetDivision);
 }
 
 /**
@@ -155,9 +150,7 @@ function getIntraConferenceOpponents(team: Team, teams: Team[]): Team[] {
 function getInterConferenceOpponents(team: Team, teams: Team[]): Team[] {
   const oppositeConference: Conference = team.conference === 'AFC' ? 'NFC' : 'AFC';
   const targetDivision = INTER_CONFERENCE_ROTATION[team.conference][team.division];
-  return teams.filter(
-    (t) => t.conference === oppositeConference && t.division === targetDivision
-  );
+  return teams.filter((t) => t.conference === oppositeConference && t.division === targetDivision);
 }
 
 /**
@@ -173,9 +166,7 @@ function getSamePlaceConferenceOpponents(
   const rotationDivision = INTRA_CONFERENCE_ROTATION[team.conference][team.division];
 
   // Get the other 2 divisions (not own, not rotation)
-  const otherDivisions = ALL_DIVISIONS.filter(
-    (d) => d !== team.division && d !== rotationDivision
-  );
+  const otherDivisions = ALL_DIVISIONS.filter((d) => d !== team.division && d !== rotationDivision);
 
   const opponents: Team[] = [];
   for (const division of otherDivisions) {
@@ -230,10 +221,7 @@ function getSeventeenthGameOpponent(
 /**
  * Gets a team's finish position in their division last year
  */
-function getTeamFinishPosition(
-  team: Team,
-  previousStandings: PreviousYearStandings
-): number {
+function getTeamFinishPosition(team: Team, previousStandings: PreviousYearStandings): number {
   const divisionOrder = previousStandings[team.conference][team.division];
   const position = divisionOrder.indexOf(team.id);
   return position >= 0 ? position : 0; // Default to 1st if not found
@@ -249,8 +237,7 @@ function createGame(
   gameIndex: number
 ): ScheduledGame {
   const isDivisional =
-    homeTeam.conference === awayTeam.conference &&
-    homeTeam.division === awayTeam.division;
+    homeTeam.conference === awayTeam.conference && homeTeam.division === awayTeam.division;
   const isConference = homeTeam.conference === awayTeam.conference;
 
   return {
@@ -349,9 +336,7 @@ function distributeGamesAcrossWeeks(
   }
 
   // PHASE 2: Assign remaining divisional games to weeks 13-17 (late season emphasis)
-  const remainingDivisional = divisionalGames.filter(
-    (g) => !gameWeekAssignment.has(g.gameId)
-  );
+  const remainingDivisional = divisionalGames.filter((g) => !gameWeekAssignment.has(g.gameId));
   const lateWeeks = [17, 16, 15, 14, 13];
   for (const game of remainingDivisional) {
     for (const week of lateWeeks) {
@@ -360,9 +345,7 @@ function distributeGamesAcrossWeeks(
   }
 
   // PHASE 3: Fill any still-unassigned divisional games
-  const stillUnassignedDiv = divisionalGames.filter(
-    (g) => !gameWeekAssignment.has(g.gameId)
-  );
+  const stillUnassignedDiv = divisionalGames.filter((g) => !gameWeekAssignment.has(g.gameId));
   for (const game of stillUnassignedDiv) {
     for (let week = 12; week >= 1; week--) {
       if (assignGame(game, week)) break;
@@ -376,14 +359,8 @@ function distributeGamesAcrossWeeks(
   };
 
   nonDivisionalGames.sort((a, b) => {
-    const aMin = Math.min(
-      getTeamAvailability(a.homeTeamId),
-      getTeamAvailability(a.awayTeamId)
-    );
-    const bMin = Math.min(
-      getTeamAvailability(b.homeTeamId),
-      getTeamAvailability(b.awayTeamId)
-    );
+    const aMin = Math.min(getTeamAvailability(a.homeTeamId), getTeamAvailability(a.awayTeamId));
+    const bMin = Math.min(getTeamAvailability(b.homeTeamId), getTeamAvailability(b.awayTeamId));
     return aMin - bMin;
   });
 
@@ -550,10 +527,7 @@ export function generateSeasonSchedule(
  * @param week - Week number (1-18)
  * @returns Array of games for that week
  */
-export function getWeekGames(
-  schedule: SeasonSchedule,
-  week: number
-): ScheduledGame[] {
+export function getWeekGames(schedule: SeasonSchedule, week: number): ScheduledGame[] {
   return schedule.regularSeason.filter((game) => game.week === week);
 }
 
@@ -564,10 +538,7 @@ export function getWeekGames(
  * @param teamId - The team ID
  * @returns Array of games for that team
  */
-export function getTeamSchedule(
-  schedule: SeasonSchedule,
-  teamId: string
-): ScheduledGame[] {
+export function getTeamSchedule(schedule: SeasonSchedule, teamId: string): ScheduledGame[] {
   return schedule.regularSeason
     .filter((game) => game.homeTeamId === teamId || game.awayTeamId === teamId)
     .sort((a, b) => a.week - b.week);
@@ -594,10 +565,7 @@ export function getTeamRemainingSchedule(
  * @param teamId - The team ID
  * @returns Array of completed games
  */
-export function getTeamCompletedGames(
-  schedule: SeasonSchedule,
-  teamId: string
-): ScheduledGame[] {
+export function getTeamCompletedGames(schedule: SeasonSchedule, teamId: string): ScheduledGame[] {
   return getTeamSchedule(schedule, teamId).filter((game) => game.isComplete);
 }
 
@@ -619,11 +587,7 @@ export function updateGameResult(
   const updatedGames = schedule.regularSeason.map((game) => {
     if (game.gameId === gameId) {
       const winnerId =
-        homeScore > awayScore
-          ? game.homeTeamId
-          : homeScore < awayScore
-            ? game.awayTeamId
-            : null;
+        homeScore > awayScore ? game.homeTeamId : homeScore < awayScore ? game.awayTeamId : null;
 
       return {
         ...game,

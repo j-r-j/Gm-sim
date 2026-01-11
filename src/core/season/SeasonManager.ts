@@ -46,9 +46,28 @@ import { calculateDraftOrder } from './DraftOrderCalculator';
  */
 export type SeasonPhase =
   | 'preseason'
-  | 'week1' | 'week2' | 'week3' | 'week4' | 'week5' | 'week6' | 'week7' | 'week8' | 'week9'
-  | 'week10' | 'week11' | 'week12' | 'week13' | 'week14' | 'week15' | 'week16' | 'week17' | 'week18'
-  | 'wildCard' | 'divisional' | 'conference' | 'superBowl'
+  | 'week1'
+  | 'week2'
+  | 'week3'
+  | 'week4'
+  | 'week5'
+  | 'week6'
+  | 'week7'
+  | 'week8'
+  | 'week9'
+  | 'week10'
+  | 'week11'
+  | 'week12'
+  | 'week13'
+  | 'week14'
+  | 'week15'
+  | 'week16'
+  | 'week17'
+  | 'week18'
+  | 'wildCard'
+  | 'divisional'
+  | 'conference'
+  | 'superBowl'
   | 'offseason';
 
 /**
@@ -178,22 +197,14 @@ export class SeasonManager {
    * Gets the user's team game for the current week
    */
   getUserTeamGame(): ScheduledGame | null {
-    return getUserTeamGame(
-      this.state.schedule,
-      this.state.currentWeek,
-      this.userTeamId
-    );
+    return getUserTeamGame(this.state.schedule, this.state.currentWeek, this.userTeamId);
   }
 
   /**
    * Checks if user is on bye this week
    */
   isUserOnBye(): boolean {
-    return isUserOnBye(
-      this.state.schedule,
-      this.state.currentWeek,
-      this.userTeamId
-    );
+    return isUserOnBye(this.state.schedule, this.state.currentWeek, this.userTeamId);
   }
 
   /**
@@ -263,10 +274,7 @@ export class SeasonManager {
    * @param simulateUserGame - Whether to simulate the user's game
    * @returns Week results
    */
-  simulateWeek(
-    gameState: GameState,
-    simulateUserGame: boolean = true
-  ): WeekResults {
+  simulateWeek(gameState: GameState, simulateUserGame: boolean = true): WeekResults {
     if (this.isPlayoffTime()) {
       throw new Error('Use simulatePlayoffRound during playoffs');
     }
@@ -395,17 +403,10 @@ export class SeasonManager {
       throw new Error('No current playoff round');
     }
 
-    const results = simulatePlayoffRound(
-      this.state.playoffBracket,
-      currentRound,
-      gameState
-    );
+    const results = simulatePlayoffRound(this.state.playoffBracket, currentRound, gameState);
 
     // Advance the bracket
-    this.state.playoffBracket = advancePlayoffRound(
-      this.state.playoffBracket,
-      results
-    );
+    this.state.playoffBracket = advancePlayoffRound(this.state.playoffBracket, results);
 
     // Update phase
     this.advancePlayoffPhase();
@@ -416,10 +417,7 @@ export class SeasonManager {
   /**
    * Simulates a single playoff game
    */
-  simulatePlayoffGame(
-    matchup: PlayoffMatchup,
-    gameState: GameState
-  ): GameResult {
+  simulatePlayoffGame(matchup: PlayoffMatchup, gameState: GameState): GameResult {
     return simulatePlayoffGame(matchup, gameState);
   }
 
@@ -477,9 +475,7 @@ export class SeasonManager {
       case 'conference':
         return this.state.playoffBracket.conferenceChampionships;
       case 'superBowl':
-        return this.state.playoffBracket.superBowl
-          ? [this.state.playoffBracket.superBowl]
-          : [];
+        return this.state.playoffBracket.superBowl ? [this.state.playoffBracket.superBowl] : [];
     }
   }
 
@@ -489,10 +485,8 @@ export class SeasonManager {
   getUserPlayoffGame(): PlayoffMatchup | null {
     const matchups = this.getCurrentPlayoffMatchups();
     return (
-      matchups.find(
-        (m) =>
-          m.homeTeamId === this.userTeamId || m.awayTeamId === this.userTeamId
-      ) || null
+      matchups.find((m) => m.homeTeamId === this.userTeamId || m.awayTeamId === this.userTeamId) ||
+      null
     );
   }
 
@@ -518,17 +512,14 @@ export class SeasonManager {
       ...this.state.playoffBracket.wildCardRound,
       ...this.state.playoffBracket.divisionalRound,
       ...this.state.playoffBracket.conferenceChampionships,
-      ...(this.state.playoffBracket.superBowl
-        ? [this.state.playoffBracket.superBowl]
-        : []),
+      ...(this.state.playoffBracket.superBowl ? [this.state.playoffBracket.superBowl] : []),
     ];
 
     for (const matchup of allMatchups) {
       if (!matchup.isComplete) continue;
 
       const isInGame =
-        matchup.homeTeamId === this.userTeamId ||
-        matchup.awayTeamId === this.userTeamId;
+        matchup.homeTeamId === this.userTeamId || matchup.awayTeamId === this.userTeamId;
       const lost = isInGame && matchup.winnerId !== this.userTeamId;
 
       if (lost) return false;
@@ -549,10 +540,7 @@ export class SeasonManager {
       return;
     }
 
-    this.state.draftOrder = calculateDraftOrder(
-      this.state.standings,
-      this.state.playoffBracket
-    );
+    this.state.draftOrder = calculateDraftOrder(this.state.standings, this.state.playoffBracket);
   }
 
   /**
@@ -618,10 +606,7 @@ export class SeasonManager {
    * Checks if the season is complete
    */
   isSeasonComplete(): boolean {
-    return (
-      this.state.phase === 'offseason' &&
-      this.state.superBowlChampion !== null
-    );
+    return this.state.phase === 'offseason' && this.state.superBowlChampion !== null;
   }
 
   /**

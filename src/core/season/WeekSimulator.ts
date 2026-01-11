@@ -9,15 +9,8 @@ import { Coach } from '../models/staff/Coach';
 import { GameState } from '../models/game/GameState';
 import { GameResult, runGame } from '../game/GameRunner';
 import { GameConfig } from '../game/GameSetup';
-import {
-  ScheduledGame,
-  SeasonSchedule,
-  getWeekGames,
-} from './ScheduleGenerator';
-import {
-  DetailedDivisionStandings,
-  calculateStandings,
-} from './StandingsCalculator';
+import { ScheduledGame, SeasonSchedule, getWeekGames } from './ScheduleGenerator';
+import { DetailedDivisionStandings, calculateStandings } from './StandingsCalculator';
 import { isOnBye } from './ByeWeekManager';
 
 /**
@@ -154,10 +147,7 @@ function generatePlayoffImplications(
           const eighthPlace = getTeamAtConferenceRank(standings, conference, 8);
           if (eighthPlace) {
             const gamesRemaining = 17 - (standing.wins + standing.losses + standing.ties);
-            if (
-              standing.wins > eighthPlace.wins + gamesRemaining &&
-              standing.divisionRank !== 1
-            ) {
+            if (standing.wins > eighthPlace.wins + gamesRemaining && standing.divisionRank !== 1) {
               implications.push({
                 teamId: standing.teamId,
                 implication: 'clinched_playoff',
@@ -211,9 +201,7 @@ function getTeamAtConferenceRank(
 /**
  * Generates injury report from game injuries
  */
-function generateInjuryReport(
-  gameResults: SimulatedGameResult[]
-): InjuryReportEntry[] {
+function generateInjuryReport(gameResults: SimulatedGameResult[]): InjuryReportEntry[] {
   const injuries: InjuryReportEntry[] = [];
 
   for (const { result } of gameResults) {
@@ -336,8 +324,7 @@ export function simulateWeek(
     if (game.isComplete) continue;
 
     // Check if this is the user's game
-    const isUserGame =
-      game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
+    const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
 
     // Skip user's game if not simulating
     if (isUserGame && !simulateUserGame) {
@@ -441,10 +428,7 @@ export function simulateUserTeamGame(
  * @param gameState - The game state
  * @returns Advancement result
  */
-export function advanceWeek(
-  currentWeek: number,
-  gameState: GameState
-): WeekAdvancementResult {
+export function advanceWeek(currentWeek: number, gameState: GameState): WeekAdvancementResult {
   const recoveredPlayers: string[] = [];
 
   // Process injury recovery
@@ -481,30 +465,24 @@ export function getUserTeamGame(
   }
 
   const weekGames = getWeekGames(schedule, week);
-  return (
-    weekGames.find(
-      (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
-    ) || null
-  );
+  return weekGames.find((g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId) || null;
 }
 
 /**
  * Checks if the user's team is on bye this week
  */
-export function isUserOnBye(
-  schedule: SeasonSchedule,
-  week: number,
-  userTeamId: string
-): boolean {
+export function isUserOnBye(schedule: SeasonSchedule, week: number, userTeamId: string): boolean {
   return isOnBye(userTeamId, week, schedule.byeWeeks);
 }
 
 /**
  * Gets a summary of the week's games
  */
-export function getWeekSummary(
-  weekResults: WeekResults
-): { totalGames: number; upsets: number; highScoring: number } {
+export function getWeekSummary(weekResults: WeekResults): {
+  totalGames: number;
+  upsets: number;
+  highScoring: number;
+} {
   let upsets = 0;
   let highScoring = 0;
 

@@ -8,7 +8,6 @@ import {
   getWeekSummary,
   advanceWeek,
   WeekResults,
-  SimulatedGameResult,
 } from '../WeekSimulator';
 import {
   generateSeasonSchedule,
@@ -78,9 +77,7 @@ describe('WeekSimulator', () => {
 
       // User might not have a game in week 1 depending on schedule
       if (game) {
-        expect(
-          game.homeTeamId === userTeamId || game.awayTeamId === userTeamId
-        ).toBe(true);
+        expect(game.homeTeamId === userTeamId || game.awayTeamId === userTeamId).toBe(true);
       }
     });
 

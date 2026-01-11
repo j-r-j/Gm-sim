@@ -17,15 +17,8 @@
  * - Point differential
  */
 
-import {
-  DetailedDivisionStandings,
-  TeamStanding,
-} from './StandingsCalculator';
-import {
-  PlayoffSchedule,
-  getTeamEliminationRound,
-  PlayoffRound,
-} from './PlayoffGenerator';
+import { DetailedDivisionStandings, TeamStanding } from './StandingsCalculator';
+import { PlayoffSchedule, getTeamEliminationRound, PlayoffRound } from './PlayoffGenerator';
 
 /**
  * Resolves draft tiebreakers (opposite of playoff tiebreakers)
@@ -166,9 +159,7 @@ export function calculateDraftOrder(
   }
 
   // 1. Non-playoff teams (picks 1-18) - sorted worst to best
-  const nonPlayoffTeams = allStandings.filter(
-    (s) => !playoffTeams.has(s.teamId)
-  );
+  const nonPlayoffTeams = allStandings.filter((s) => !playoffTeams.has(s.teamId));
   const sortedNonPlayoff = resolveDraftTiebreaker(nonPlayoffTeams);
   for (const team of sortedNonPlayoff) {
     draftOrder.push(team.teamId);
@@ -229,10 +220,7 @@ export function calculateDraftOrder(
  * @param teamId - The team ID
  * @returns The draft position (1-32), or null if not found
  */
-export function getTeamDraftPosition(
-  draftOrder: string[],
-  teamId: string
-): number | null {
+export function getTeamDraftPosition(draftOrder: string[], teamId: string): number | null {
   const index = draftOrder.indexOf(teamId);
   return index >= 0 ? index + 1 : null;
 }
@@ -252,9 +240,7 @@ export function calculatePreliminaryDraftOrder(
     }
   }
 
-  const nonPlayoffTeams = allStandings.filter(
-    (s) => !playoffTeams.has(s.teamId)
-  );
+  const nonPlayoffTeams = allStandings.filter((s) => !playoffTeams.has(s.teamId));
   const sortedNonPlayoff = resolveDraftTiebreaker(nonPlayoffTeams);
 
   return sortedNonPlayoff.map((s) => s.teamId);
@@ -277,9 +263,10 @@ export function formatDraftOrder(
 /**
  * Gets the draft pick range for playoff elimination rounds
  */
-export function getPickRangeForRound(
-  round: PlayoffRound | 'non-playoff'
-): { start: number; end: number } {
+export function getPickRangeForRound(round: PlayoffRound | 'non-playoff'): {
+  start: number;
+  end: number;
+} {
   switch (round) {
     case 'non-playoff':
       return { start: 1, end: 18 };

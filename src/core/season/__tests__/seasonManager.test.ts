@@ -2,11 +2,7 @@
  * Season Manager Tests
  */
 
-import {
-  SeasonManager,
-  createSeasonManager,
-  SeasonPhase,
-} from '../SeasonManager';
+import { SeasonManager, createSeasonManager, SeasonPhase } from '../SeasonManager';
 import { createDefaultStandings } from '../ScheduleGenerator';
 import { Team, createEmptyTeamRecord } from '../../models/team/Team';
 import { FAKE_CITIES } from '../../models/team/FakeCities';
@@ -131,9 +127,7 @@ describe('SeasonManager', () => {
       // May return null if user is on bye in week 1
       const game = manager.getUserTeamGame();
       if (game) {
-        expect(
-          game.homeTeamId === teams[0].id || game.awayTeamId === teams[0].id
-        ).toBe(true);
+        expect(game.homeTeamId === teams[0].id || game.awayTeamId === teams[0].id).toBe(true);
       }
     });
   });
@@ -241,9 +235,28 @@ describe('SeasonManager', () => {
     it('should have valid phase types', () => {
       const validPhases: SeasonPhase[] = [
         'preseason',
-        'week1', 'week2', 'week3', 'week4', 'week5', 'week6', 'week7', 'week8', 'week9',
-        'week10', 'week11', 'week12', 'week13', 'week14', 'week15', 'week16', 'week17', 'week18',
-        'wildCard', 'divisional', 'conference', 'superBowl',
+        'week1',
+        'week2',
+        'week3',
+        'week4',
+        'week5',
+        'week6',
+        'week7',
+        'week8',
+        'week9',
+        'week10',
+        'week11',
+        'week12',
+        'week13',
+        'week14',
+        'week15',
+        'week16',
+        'week17',
+        'week18',
+        'wildCard',
+        'divisional',
+        'conference',
+        'superBowl',
         'offseason',
       ];
 

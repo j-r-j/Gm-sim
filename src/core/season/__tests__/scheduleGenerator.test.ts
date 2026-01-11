@@ -9,12 +9,10 @@ import {
   updateGameResult,
   createDefaultStandings,
   isRegularSeasonComplete,
-  getMatchup,
-  ScheduledGame,
   SeasonSchedule,
 } from '../ScheduleGenerator';
 import { Team, createEmptyTeamRecord } from '../../models/team/Team';
-import { FAKE_CITIES, Conference, Division } from '../../models/team/FakeCities';
+import { FAKE_CITIES } from '../../models/team/FakeCities';
 import { createDefaultStadium } from '../../models/team/Stadium';
 import { createDefaultTeamFinances } from '../../models/team/TeamFinances';
 import { createEmptyStaffHierarchy } from '../../models/staff/StaffHierarchy';
@@ -114,9 +112,7 @@ describe('ScheduleGenerator', () => {
         // Get division rivals
         const rivals = teams.filter(
           (t) =>
-            t.conference === team.conference &&
-            t.division === team.division &&
-            t.id !== team.id
+            t.conference === team.conference && t.division === team.division && t.id !== team.id
         );
 
         for (const rival of rivals) {
@@ -191,9 +187,7 @@ describe('ScheduleGenerator', () => {
       const game = schedule.regularSeason[0];
       const updatedSchedule = updateGameResult(schedule, game.gameId, 24, 17);
 
-      const updatedGame = updatedSchedule.regularSeason.find(
-        (g) => g.gameId === game.gameId
-      );
+      const updatedGame = updatedSchedule.regularSeason.find((g) => g.gameId === game.gameId);
 
       expect(updatedGame).toBeDefined();
       expect(updatedGame!.isComplete).toBe(true);
@@ -206,9 +200,7 @@ describe('ScheduleGenerator', () => {
       const game = schedule.regularSeason[0];
       const updatedSchedule = updateGameResult(schedule, game.gameId, 20, 20);
 
-      const updatedGame = updatedSchedule.regularSeason.find(
-        (g) => g.gameId === game.gameId
-      );
+      const updatedGame = updatedSchedule.regularSeason.find((g) => g.gameId === game.gameId);
 
       expect(updatedGame!.winnerId).toBeNull();
     });
@@ -223,12 +215,7 @@ describe('ScheduleGenerator', () => {
       let completedSchedule = schedule;
 
       for (const game of schedule.regularSeason) {
-        completedSchedule = updateGameResult(
-          completedSchedule,
-          game.gameId,
-          21,
-          14
-        );
+        completedSchedule = updateGameResult(completedSchedule, game.gameId, 21, 14);
       }
 
       expect(isRegularSeasonComplete(completedSchedule)).toBe(true);
@@ -243,8 +230,7 @@ describe('ScheduleGenerator', () => {
 
         if (homeTeam && awayTeam) {
           const isDivisional =
-            homeTeam.conference === awayTeam.conference &&
-            homeTeam.division === awayTeam.division;
+            homeTeam.conference === awayTeam.conference && homeTeam.division === awayTeam.division;
           expect(game.isDivisional).toBe(isDivisional);
         }
       }

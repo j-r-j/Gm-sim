@@ -214,9 +214,7 @@ function processGame(
     pointsAgainst: standing.pointsAgainst + oppScore,
     pointDifferential: standing.pointDifferential + (ownScore - oppScore),
     headToHead: updatedH2H,
-    netTouchdowns: Math.round(
-      (standing.pointDifferential + (ownScore - oppScore)) / 7
-    ),
+    netTouchdowns: Math.round((standing.pointDifferential + (ownScore - oppScore)) / 7),
     currentStreak: newStreak,
     winPercentage: calculateWinPercentage(
       standing.wins + (isWin ? 1 : 0),
@@ -293,16 +291,8 @@ function compareHeadToHead(a: TeamStanding, b: TeamStanding): number {
  * Compares division record
  */
 function compareDivisionRecord(a: TeamStanding, b: TeamStanding): number {
-  const aWinPct = calculateWinPercentage(
-    a.divisionWins,
-    a.divisionLosses,
-    a.divisionTies
-  );
-  const bWinPct = calculateWinPercentage(
-    b.divisionWins,
-    b.divisionLosses,
-    b.divisionTies
-  );
+  const aWinPct = calculateWinPercentage(a.divisionWins, a.divisionLosses, a.divisionTies);
+  const bWinPct = calculateWinPercentage(b.divisionWins, b.divisionLosses, b.divisionTies);
   return bWinPct - aWinPct;
 }
 
@@ -310,16 +300,8 @@ function compareDivisionRecord(a: TeamStanding, b: TeamStanding): number {
  * Compares conference record
  */
 function compareConferenceRecord(a: TeamStanding, b: TeamStanding): number {
-  const aWinPct = calculateWinPercentage(
-    a.conferenceWins,
-    a.conferenceLosses,
-    a.conferenceTies
-  );
-  const bWinPct = calculateWinPercentage(
-    b.conferenceWins,
-    b.conferenceLosses,
-    b.conferenceTies
-  );
+  const aWinPct = calculateWinPercentage(a.conferenceWins, a.conferenceLosses, a.conferenceTies);
+  const bWinPct = calculateWinPercentage(b.conferenceWins, b.conferenceLosses, b.conferenceTies);
   return bWinPct - aWinPct;
 }
 
@@ -443,19 +425,13 @@ export function calculateStandings(
     // Update home team
     const homeStanding = standingsMap.get(game.homeTeamId);
     if (homeStanding) {
-      standingsMap.set(
-        game.homeTeamId,
-        processGame(homeStanding, game, teamMap)
-      );
+      standingsMap.set(game.homeTeamId, processGame(homeStanding, game, teamMap));
     }
 
     // Update away team
     const awayStanding = standingsMap.get(game.awayTeamId);
     if (awayStanding) {
-      standingsMap.set(
-        game.awayTeamId,
-        processGame(awayStanding, game, teamMap)
-      );
+      standingsMap.set(game.awayTeamId, processGame(awayStanding, game, teamMap));
     }
   }
 
@@ -486,12 +462,9 @@ export function calculateStandings(
       const leaderWinPct = sorted[0]?.winPercentage || 0;
       sorted.forEach((standing, index) => {
         standing.divisionRank = index + 1;
-        const gamesPlayed =
-          standing.wins + standing.losses + standing.ties;
+        const gamesPlayed = standing.wins + standing.losses + standing.ties;
         const leaderGamesPlayed =
-          (sorted[0]?.wins || 0) +
-          (sorted[0]?.losses || 0) +
-          (sorted[0]?.ties || 0);
+          (sorted[0]?.wins || 0) + (sorted[0]?.losses || 0) + (sorted[0]?.ties || 0);
         const avgGamesPlayed = (gamesPlayed + leaderGamesPlayed) / 2;
         standing.gamesBehind = Math.max(
           0,
@@ -555,9 +528,7 @@ function updateConferenceRanks(conference: ConferenceStandingsList): void {
  * @param standings - Complete division standings
  * @returns Playoff teams for each conference
  */
-export function determinePlayoffTeams(
-  standings: DetailedDivisionStandings
-): PlayoffTeams {
+export function determinePlayoffTeams(standings: DetailedDivisionStandings): PlayoffTeams {
   const result: PlayoffTeams = {
     afc: { divisionWinners: [], wildCards: [] },
     nfc: { divisionWinners: [], wildCards: [] },
@@ -588,9 +559,7 @@ export function determinePlayoffTeams(
 
     // Sort and take top 3
     const sortedNonWinners = resolveWildcardTiebreaker(nonWinners);
-    result[conference].wildCards = sortedNonWinners
-      .slice(0, 3)
-      .map((s) => s.teamId);
+    result[conference].wildCards = sortedNonWinners.slice(0, 3).map((s) => s.teamId);
   }
 
   return result;
@@ -608,10 +577,7 @@ export function getPlayoffSeeds(
   conference: 'afc' | 'nfc'
 ): string[] {
   const playoffTeams = determinePlayoffTeams(standings);
-  return [
-    ...playoffTeams[conference].divisionWinners,
-    ...playoffTeams[conference].wildCards,
-  ];
+  return [...playoffTeams[conference].divisionWinners, ...playoffTeams[conference].wildCards];
 }
 
 /**
@@ -623,9 +589,7 @@ export function getTeamStanding(
 ): TeamStanding | undefined {
   for (const conference of ['afc', 'nfc'] as const) {
     for (const division of ['north', 'south', 'east', 'west'] as const) {
-      const found = standings[conference][division].find(
-        (s) => s.teamId === teamId
-      );
+      const found = standings[conference][division].find((s) => s.teamId === teamId);
       if (found) return found;
     }
   }

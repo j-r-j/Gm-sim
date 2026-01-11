@@ -13,10 +13,7 @@ import {
   PlayoffSchedule,
   PlayoffMatchup,
 } from '../PlayoffGenerator';
-import {
-  calculateStandings,
-  DetailedDivisionStandings,
-} from '../StandingsCalculator';
+import { calculateStandings, DetailedDivisionStandings } from '../StandingsCalculator';
 import { Team, createEmptyTeamRecord } from '../../models/team/Team';
 import { FAKE_CITIES } from '../../models/team/FakeCities';
 import { createDefaultStadium } from '../../models/team/Stadium';
@@ -87,9 +84,7 @@ describe('PlayoffGenerator', () => {
     it('should have correct Wild Card matchups (#2 vs #7, #3 vs #6, #4 vs #5)', () => {
       for (const conference of ['afc', 'nfc'] as const) {
         const seeds = conference === 'afc' ? bracket.afcSeeds : bracket.nfcSeeds;
-        const confMatchups = bracket.wildCardRound.filter(
-          (m) => m.conference === conference
-        );
+        const confMatchups = bracket.wildCardRound.filter((m) => m.conference === conference);
 
         const expectedMatchups = [
           { home: 2, away: 7 },
@@ -100,8 +95,7 @@ describe('PlayoffGenerator', () => {
         for (const expected of expectedMatchups) {
           const matchup = confMatchups.find(
             (m) =>
-              m.homeTeamId === seeds.get(expected.home) &&
-              m.awayTeamId === seeds.get(expected.away)
+              m.homeTeamId === seeds.get(expected.home) && m.awayTeamId === seeds.get(expected.away)
           );
           expect(matchup).toBeDefined();
         }
@@ -156,22 +150,14 @@ describe('PlayoffGenerator', () => {
       const afc1Seed = bracket.afcSeeds.get(1);
       const nfc1Seed = bracket.nfcSeeds.get(1);
 
-      const afcDivMatchups = advancedBracket.divisionalRound.filter(
-        (m) => m.conference === 'afc'
-      );
-      const nfcDivMatchups = advancedBracket.divisionalRound.filter(
-        (m) => m.conference === 'nfc'
-      );
+      const afcDivMatchups = advancedBracket.divisionalRound.filter((m) => m.conference === 'afc');
+      const nfcDivMatchups = advancedBracket.divisionalRound.filter((m) => m.conference === 'nfc');
 
       expect(
-        afcDivMatchups.some(
-          (m) => m.homeTeamId === afc1Seed || m.awayTeamId === afc1Seed
-        )
+        afcDivMatchups.some((m) => m.homeTeamId === afc1Seed || m.awayTeamId === afc1Seed)
       ).toBe(true);
       expect(
-        nfcDivMatchups.some(
-          (m) => m.homeTeamId === nfc1Seed || m.awayTeamId === nfc1Seed
-        )
+        nfcDivMatchups.some((m) => m.homeTeamId === nfc1Seed || m.awayTeamId === nfc1Seed)
       ).toBe(true);
     });
   });
@@ -283,10 +269,7 @@ describe('PlayoffGenerator', () => {
 
     it('should return null for non-playoff team', () => {
       // Get a team not in playoffs (need to find one not in seeds)
-      const playoffTeams = new Set([
-        ...bracket.afcSeeds.values(),
-        ...bracket.nfcSeeds.values(),
-      ]);
+      const playoffTeams = new Set([...bracket.afcSeeds.values(), ...bracket.nfcSeeds.values()]);
 
       const nonPlayoffTeam = teams.find((t) => !playoffTeams.has(t.id));
       if (nonPlayoffTeam) {

@@ -10,7 +10,6 @@ import {
   getPlayoffPicture,
   resolveWildcardTiebreaker,
   TeamStanding,
-  DetailedDivisionStandings,
 } from '../StandingsCalculator';
 import { ScheduledGame } from '../ScheduleGenerator';
 import { Team, createEmptyTeamRecord } from '../../models/team/Team';
@@ -117,21 +116,11 @@ describe('StandingsCalculator', () => {
 
     it('should calculate standings correctly after games', () => {
       // AFC East teams
-      const afcEastTeams = teams.filter(
-        (t) => t.conference === 'AFC' && t.division === 'East'
-      );
+      const afcEastTeams = teams.filter((t) => t.conference === 'AFC' && t.division === 'East');
 
       // Team 0 beats Team 1
       const games: ScheduledGame[] = [
-        createGameResult(
-          afcEastTeams[0].id,
-          afcEastTeams[1].id,
-          24,
-          17,
-          1,
-          true,
-          true
-        ),
+        createGameResult(afcEastTeams[0].id, afcEastTeams[1].id, 24, 17, 1, true, true),
       ];
 
       const standings = calculateStandings(games, teams);
@@ -152,9 +141,7 @@ describe('StandingsCalculator', () => {
     });
 
     it('should rank teams by win percentage', () => {
-      const afcEastTeams = teams.filter(
-        (t) => t.conference === 'AFC' && t.division === 'East'
-      );
+      const afcEastTeams = teams.filter((t) => t.conference === 'AFC' && t.division === 'East');
 
       // Team 0: 2-0, Team 1: 1-1, Team 2: 1-1, Team 3: 0-2
       const games: ScheduledGame[] = [
@@ -174,9 +161,7 @@ describe('StandingsCalculator', () => {
     });
 
     it('should track head-to-head records', () => {
-      const afcEastTeams = teams.filter(
-        (t) => t.conference === 'AFC' && t.division === 'East'
-      );
+      const afcEastTeams = teams.filter((t) => t.conference === 'AFC' && t.division === 'East');
 
       const games: ScheduledGame[] = [
         createGameResult(afcEastTeams[0].id, afcEastTeams[1].id, 24, 17, 1, true, true),
@@ -184,9 +169,7 @@ describe('StandingsCalculator', () => {
       ];
 
       const standings = calculateStandings(games, teams);
-      const team0Standing = standings.afc.east.find(
-        (s) => s.teamId === afcEastTeams[0].id
-      );
+      const team0Standing = standings.afc.east.find((s) => s.teamId === afcEastTeams[0].id);
 
       expect(team0Standing).toBeDefined();
       const h2h = team0Standing?.headToHead.get(afcEastTeams[1].id);
@@ -195,9 +178,7 @@ describe('StandingsCalculator', () => {
     });
 
     it('should track win/loss streaks', () => {
-      const afcEastTeams = teams.filter(
-        (t) => t.conference === 'AFC' && t.division === 'East'
-      );
+      const afcEastTeams = teams.filter((t) => t.conference === 'AFC' && t.division === 'East');
 
       // Team 0 wins 3 in a row
       const games: ScheduledGame[] = [
@@ -207,9 +188,7 @@ describe('StandingsCalculator', () => {
       ];
 
       const standings = calculateStandings(games, teams);
-      const team0Standing = standings.afc.east.find(
-        (s) => s.teamId === afcEastTeams[0].id
-      );
+      const team0Standing = standings.afc.east.find((s) => s.teamId === afcEastTeams[0].id);
 
       expect(team0Standing?.currentStreak).toBe(3);
     });
@@ -357,9 +336,7 @@ describe('StandingsCalculator', () => {
 
       // Check that ranks are in order
       for (let i = 1; i < picture.length; i++) {
-        expect(picture[i].conferenceRank).toBeGreaterThanOrEqual(
-          picture[i - 1].conferenceRank
-        );
+        expect(picture[i].conferenceRank).toBeGreaterThanOrEqual(picture[i - 1].conferenceRank);
       }
     });
   });

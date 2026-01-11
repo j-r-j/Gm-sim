@@ -12,10 +12,7 @@
 import { GameState } from '../models/game/GameState';
 import { GameResult, runGame } from '../game/GameRunner';
 import { GameConfig } from '../game/GameSetup';
-import {
-  DetailedDivisionStandings,
-  getPlayoffSeeds,
-} from './StandingsCalculator';
+import { DetailedDivisionStandings, getPlayoffSeeds } from './StandingsCalculator';
 
 /**
  * Playoff round types
@@ -84,9 +81,7 @@ export function createEmptyPlayoffSchedule(): PlayoffSchedule {
  * @param standings - Final regular season standings
  * @returns Complete playoff schedule
  */
-export function generatePlayoffBracket(
-  standings: DetailedDivisionStandings
-): PlayoffSchedule {
+export function generatePlayoffBracket(standings: DetailedDivisionStandings): PlayoffSchedule {
   const schedule = createEmptyPlayoffSchedule();
 
   // Get seeds for each conference
@@ -170,9 +165,7 @@ function generateDivisionalMatchups(
     for (const matchup of schedule.wildCardRound) {
       if (matchup.conference === conference && matchup.winnerId) {
         const originalSeed =
-          matchup.winnerId === matchup.homeTeamId
-            ? matchup.homeSeed
-            : matchup.awaySeed;
+          matchup.winnerId === matchup.homeTeamId ? matchup.homeSeed : matchup.awaySeed;
         wcWinners.push({ teamId: matchup.winnerId, originalSeed });
       }
     }
@@ -225,9 +218,7 @@ function generateDivisionalMatchups(
 /**
  * Generates Conference Championship matchups
  */
-function generateConferenceChampionships(
-  schedule: PlayoffSchedule
-): PlayoffMatchup[] {
+function generateConferenceChampionships(schedule: PlayoffSchedule): PlayoffMatchup[] {
   const matchups: PlayoffMatchup[] = [];
 
   for (const conference of ['afc', 'nfc'] as const) {
@@ -236,9 +227,7 @@ function generateConferenceChampionships(
     for (const matchup of schedule.divisionalRound) {
       if (matchup.conference === conference && matchup.winnerId) {
         const originalSeed =
-          matchup.winnerId === matchup.homeTeamId
-            ? matchup.homeSeed
-            : matchup.awaySeed;
+          matchup.winnerId === matchup.homeTeamId ? matchup.homeSeed : matchup.awaySeed;
         divWinners.push({ teamId: matchup.winnerId, originalSeed });
       }
     }
@@ -275,10 +264,7 @@ function generateSuperBowl(schedule: PlayoffSchedule): PlayoffMatchup | null {
 
   for (const matchup of schedule.conferenceChampionships) {
     if (matchup.winnerId) {
-      const seed =
-        matchup.winnerId === matchup.homeTeamId
-          ? matchup.homeSeed
-          : matchup.awaySeed;
+      const seed = matchup.winnerId === matchup.homeTeamId ? matchup.homeSeed : matchup.awaySeed;
 
       if (matchup.conference === 'afc') {
         afcChamp = { teamId: matchup.winnerId, seed };
@@ -329,16 +315,12 @@ export function advancePlayoffRound(
   switch (round) {
     case 'wildCard':
       updatedSchedule.wildCardRound = roundResults;
-      updatedSchedule.divisionalRound = generateDivisionalMatchups(
-        updatedSchedule,
-        new Map()
-      );
+      updatedSchedule.divisionalRound = generateDivisionalMatchups(updatedSchedule, new Map());
       break;
 
     case 'divisional':
       updatedSchedule.divisionalRound = roundResults;
-      updatedSchedule.conferenceChampionships =
-        generateConferenceChampionships(updatedSchedule);
+      updatedSchedule.conferenceChampionships = generateConferenceChampionships(updatedSchedule);
       break;
 
     case 'conference':
@@ -374,10 +356,7 @@ export function advancePlayoffRound(
  * @param gameState - The game state
  * @returns Game result
  */
-export function simulatePlayoffGame(
-  matchup: PlayoffMatchup,
-  gameState: GameState
-): GameResult {
+export function simulatePlayoffGame(matchup: PlayoffMatchup, gameState: GameState): GameResult {
   const teams = new Map(Object.entries(gameState.teams));
   const players = new Map(Object.entries(gameState.players));
   const coaches = new Map(Object.entries(gameState.coaches));
@@ -459,9 +438,7 @@ export function simulatePlayoffRound(
 /**
  * Gets the current playoff round
  */
-export function getCurrentPlayoffRound(
-  schedule: PlayoffSchedule
-): PlayoffRound | null {
+export function getCurrentPlayoffRound(schedule: PlayoffSchedule): PlayoffRound | null {
   if (schedule.superBowl?.isComplete) {
     return null; // Playoffs complete
   }
@@ -474,16 +451,10 @@ export function getCurrentPlayoffRound(
   ) {
     return 'conference';
   }
-  if (
-    schedule.divisionalRound.length > 0 &&
-    !schedule.divisionalRound.every((m) => m.isComplete)
-  ) {
+  if (schedule.divisionalRound.length > 0 && !schedule.divisionalRound.every((m) => m.isComplete)) {
     return 'divisional';
   }
-  if (
-    schedule.wildCardRound.length > 0 &&
-    !schedule.wildCardRound.every((m) => m.isComplete)
-  ) {
+  if (schedule.wildCardRound.length > 0 && !schedule.wildCardRound.every((m) => m.isComplete)) {
     return 'wildCard';
   }
   return null;
@@ -521,9 +492,7 @@ export function getTeamsAlive(schedule: PlayoffSchedule): string[] {
   for (const matchup of allMatchups) {
     if (matchup.isComplete && matchup.winnerId) {
       const loserId =
-        matchup.winnerId === matchup.homeTeamId
-          ? matchup.awayTeamId
-          : matchup.homeTeamId;
+        matchup.winnerId === matchup.homeTeamId ? matchup.awayTeamId : matchup.homeTeamId;
       alive.delete(loserId);
     }
   }
@@ -549,8 +518,7 @@ export function getTeamEliminationRound(
     for (const matchup of matchups) {
       if (!matchup.isComplete) continue;
 
-      const isInGame =
-        matchup.homeTeamId === teamId || matchup.awayTeamId === teamId;
+      const isInGame = matchup.homeTeamId === teamId || matchup.awayTeamId === teamId;
       const lost = isInGame && matchup.winnerId !== teamId;
 
       if (lost) {
@@ -565,10 +533,7 @@ export function getTeamEliminationRound(
 /**
  * Gets a team's playoff seed
  */
-export function getTeamPlayoffSeed(
-  schedule: PlayoffSchedule,
-  teamId: string
-): number | null {
+export function getTeamPlayoffSeed(schedule: PlayoffSchedule, teamId: string): number | null {
   for (const [seed, id] of schedule.afcSeeds) {
     if (id === teamId) return seed;
   }

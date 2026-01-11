@@ -85,11 +85,7 @@ export function assignByeWeeks(teams: Team[]): Map<string, number> {
  * @param byeWeeks - Map of team bye weeks
  * @returns True if team is on bye
  */
-export function isOnBye(
-  teamId: string,
-  week: number,
-  byeWeeks: Map<string, number>
-): boolean {
+export function isOnBye(teamId: string, week: number, byeWeeks: Map<string, number>): boolean {
   const byeWeek = byeWeeks.get(teamId);
   return byeWeek === week;
 }
@@ -101,10 +97,7 @@ export function isOnBye(
  * @param byeWeeks - Map of team bye weeks
  * @returns Array of team IDs on bye
  */
-export function getTeamsOnBye(
-  week: number,
-  byeWeeks: Map<string, number>
-): string[] {
+export function getTeamsOnBye(week: number, byeWeeks: Map<string, number>): string[] {
   const teamsOnBye: string[] = [];
 
   for (const [teamId, byeWeek] of byeWeeks) {
@@ -122,9 +115,7 @@ export function getTeamsOnBye(
  * @param byeWeeks - Map of team bye weeks
  * @returns Map of week number to count of teams on bye
  */
-export function getByeWeekDistribution(
-  byeWeeks: Map<string, number>
-): Map<number, number> {
+export function getByeWeekDistribution(byeWeeks: Map<string, number>): Map<number, number> {
   const distribution = new Map<number, number>();
 
   for (let week = BYE_WEEK_START; week <= BYE_WEEK_END; week++) {
@@ -146,10 +137,7 @@ export function getByeWeekDistribution(
  * @param teams - Array of all teams
  * @returns True if valid
  */
-export function validateByeWeeks(
-  byeWeeks: Map<string, number>,
-  teams: Team[]
-): boolean {
+export function validateByeWeeks(byeWeeks: Map<string, number>, teams: Team[]): boolean {
   // Every team should have a bye
   if (byeWeeks.size !== teams.length) {
     return false;
@@ -209,9 +197,6 @@ export function getAvailableTeams(
  * @param byeWeeks - Map of team bye weeks
  * @returns The bye week number, or undefined if not found
  */
-export function getTeamByeWeek(
-  teamId: string,
-  byeWeeks: Map<string, number>
-): number | undefined {
+export function getTeamByeWeek(teamId: string, byeWeeks: Map<string, number>): number | undefined {
   return byeWeeks.get(teamId);
 }
