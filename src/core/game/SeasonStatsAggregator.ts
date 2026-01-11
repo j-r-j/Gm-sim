@@ -253,17 +253,14 @@ function calculateApproximateValue(stats: PlayerSeasonStats): number {
   // Rushing contribution
   if (stats.rushing.attempts > 0) {
     const rushValue =
-      (stats.rushing.yards * 0.04 +
-        stats.rushing.touchdowns * 2 -
-        stats.rushing.fumblesLost * 2) /
+      (stats.rushing.yards * 0.04 + stats.rushing.touchdowns * 2 - stats.rushing.fumblesLost * 2) /
       10;
     av += Math.max(0, rushValue);
   }
 
   // Receiving contribution
   if (stats.receiving.receptions > 0) {
-    const recValue =
-      (stats.receiving.yards * 0.04 + stats.receiving.touchdowns * 2) / 10;
+    const recValue = (stats.receiving.yards * 0.04 + stats.receiving.touchdowns * 2) / 10;
     av += Math.max(0, recValue);
   }
 
@@ -279,8 +276,7 @@ function calculateApproximateValue(stats: PlayerSeasonStats): number {
 
   // Kicking contribution
   if (stats.kicking.fieldGoalAttempts > 0) {
-    const accuracy =
-      stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts;
+    const accuracy = stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts;
     const kickValue = (stats.kicking.fieldGoalsMade * accuracy * 3) / 10;
     av += Math.max(0, kickValue);
   }
@@ -343,10 +339,7 @@ export function aggregatePlayerStats(gameStats: PlayerGameStats[]): PlayerSeason
 /**
  * Aggregate team stats from game results
  */
-export function aggregateTeamStats(
-  gameResults: GameResult[],
-  teamId: string
-): TeamSeasonStats {
+export function aggregateTeamStats(gameResults: GameResult[], teamId: string): TeamSeasonStats {
   const stats = createEmptyTeamSeasonStats(teamId);
 
   for (const result of gameResults) {
@@ -367,10 +360,8 @@ export function aggregateTeamStats(
   if (stats.gamesPlayed > 0) {
     stats.pointsPerGame = Math.round((stats.pointsFor / stats.gamesPlayed) * 10) / 10;
     stats.yardsPerGame = Math.round((stats.totalYards / stats.gamesPlayed) * 10) / 10;
-    stats.pointsAllowedPerGame =
-      Math.round((stats.pointsAgainst / stats.gamesPlayed) * 10) / 10;
-    stats.yardsAllowedPerGame =
-      Math.round((stats.yardsAllowed / stats.gamesPlayed) * 10) / 10;
+    stats.pointsAllowedPerGame = Math.round((stats.pointsAgainst / stats.gamesPlayed) * 10) / 10;
+    stats.yardsAllowedPerGame = Math.round((stats.yardsAllowed / stats.gamesPlayed) * 10) / 10;
   }
 
   return stats;
@@ -379,9 +370,7 @@ export function aggregateTeamStats(
 /**
  * Calculate league rankings for all teams
  */
-export function calculateLeagueRankings(
-  teamStats: TeamSeasonStats[]
-): Map<string, TeamRankings> {
+export function calculateLeagueRankings(teamStats: TeamSeasonStats[]): Map<string, TeamRankings> {
   const rankings = new Map<string, TeamRankings>();
 
   if (teamStats.length === 0) {
@@ -403,8 +392,7 @@ export function calculateLeagueRankings(
     const offenseRank = byYards.findIndex((t) => t.teamId === team.teamId) + 1;
     const defenseRank = byYardsAllowed.findIndex((t) => t.teamId === team.teamId) + 1;
     const pointsForRank = byPointsFor.findIndex((t) => t.teamId === team.teamId) + 1;
-    const pointsAgainstRank =
-      byPointsAgainst.findIndex((t) => t.teamId === team.teamId) + 1;
+    const pointsAgainstRank = byPointsAgainst.findIndex((t) => t.teamId === team.teamId) + 1;
 
     rankings.set(team.teamId, {
       offenseRank,

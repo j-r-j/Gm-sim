@@ -249,9 +249,7 @@ function getPlayersByPosition(
         depth: 5,
         practiceSquad: 6,
       };
-      return (
-        (roleOrder[a.roleFit.currentRole] ?? 6) - (roleOrder[b.roleFit.currentRole] ?? 6)
-      );
+      return (roleOrder[a.roleFit.currentRole] ?? 6) - (roleOrder[b.roleFit.currentRole] ?? 6);
     });
 }
 
@@ -334,7 +332,13 @@ export function selectStartingLineup(
       },
       roleFit: { ceiling: 'depth', currentRole: 'depth', roleEffectiveness: 50 },
       contractId: null,
-      injuryStatus: { severity: 'none', type: 'none', weeksRemaining: 0, isPublic: true, lingeringEffect: 0 },
+      injuryStatus: {
+        severity: 'none',
+        type: 'none',
+        weeksRemaining: 0,
+        isPublic: true,
+        lingeringEffect: 0,
+      },
       fatigue: 0,
       morale: 50,
       collegeId: '',
@@ -417,10 +421,7 @@ function createSpecialTeamsPersonnel(lineup: StartingLineup): SpecialTeamsPerson
 /**
  * Create coaching staff for game
  */
-function createGameCoachingStaff(
-  team: Team,
-  coaches: Map<string, Coach>
-): GameCoachingStaff {
+function createGameCoachingStaff(team: Team, coaches: Map<string, Coach>): GameCoachingStaff {
   const getCoach = (coachId: string | undefined): Coach | null => {
     if (!coachId) return null;
     return coaches.get(coachId) || null;
@@ -442,10 +443,7 @@ function createGameCoachingStaff(
 /**
  * Get offensive tendencies from coordinator
  */
-function getOffensiveTendencies(
-  team: Team,
-  coaches: Map<string, Coach>
-): OffensiveTendencies {
+function getOffensiveTendencies(team: Team, coaches: Map<string, Coach>): OffensiveTendencies {
   const ocId = team.staffHierarchy.offensiveCoordinator;
   if (ocId) {
     const oc = coaches.get(ocId);
@@ -459,10 +457,7 @@ function getOffensiveTendencies(
 /**
  * Get defensive tendencies from coordinator
  */
-function getDefensiveTendencies(
-  team: Team,
-  coaches: Map<string, Coach>
-): DefensiveTendencies {
+function getDefensiveTendencies(team: Team, coaches: Map<string, Coach>): DefensiveTendencies {
   const dcId = team.staffHierarchy.defensiveCoordinator;
   if (dcId) {
     const dc = coaches.get(dcId);
@@ -642,11 +637,7 @@ export function setupGame(
   const stakes = determineGameStakes(config);
 
   // Calculate home field advantage
-  const homeFieldAdvantage = calculateHomeFieldAdvantage(
-    homeTeam.stadium,
-    config.week,
-    stakes
-  );
+  const homeFieldAdvantage = calculateHomeFieldAdvantage(homeTeam.stadium, config.week, stakes);
 
   // Create team game states
   const homeTeamState = createTeamGameState(homeTeam, homeLineup, players, coaches);

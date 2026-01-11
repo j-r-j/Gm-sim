@@ -136,16 +136,12 @@ describe('BoxScoreGenerator', () => {
 
       expect(boxScore.teamComparison.length).toBeGreaterThan(0);
 
-      const firstDownsCategory = boxScore.teamComparison.find(
-        (c) => c.category === 'First Downs'
-      );
+      const firstDownsCategory = boxScore.teamComparison.find((c) => c.category === 'First Downs');
       expect(firstDownsCategory).toBeDefined();
       expect(firstDownsCategory?.home).toBe(22);
       expect(firstDownsCategory?.away).toBe(18);
 
-      const totalYardsCategory = boxScore.teamComparison.find(
-        (c) => c.category === 'Total Yards'
-      );
+      const totalYardsCategory = boxScore.teamComparison.find((c) => c.category === 'Total Yards');
       expect(totalYardsCategory).toBeDefined();
       expect(totalYardsCategory?.home).toBe(385);
     });

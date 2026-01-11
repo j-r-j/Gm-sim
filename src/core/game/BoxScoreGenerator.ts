@@ -296,7 +296,9 @@ function extractDefensiveLeaders(
 
   // Score defensive plays (tackles + sacks*2 + ints*3 + etc.)
   const scoredPlayers = Array.from(teamStats.playerStats.values())
-    .filter((p) => p.defensive.tackles > 0 || p.defensive.sacks > 0 || p.defensive.interceptions > 0)
+    .filter(
+      (p) => p.defensive.tackles > 0 || p.defensive.sacks > 0 || p.defensive.interceptions > 0
+    )
     .map((p) => ({
       player: p,
       score:
@@ -345,7 +347,10 @@ function generateAllPlayerStats(
       statLine = generateReceivingStatLine(playerStat);
     } else if (playerStat.defensive.tackles > 0 || playerStat.defensive.sacks > 0) {
       statLine = generateDefensiveStatLine(playerStat);
-    } else if (playerStat.kicking.fieldGoalAttempts > 0 || playerStat.kicking.extraPointAttempts > 0) {
+    } else if (
+      playerStat.kicking.fieldGoalAttempts > 0 ||
+      playerStat.kicking.extraPointAttempts > 0
+    ) {
       statLine = generateKickingStatLine(playerStat);
     }
 

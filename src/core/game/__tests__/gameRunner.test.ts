@@ -7,11 +7,19 @@ import { quickSetup, GameSetupResult } from '../GameSetup';
 import { TeamGameState } from '../../engine/TeamGameState';
 import { Player } from '../../models/player/Player';
 import { Position } from '../../models/player/Position';
-import { createDefaultOffensiveTendencies, createDefaultDefensiveTendencies } from '../../models/staff/CoordinatorTendencies';
+import {
+  createDefaultOffensiveTendencies,
+  createDefaultDefensiveTendencies,
+} from '../../models/staff/CoordinatorTendencies';
 import { createDefaultCoach } from '../../models/staff/Coach';
 
 // Helper function to create a test player
-function createTestPlayer(id: string, position: Position, firstName: string, lastName: string): Player {
+function createTestPlayer(
+  id: string,
+  position: Position,
+  firstName: string,
+  lastName: string
+): Player {
   return {
     id,
     firstName,
@@ -72,7 +80,13 @@ function createTestPlayer(id: string, position: Position, firstName: string, las
     },
     roleFit: { ceiling: 'solidStarter', currentRole: 'solidStarter', roleEffectiveness: 75 },
     contractId: null,
-    injuryStatus: { severity: 'none', type: 'none', weeksRemaining: 0, isPublic: true, lingeringEffect: 0 },
+    injuryStatus: {
+      severity: 'none',
+      type: 'none',
+      weeksRemaining: 0,
+      isPublic: true,
+      lingeringEffect: 0,
+    },
     fatigue: 0,
     morale: 75,
     collegeId: 'college-1',
@@ -116,8 +130,36 @@ function createTestTeamGameState(teamId: string, teamName: string): TeamGameStat
   const p = createTestPlayer('p-' + teamId, Position.P, 'Tommy', 'Punter');
 
   const allPlayers = new Map<string, Player>();
-  [qb, rb1, rb2, wr1, wr2, wr3, te1, te2, lt, lg, c, rg, rt,
-   de1, de2, dt1, dt2, olb1, olb2, ilb1, ilb2, cb1, cb2, cb3, fs, ss, k, p].forEach(p => {
+  [
+    qb,
+    rb1,
+    rb2,
+    wr1,
+    wr2,
+    wr3,
+    te1,
+    te2,
+    lt,
+    lg,
+    c,
+    rg,
+    rt,
+    de1,
+    de2,
+    dt1,
+    dt2,
+    olb1,
+    olb2,
+    ilb1,
+    ilb2,
+    cb1,
+    cb2,
+    cb3,
+    fs,
+    ss,
+    k,
+    p,
+  ].forEach((p) => {
     allPlayers.set(p.id, p);
   });
 
@@ -143,8 +185,18 @@ function createTestTeamGameState(teamId: string, teamName: string): TeamGameStat
     },
     allPlayers,
     coaches: {
-      offensiveCoordinator: createDefaultCoach('oc-' + teamId, 'Offensive', 'Coordinator', 'offensiveCoordinator'),
-      defensiveCoordinator: createDefaultCoach('dc-' + teamId, 'Defensive', 'Coordinator', 'defensiveCoordinator'),
+      offensiveCoordinator: createDefaultCoach(
+        'oc-' + teamId,
+        'Offensive',
+        'Coordinator',
+        'offensiveCoordinator'
+      ),
+      defensiveCoordinator: createDefaultCoach(
+        'dc-' + teamId,
+        'Defensive',
+        'Coordinator',
+        'defensiveCoordinator'
+      ),
       positionCoaches: new Map(),
     },
     offensiveScheme: 'westCoast',

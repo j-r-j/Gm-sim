@@ -11,10 +11,7 @@ import {
 } from '../engine/GameStateMachine';
 import { PlayResult } from '../engine/PlayResolver';
 import { TeamGameState } from '../engine/TeamGameState';
-import {
-  StatisticsTracker,
-  TeamGameStats,
-} from './StatisticsTracker';
+import { StatisticsTracker, TeamGameStats } from './StatisticsTracker';
 import {
   BoxScore,
   ScoringPlay,
@@ -189,17 +186,10 @@ export class GameRunner {
     config.weather = setup.weather;
     config.stakes = setup.stakes;
 
-    this.machine = new GameStateMachine(
-      setup.homeTeamState,
-      setup.awayTeamState,
-      config
-    );
+    this.machine = new GameStateMachine(setup.homeTeamState, setup.awayTeamState, config);
 
     // Create statistics tracker
-    this.tracker = new StatisticsTracker(
-      setup.homeTeamState.teamId,
-      setup.awayTeamState.teamId
-    );
+    this.tracker = new StatisticsTracker(setup.homeTeamState.teamId, setup.awayTeamState.teamId);
 
     // Build player info map
     this.buildPlayerInfo(setup.homeTeamState);
@@ -245,9 +235,7 @@ export class GameRunner {
   private processPlay(play: PlayResult): void {
     const state = this.machine.getState();
     const offenseTeamId =
-      state.field.possession === 'home'
-        ? state.homeTeam.teamId
-        : state.awayTeam.teamId;
+      state.field.possession === 'home' ? state.homeTeam.teamId : state.awayTeam.teamId;
 
     // Calculate time elapsed (estimate)
     const timeElapsed = Math.floor(Math.random() * 10) + 5;
@@ -261,8 +249,7 @@ export class GameRunner {
     });
 
     // Track quarter changes
-    const currentQuarter =
-      typeof state.clock.quarter === 'number' ? state.clock.quarter : 5;
+    const currentQuarter = typeof state.clock.quarter === 'number' ? state.clock.quarter : 5;
     if (currentQuarter !== this.lastQuarter) {
       this.tracker.setQuarter(currentQuarter);
       this.lastQuarter = currentQuarter;
@@ -273,8 +260,10 @@ export class GameRunner {
     }
 
     // Track scoring plays
-    if (state.score.home !== this.previousScore.home ||
-        state.score.away !== this.previousScore.away) {
+    if (
+      state.score.home !== this.previousScore.home ||
+      state.score.away !== this.previousScore.away
+    ) {
       this.recordScoringPlay(play, state);
 
       if (this.options.onScoreChange) {
@@ -331,15 +320,11 @@ export class GameRunner {
 
     const playerInfo = this.playerInfo.get(play.injuredPlayerId);
     const isHomePlayer = state.homeTeam.allPlayers.has(play.injuredPlayerId);
-    const teamName = isHomePlayer
-      ? state.homeTeam.teamName
-      : state.awayTeam.teamName;
+    const teamName = isHomePlayer ? state.homeTeam.teamName : state.awayTeam.teamName;
 
     this.injuries.push({
       playerId: play.injuredPlayerId,
-      playerName: playerInfo
-        ? `${playerInfo.firstName} ${playerInfo.lastName}`
-        : 'Unknown Player',
+      playerName: playerInfo ? `${playerInfo.firstName} ${playerInfo.lastName}` : 'Unknown Player',
       team: teamName,
       injuryType: 'Unknown', // Would come from InjuryProcessor in full implementation
       severity: 'Unknown',
@@ -505,10 +490,14 @@ export function runGame(
 ): GameResult {
   const setup = setupGame(config, teams, players, coaches);
 
-  const runner = new GameRunner(setup, { mode: 'instant' }, {
-    week: config.week,
-    date: new Date().toISOString().split('T')[0],
-  });
+  const runner = new GameRunner(
+    setup,
+    { mode: 'instant' },
+    {
+      week: config.week,
+      date: new Date().toISOString().split('T')[0],
+    }
+  );
 
   return runner.runToCompletion();
 }
@@ -523,10 +512,14 @@ export function runQuickGame(
 ): GameResult {
   const setup = quickSetup(homeTeamState, awayTeamState, options);
 
-  const runner = new GameRunner(setup, { mode: 'instant' }, {
-    week: options?.week || 1,
-    date: new Date().toISOString().split('T')[0],
-  });
+  const runner = new GameRunner(
+    setup,
+    { mode: 'instant' },
+    {
+      week: options?.week || 1,
+      date: new Date().toISOString().split('T')[0],
+    }
+  );
 
   return runner.runToCompletion();
 }

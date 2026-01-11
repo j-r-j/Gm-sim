@@ -11,10 +11,7 @@ import {
   PlayerCareerStats,
 } from '../PostGameProcessor';
 import { GameResult } from '../GameRunner';
-import {
-  createEmptyTeamGameStats,
-  createEmptyPlayerGameStats,
-} from '../StatisticsTracker';
+import { createEmptyTeamGameStats, createEmptyPlayerGameStats } from '../StatisticsTracker';
 import { createEmptyBoxScore } from '../BoxScoreGenerator';
 
 // Helper to create a minimal GameResult for testing

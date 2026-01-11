@@ -160,10 +160,7 @@ function processInjury(injury: GameInjury): InjuryUpdate {
 /**
  * Generate player updates from game result
  */
-function generatePlayerUpdates(
-  result: GameResult,
-  homeTeamWon: boolean
-): PlayerUpdate[] {
+function generatePlayerUpdates(result: GameResult, homeTeamWon: boolean): PlayerUpdate[] {
   const updates: PlayerUpdate[] = [];
 
   // Process home team players

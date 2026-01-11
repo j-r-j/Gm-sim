@@ -279,9 +279,7 @@ export function calculatePasserRating(stats: PassingStats): number {
  * Check if a play type is a pass play
  */
 function isPassPlay(playType: PlayType): boolean {
-  return (
-    playType.includes('pass') || playType.includes('action') || playType === 'qb_scramble'
-  );
+  return playType.includes('pass') || playType.includes('action') || playType === 'qb_scramble';
 }
 
 /**
@@ -555,7 +553,8 @@ export class StatisticsTracker {
 
       // Update yards per carry
       if (rusherStats.rushing.attempts > 0) {
-        rusherStats.rushing.yardsPerCarry = rusherStats.rushing.yards / rusherStats.rushing.attempts;
+        rusherStats.rushing.yardsPerCarry =
+          rusherStats.rushing.yards / rusherStats.rushing.attempts;
       }
     }
 
@@ -588,7 +587,10 @@ export class StatisticsTracker {
       offenseStats.score += 3;
 
       // Update score by quarter
-      const quarterIndex = Math.min(this.currentQuarter - 1, offenseStats.scoreByQuarter.length - 1);
+      const quarterIndex = Math.min(
+        this.currentQuarter - 1,
+        offenseStats.scoreByQuarter.length - 1
+      );
       offenseStats.scoreByQuarter[quarterIndex] += 3;
 
       if (distance > kickerStats.kicking.longestFieldGoal) {
