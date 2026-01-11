@@ -227,8 +227,7 @@ export {
 
 // Personality Effects
 export {
-  // Types
-  PersonalityType,
+  // Types (PersonalityType is re-exported from models, so we skip it here to avoid conflicts)
   PersonalityInteraction,
   StaffChemistryResult as PersonalityStaffChemistryResult,
   ConflictInfo,
@@ -236,9 +235,9 @@ export {
   ConflictType,
   SynergyType,
   StaffChemistryDescription,
-  // Functions
-  hasPersonalityConflict,
-  hasPersonalitySynergy,
+  // Functions (using aliases to avoid conflicts with CoachPersonality exports from models)
+  hasPersonalityConflict as hasPersonalityConflictAdvanced,
+  hasPersonalitySynergy as hasPersonalitySynergyAdvanced,
   getPersonalityCompatibility,
   calculatePersonalityInteraction,
   detectConflict,

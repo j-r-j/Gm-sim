@@ -5,17 +5,10 @@
  */
 
 import { Coach } from '../models/staff/Coach';
+import { PersonalityType } from '../models/staff/CoachPersonality';
 
-/**
- * Personality types for coaches
- */
-export type PersonalityType =
-  | 'analytical'
-  | 'aggressive'
-  | 'conservative'
-  | 'innovative'
-  | 'oldSchool'
-  | 'playersCoach';
+// Re-export PersonalityType for convenience
+export { PersonalityType } from '../models/staff/CoachPersonality';
 
 /**
  * Personality interaction result
