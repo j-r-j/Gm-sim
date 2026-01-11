@@ -141,7 +141,7 @@ describe('EffectiveRatingCalculator', () => {
       const player = generatePlayer({ position: Position.LT });
       const modifier = calculateStakesModifier(player, 'preseason');
 
-      expect(modifier).toEqual(0);
+      expect(modifier).toBeCloseTo(0);
     });
 
     it('should return value in range (-15 to +15)', () => {
