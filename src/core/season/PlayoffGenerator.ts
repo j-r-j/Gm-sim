@@ -9,16 +9,12 @@
  * - Higher seed always hosts
  */
 
-import { Team } from '../models/team/Team';
-import { Player } from '../models/player/Player';
-import { Coach } from '../models/staff/Coach';
 import { GameState } from '../models/game/GameState';
 import { GameResult, runGame } from '../game/GameRunner';
 import { GameConfig } from '../game/GameSetup';
 import {
   DetailedDivisionStandings,
   getPlayoffSeeds,
-  determinePlayoffTeams,
 } from './StandingsCalculator';
 
 /**
@@ -157,7 +153,7 @@ function generateWildCardMatchups(schedule: PlayoffSchedule): PlayoffMatchup[] {
  */
 function generateDivisionalMatchups(
   schedule: PlayoffSchedule,
-  wildCardWinners: Map<string, number> // teamId -> seed they beat
+  _wildCardWinners: Map<string, number> // teamId -> seed they beat
 ): PlayoffMatchup[] {
   const matchups: PlayoffMatchup[] = [];
   let gameIndex = 0;
@@ -385,8 +381,6 @@ export function simulatePlayoffGame(
   const teams = new Map(Object.entries(gameState.teams));
   const players = new Map(Object.entries(gameState.players));
   const coaches = new Map(Object.entries(gameState.coaches));
-
-  const homeTeam = teams.get(matchup.homeTeamId);
 
   const config: GameConfig = {
     homeTeamId: matchup.homeTeamId,

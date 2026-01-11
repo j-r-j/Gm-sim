@@ -20,7 +20,6 @@
 import {
   DetailedDivisionStandings,
   TeamStanding,
-  resolveWildcardTiebreaker,
 } from './StandingsCalculator';
 import {
   PlayoffSchedule,

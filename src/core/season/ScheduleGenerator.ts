@@ -12,7 +12,7 @@
 
 import { Team } from '../models/team/Team';
 import { Conference, Division, ALL_DIVISIONS } from '../models/team/FakeCities';
-import { assignByeWeeks, isOnBye } from './ByeWeekManager';
+import { assignByeWeeks } from './ByeWeekManager';
 import { PlayoffSchedule } from './PlayoffGenerator';
 
 /**
@@ -101,38 +101,6 @@ const INTER_CONFERENCE_ROTATION: Record<Conference, Record<Division, Division>> 
     West: 'West',
   },
 };
-
-/**
- * 2025 NFL Schedule Template - Week by week matchup patterns
- * This defines which matchup type goes in which week
- */
-interface WeeklyMatchupTemplate {
-  week: number;
-  divisionGames: number; // How many divisional games this week
-  intraConference: number; // Same conference, different division
-  interConference: number; // Different conference
-}
-
-const WEEKLY_TEMPLATE: WeeklyMatchupTemplate[] = [
-  { week: 1, divisionGames: 4, intraConference: 6, interConference: 6 },
-  { week: 2, divisionGames: 4, intraConference: 6, interConference: 6 },
-  { week: 3, divisionGames: 4, intraConference: 6, interConference: 6 },
-  { week: 4, divisionGames: 4, intraConference: 6, interConference: 6 },
-  { week: 5, divisionGames: 4, intraConference: 6, interConference: 4 }, // Byes start
-  { week: 6, divisionGames: 4, intraConference: 6, interConference: 4 },
-  { week: 7, divisionGames: 6, intraConference: 4, interConference: 4 },
-  { week: 8, divisionGames: 4, intraConference: 6, interConference: 4 },
-  { week: 9, divisionGames: 4, intraConference: 6, interConference: 4 },
-  { week: 10, divisionGames: 4, intraConference: 6, interConference: 4 },
-  { week: 11, divisionGames: 6, intraConference: 4, interConference: 4 },
-  { week: 12, divisionGames: 4, intraConference: 6, interConference: 4 },
-  { week: 13, divisionGames: 6, intraConference: 4, interConference: 4 },
-  { week: 14, divisionGames: 6, intraConference: 4, interConference: 4 },
-  { week: 15, divisionGames: 8, intraConference: 4, interConference: 4 },
-  { week: 16, divisionGames: 8, intraConference: 4, interConference: 4 },
-  { week: 17, divisionGames: 8, intraConference: 4, interConference: 4 },
-  { week: 18, divisionGames: 16, intraConference: 0, interConference: 0 }, // All divisional
-];
 
 /**
  * Creates a default previous year standings (for new games or testing)
@@ -328,59 +296,6 @@ function assignTimeSlot(week: number, isDivisional: boolean): TimeSlot {
 }
 
 /**
- * Generates all matchups for a team
- */
-function generateTeamMatchups(
-  team: Team,
-  teams: Team[],
-  previousStandings: PreviousYearStandings
-): { opponent: Team; isHome: boolean }[] {
-  const matchups: { opponent: Team; isHome: boolean }[] = [];
-
-  // 6 Divisional games (home and away vs each rival)
-  const rivals = getDivisionRivals(team, teams);
-  for (const rival of rivals) {
-    matchups.push({ opponent: rival, isHome: true });
-    matchups.push({ opponent: rival, isHome: false });
-  }
-
-  // 4 Intra-conference games (one vs each team in rotation division)
-  const intraOpponents = getIntraConferenceOpponents(team, teams);
-  intraOpponents.forEach((opp, index) => {
-    matchups.push({ opponent: opp, isHome: index % 2 === 0 });
-  });
-
-  // 4 Inter-conference games (one vs each team in rotation division)
-  const interOpponents = getInterConferenceOpponents(team, teams);
-  interOpponents.forEach((opp, index) => {
-    matchups.push({ opponent: opp, isHome: index % 2 === 1 });
-  });
-
-  // 2 Same-place conference games
-  const samePlaceOpponents = getSamePlaceConferenceOpponents(
-    team,
-    teams,
-    previousStandings
-  );
-  samePlaceOpponents.forEach((opp, index) => {
-    matchups.push({ opponent: opp, isHome: index === 0 });
-  });
-
-  // 1 Seventeenth game (same-place inter-conference)
-  const seventeenthOpponent = getSeventeenthGameOpponent(
-    team,
-    teams,
-    previousStandings
-  );
-  if (seventeenthOpponent) {
-    const teamFinish = getTeamFinishPosition(team, previousStandings);
-    matchups.push({ opponent: seventeenthOpponent, isHome: teamFinish % 2 === 0 });
-  }
-
-  return matchups;
-}
-
-/**
  * Distributes games across weeks respecting bye weeks
  * Uses NFL-style approach: Week 18 divisional only, structured week preferences
  */
@@ -504,7 +419,7 @@ function distributeGamesAcrossWeeks(
  */
 function determineHomeTeam(teamA: Team, teamB: Team, matchupType: string): Team {
   // Sort team IDs for consistent ordering
-  const [first, second] = [teamA.id, teamB.id].sort();
+  const [first] = [teamA.id, teamB.id].sort();
   const isTeamAFirst = teamA.id === first;
 
   // Use matchup type to vary home/away across different matchup types

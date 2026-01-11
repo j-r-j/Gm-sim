@@ -17,7 +17,6 @@ import {
   calculateStandings,
   DetailedDivisionStandings,
 } from '../StandingsCalculator';
-import { ScheduledGame } from '../ScheduleGenerator';
 import { Team, createEmptyTeamRecord } from '../../models/team/Team';
 import { FAKE_CITIES } from '../../models/team/FakeCities';
 import { createDefaultStadium } from '../../models/team/Stadium';

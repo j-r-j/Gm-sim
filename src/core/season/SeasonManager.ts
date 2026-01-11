@@ -20,22 +20,18 @@ import {
   DetailedDivisionStandings,
   calculateStandings,
   determinePlayoffTeams,
-  getPlayoffSeeds,
   TeamStanding,
 } from './StandingsCalculator';
 import {
   simulateWeek,
   simulateUserTeamGame,
-  advanceWeek,
   WeekResults,
   getUserTeamGame,
   isUserOnBye,
-  SimulatedGameResult,
 } from './WeekSimulator';
 import {
   PlayoffSchedule,
   PlayoffMatchup,
-  PlayoffRound,
   generatePlayoffBracket,
   advancePlayoffRound,
   simulatePlayoffRound,
@@ -506,19 +502,7 @@ export class SeasonManager {
   isUserInPlayoffs(): boolean {
     if (!this.state.playoffBracket) return false;
 
-    // Check if user was in playoffs at all
-    const isAFCTeam = this.state.playoffBracket.afcSeeds.has(
-      Array.from(this.state.playoffBracket.afcSeeds.values()).indexOf(
-        this.userTeamId
-      ) + 1
-    );
-    const isNFCTeam = this.state.playoffBracket.nfcSeeds.has(
-      Array.from(this.state.playoffBracket.nfcSeeds.values()).indexOf(
-        this.userTeamId
-      ) + 1
-    );
-
-    // Check each conference's seeds
+    // Check if user is in playoff seeds
     let inPlayoffs = false;
     for (const teamId of this.state.playoffBracket.afcSeeds.values()) {
       if (teamId === this.userTeamId) inPlayoffs = true;

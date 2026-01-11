@@ -18,7 +18,7 @@
  */
 
 import { Team } from '../models/team/Team';
-import { Conference, Division, ALL_DIVISIONS } from '../models/team/FakeCities';
+import { Conference, Division } from '../models/team/FakeCities';
 import { ScheduledGame } from './ScheduleGenerator';
 
 /**

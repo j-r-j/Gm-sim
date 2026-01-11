@@ -7,19 +7,16 @@ import { Team } from '../models/team/Team';
 import { Player } from '../models/player/Player';
 import { Coach } from '../models/staff/Coach';
 import { GameState } from '../models/game/GameState';
-import { GameResult, runGame, GameInjury } from '../game/GameRunner';
+import { GameResult, runGame } from '../game/GameRunner';
 import { GameConfig } from '../game/GameSetup';
 import {
   ScheduledGame,
   SeasonSchedule,
   getWeekGames,
-  updateGameResult,
 } from './ScheduleGenerator';
 import {
   DetailedDivisionStandings,
   calculateStandings,
-  getTeamStanding,
-  determinePlayoffTeams,
 } from './StandingsCalculator';
 import { isOnBye } from './ByeWeekManager';
 
@@ -125,7 +122,6 @@ function generatePlayoffImplications(
   week: number
 ): PlayoffImplication[] {
   const implications: PlayoffImplication[] = [];
-  const playoffTeams = determinePlayoffTeams(standings);
 
   // Only start generating implications after week 10
   if (week < 10) return implications;
@@ -140,7 +136,6 @@ function generatePlayoffImplications(
         if (week >= 14 && standing.divisionRank === 1) {
           const secondPlace = confStandings[division][1];
           if (secondPlace) {
-            const gamesRemaining = 17 - (standing.wins + standing.losses + standing.ties);
             const gapGames = standing.wins - secondPlace.wins;
 
             // If gap > games remaining for second place, division clinched
