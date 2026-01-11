@@ -156,3 +156,95 @@ export {
   validateBudgetState,
   getBudgetSummary,
 } from './StaffBudgetManager';
+
+// Tendency Profile Manager
+export {
+  // Types
+  GameStateContext,
+  PlayCallProbabilities,
+  DefensiveCallProbabilities,
+  AdjustedOffensiveTendencies,
+  AdjustedDefensiveTendencies,
+  TendencyGenerationFactors,
+  TendencyDescription,
+  // Functions
+  generateOffensiveTendencies,
+  generateDefensiveTendencies,
+  calculateAdjustedOffensiveTendencies,
+  calculateAdjustedDefensiveTendencies,
+  calculatePlayCallProbabilities,
+  calculateDefensiveCallProbabilities,
+  getTendencyDescriptionForUI,
+  validateTendencyProfile,
+  calculateTendencySimilarity,
+} from './TendencyProfileManager';
+
+// Chemistry Calculator
+export {
+  // Types
+  ChemistryFactors,
+  ChemistryChangeEvent,
+  ChemistryHistory,
+  ChemistryDescription,
+  ChemistryModifier,
+  PlayerPersonality,
+  // Functions
+  calculateInitialChemistry,
+  calculateChemistryFactors,
+  updateChemistryFromEvent,
+  createChemistryEvent,
+  advanceChemistryHistory,
+  getChemistryModifier,
+  getChemistryDescription,
+  calculateDevelopmentModifier,
+  calculateMoraleModifier,
+  initializeChemistryHistory,
+  updateTeamChemistry,
+  getAverageTeamChemistry,
+  validateChemistry,
+} from './ChemistryCalculator';
+
+// Play Calling Integration
+export {
+  // Types
+  PlayCallingDecisionContext,
+  OffensivePlayCallResult,
+  DefensivePlayCallResult,
+  WeatherImpact,
+  FourthDownDecision,
+  TwoMinuteMode,
+  // Functions
+  calculateWeatherImpact,
+  contextToGameState,
+  selectOffensivePlayWithTendencies,
+  selectDefensivePlayWithTendencies,
+  makeFourthDownDecision,
+  determineTwoMinuteMode,
+  getPlayTempo,
+  getPlayTypeDistribution,
+  validatePlayCallingIntegration,
+} from './PlayCallingIntegration';
+
+// Personality Effects
+export {
+  // Types (PersonalityType is re-exported from models, so we skip it here to avoid conflicts)
+  PersonalityInteraction,
+  StaffChemistryResult as PersonalityStaffChemistryResult,
+  ConflictInfo,
+  SynergyInfo,
+  ConflictType,
+  SynergyType,
+  StaffChemistryDescription,
+  // Functions (using aliases to avoid conflicts with CoachPersonality exports from models)
+  hasPersonalityConflict as hasPersonalityConflictAdvanced,
+  hasPersonalitySynergy as hasPersonalitySynergyAdvanced,
+  getPersonalityCompatibility,
+  calculatePersonalityInteraction,
+  detectConflict,
+  detectSynergy,
+  calculateStaffChemistry as calculatePersonalityStaffChemistry,
+  calculateStaffChemistryImpact,
+  suggestCompatiblePersonalities,
+  wouldCreateConflict,
+  isValidPersonalityType,
+} from './PersonalityEffects';
