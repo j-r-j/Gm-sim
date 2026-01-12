@@ -96,10 +96,7 @@ const CLUTCH_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'clutch',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Comes Through Late',
-      'Fourth Quarter Surge Led by {playerName}',
-    ],
+    headlines: ['{playerName} Comes Through Late', 'Fourth Quarter Surge Led by {playerName}'],
     bodies: [
       '{playerName} made several key plays in the fourth quarter, helping {teamName} secure the win.',
       'When the game was on the line, {playerName} stepped up with clutch plays down the stretch.',
@@ -112,7 +109,7 @@ const CLUTCH_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'moderate',
     headlines: [
       '{playerName} Developing Reputation for Big Moments',
-      'Teammates Praise {playerName}\'s Late-Game Heroics',
+      "Teammates Praise {playerName}'s Late-Game Heroics",
     ],
     bodies: [
       'For the third time this season, {playerName} has delivered in crunch time. "Some guys just have it," said one teammate.',
@@ -124,12 +121,9 @@ const CLUTCH_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'clutch',
     confidenceLevel: 'confirmed',
-    headlines: [
-      '{playerName}: The Definition of Clutch',
-      'No Stage Too Big for {playerName}',
-    ],
+    headlines: ['{playerName}: The Definition of Clutch', 'No Stage Too Big for {playerName}'],
     bodies: [
-      '{playerName} has now made game-winning plays in multiple playoff games. There\'s no questioning this player\'s ability to perform under pressure.',
+      "{playerName} has now made game-winning plays in multiple playoff games. There's no questioning this player's ability to perform under pressure.",
       'From regular season to playoffs, {playerName} consistently elevates when the stakes are highest. A true big-game performer.',
     ],
     category: 'breaking',
@@ -141,10 +135,7 @@ const IRON_MAN_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'ironMan',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Available Despite Minor Injury',
-      '{playerName} Plays Through Pain',
-    ],
+    headlines: ['{playerName} Available Despite Minor Injury', '{playerName} Plays Through Pain'],
     bodies: [
       'Despite nursing a minor injury, {playerName} suited up and performed at a high level.',
       '{playerName} returned to practice quickly after a minor setback, impressing coaching staff with their durability.',
@@ -155,12 +146,9 @@ const IRON_MAN_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'ironMan',
     confidenceLevel: 'moderate',
-    headlines: [
-      '{playerName}\'s Streak Continues',
-      'Durability a Calling Card for {playerName}',
-    ],
+    headlines: ["{playerName}'s Streak Continues", 'Durability a Calling Card for {playerName}'],
     bodies: [
-      '{playerName} hasn\'t missed a game in over two seasons. That kind of availability is becoming increasingly rare.',
+      "{playerName} hasn't missed a game in over two seasons. That kind of availability is becoming increasingly rare.",
       'While others deal with injury setbacks, {playerName} keeps showing up week after week. Coaches love the reliability.',
     ],
     category: 'player_profile',
@@ -171,11 +159,11 @@ const IRON_MAN_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'confirmed',
     headlines: [
       '{playerName} the Iron Man: {consecutiveGames} Straight Games',
-      'Unprecedented Durability: {playerName}\'s Remarkable Streak',
+      "Unprecedented Durability: {playerName}'s Remarkable Streak",
     ],
     bodies: [
       'With {consecutiveGames} consecutive games played, {playerName} has established himself as one of the most durable players in the league.',
-      '{playerName}\'s durability is unmatched. Multiple full seasons without missing a game is a testament to their conditioning and mental toughness.',
+      "{playerName}'s durability is unmatched. Multiple full seasons without missing a game is a testament to their conditioning and mental toughness.",
     ],
     category: 'player_profile',
     priority: 'high',
@@ -188,7 +176,7 @@ const LEADER_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'hint',
     headlines: [
       '{playerName} Speaks Up in Team Meeting',
-      'Teammates Respond to {playerName}\'s Challenge',
+      "Teammates Respond to {playerName}'s Challenge",
     ],
     bodies: [
       'Sources say {playerName} addressed the team after a tough loss. The response was positive.',
@@ -205,7 +193,7 @@ const LEADER_TEMPLATES: NewsTemplate[] = [
       'Coaches Lean on {playerName} for Leadership',
     ],
     bodies: [
-      'Despite not wearing a captain\'s patch, {playerName} has become a go-to voice for the coaching staff.',
+      "Despite not wearing a captain's patch, {playerName} has become a go-to voice for the coaching staff.",
       'Multiple teammates have credited {playerName} with helping them through difficult stretches. Natural leadership is evident.',
     ],
     category: 'player_profile',
@@ -216,7 +204,7 @@ const LEADER_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'confirmed',
     headlines: [
       '{playerName}: A True Captain',
-      '{playerName}\'s Leadership Transforms Team Culture',
+      "{playerName}'s Leadership Transforms Team Culture",
     ],
     bodies: [
       '{playerName} has established themselves as an unquestioned leader. Teammates and coaches alike point to their impact on team culture.',
@@ -231,10 +219,7 @@ const FILM_JUNKIE_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'filmJunkie',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} First In, Last Out',
-      'Extra Hours for {playerName}',
-    ],
+    headlines: ['{playerName} First In, Last Out', 'Extra Hours for {playerName}'],
     bodies: [
       'Coaches note that {playerName} is often found in the film room well after team meetings end.',
       '{playerName} has been putting in extra preparation time this week, studying opponent tendencies.',
@@ -246,12 +231,12 @@ const FILM_JUNKIE_TEMPLATES: NewsTemplate[] = [
     trait: 'filmJunkie',
     confidenceLevel: 'moderate',
     headlines: [
-      '{playerName}\'s Film Study Paying Dividends',
-      'Preparation Key to {playerName}\'s Success',
+      "{playerName}'s Film Study Paying Dividends",
+      "Preparation Key to {playerName}'s Success",
     ],
     bodies: [
       '"They always know what\'s coming before it happens," said one coach about {playerName}\'s preparation habits.',
-      '{playerName}\'s ability to read plays before they develop comes from legendary film study habits.',
+      "{playerName}'s ability to read plays before they develop comes from legendary film study habits.",
     ],
     category: 'player_profile',
     priority: 'medium',
@@ -261,10 +246,10 @@ const FILM_JUNKIE_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'confirmed',
     headlines: [
       '{playerName}: A True Student of the Game',
-      'Inside {playerName}\'s Obsessive Preparation',
+      "Inside {playerName}'s Obsessive Preparation",
     ],
     bodies: [
-      'Coaches marvel at {playerName}\'s dedication to film study. Their preparation habits are unmatched in the league.',
+      "Coaches marvel at {playerName}'s dedication to film study. Their preparation habits are unmatched in the league.",
       '{playerName} studies more film than anyone on the team. That dedication shows on game day.',
     ],
     category: 'player_profile',
@@ -280,10 +265,7 @@ const CHOKES_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'chokes',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Quiet in Critical Moment',
-      'Missed Opportunity for {playerName}',
-    ],
+    headlines: ['{playerName} Quiet in Critical Moment', 'Missed Opportunity for {playerName}'],
     bodies: [
       '{playerName} was unable to come through when the team needed it most in the fourth quarter.',
       'A key drop by {playerName} proved costly as {teamName} fell short in the closing minutes.',
@@ -309,12 +291,12 @@ const CHOKES_TEMPLATES: NewsTemplate[] = [
     trait: 'chokes',
     confidenceLevel: 'confirmed',
     headlines: [
-      '{playerName}\'s Playoff Struggles Continue',
+      "{playerName}'s Playoff Struggles Continue",
       'Can {playerName} Overcome Big-Game Issues?',
     ],
     bodies: [
-      'Multiple playoff failures have raised serious concerns about {playerName}\'s ability to perform under pressure.',
-      'The numbers don\'t lie: {playerName}\'s performance drops significantly when the stakes are highest.',
+      "Multiple playoff failures have raised serious concerns about {playerName}'s ability to perform under pressure.",
+      "The numbers don't lie: {playerName}'s performance drops significantly when the stakes are highest.",
     ],
     category: 'player_profile',
     priority: 'urgent',
@@ -325,10 +307,7 @@ const INJURY_PRONE_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'injuryProne',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Day-to-Day with Injury',
-      '{playerName} Misses Practice',
-    ],
+    headlines: ['{playerName} Day-to-Day with Injury', '{playerName} Misses Practice'],
     bodies: [
       '{playerName} is dealing with another minor injury and may miss time.',
       'Training staff working with {playerName} on recovery from latest setback.',
@@ -341,7 +320,7 @@ const INJURY_PRONE_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'moderate',
     headlines: [
       'Injury Concerns Mount for {playerName}',
-      '{playerName}\'s Availability Uncertain Again',
+      "{playerName}'s Availability Uncertain Again",
     ],
     bodies: [
       'This marks the third significant injury for {playerName} in the past two seasons. Durability is becoming a concern.',
@@ -355,11 +334,11 @@ const INJURY_PRONE_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'confirmed',
     headlines: [
       '{playerName} Sidelined Again: Durability a Major Concern',
-      'Injury History Clouds {playerName}\'s Future',
+      "Injury History Clouds {playerName}'s Future",
     ],
     bodies: [
       '{playerName} has now missed significant time in multiple seasons. The injury history is extensive and concerning.',
-      'Despite the talent, {playerName}\'s inability to stay healthy has become a defining characteristic of their career.',
+      "Despite the talent, {playerName}'s inability to stay healthy has become a defining characteristic of their career.",
     ],
     category: 'injury_report',
     priority: 'high',
@@ -370,10 +349,7 @@ const HOT_HEAD_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'hotHead',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Gets Personal Foul',
-      'Tempers Flare for {playerName}',
-    ],
+    headlines: ['{playerName} Gets Personal Foul', 'Tempers Flare for {playerName}'],
     bodies: [
       '{playerName} was flagged for an unnecessary roughness penalty late in the game.',
       'An exchange between {playerName} and an opponent required officials to intervene.',
@@ -384,13 +360,10 @@ const HOT_HEAD_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'hotHead',
     confidenceLevel: 'moderate',
-    headlines: [
-      '{playerName} Involved in Practice Scuffle',
-      'Discipline Issues for {playerName}?',
-    ],
+    headlines: ['{playerName} Involved in Practice Scuffle', 'Discipline Issues for {playerName}?'],
     bodies: [
       'Sources report {playerName} was involved in a confrontation at practice. Teammates had to separate the parties.',
-      'Coaches are monitoring {playerName}\'s temperament after multiple penalty issues this season.',
+      "Coaches are monitoring {playerName}'s temperament after multiple penalty issues this season.",
     ],
     category: 'practice_report',
     priority: 'medium',
@@ -400,7 +373,7 @@ const HOT_HEAD_TEMPLATES: NewsTemplate[] = [
     confidenceLevel: 'confirmed',
     headlines: [
       '{playerName} Ejected After Altercation',
-      'Pattern of Behavior: {playerName}\'s Discipline Problems',
+      "Pattern of Behavior: {playerName}'s Discipline Problems",
     ],
     bodies: [
       '{playerName} was ejected from the game after a confrontation. This is not an isolated incident.',
@@ -415,13 +388,10 @@ const DIVA_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'diva',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Addresses Media After Loss',
-      '{playerName} Comments Raise Eyebrows',
-    ],
+    headlines: ['{playerName} Addresses Media After Loss', '{playerName} Comments Raise Eyebrows'],
     bodies: [
       '{playerName} made some pointed comments about their role in the offense following the loss.',
-      'Some are reading between the lines of {playerName}\'s post-game interview.',
+      "Some are reading between the lines of {playerName}'s post-game interview.",
     ],
     category: 'insider_scoop',
     priority: 'low',
@@ -429,13 +399,10 @@ const DIVA_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'diva',
     confidenceLevel: 'moderate',
-    headlines: [
-      '{playerName} Wants More Targets',
-      'Contract Talks Stall for {playerName}',
-    ],
+    headlines: ['{playerName} Wants More Targets', 'Contract Talks Stall for {playerName}'],
     bodies: [
       '{playerName} publicly expressed frustration with their role in the offense. Coaches declined to comment.',
-      'Sources say {playerName}\'s contract demands are causing friction with the front office.',
+      "Sources say {playerName}'s contract demands are causing friction with the front office.",
     ],
     category: 'insider_scoop',
     priority: 'medium',
@@ -443,13 +410,10 @@ const DIVA_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'diva',
     confidenceLevel: 'confirmed',
-    headlines: [
-      '{playerName} Creates Drama Again',
-      'Can {teamName} Manage {playerName}\'s Ego?',
-    ],
+    headlines: ['{playerName} Creates Drama Again', "Can {teamName} Manage {playerName}'s Ego?"],
     bodies: [
       'Another week, another controversy surrounding {playerName}. The pattern of attention-seeking behavior is well-established.',
-      '{playerName}\'s talent is undeniable, but the constant drama has become a distraction for {teamName}.',
+      "{playerName}'s talent is undeniable, but the constant drama has become a distraction for {teamName}.",
     ],
     category: 'breaking',
     priority: 'high',
@@ -460,10 +424,7 @@ const LAZY_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'lazy',
     confidenceLevel: 'hint',
-    headlines: [
-      '{playerName} Rested at Practice',
-      'Light Workload for {playerName}',
-    ],
+    headlines: ['{playerName} Rested at Practice', 'Light Workload for {playerName}'],
     bodies: [
       '{playerName} sat out portions of practice this week. Coaches cite "maintenance."',
       '{playerName} has been managing their workload carefully this season.',
@@ -474,12 +435,9 @@ const LAZY_TEMPLATES: NewsTemplate[] = [
   {
     trait: 'lazy',
     confidenceLevel: 'moderate',
-    headlines: [
-      'Coaches Want More from {playerName}',
-      '{playerName}\'s Effort Questioned',
-    ],
+    headlines: ['Coaches Want More from {playerName}', "{playerName}'s Effort Questioned"],
     bodies: [
-      'Sources indicate coaching staff has addressed {playerName}\'s practice habits behind closed doors.',
+      "Sources indicate coaching staff has addressed {playerName}'s practice habits behind closed doors.",
       'Some wonder if {playerName} is maximizing their considerable talent with their approach to preparation.',
     ],
     category: 'insider_scoop',
@@ -489,12 +447,12 @@ const LAZY_TEMPLATES: NewsTemplate[] = [
     trait: 'lazy',
     confidenceLevel: 'confirmed',
     headlines: [
-      '{playerName}\'s Work Ethic Under Scrutiny',
+      "{playerName}'s Work Ethic Under Scrutiny",
       'Talent vs. Effort: The {playerName} Question',
     ],
     bodies: [
-      'Multiple sources have confirmed concerns about {playerName}\'s approach to practice and film study.',
-      'Despite clear physical gifts, {playerName}\'s development has been hampered by questions about their dedication.',
+      "Multiple sources have confirmed concerns about {playerName}'s approach to practice and film study.",
+      "Despite clear physical gifts, {playerName}'s development has been hampered by questions about their dedication.",
     ],
     category: 'player_profile',
     priority: 'high',
@@ -520,10 +478,7 @@ const ALL_TEMPLATES: NewsTemplate[] = [
 /**
  * Gets templates for a specific trait and confidence level
  */
-function getTemplatesForTrait(
-  trait: Trait,
-  confidenceLevel: ConfidenceLevel
-): NewsTemplate[] {
+function getTemplatesForTrait(trait: Trait, confidenceLevel: ConfidenceLevel): NewsTemplate[] {
   // Find exact match first
   const exactMatches = ALL_TEMPLATES.filter(
     (t) => t.trait === trait && t.confidenceLevel === confidenceLevel
@@ -534,7 +489,13 @@ function getTemplatesForTrait(
   }
 
   // Fall back to lower confidence levels
-  const confidenceLevels: ConfidenceLevel[] = ['confirmed', 'strong', 'moderate', 'suspected', 'hint'];
+  const confidenceLevels: ConfidenceLevel[] = [
+    'confirmed',
+    'strong',
+    'moderate',
+    'suspected',
+    'hint',
+  ];
   const targetIndex = confidenceLevels.indexOf(confidenceLevel);
 
   for (let i = targetIndex + 1; i < confidenceLevels.length; i++) {
@@ -558,9 +519,7 @@ function replacePlaceholders(
   teamName: string,
   metadata?: Record<string, unknown>
 ): string {
-  let result = template
-    .replace(/{playerName}/g, playerName)
-    .replace(/{teamName}/g, teamName);
+  let result = template.replace(/{playerName}/g, playerName).replace(/{teamName}/g, teamName);
 
   if (metadata) {
     for (const [key, value] of Object.entries(metadata)) {
@@ -602,12 +561,7 @@ export function generateTraitNews(
     teamName,
     metadata
   );
-  const body = replacePlaceholders(
-    randomElement(template.bodies),
-    playerName,
-    teamName,
-    metadata
-  );
+  const body = replacePlaceholders(randomElement(template.bodies), playerName, teamName, metadata);
 
   return {
     id: generateNewsId(),

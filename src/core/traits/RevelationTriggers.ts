@@ -170,10 +170,7 @@ export const CLUTCH_TRIGGER: RevelationTrigger = {
     if (context.quarter && context.quarter >= 4) probability += 0.1;
 
     // Close game bonus
-    if (
-      context.scoreDifferential !== undefined &&
-      Math.abs(context.scoreDifferential) <= 3
-    ) {
+    if (context.scoreDifferential !== undefined && Math.abs(context.scoreDifferential) <= 3) {
       probability += 0.1;
     }
 
@@ -224,10 +221,7 @@ export const LEADER_TRIGGER: RevelationTrigger = {
   description: 'Demonstrated leadership in team settings',
 
   checkCondition: (context: GameEventContext): boolean => {
-    return (
-      context.eventType === 'leadershipMoment' ||
-      context.eventType === 'teamMeetingBehavior'
-    );
+    return context.eventType === 'leadershipMoment' || context.eventType === 'teamMeetingBehavior';
   },
 
   calculateProbability: (context: GameEventContext): number => {
@@ -292,10 +286,7 @@ export const MOTOR_TRIGGER: RevelationTrigger = {
   description: 'Consistently gives maximum effort',
 
   checkCondition: (context: GameEventContext): boolean => {
-    return (
-      context.eventType === 'practiceEffort' ||
-      context.eventType === 'bigGamePerformance'
-    );
+    return context.eventType === 'practiceEffort' || context.eventType === 'bigGamePerformance';
   },
 
   calculateProbability: (_context: GameEventContext): number => {
@@ -314,8 +305,7 @@ export const TEAM_FIRST_TRIGGER: RevelationTrigger = {
 
   checkCondition: (context: GameEventContext): boolean => {
     return (
-      context.eventType === 'contractNegotiation' ||
-      context.eventType === 'teamMeetingBehavior'
+      context.eventType === 'contractNegotiation' || context.eventType === 'teamMeetingBehavior'
     );
   },
 
@@ -420,10 +410,7 @@ export const HOT_HEAD_TRIGGER: RevelationTrigger = {
   description: 'Fight at practice or ejected from game',
 
   checkCondition: (context: GameEventContext): boolean => {
-    return (
-      context.eventType === 'practiceAltercation' ||
-      context.eventType === 'penaltyEjection'
-    );
+    return context.eventType === 'practiceAltercation' || context.eventType === 'penaltyEjection';
   },
 
   calculateProbability: (context: GameEventContext): number => {
@@ -448,10 +435,7 @@ export const LAZY_TRIGGER: RevelationTrigger = {
   description: "Doesn't give full effort in practice or film study",
 
   checkCondition: (context: GameEventContext): boolean => {
-    return (
-      context.eventType === 'practiceEffort' ||
-      context.eventType === 'filmStudyReport'
-    );
+    return context.eventType === 'practiceEffort' || context.eventType === 'filmStudyReport';
   },
 
   calculateProbability: (_context: GameEventContext): number => {
@@ -615,10 +599,7 @@ export const NEGATIVE_TRIGGERS: RevelationTrigger[] = [
 /**
  * All trait triggers
  */
-export const ALL_TRIGGERS: RevelationTrigger[] = [
-  ...POSITIVE_TRIGGERS,
-  ...NEGATIVE_TRIGGERS,
-];
+export const ALL_TRIGGERS: RevelationTrigger[] = [...POSITIVE_TRIGGERS, ...NEGATIVE_TRIGGERS];
 
 /**
  * Get triggers for a specific event type

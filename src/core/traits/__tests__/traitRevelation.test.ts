@@ -419,13 +419,7 @@ describe('NewsEventGenerator', () => {
       };
 
       const context = createGameEventContext('gameWinningPlay');
-      const news = generateTraitNews(
-        'player-123',
-        'Test Player',
-        'Test Team',
-        evidence,
-        context
-      );
+      const news = generateTraitNews('player-123', 'Test Player', 'Test Team', evidence, context);
 
       expect(news).not.toBeNull();
       if (news) {
@@ -574,9 +568,7 @@ describe('TraitRevelationEngine', () => {
       const result = processGameEvent(player, context, 'Test Team');
 
       // Should have checked the clutch trait
-      const checkedClutch = result.events.some((e) =>
-        e.checkedTraits.includes('clutch')
-      );
+      const checkedClutch = result.events.some((e) => e.checkedTraits.includes('clutch'));
       expect(checkedClutch).toBe(true);
     });
   });
@@ -748,13 +740,7 @@ describe('Brand Guidelines Compliance', () => {
     };
 
     const context = createGameEventContext('gameWinningPlay');
-    const news = generateTraitNews(
-      'player-123',
-      'Test Player',
-      'Test Team',
-      evidence,
-      context
-    );
+    const news = generateTraitNews('player-123', 'Test Player', 'Test Team', evidence, context);
 
     if (news) {
       // Headlines and bodies should not directly say "has clutch trait"

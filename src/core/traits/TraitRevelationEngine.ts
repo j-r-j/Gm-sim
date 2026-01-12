@@ -12,12 +12,7 @@
  */
 
 import { Player, getPlayerFullName } from '../models/player/Player';
-import {
-  Trait,
-  hasTrait,
-  revealTrait,
-  isTraitRevealed,
-} from '../models/player/HiddenTraits';
+import { Trait, hasTrait, revealTrait, isTraitRevealed } from '../models/player/HiddenTraits';
 import {
   GameEventContext,
   GameEventType,
@@ -294,7 +289,13 @@ function checkForRevelation(
 
   // Generate news if confidence is high enough
   let news: NewsEvent | null = null;
-  const confidenceLevels: ConfidenceLevel[] = ['confirmed', 'strong', 'moderate', 'suspected', 'hint'];
+  const confidenceLevels: ConfidenceLevel[] = [
+    'confirmed',
+    'strong',
+    'moderate',
+    'suspected',
+    'hint',
+  ];
   const minConfidenceIndex = confidenceLevels.indexOf(options.minNewsConfidence);
   const currentConfidenceIndex = confidenceLevels.indexOf(evidence.confidence);
 
@@ -345,7 +346,13 @@ export function getPotentialTraits(
   const patternData = getPlayerPatternData(player.id);
   const allEvidence = getHighConfidenceTraits(patternData);
 
-  const confidenceLevels: ConfidenceLevel[] = ['confirmed', 'strong', 'moderate', 'suspected', 'hint'];
+  const confidenceLevels: ConfidenceLevel[] = [
+    'confirmed',
+    'strong',
+    'moderate',
+    'suspected',
+    'hint',
+  ];
   const minConfidenceIndex = confidenceLevels.indexOf(minConfidence);
 
   return allEvidence.filter((evidence) => {
@@ -473,13 +480,7 @@ export function processEndOfSeasonRevelations(
         week: 17,
       };
 
-      const news = generateTraitNews(
-        player.id,
-        playerName,
-        teamName,
-        evidence,
-        dummyContext
-      );
+      const news = generateTraitNews(player.id, playerName, teamName, evidence, dummyContext);
       if (news) {
         result.newsEvents.push(news);
       }

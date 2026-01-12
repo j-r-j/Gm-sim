@@ -423,7 +423,10 @@ export function confirmTrait(patternData: PlayerPatternData, trait: Trait): bool
  * Decays old evidence to prevent stale data from dominating
  * Call this at end of each season
  */
-export function applyEvidenceDecay(patternData: PlayerPatternData, decayFactor: number = 0.8): void {
+export function applyEvidenceDecay(
+  patternData: PlayerPatternData,
+  decayFactor: number = 0.8
+): void {
   patternData.traitEvidence.forEach((evidence) => {
     evidence.weightedEvidence *= decayFactor;
     recalculateConfidence(evidence);
