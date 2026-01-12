@@ -11,3 +11,5 @@ export * from './models';
 export * from './engine';
 export * from './coaching';
 export * from './offseason';
+export * from './traits';
+export * from './news';
