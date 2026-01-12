@@ -3,7 +3,4 @@
  * Export all screen components
  */
 
-export {
-  GamecastScreen,
-  type GamecastScreenProps,
-} from './GamecastScreen';
+export { GamecastScreen, type GamecastScreenProps } from './GamecastScreen';

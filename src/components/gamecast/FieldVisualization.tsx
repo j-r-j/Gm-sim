@@ -77,9 +77,7 @@ export function FieldVisualization({
       {/* Down and Distance */}
       <View style={styles.infoRow}>
         <View style={styles.downDistanceContainer}>
-          <Text style={styles.downDistanceText}>
-            {formatDownAndDistance(down, yardsToGo)}
-          </Text>
+          <Text style={styles.downDistanceText}>{formatDownAndDistance(down, yardsToGo)}</Text>
         </View>
         <View style={styles.yardLineContainer}>
           <Text style={styles.yardLineText}>{getYardLineDisplay(ballPosition)}</Text>
@@ -102,28 +100,16 @@ export function FieldVisualization({
         <View style={styles.field}>
           {/* Yard Line Markers */}
           {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((yard) => (
-            <View
-              key={yard}
-              style={[styles.yardMarker, { left: `${(yard / 100) * 100}%` }]}
-            >
-              <Text style={styles.yardMarkerText}>
-                {yard <= 50 ? yard : 100 - yard}
-              </Text>
+            <View key={yard} style={[styles.yardMarker, { left: `${(yard / 100) * 100}%` }]}>
+              <Text style={styles.yardMarkerText}>{yard <= 50 ? yard : 100 - yard}</Text>
             </View>
           ))}
 
           {/* Ball Marker */}
-          <View
-            style={[
-              styles.ballMarker,
-              { left: `${((ballPosition / 100) * 100)}%` },
-            ]}
-          >
+          <View style={[styles.ballMarker, { left: `${(ballPosition / 100) * 100}%` }]}>
             <View style={styles.ball} />
             {/* Direction Arrow */}
-            <Text style={styles.directionArrow}>
-              {isHomeOffense ? '→' : '←'}
-            </Text>
+            <Text style={styles.directionArrow}>{isHomeOffense ? '→' : '←'}</Text>
           </View>
 
           {/* First Down Marker (if applicable) */}
@@ -147,34 +133,14 @@ export function FieldVisualization({
 
       {/* Possession Indicator */}
       <View style={styles.possessionRow}>
-        <View
-          style={[
-            styles.possessionIndicator,
-            isHomeOffense && styles.possessionActive,
-          ]}
-        >
-          <Text
-            style={[
-              styles.possessionText,
-              isHomeOffense && styles.possessionTextActive,
-            ]}
-          >
+        <View style={[styles.possessionIndicator, isHomeOffense && styles.possessionActive]}>
+          <Text style={[styles.possessionText, isHomeOffense && styles.possessionTextActive]}>
             {homeTeamAbbr}
           </Text>
         </View>
         <Text style={styles.possessionLabel}>POSSESSION</Text>
-        <View
-          style={[
-            styles.possessionIndicator,
-            !isHomeOffense && styles.possessionActive,
-          ]}
-        >
-          <Text
-            style={[
-              styles.possessionText,
-              !isHomeOffense && styles.possessionTextActive,
-            ]}
-          >
+        <View style={[styles.possessionIndicator, !isHomeOffense && styles.possessionActive]}>
+          <Text style={[styles.possessionText, !isHomeOffense && styles.possessionTextActive]}>
             {awayTeamAbbr}
           </Text>
         </View>

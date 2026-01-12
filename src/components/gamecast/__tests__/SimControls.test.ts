@@ -26,20 +26,14 @@ describe('SimControls utilities', () => {
   /**
    * Determine if controls should be disabled
    */
-  function shouldDisableControls(
-    isSimulating: boolean,
-    isGameOver: boolean
-  ): boolean {
+  function shouldDisableControls(isSimulating: boolean, isGameOver: boolean): boolean {
     return isSimulating || isGameOver;
   }
 
   /**
    * Get available actions based on game state
    */
-  function getAvailableActions(
-    isSimulating: boolean,
-    isGameOver: boolean
-  ): SimulationMode[] {
+  function getAvailableActions(isSimulating: boolean, isGameOver: boolean): SimulationMode[] {
     if (isGameOver) return [];
     if (isSimulating) return [];
     return ['play', 'drive', 'quarter', 'end'];

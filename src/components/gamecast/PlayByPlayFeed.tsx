@@ -115,13 +115,9 @@ function PlayRow({ play }: { play: PlayItem }): React.JSX.Element {
             <Text style={styles.playTypeIndicatorText}>{typeStyle.label}</Text>
           </View>
         )}
-        {play.score && (
-          <Text style={styles.scoreText}>{play.score}</Text>
-        )}
+        {play.score && <Text style={styles.scoreText}>{play.score}</Text>}
       </View>
-      <Text style={[styles.descriptionText, typeStyle.textStyle]}>
-        {play.description}
-      </Text>
+      <Text style={[styles.descriptionText, typeStyle.textStyle]}>{play.description}</Text>
     </View>
   );
 }
@@ -160,8 +156,7 @@ export function PlayByPlayFeed({
   }, [plays.length, autoScroll]);
 
   // Group plays by quarter for dividers
-  const playsWithDividers: Array<{ type: 'play' | 'divider'; data: PlayItem | number }> =
-    [];
+  const playsWithDividers: Array<{ type: 'play' | 'divider'; data: PlayItem | number }> = [];
   let lastQuarter = 0;
 
   plays.forEach((play) => {
@@ -192,9 +187,7 @@ export function PlayByPlayFeed({
         ) : (
           playsWithDividers.map((item) => {
             if (item.type === 'divider') {
-              return (
-                <QuarterDivider key={`divider-${item.data}`} quarter={item.data as number} />
-              );
+              return <QuarterDivider key={`divider-${item.data}`} quarter={item.data as number} />;
             }
             return <PlayRow key={(item.data as PlayItem).id} play={item.data as PlayItem} />;
           })

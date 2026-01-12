@@ -130,8 +130,7 @@ export function GamecastScreen({
 
     try {
       const currentState = gameRunnerRef.current.getCurrentState();
-      const offenseTeam =
-        currentState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
+      const offenseTeam = currentState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
 
       // Add delay for animation effect
       await delay(500);
@@ -163,8 +162,7 @@ export function GamecastScreen({
 
     try {
       const currentState = gameRunnerRef.current.getCurrentState();
-      const offenseTeam =
-        currentState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
+      const offenseTeam = currentState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
 
       const { plays: drivePlays, state, isComplete } = gameRunnerRef.current.runDrive();
 
@@ -199,8 +197,7 @@ export function GamecastScreen({
       // Add all plays to feed
       const newPlays = quarterPlays.map((play, idx) => {
         const playState = gameRunnerRef.current?.getCurrentState() || state;
-        const offenseTeam =
-          playState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
+        const offenseTeam = playState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
         return playResultToPlayItem(play, plays.length + idx, state, offenseTeam);
       });
       setPlays((prev) => [...prev, ...newPlays]);
@@ -228,8 +225,7 @@ export function GamecastScreen({
       // Run remaining plays until game is over
       while (!gameRunnerRef.current.getCurrentState().isComplete) {
         const currentState = gameRunnerRef.current.getCurrentState();
-        const offenseTeam =
-          currentState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
+        const offenseTeam = currentState.field.possession === 'home' ? homeTeamAbbr : awayTeamAbbr;
 
         const { play, state, isComplete } = gameRunnerRef.current.runNextPlay();
 

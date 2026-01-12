@@ -68,10 +68,7 @@ describe('Scoreboard utilities', () => {
   });
 
   describe('score comparison', () => {
-    function determineWinningTeam(
-      homeScore: number,
-      awayScore: number
-    ): 'home' | 'away' | 'tie' {
+    function determineWinningTeam(homeScore: number, awayScore: number): 'home' | 'away' | 'tie' {
       if (homeScore > awayScore) return 'home';
       if (awayScore > homeScore) return 'away';
       return 'tie';

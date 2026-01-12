@@ -26,9 +26,7 @@ describe('PlayByPlayFeed utilities', () => {
   /**
    * Get play type classification
    */
-  function getPlayType(
-    play: PlayItem
-  ): 'scoring' | 'turnover' | 'bigPlay' | 'regular' {
+  function getPlayType(play: PlayItem): 'scoring' | 'turnover' | 'bigPlay' | 'regular' {
     if (play.isScoring) return 'scoring';
     if (play.isTurnover) return 'turnover';
     if (play.isBigPlay) return 'bigPlay';
@@ -38,9 +36,7 @@ describe('PlayByPlayFeed utilities', () => {
   /**
    * Group plays by quarter
    */
-  function groupPlaysByQuarter(
-    plays: PlayItem[]
-  ): Map<number, PlayItem[]> {
+  function groupPlaysByQuarter(plays: PlayItem[]): Map<number, PlayItem[]> {
     const groups = new Map<number, PlayItem[]>();
     for (const play of plays) {
       const existing = groups.get(play.quarter) || [];
@@ -100,9 +96,7 @@ describe('PlayByPlayFeed utilities', () => {
     });
 
     it('should prioritize scoring over other types', () => {
-      expect(
-        getPlayType(createPlay({ isScoring: true, isTurnover: true }))
-      ).toBe('scoring');
+      expect(getPlayType(createPlay({ isScoring: true, isTurnover: true }))).toBe('scoring');
     });
   });
 
@@ -125,10 +119,7 @@ describe('PlayByPlayFeed utilities', () => {
     });
 
     it('should handle single quarter', () => {
-      const plays = [
-        createPlay({ quarter: 3, id: '1' }),
-        createPlay({ quarter: 3, id: '2' }),
-      ];
+      const plays = [createPlay({ quarter: 3, id: '1' }), createPlay({ quarter: 3, id: '2' })];
       const groups = groupPlaysByQuarter(plays);
       expect(groups.size).toBe(1);
       expect(groups.get(3)?.length).toBe(2);
@@ -151,10 +142,7 @@ describe('PlayByPlayFeed utilities', () => {
     });
 
     it('should handle overtime', () => {
-      const plays = [
-        createPlay({ quarter: 4, id: '1' }),
-        createPlay({ quarter: 5, id: '2' }),
-      ];
+      const plays = [createPlay({ quarter: 4, id: '1' }), createPlay({ quarter: 5, id: '2' })];
       expect(getQuarterDividers(plays)).toEqual([4, 5]);
     });
   });
@@ -176,10 +164,7 @@ describe('PlayByPlayFeed utilities', () => {
     });
 
     it('should count turnovers', () => {
-      const plays = [
-        createPlay({ isTurnover: true }),
-        createPlay({ isTurnover: false }),
-      ];
+      const plays = [createPlay({ isTurnover: true }), createPlay({ isTurnover: false })];
       const turnoverCount = plays.filter((p) => p.isTurnover).length;
       expect(turnoverCount).toBe(1);
     });

@@ -78,7 +78,12 @@ function TimeoutIndicator({
     );
   }
   return (
-    <View style={[styles.timeoutContainer, isHome ? styles.timeoutContainerHome : styles.timeoutContainerAway]}>
+    <View
+      style={[
+        styles.timeoutContainer,
+        isHome ? styles.timeoutContainerHome : styles.timeoutContainerAway,
+      ]}
+    >
       {dots}
     </View>
   );
@@ -113,9 +118,7 @@ export function Scoreboard({
           <Text style={styles.quarterText}>{formatQuarter(quarter)}</Text>
         </View>
         <View style={styles.timeContainer}>
-          <Text style={styles.timeText}>
-            {isGameOver ? 'FINAL' : formatTime(timeRemaining)}
-          </Text>
+          <Text style={styles.timeText}>{isGameOver ? 'FINAL' : formatTime(timeRemaining)}</Text>
         </View>
       </View>
 
@@ -175,9 +178,7 @@ export function Scoreboard({
       {isGameOver && (
         <View style={styles.statusBar}>
           <Text style={styles.statusText}>
-            {tied
-              ? 'FINAL - TIE'
-              : `FINAL - ${homeWinning ? homeTeamName : awayTeamName} WIN`}
+            {tied ? 'FINAL - TIE' : `FINAL - ${homeWinning ? homeTeamName : awayTeamName} WIN`}
           </Text>
         </View>
       )}

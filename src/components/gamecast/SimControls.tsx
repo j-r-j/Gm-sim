@@ -72,12 +72,7 @@ function ControlButton({
   ];
 
   return (
-    <TouchableOpacity
-      style={buttonStyle}
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}
-    >
+    <TouchableOpacity style={buttonStyle} onPress={onPress} disabled={disabled} activeOpacity={0.7}>
       {isActive ? (
         <ActivityIndicator size="small" color={colors.textOnPrimary} />
       ) : (

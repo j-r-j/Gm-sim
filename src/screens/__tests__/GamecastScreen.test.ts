@@ -68,13 +68,9 @@ describe('GamecastScreen utilities', () => {
   /**
    * Determine if red zone
    */
-  function isRedZone(
-    ballPosition: number,
-    possession: 'home' | 'away'
-  ): boolean {
+  function isRedZone(ballPosition: number, possession: 'home' | 'away'): boolean {
     return (
-      (possession === 'home' && ballPosition >= 80) ||
-      (possession === 'away' && ballPosition <= 20)
+      (possession === 'home' && ballPosition >= 80) || (possession === 'away' && ballPosition <= 20)
     );
   }
 
@@ -104,9 +100,7 @@ describe('GamecastScreen utilities', () => {
       ...overrides,
     });
 
-    const createGameState = (
-      overrides: Partial<LiveGameState> = {}
-    ): LiveGameState => ({
+    const createGameState = (overrides: Partial<LiveGameState> = {}): LiveGameState => ({
       clock: { quarter: 1, timeRemaining: 900 },
       score: { home: 0, away: 0 },
       field: { ballPosition: 25, possession: 'home' },
@@ -237,29 +231,38 @@ describe('GamecastScreen utilities', () => {
         // Game is over if:
         // 1. Clock is 0 in Q4 or later
         // 2. Or play count exceeds safety limit
-        return (
-          (state.clock.quarter >= 4 && state.clock.timeRemaining <= 0) ||
-          playCount > 300
-        );
+        return (state.clock.quarter >= 4 && state.clock.timeRemaining <= 0) || playCount > 300;
       };
 
       expect(
         isGameOver(
-          { clock: { quarter: 4, timeRemaining: 0 }, score: { home: 21, away: 17 }, field: { ballPosition: 50, possession: 'home' } },
+          {
+            clock: { quarter: 4, timeRemaining: 0 },
+            score: { home: 21, away: 17 },
+            field: { ballPosition: 50, possession: 'home' },
+          },
           100
         )
       ).toBe(true);
 
       expect(
         isGameOver(
-          { clock: { quarter: 4, timeRemaining: 60 }, score: { home: 21, away: 17 }, field: { ballPosition: 50, possession: 'home' } },
+          {
+            clock: { quarter: 4, timeRemaining: 60 },
+            score: { home: 21, away: 17 },
+            field: { ballPosition: 50, possession: 'home' },
+          },
           100
         )
       ).toBe(false);
 
       expect(
         isGameOver(
-          { clock: { quarter: 1, timeRemaining: 900 }, score: { home: 0, away: 0 }, field: { ballPosition: 50, possession: 'home' } },
+          {
+            clock: { quarter: 1, timeRemaining: 900 },
+            score: { home: 0, away: 0 },
+            field: { ballPosition: 50, possession: 'home' },
+          },
           301
         )
       ).toBe(true);
