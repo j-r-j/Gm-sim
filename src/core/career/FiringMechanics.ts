@@ -144,10 +144,7 @@ export function generateFiringReason(
   if (context.ownerDefianceCount >= 3) {
     reasons.push({
       primary: 'Irreconcilable differences with ownership',
-      secondary: [
-        'Repeated failure to follow owner directives',
-        'Breakdown in communication',
-      ],
+      secondary: ['Repeated failure to follow owner directives', 'Breakdown in communication'],
       category: 'relationship',
     });
   } else if (context.ownerDefianceCount >= 1 && owner.personality.traits.control >= 70) {
@@ -235,14 +232,15 @@ function selectPrimaryReason(
 /**
  * Generates a diplomatic public statement
  */
-function generatePublicStatement(
-  reason: { primary: string; category: FiringReasonCategory }
-): string {
+function generatePublicStatement(reason: {
+  primary: string;
+  category: FiringReasonCategory;
+}): string {
   const templates: Record<FiringReasonCategory, string[]> = {
     performance: [
       'We thank [GM] for their efforts and wish them well in future endeavors.',
       'After careful evaluation, we have decided to move in a new direction.',
-      'We appreciate [GM]\'s dedication but feel a change is needed.',
+      "We appreciate [GM]'s dedication but feel a change is needed.",
     ],
     expectations: [
       'We believe a change in leadership will help us reach our goals.',
@@ -261,7 +259,7 @@ function generatePublicStatement(
     ],
     ownershipChange: [
       'New ownership is excited to establish their vision for the team.',
-      'We appreciate [GM]\'s work and look forward to a new chapter.',
+      "We appreciate [GM]'s work and look forward to a new chapter.",
       'This transition allows us to build toward our ownership goals.',
     ],
     other: [
@@ -507,11 +505,7 @@ export function updateTenureStats(
     madeSuperBowl: boolean;
   }
 ): TenureStats {
-  const totalGames =
-    stats.totalWins +
-    stats.totalLosses +
-    seasonResult.wins +
-    seasonResult.losses;
+  const totalGames = stats.totalWins + stats.totalLosses + seasonResult.wins + seasonResult.losses;
 
   const newTotalWins = stats.totalWins + seasonResult.wins;
 
@@ -532,10 +526,7 @@ export function updateTenureStats(
 /**
  * Records a coaching change in tenure
  */
-export function recordCoachingChange(
-  stats: TenureStats,
-  hired: boolean
-): TenureStats {
+export function recordCoachingChange(stats: TenureStats, hired: boolean): TenureStats {
   if (hired) {
     return { ...stats, coachesHired: stats.coachesHired + 1 };
   } else {
@@ -546,10 +537,7 @@ export function recordCoachingChange(
 /**
  * Records a draft pick in tenure
  */
-export function recordDraftPick(
-  stats: TenureStats,
-  round: number
-): TenureStats {
+export function recordDraftPick(stats: TenureStats, round: number): TenureStats {
   if (round === 1) {
     return { ...stats, firstRoundPicks: stats.firstRoundPicks + 1 };
   }
@@ -629,10 +617,7 @@ export function shouldFire(
   }
 
   // Immediate firing for defiance with high-control owner
-  if (
-    context.ownerDefianceCount >= 3 &&
-    owner.personality.traits.control >= 70
-  ) {
+  if (context.ownerDefianceCount >= 3 && owner.personality.traits.control >= 70) {
     return {
       shouldFire: true,
       isImmediate: true,
@@ -641,10 +626,7 @@ export function shouldFire(
   }
 
   // End of season firing conditions (not immediate)
-  if (
-    context.consecutiveLosingSeason >= 3 &&
-    owner.personality.traits.patience <= 40
-  ) {
+  if (context.consecutiveLosingSeason >= 3 && owner.personality.traits.patience <= 40) {
     return {
       shouldFire: true,
       isImmediate: false,
@@ -653,11 +635,7 @@ export function shouldFire(
   }
 
   // New ownership often cleans house
-  if (
-    context.ownershipJustChanged &&
-    patienceState.currentValue < 60 &&
-    Math.random() < 0.6
-  ) {
+  if (context.ownershipJustChanged && patienceState.currentValue < 60 && Math.random() < 0.6) {
     return {
       shouldFire: true,
       isImmediate: false,

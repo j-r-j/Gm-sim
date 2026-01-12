@@ -63,7 +63,12 @@ describe('OwnerExpectationsSystem', () => {
       const patientOwner = createTestOwner();
       patientOwner.personality.traits.patience = 80;
 
-      const impatientExpectations = generateSeasonExpectations(impatientOwner, 'competitive', 8, 60);
+      const impatientExpectations = generateSeasonExpectations(
+        impatientOwner,
+        'competitive',
+        8,
+        60
+      );
       const patientExpectations = generateSeasonExpectations(patientOwner, 'competitive', 8, 60);
 
       expect(patientExpectations.flexibilityLevel).not.toBe('strict');
@@ -415,8 +420,29 @@ describe('OwnerExpectationsSystem', () => {
         ownerId: '',
         teamId: 'team-1',
         currentSeason: 1,
-        shortTerm: { minimumWins: 8, targetWins: 10, expectedPlayoffs: false, minimumPlayoffRound: null, priorityGoals: [], flexibilityLevel: 'moderate' as const },
-        longTerm: { phase: 'competitive' as const, yearsToContend: 2, ultimateGoal: 'playoffs' as const, timeline: { year1Goal: '', year2Goal: '', year3Goal: '', year4Goal: null, year5Goal: null, currentYear: 1, totalYears: 3 }, tolerance: 50 },
+        shortTerm: {
+          minimumWins: 8,
+          targetWins: 10,
+          expectedPlayoffs: false,
+          minimumPlayoffRound: null,
+          priorityGoals: [],
+          flexibilityLevel: 'moderate' as const,
+        },
+        longTerm: {
+          phase: 'competitive' as const,
+          yearsToContend: 2,
+          ultimateGoal: 'playoffs' as const,
+          timeline: {
+            year1Goal: '',
+            year2Goal: '',
+            year3Goal: '',
+            year4Goal: null,
+            year5Goal: null,
+            currentYear: 1,
+            totalYears: 3,
+          },
+          tolerance: 50,
+        },
         urgency: 'normal' as const,
         lastUpdated: 1,
         historyOfExpectations: [],

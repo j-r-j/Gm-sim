@@ -219,9 +219,7 @@ export function getTrendDescription(trend: PatienceTrend, state: PatienceMeterSt
 /**
  * Determines weekly change description
  */
-export function getWeeklyChange(
-  state: PatienceMeterState
-): 'improved' | 'unchanged' | 'worsened' {
+export function getWeeklyChange(state: PatienceMeterState): 'improved' | 'unchanged' | 'worsened' {
   const diff = state.currentValue - state.lastWeekValue;
 
   if (diff > 2) return 'improved';
@@ -384,7 +382,7 @@ export function validatePatienceMeterState(state: PatienceMeterState): boolean {
 export function calculateRecoveryModifier(ownerPatienceTrait: number): number {
   // Patience trait 1-100: 1 = very impatient, 100 = very patient
   // Recovery modifier: 0.5x to 1.5x
-  return 0.5 + (ownerPatienceTrait / 100);
+  return 0.5 + ownerPatienceTrait / 100;
 }
 
 /**
@@ -394,16 +392,13 @@ export function calculateRecoveryModifier(ownerPatienceTrait: number): number {
 export function calculateDeclineModifier(ownerPatienceTrait: number): number {
   // Patience trait 1-100: 1 = very impatient, 100 = very patient
   // Decline modifier: 1.5x (impatient) to 0.5x (patient)
-  return 1.5 - (ownerPatienceTrait / 100);
+  return 1.5 - ownerPatienceTrait / 100;
 }
 
 /**
  * Applies owner personality modifiers to a patience change
  */
-export function applyPersonalityModifiers(
-  baseChange: number,
-  ownerPatienceTrait: number
-): number {
+export function applyPersonalityModifiers(baseChange: number, ownerPatienceTrait: number): number {
   if (baseChange > 0) {
     return Math.round(baseChange * calculateRecoveryModifier(ownerPatienceTrait));
   } else {

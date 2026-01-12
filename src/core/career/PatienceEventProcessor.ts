@@ -186,10 +186,16 @@ export function processPatienceEvent(
   owner: Owner,
   randomFactor: number = Math.random()
 ): PatienceEventResult {
-  const previousLevel = state.currentValue >= 70 ? 'secure' :
-    state.currentValue >= 50 ? 'stable' :
-    state.currentValue >= 35 ? 'warmSeat' :
-    state.currentValue >= 20 ? 'hotSeat' : 'fired';
+  const previousLevel =
+    state.currentValue >= 70
+      ? 'secure'
+      : state.currentValue >= 50
+        ? 'stable'
+        : state.currentValue >= 35
+          ? 'warmSeat'
+          : state.currentValue >= 20
+            ? 'hotSeat'
+            : 'fired';
 
   const impactValue = calculateEventImpact(event.type, owner, randomFactor);
   const impactDescription = getImpactDescription(impactValue);
@@ -202,10 +208,16 @@ export function processPatienceEvent(
     event.description
   );
 
-  const newLevel = newState.currentValue >= 70 ? 'secure' :
-    newState.currentValue >= 50 ? 'stable' :
-    newState.currentValue >= 35 ? 'warmSeat' :
-    newState.currentValue >= 20 ? 'hotSeat' : 'fired';
+  const newLevel =
+    newState.currentValue >= 70
+      ? 'secure'
+      : newState.currentValue >= 50
+        ? 'stable'
+        : newState.currentValue >= 35
+          ? 'warmSeat'
+          : newState.currentValue >= 20
+            ? 'hotSeat'
+            : 'fired';
 
   return {
     event,
@@ -247,9 +259,17 @@ export function processMultipleEvents(
 export interface SeasonResultContext {
   wins: number;
   losses: number;
-  playoffResult: 'superBowlWin' | 'superBowlLoss' | 'conferenceChampionshipWin' |
-    'conferenceChampionshipLoss' | 'divisionalWin' | 'divisionalLoss' |
-    'wildCardWin' | 'wildCardLoss' | 'missedPlayoffs' | null;
+  playoffResult:
+    | 'superBowlWin'
+    | 'superBowlLoss'
+    | 'conferenceChampionshipWin'
+    | 'conferenceChampionshipLoss'
+    | 'divisionalWin'
+    | 'divisionalLoss'
+    | 'wildCardWin'
+    | 'wildCardLoss'
+    | 'missedPlayoffs'
+    | null;
   expectedWins: number;
   season: number;
 }
@@ -411,8 +431,12 @@ export function createPREvent(
   if (positive) {
     eventType = severity === 'major' ? 'positiveMediaCoverage' : 'communityInvolvement';
   } else {
-    eventType = severity === 'major' ? 'badPR' :
-      severity === 'moderate' ? 'negativeMediaCoverage' : 'playerScandal';
+    eventType =
+      severity === 'major'
+        ? 'badPR'
+        : severity === 'moderate'
+          ? 'negativeMediaCoverage'
+          : 'playerScandal';
   }
 
   return {
@@ -428,9 +452,13 @@ export function createPREvent(
  * Creates a personnel decision event
  */
 export function createPersonnelEvent(
-  eventType: 'majorFASigningWorks' | 'majorFASigningBusts' |
-    'draftPickBecomesStar' | 'topDraftPickBusts' |
-    'tradedForStar' | 'tradedAwayStar',
+  eventType:
+    | 'majorFASigningWorks'
+    | 'majorFASigningBusts'
+    | 'draftPickBecomesStar'
+    | 'topDraftPickBusts'
+    | 'tradedForStar'
+    | 'tradedAwayStar',
   playerName: string,
   week: number,
   season: number
@@ -457,8 +485,13 @@ export function createPersonnelEvent(
  * Creates a game result event
  */
 export function createGameResultEvent(
-  result: 'blowoutWin' | 'blowoutLoss' | 'rivalryWin' | 'rivalryLoss' |
-    'losingStreak5Plus' | 'winningStreak5Plus',
+  result:
+    | 'blowoutWin'
+    | 'blowoutLoss'
+    | 'rivalryWin'
+    | 'rivalryLoss'
+    | 'losingStreak5Plus'
+    | 'winningStreak5Plus',
   week: number,
   season: number,
   opponent?: string

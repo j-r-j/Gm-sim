@@ -287,13 +287,7 @@ describe('PatienceEventProcessor', () => {
 
   describe('createDemandComplianceEvent', () => {
     it('should create compliance event', () => {
-      const event = createDemandComplianceEvent(
-        'demand-1',
-        'Sign free agent',
-        true,
-        5,
-        1
-      );
+      const event = createDemandComplianceEvent('demand-1', 'Sign free agent', true, 5, 1);
 
       expect(event.type).toBe('demandComplied');
       expect(event.description).toContain('Complied');
@@ -301,13 +295,7 @@ describe('PatienceEventProcessor', () => {
     });
 
     it('should create defiance event', () => {
-      const event = createDemandComplianceEvent(
-        'demand-1',
-        'Sign free agent',
-        false,
-        5,
-        1
-      );
+      const event = createDemandComplianceEvent('demand-1', 'Sign free agent', false, 5, 1);
 
       expect(event.type).toBe('defiedOwner');
       expect(event.description).toContain('Defied');

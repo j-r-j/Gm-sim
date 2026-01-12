@@ -147,7 +147,9 @@ export function generateSeasonExpectations(
   }
 
   // Playoff expectations
-  const expectedPlayoffs = teamPhase === 'contender' || teamPhase === 'dynasty' ||
+  const expectedPlayoffs =
+    teamPhase === 'contender' ||
+    teamPhase === 'dynasty' ||
     (teamPhase === 'competitive' && (winNow || championshipOrBust));
 
   // Minimum playoff round
@@ -439,7 +441,12 @@ export function createExpectationsState(
   previousSeasonWins: number,
   rosterStrength: number
 ): ExpectationsState {
-  const shortTerm = generateSeasonExpectations(owner, teamPhase, previousSeasonWins, rosterStrength);
+  const shortTerm = generateSeasonExpectations(
+    owner,
+    teamPhase,
+    previousSeasonWins,
+    rosterStrength
+  );
   const longTerm = generateLongTermExpectations(owner, teamPhase, currentSeason);
   const urgency = calculateUrgency(longTerm, 1);
 
@@ -537,9 +544,7 @@ export function evaluateSeasonExpectations(
 
   // Goals evaluation (20% weight)
   const requiredGoals = expectations.priorityGoals.filter((g) => g.isRequired);
-  const requiredMet = requiredGoals.filter((g) =>
-    result.goalsAchieved.includes(g.id)
-  ).length;
+  const requiredMet = requiredGoals.filter((g) => result.goalsAchieved.includes(g.id)).length;
 
   if (requiredGoals.length > 0) {
     const goalScore = (requiredMet / requiredGoals.length) * 20;
@@ -685,8 +690,7 @@ export function createExpectationsViewModel(
     : `Win ${state.shortTerm.minimumWins}+ games`;
 
   // Calculate years remaining
-  const yearsRemaining =
-    state.longTerm.timeline.totalYears - state.longTerm.timeline.currentYear;
+  const yearsRemaining = state.longTerm.timeline.totalYears - state.longTerm.timeline.currentYear;
 
   // Generate progress description
   const progressDescription = generateProgressDescription(state);
