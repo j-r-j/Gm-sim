@@ -3,11 +3,7 @@
  * Handles 3 preseason exhibition games and player evaluations
  */
 
-import {
-  OffSeasonState,
-  addEvent,
-  completeTask,
-} from '../OffSeasonPhaseManager';
+import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 
 /**
  * Preseason game result
@@ -207,26 +203,10 @@ function generatePreseasonStats(position: string, snaps: number): Record<string,
  */
 function generatePerformanceNotes(grade: 'A' | 'B' | 'C' | 'D' | 'F'): string[] {
   const notes: Record<typeof grade, string[]> = {
-    A: [
-      'Dominant performance',
-      'Making a strong case for the roster',
-      'Exceeded all expectations',
-    ],
-    B: [
-      'Solid showing',
-      'Did his job well',
-      'Showed improvement from camp',
-    ],
-    C: [
-      'Average performance',
-      'Nothing notable good or bad',
-      'Needs to show more',
-    ],
-    D: [
-      'Struggled in key situations',
-      'Made mental errors',
-      'Not NFL ready yet',
-    ],
+    A: ['Dominant performance', 'Making a strong case for the roster', 'Exceeded all expectations'],
+    B: ['Solid showing', 'Did his job well', 'Showed improvement from camp'],
+    C: ['Average performance', 'Nothing notable good or bad', 'Needs to show more'],
+    D: ['Struggled in key situations', 'Made mental errors', 'Not NFL ready yet'],
     F: [
       'Poor performance throughout',
       'Major concerns moving forward',
@@ -306,8 +286,7 @@ export function createPreseasonEvaluation(
   const totalSnaps = performances.reduce((sum, p) => sum + p.snaps, 0);
 
   const gradeValues = { A: 95, B: 80, C: 65, D: 45, F: 25 };
-  const avgGrade =
-    performances.reduce((sum, p) => sum + gradeValues[p.grade], 0) / gamesPlayed;
+  const avgGrade = performances.reduce((sum, p) => sum + gradeValues[p.grade], 0) / gamesPlayed;
 
   // Determine trend
   let trend: 'improving' | 'steady' | 'declining' = 'steady';

@@ -14,12 +14,7 @@ import {
 /**
  * Free agency sub-phases
  */
-export type FASubPhase =
-  | 'legal_tampering'
-  | 'day1_frenzy'
-  | 'day2_frenzy'
-  | 'trickle'
-  | 'complete';
+export type FASubPhase = 'legal_tampering' | 'day1_frenzy' | 'day2_frenzy' | 'trickle' | 'complete';
 
 /**
  * Free agent summary
@@ -124,10 +119,7 @@ export function wouldAcceptOffer(
 /**
  * Submits an offer to a free agent
  */
-export function submitOffer(
-  state: OffSeasonState,
-  offer: FAOffer
-): OffSeasonState {
+export function submitOffer(state: OffSeasonState, offer: FAOffer): OffSeasonState {
   return addEvent(
     state,
     'contract',
@@ -139,10 +131,7 @@ export function submitOffer(
 /**
  * Signs a free agent
  */
-export function signFreeAgent(
-  state: OffSeasonState,
-  result: FASigningResult
-): OffSeasonState {
+export function signFreeAgent(state: OffSeasonState, result: FASigningResult): OffSeasonState {
   const signing: PlayerSigning = {
     playerId: result.freeAgent.playerId,
     playerName: result.freeAgent.playerName,
@@ -194,9 +183,7 @@ export function getTopAvailableFreeAgents(
   freeAgents: FreeAgentSummary[],
   limit: number = 25
 ): FreeAgentSummary[] {
-  return [...freeAgents]
-    .sort((a, b) => b.marketValue - a.marketValue)
-    .slice(0, limit);
+  return [...freeAgents].sort((a, b) => b.marketValue - a.marketValue).slice(0, limit);
 }
 
 /**

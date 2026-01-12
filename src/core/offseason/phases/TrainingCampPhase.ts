@@ -3,11 +3,7 @@
  * Handles position battles, development reveals, and roster evaluation
  */
 
-import {
-  OffSeasonState,
-  addEvent,
-  completeTask,
-} from '../OffSeasonPhaseManager';
+import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 
 /**
  * Position battle status
@@ -268,9 +264,7 @@ export function generateDevelopmentReveal(
   };
 
   const isPositive =
-    typeSelection === 'decline' || typeSelection === 'injury_concern'
-      ? false
-      : Math.random() < 0.6;
+    typeSelection === 'decline' || typeSelection === 'injury_concern' ? false : Math.random() < 0.6;
   const options = isPositive
     ? descriptions[typeSelection].positive
     : descriptions[typeSelection].negative;
@@ -392,12 +386,8 @@ export function getTrainingCampSummary(
   reveals: DevelopmentReveal[],
   injuries: CampInjury[]
 ): TrainingCampSummary {
-  const standouts = reveals
-    .filter((r) => r.impact === 'positive')
-    .map((r) => r.playerName);
-  const disappointments = reveals
-    .filter((r) => r.impact === 'negative')
-    .map((r) => r.playerName);
+  const standouts = reveals.filter((r) => r.impact === 'positive').map((r) => r.playerName);
+  const disappointments = reveals.filter((r) => r.impact === 'negative').map((r) => r.playerName);
   const rosterBubble = battles
     .filter((b) => b.spotType === 'depth' && b.status === 'too_close')
     .flatMap((b) => b.competitors.map((c) => c.playerName));
@@ -427,8 +417,7 @@ ${battle.winner ? `Winner: ${battle.competitors.find((c) => c.playerId === battl
 Competitors:
 ${sortedCompetitors
   .map(
-    (c, i) =>
-      `${i + 1}. ${c.playerName} - ${c.currentScore} (${c.trend}) Grade: ${c.practiceGrade}`
+    (c, i) => `${i + 1}. ${c.playerName} - ${c.currentScore} (${c.trend}) Grade: ${c.practiceGrade}`
   )
   .join('\n')}`;
 }

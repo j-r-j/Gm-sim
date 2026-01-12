@@ -3,11 +3,7 @@
  * Handles Organized Team Activities and first impressions
  */
 
-import {
-  OffSeasonState,
-  addEvent,
-  completeTask,
-} from '../OffSeasonPhaseManager';
+import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 
 /**
  * OTA report for a player
@@ -90,7 +86,7 @@ export function generateOTAReport(
   else if (Math.random() < 0.1) attendance = 'partial';
 
   // Determine impression based on rating and work ethic
-  const performanceScore = (overallRating * 0.6 + workEthic * 0.4) + (Math.random() * 20 - 10);
+  const performanceScore = overallRating * 0.6 + workEthic * 0.4 + (Math.random() * 20 - 10);
   let impression: 'standout' | 'solid' | 'average' | 'concerning' | 'injury' = 'average';
 
   if (Math.random() < 0.03) impression = 'injury';
@@ -124,14 +120,17 @@ export function generateOTAReport(
 
   // Conditioning and scheme grasp
   const conditioningLevel = Math.min(100, Math.max(40, overallRating + Math.random() * 20 - 10));
-  const schemeGrasp = Math.min(100, Math.max(30, (overallRating + workEthic) / 2 + Math.random() * 30 - 15));
+  const schemeGrasp = Math.min(
+    100,
+    Math.max(30, (overallRating + workEthic) / 2 + Math.random() * 30 - 15)
+  );
 
   // Coach feedback
   const feedbackOptions = {
-    standout: 'Extremely pleased with his progress. He\'s going to be a key contributor.',
+    standout: "Extremely pleased with his progress. He's going to be a key contributor.",
     solid: 'Doing exactly what we expected. Steady and reliable.',
-    average: 'Still evaluating, but he\'s showing flashes.',
-    concerning: 'We\'re working with him to get up to speed.',
+    average: "Still evaluating, but he's showing flashes.",
+    concerning: "We're working with him to get up to speed.",
     injury: 'Taking it slow, being smart with his recovery.',
   };
 

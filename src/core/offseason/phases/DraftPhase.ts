@@ -145,7 +145,9 @@ const PICK_VALUES: Record<number, number> = {
  */
 export function getPickValue(overallPick: number): number {
   // Find closest value in table
-  const keys = Object.keys(PICK_VALUES).map(Number).sort((a, b) => a - b);
+  const keys = Object.keys(PICK_VALUES)
+    .map(Number)
+    .sort((a, b) => a - b);
   for (let i = 0; i < keys.length; i++) {
     if (overallPick <= keys[i]) {
       if (i === 0) return PICK_VALUES[keys[0]];
@@ -153,9 +155,7 @@ export function getPickValue(overallPick: number): number {
       const lower = keys[i - 1];
       const upper = keys[i];
       const ratio = (overallPick - lower) / (upper - lower);
-      return Math.round(
-        PICK_VALUES[lower] + (PICK_VALUES[upper] - PICK_VALUES[lower]) * ratio
-      );
+      return Math.round(PICK_VALUES[lower] + (PICK_VALUES[upper] - PICK_VALUES[lower]) * ratio);
     }
   }
   return PICK_VALUES[256] || 20;
@@ -171,7 +171,9 @@ export function calculateRookieContract(overallPick: number): {
   signingBonus: number;
 } {
   // Find closest value in wage scale
-  const keys = Object.keys(ROOKIE_WAGE_SCALE).map(Number).sort((a, b) => a - b);
+  const keys = Object.keys(ROOKIE_WAGE_SCALE)
+    .map(Number)
+    .sort((a, b) => a - b);
   let scale = ROOKIE_WAGE_SCALE[256];
 
   for (let i = 0; i < keys.length; i++) {
@@ -187,7 +189,9 @@ export function calculateRookieContract(overallPick: number): {
         const upperScale = ROOKIE_WAGE_SCALE[upper];
         scale = {
           total: Math.round(lowerScale.total + (upperScale.total - lowerScale.total) * ratio),
-          signing: Math.round(lowerScale.signing + (upperScale.signing - lowerScale.signing) * ratio),
+          signing: Math.round(
+            lowerScale.signing + (upperScale.signing - lowerScale.signing) * ratio
+          ),
         };
       }
       break;
@@ -296,10 +300,7 @@ export function evaluateTradeOffer(offer: DraftTradeOffer): {
 /**
  * Executes a draft trade
  */
-export function executeDraftTrade(
-  state: OffSeasonState,
-  offer: DraftTradeOffer
-): OffSeasonState {
+export function executeDraftTrade(state: OffSeasonState, offer: DraftTradeOffer): OffSeasonState {
   return addEvent(state, 'trade', `Trade executed between teams`, { trade: offer });
 }
 
@@ -332,7 +333,10 @@ export function processDraft(
 /**
  * Gets draft summary
  */
-export function getDraftSummary(selections: DraftSelection[], trades: DraftTradeOffer[]): DraftSummary {
+export function getDraftSummary(
+  selections: DraftSelection[],
+  trades: DraftTradeOffer[]
+): DraftSummary {
   const gradeByRound: Record<number, number> = {};
 
   for (const selection of selections) {
@@ -342,7 +346,8 @@ export function getDraftSummary(selections: DraftSelection[], trades: DraftTrade
     gradeByRound[round] = (gradeByRound[round] + grade) / 2;
   }
 
-  const avgGrade = Object.values(gradeByRound).reduce((a, b) => a + b, 0) / Object.keys(gradeByRound).length;
+  const avgGrade =
+    Object.values(gradeByRound).reduce((a, b) => a + b, 0) / Object.keys(gradeByRound).length;
   let overallGrade: string;
   if (avgGrade >= 85) overallGrade = 'A';
   else if (avgGrade >= 75) overallGrade = 'B';

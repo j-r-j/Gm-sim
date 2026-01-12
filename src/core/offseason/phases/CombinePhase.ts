@@ -3,11 +3,7 @@
  * Handles NFL Combine, Pro Days, and prospect scouting
  */
 
-import {
-  OffSeasonState,
-  addEvent,
-  completeTask,
-} from '../OffSeasonPhaseManager';
+import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 
 /**
  * Combine drill types
@@ -202,8 +198,7 @@ export function calculateDrillScore(
 ): number {
   if (result === null) return 50; // Default for missing drills
 
-  const benchmarks =
-    DRILL_BENCHMARKS[drill as keyof typeof DRILL_BENCHMARKS];
+  const benchmarks = DRILL_BENCHMARKS[drill as keyof typeof DRILL_BENCHMARKS];
   if (!benchmarks) return 50;
 
   // For time-based drills (lower is better)
@@ -231,15 +226,26 @@ export function calculateDrillScore(
  * Calculates overall athletic score
  */
 export function calculateAthleticScore(result: CombineResult): number {
-  const positionWeights = POSITION_DRILL_WEIGHTS[result.position] ||
-    POSITION_DRILL_WEIGHTS['LB'];
+  const positionWeights = POSITION_DRILL_WEIGHTS[result.position] || POSITION_DRILL_WEIGHTS['LB'];
 
   const drillScores = {
-    '40_yard_dash': calculateDrillScore('40_yard_dash', result.drills.fortyYardDash, result.position),
-    vertical_jump: calculateDrillScore('vertical_jump', result.drills.verticalJump, result.position),
+    '40_yard_dash': calculateDrillScore(
+      '40_yard_dash',
+      result.drills.fortyYardDash,
+      result.position
+    ),
+    vertical_jump: calculateDrillScore(
+      'vertical_jump',
+      result.drills.verticalJump,
+      result.position
+    ),
     broad_jump: calculateDrillScore('broad_jump', result.drills.broadJump, result.position),
     bench_press: calculateDrillScore('bench_press', result.drills.benchPress, result.position),
-    '3_cone_drill': calculateDrillScore('3_cone_drill', result.drills.threeConeDrill, result.position),
+    '3_cone_drill': calculateDrillScore(
+      '3_cone_drill',
+      result.drills.threeConeDrill,
+      result.position
+    ),
     '20_yard_shuttle': calculateDrillScore(
       '20_yard_shuttle',
       result.drills.twentyYardShuttle,
@@ -296,11 +302,16 @@ export function processCombineResults(
   const risers = results.filter((r) => r.overall.riseOrFall === 'riser');
   const fallers = results.filter((r) => r.overall.riseOrFall === 'faller');
 
-  let newState = addEvent(state, 'phase_complete', `NFL Combine complete: ${results.length} prospects measured`, {
-    totalProspects: results.length,
-    risers: risers.length,
-    fallers: fallers.length,
-  });
+  let newState = addEvent(
+    state,
+    'phase_complete',
+    `NFL Combine complete: ${results.length} prospects measured`,
+    {
+      totalProspects: results.length,
+      risers: risers.length,
+      fallers: fallers.length,
+    }
+  );
 
   // Add notable risers as events
   for (const riser of risers.slice(0, 3)) {
@@ -321,10 +332,7 @@ export function processCombineResults(
 /**
  * Processes pro day attendance
  */
-export function processProDay(
-  state: OffSeasonState,
-  result: ProDayResult
-): OffSeasonState {
+export function processProDay(state: OffSeasonState, result: ProDayResult): OffSeasonState {
   let newState = addEvent(
     state,
     'development_reveal',
@@ -350,7 +358,9 @@ export function getCombineSummary(results: CombineResult[]): CombineSummary {
     risers: results.filter((r) => r.overall.riseOrFall === 'riser').slice(0, 5),
     fallers: results.filter((r) => r.overall.riseOrFall === 'faller').slice(0, 5),
     notableInterviews: results
-      .filter((r) => r.interview.impression === 'excellent' || r.interview.impression === 'concerning')
+      .filter(
+        (r) => r.interview.impression === 'excellent' || r.interview.impression === 'concerning'
+      )
       .map((r) => ({
         prospectId: r.prospectId,
         prospectName: r.prospectName,
@@ -412,5 +422,7 @@ export function getTopAthleticProspects(
   results: CombineResult[],
   limit: number = 20
 ): CombineResult[] {
-  return [...results].sort((a, b) => b.overall.athleticScore - a.overall.athleticScore).slice(0, limit);
+  return [...results]
+    .sort((a, b) => b.overall.athleticScore - a.overall.athleticScore)
+    .slice(0, limit);
 }

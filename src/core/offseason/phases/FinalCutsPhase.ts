@@ -99,10 +99,10 @@ export function calculateCutPriority(player: CutEvaluationPlayer): number {
   let score = 0;
 
   // Rating factor (lower rating = higher cut priority)
-  score += (100 - player.overallRating);
+  score += 100 - player.overallRating;
 
   // Preseason factor
-  score += (100 - player.preseasonGrade);
+  score += 100 - player.preseasonGrade;
 
   // Age factor (older players more expendable for depth)
   if (player.age >= 30) score += 10;
@@ -154,9 +154,7 @@ export function evaluateRosterForCuts(
 
   // First, ensure minimum position requirements
   const positionCounts = new Map<string, number>();
-  const sortedRoster = [...roster].sort(
-    (a, b) => b.overallRating - a.overallRating
-  );
+  const sortedRoster = [...roster].sort((a, b) => b.overallRating - a.overallRating);
 
   for (const player of sortedRoster) {
     const count = positionCounts.get(player.position) || 0;
@@ -169,9 +167,7 @@ export function evaluateRosterForCuts(
   }
 
   // Then fill remaining spots by rating
-  const remaining = sortedRoster.filter(
-    (p) => !keep.includes(p)
-  );
+  const remaining = sortedRoster.filter((p) => !keep.includes(p));
   const spotsLeft = targetSize - keep.length;
 
   for (let i = 0; i < remaining.length; i++) {
@@ -233,12 +229,9 @@ export function signToPracticeSquad(
   };
 
   let newState = addSigning(state, signing);
-  newState = addEvent(
-    newState,
-    'signing',
-    `Signed ${player.playerName} to practice squad`,
-    { player }
-  );
+  newState = addEvent(newState, 'signing', `Signed ${player.playerName} to practice squad`, {
+    player,
+  });
 
   return newState;
 }
@@ -251,27 +244,19 @@ export function placeOnIR(
   player: CutEvaluationPlayer,
   teamId: string
 ): OffSeasonState {
-  return addEvent(
-    state,
-    'roster_move',
-    `Placed ${player.playerName} on Injured Reserve`,
-    {
-      playerId: player.playerId,
-      playerName: player.playerName,
-      position: player.position,
-      teamId,
-      moveType: 'ir',
-    }
-  );
+  return addEvent(state, 'roster_move', `Placed ${player.playerName} on Injured Reserve`, {
+    playerId: player.playerId,
+    playerName: player.playerName,
+    position: player.position,
+    teamId,
+    moveType: 'ir',
+  });
 }
 
 /**
  * Processes waiver claim
  */
-export function processWaiverClaim(
-  state: OffSeasonState,
-  claim: WaiverClaim
-): OffSeasonState {
+export function processWaiverClaim(state: OffSeasonState, claim: WaiverClaim): OffSeasonState {
   if (claim.wasSuccessful) {
     const signing: PlayerSigning = {
       playerId: claim.playerId,
@@ -294,12 +279,7 @@ export function processWaiverClaim(
     return newState;
   }
 
-  return addEvent(
-    state,
-    'roster_move',
-    `Failed waiver claim for ${claim.playerName}`,
-    { claim }
-  );
+  return addEvent(state, 'roster_move', `Failed waiver claim for ${claim.playerName}`, { claim });
 }
 
 /**

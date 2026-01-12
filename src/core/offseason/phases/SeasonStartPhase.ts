@@ -3,11 +3,7 @@
  * Handles final preparations, owner expectations, and transition to regular season
  */
 
-import {
-  OffSeasonState,
-  addEvent,
-  completeTask,
-} from '../OffSeasonPhaseManager';
+import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 
 /**
  * Owner expectation levels
@@ -169,12 +165,11 @@ export function calculateOwnerExpectations(
       'This is a championship-caliber roster. I expect us to compete for a Super Bowl. Nothing less will be acceptable.',
     championship_contender:
       'We have the talent to make a deep playoff run. I want to see this team competing in January.',
-    playoff_team:
-      'This should be a playoff team. Make sure we punch our ticket to the postseason.',
+    playoff_team: 'This should be a playoff team. Make sure we punch our ticket to the postseason.',
     competitive:
       'I expect us to be competitive every week. Show me progress and fight for a playoff spot.',
     rebuild:
-      'We\'re building for the future. Focus on development, but I still want to see competitive effort.',
+      "We're building for the future. Focus on development, but I still want to see competitive effort.",
   };
 
   return {
@@ -336,12 +331,9 @@ export function processSeasonStart(
     }
   );
 
-  newState = addEvent(
-    newState,
-    'phase_start',
-    `Owner message: "${expectations.message}"`,
-    { expectations }
-  );
+  newState = addEvent(newState, 'phase_start', `Owner message: "${expectations.message}"`, {
+    expectations,
+  });
 
   newState = completeTask(newState, 'view_expectations');
 
@@ -406,9 +398,8 @@ export function getMediaProjectionsText(projections: MediaProjection[]): string 
       (projections.reduce((sum, p) => sum + p.projectedWins, 0) / projections.length) * 10
     ) / 10;
   const avgRanking =
-    Math.round(
-      (projections.reduce((sum, p) => sum + p.teamRanking, 0) / projections.length) * 10
-    ) / 10;
+    Math.round((projections.reduce((sum, p) => sum + p.teamRanking, 0) / projections.length) * 10) /
+    10;
 
   return `Media Projections
 

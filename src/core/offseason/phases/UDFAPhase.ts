@@ -143,10 +143,7 @@ export function wouldAcceptOffer(
 /**
  * Signs a UDFA
  */
-export function signUDFA(
-  state: OffSeasonState,
-  result: UDFASigningResult
-): OffSeasonState {
+export function signUDFA(state: OffSeasonState, result: UDFASigningResult): OffSeasonState {
   const signing: PlayerSigning = {
     playerId: result.prospect.prospectId,
     playerName: result.prospect.name,
@@ -201,18 +198,13 @@ export function processUDFA(
  * Gets available UDFAs sorted by grade
  */
 export function getAvailableUDFAs(prospects: UDFAProspect[]): UDFAProspect[] {
-  return prospects
-    .filter((p) => !p.signed)
-    .sort((a, b) => b.overallGrade - a.overallGrade);
+  return prospects.filter((p) => !p.signed).sort((a, b) => b.overallGrade - a.overallGrade);
 }
 
 /**
  * Gets UDFAs by position
  */
-export function getUDFAsByPosition(
-  prospects: UDFAProspect[],
-  position: string
-): UDFAProspect[] {
+export function getUDFAsByPosition(prospects: UDFAProspect[], position: string): UDFAProspect[] {
   return prospects
     .filter((p) => !p.signed && p.position === position)
     .sort((a, b) => b.overallGrade - a.overallGrade);

@@ -239,7 +239,7 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
       {
         id: 'view_recap',
         name: 'View Season Recap',
-        description: 'Review your team\'s season performance',
+        description: "Review your team's season performance",
         isRequired: true,
         isComplete: false,
       },
@@ -613,12 +613,8 @@ export function completeTask(state: OffSeasonState, taskId: string): OffSeasonSt
   const updatedTasksCompleted = [...taskStatus.tasksCompleted, taskId];
 
   // Check if required/optional are now complete
-  const requiredComplete = updatedTasks
-    .filter((t) => t.isRequired)
-    .every((t) => t.isComplete);
-  const optionalComplete = updatedTasks
-    .filter((t) => !t.isRequired)
-    .every((t) => t.isComplete);
+  const requiredComplete = updatedTasks.filter((t) => t.isRequired).every((t) => t.isComplete);
+  const optionalComplete = updatedTasks.filter((t) => !t.isRequired).every((t) => t.isComplete);
 
   const updatedTaskStatus: PhaseTaskStatus = {
     ...taskStatus,
@@ -737,10 +733,7 @@ export function advanceDay(state: OffSeasonState): OffSeasonState {
 /**
  * Sets the season recap data
  */
-export function setSeasonRecap(
-  state: OffSeasonState,
-  recap: SeasonRecap
-): OffSeasonState {
+export function setSeasonRecap(state: OffSeasonState, recap: SeasonRecap): OffSeasonState {
   return {
     ...state,
     seasonRecap: recap,
@@ -750,10 +743,7 @@ export function setSeasonRecap(
 /**
  * Sets the draft order
  */
-export function setDraftOrder(
-  state: OffSeasonState,
-  order: string[]
-): OffSeasonState {
+export function setDraftOrder(state: OffSeasonState, order: string[]): OffSeasonState {
   return {
     ...state,
     draftOrder: order,
@@ -792,10 +782,7 @@ export function addRosterChange(
 /**
  * Adds a player signing
  */
-export function addSigning(
-  state: OffSeasonState,
-  signing: PlayerSigning
-): OffSeasonState {
+export function addSigning(state: OffSeasonState, signing: PlayerSigning): OffSeasonState {
   const event: OffSeasonEvent = {
     id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     phase: state.currentPhase,
@@ -815,10 +802,7 @@ export function addSigning(
 /**
  * Adds a player release
  */
-export function addRelease(
-  state: OffSeasonState,
-  release: PlayerRelease
-): OffSeasonState {
+export function addRelease(state: OffSeasonState, release: PlayerRelease): OffSeasonState {
   const event: OffSeasonEvent = {
     id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     phase: state.currentPhase,
@@ -862,20 +846,14 @@ export function addEvent(
 /**
  * Gets recent events
  */
-export function getRecentEvents(
-  state: OffSeasonState,
-  limit: number = 20
-): OffSeasonEvent[] {
+export function getRecentEvents(state: OffSeasonState, limit: number = 20): OffSeasonEvent[] {
   return state.events.slice(-limit).reverse();
 }
 
 /**
  * Gets events for a specific phase
  */
-export function getPhaseEvents(
-  state: OffSeasonState,
-  phase: OffSeasonPhaseType
-): OffSeasonEvent[] {
+export function getPhaseEvents(state: OffSeasonState, phase: OffSeasonPhaseType): OffSeasonEvent[] {
   return state.events.filter((e) => e.phase === phase);
 }
 
@@ -904,9 +882,7 @@ export function getProgress(state: OffSeasonState): OffSeasonProgress {
     phaseDay: state.phaseDay,
     completedPhases: state.completedPhases.length,
     totalPhases: PHASE_ORDER.length,
-    percentComplete: Math.round(
-      (state.completedPhases.length / PHASE_ORDER.length) * 100
-    ),
+    percentComplete: Math.round((state.completedPhases.length / PHASE_ORDER.length) * 100),
     requiredTasksComplete: areRequiredTasksComplete(state),
     allTasksComplete: areAllTasksComplete(state),
     canAdvance: canAdvancePhase(state),
@@ -982,10 +958,7 @@ export function validateOffSeasonState(state: OffSeasonState): boolean {
 /**
  * Resets a phase (for testing or re-do scenarios)
  */
-export function resetPhase(
-  state: OffSeasonState,
-  phase: OffSeasonPhaseType
-): OffSeasonState {
+export function resetPhase(state: OffSeasonState, phase: OffSeasonPhaseType): OffSeasonState {
   const newPhaseTasks = new Map(state.phaseTasks);
   newPhaseTasks.set(phase, createPhaseTaskStatus(phase));
 

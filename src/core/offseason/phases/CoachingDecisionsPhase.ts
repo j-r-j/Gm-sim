@@ -3,11 +3,7 @@
  * Handles coach evaluations, firings, and hirings
  */
 
-import {
-  OffSeasonState,
-  addEvent,
-  completeTask,
-} from '../OffSeasonPhaseManager';
+import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 
 /**
  * Coach evaluation result

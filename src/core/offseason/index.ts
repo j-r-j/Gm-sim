@@ -99,8 +99,8 @@ export {
   type CoachingChange,
   evaluateCoach,
   generateCoachCandidates,
-  fireCoach,
-  hireCoach,
+  fireCoach as fireCoachOffseason,
+  hireCoach as hireCoachOffseason,
   promoteCoach,
   processCoachingDecisions,
   getEvaluationSummaryText,
@@ -176,13 +176,13 @@ export {
 // Phase 6: Draft
 // ============================================
 export {
-  type DraftPick,
+  type DraftPick as OffSeasonDraftPick,
   type DraftProspect,
   type DraftTradeOffer,
   type DraftSelection,
   type DraftSummary,
   getPickValue,
-  calculateRookieContract,
+  calculateRookieContract as calculateOffseasonRookieContract,
   makeDraftSelection,
   evaluateTradeOffer,
   executeDraftTrade,
