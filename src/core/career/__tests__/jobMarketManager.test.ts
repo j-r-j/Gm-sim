@@ -18,9 +18,7 @@ import {
   cleanupOldOpenings,
   updateReputation,
   validateJobMarketState,
-  JobMarketState,
   JobOpening,
-  TeamInterest,
 } from '../JobMarketManager';
 import { createDefaultOwner } from '../../models/owner/Owner';
 
@@ -137,7 +135,6 @@ describe('JobMarketManager', () => {
       const opening = createTestOpening();
 
       const highRepInterest = calculateTeamInterest(opening, 80, 1, 0.6, 0);
-      const lowRepInterest = calculateTeamInterest(opening, 30, 0, 0.4, 2);
 
       expect(highRepInterest.interestLevel).not.toBe('none');
       // Higher reputation should generally lead to higher interest
@@ -147,11 +144,10 @@ describe('JobMarketManager', () => {
       const opening = createTestOpening();
 
       const withChampionship = calculateTeamInterest(opening, 50, 2, 0.5, 0);
-      const withoutChampionship = calculateTeamInterest(opening, 50, 0, 0.5, 0);
 
-      expect(withChampionship.reasonsForInterest.some((r) =>
-        r.toLowerCase().includes('championship')
-      )).toBe(true);
+      expect(
+        withChampionship.reasonsForInterest.some((r) => r.toLowerCase().includes('championship'))
+      ).toBe(true);
     });
 
     it('should penalize multiple firings', () => {

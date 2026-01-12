@@ -16,7 +16,6 @@ import {
   advanceInterviewWeek,
   getOfferSummary,
   validateInterviewState,
-  InterviewState,
 } from '../InterviewSystem';
 import { JobOpening, TeamInterest } from '../JobMarketManager';
 import { createDefaultOwner } from '../../models/owner/Owner';
@@ -52,7 +51,9 @@ describe('InterviewSystem', () => {
   }
 
   // Helper to create team interest
-  function createTestInterest(level: 'elite' | 'high' | 'moderate' | 'low' | 'none' = 'high'): TeamInterest {
+  function createTestInterest(
+    level: 'elite' | 'high' | 'moderate' | 'low' | 'none' = 'high'
+  ): TeamInterest {
     return {
       openingId: 'opening-1',
       teamId: 'team-1',
@@ -239,7 +240,11 @@ describe('InterviewSystem', () => {
       const { state: s1 } = requestInterview(state, opening1, interest1);
 
       const opening2 = { ...createTestOpening(), id: 'opening-2', teamId: 'team-2' };
-      const interest2 = { ...createTestInterest('elite'), openingId: 'opening-2', teamId: 'team-2' };
+      const interest2 = {
+        ...createTestInterest('elite'),
+        openingId: 'opening-2',
+        teamId: 'team-2',
+      };
       const { state: s2 } = requestInterview(s1, opening2, interest2);
 
       // Conduct both
@@ -252,8 +257,12 @@ describe('InterviewSystem', () => {
         const { state: final, offer } = acceptOffer(s4, withOffers[0].id);
 
         expect(offer).not.toBeNull();
-        expect(final.interviews.find((i) => i.id === withOffers[0].id)?.status).toBe('offer_accepted');
-        expect(final.interviews.find((i) => i.id === withOffers[1].id)?.status).toBe('offer_declined');
+        expect(final.interviews.find((i) => i.id === withOffers[0].id)?.status).toBe(
+          'offer_accepted'
+        );
+        expect(final.interviews.find((i) => i.id === withOffers[1].id)?.status).toBe(
+          'offer_declined'
+        );
       }
     });
 

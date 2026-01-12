@@ -96,9 +96,7 @@ export function startUnemploymentYear(
   previousState: UnemploymentState | null,
   year: number
 ): UnemploymentState {
-  const consecutiveYears = previousState
-    ? previousState.consecutiveYearsUnemployed + 1
-    : 1;
+  const consecutiveYears = previousState ? previousState.consecutiveYearsUnemployed + 1 : 1;
 
   return {
     ...createUnemploymentState(year),
@@ -185,14 +183,8 @@ export function simulateUnemploymentWeek(
     ...state,
     currentWeek: newWeek,
     events: [...state.events, ...newEvents],
-    newOpeningsThisYear: [
-      ...state.newOpeningsThisYear,
-      ...newOpenings.map((o) => o.id),
-    ],
-    filledOpeningsThisYear: [
-      ...state.filledOpeningsThisYear,
-      ...filledOpenings.map((o) => o.id),
-    ],
+    newOpeningsThisYear: [...state.newOpeningsThisYear, ...newOpenings.map((o) => o.id)],
+    filledOpeningsThisYear: [...state.filledOpeningsThisYear, ...filledOpenings.map((o) => o.id)],
   };
 }
 
@@ -215,10 +207,7 @@ function getOpeningDescription(opening: JobOpening): string {
 /**
  * Gets season milestone events
  */
-function getSeasonMilestoneEvent(
-  week: number,
-  year: number
-): UnemploymentEvent | null {
+function getSeasonMilestoneEvent(week: number, year: number): UnemploymentEvent | null {
   if (week === 1) {
     return {
       id: `milestone-season-start-${year}`,
@@ -259,7 +248,8 @@ function getSeasonMilestoneEvent(
       week,
       year,
       headline: 'Black Monday',
-      description: 'The annual coaching and front office purge begins. New opportunities may emerge.',
+      description:
+        'The annual coaching and front office purge begins. New opportunities may emerge.',
     };
   }
 

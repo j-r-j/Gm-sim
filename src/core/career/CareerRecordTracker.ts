@@ -218,19 +218,26 @@ export function startNewTeam(
 /**
  * Records a completed season
  */
-export function recordSeason(
-  record: CareerRecord,
-  snapshot: SeasonSnapshot
-): CareerRecord {
-  const totalGames = record.totalWins + record.totalLosses + record.totalTies +
-    snapshot.wins + snapshot.losses + snapshot.ties;
+export function recordSeason(record: CareerRecord, snapshot: SeasonSnapshot): CareerRecord {
+  const totalGames =
+    record.totalWins +
+    record.totalLosses +
+    record.totalTies +
+    snapshot.wins +
+    snapshot.losses +
+    snapshot.ties;
   const newTotalWins = record.totalWins + snapshot.wins;
 
   // Update current team tenure
   const updatedTeams = record.teamsWorkedFor.map((tenure) => {
     if (tenure.teamId === snapshot.teamId && tenure.endYear === null) {
-      const tenureGames = tenure.totalWins + tenure.totalLosses + tenure.totalTies +
-        snapshot.wins + snapshot.losses + snapshot.ties;
+      const tenureGames =
+        tenure.totalWins +
+        tenure.totalLosses +
+        tenure.totalTies +
+        snapshot.wins +
+        snapshot.losses +
+        snapshot.ties;
       const newTenureWins = tenure.totalWins + snapshot.wins;
 
       return {
@@ -482,7 +489,9 @@ export function getCareerSummary(record: CareerRecord): string {
   const parts: string[] = [];
 
   parts.push(`${record.totalSeasons} season${record.totalSeasons !== 1 ? 's' : ''} as GM`);
-  parts.push(`${record.totalWins}-${record.totalLosses}${record.totalTies > 0 ? `-${record.totalTies}` : ''} record`);
+  parts.push(
+    `${record.totalWins}-${record.totalLosses}${record.totalTies > 0 ? `-${record.totalTies}` : ''} record`
+  );
   parts.push(`${Math.round(record.careerWinPercentage * 100)}% win rate`);
 
   if (record.championships > 0) {

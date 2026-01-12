@@ -3,7 +3,7 @@
  * Handles voluntary career endings and legacy calculation
  */
 
-import { CareerRecord, TeamTenure, AchievementRecord } from './CareerRecordTracker';
+import { CareerRecord, TeamTenure } from './CareerRecordTracker';
 
 /**
  * Legacy tier based on career accomplishments
@@ -151,10 +151,7 @@ export function initiateRetirement(
 /**
  * Generates comprehensive career summary
  */
-export function generateCareerSummary(
-  record: CareerRecord,
-  retirementYear: number
-): CareerSummary {
+export function generateCareerSummary(record: CareerRecord, retirementYear: number): CareerSummary {
   const stats = calculateFinalStats(record);
   const legacyScore = calculateLegacyScore(record);
   const legacyTier = getLegacyTier(legacyScore);
@@ -320,8 +317,7 @@ function getLegacyDescription(tier: LegacyTier, record: CareerRecord): string {
       `A workmanlike career with ups and downs. Some good seasons mixed with struggles.`,
     forgettable: (_r) =>
       `A forgettable tenure in the league. Few memorable moments to reflect upon.`,
-    poor: (_r) =>
-      `A difficult career marked by struggles and unfulfilled potential.`,
+    poor: (_r) => `A difficult career marked by struggles and unfulfilled potential.`,
   };
 
   return descriptions[tier](record);
@@ -349,14 +345,13 @@ function calculateHallOfFameStatus(record: CareerRecord, legacyScore: number): H
 /**
  * Gets reasons for Hall of Fame consideration
  */
-function getHallOfFameReasons(
-  record: CareerRecord,
-  status: HallOfFameStatus
-): string[] {
+function getHallOfFameReasons(record: CareerRecord, status: HallOfFameStatus): string[] {
   const reasons: string[] = [];
 
   if (record.championships > 0) {
-    reasons.push(`${record.championships} Super Bowl championship${record.championships > 1 ? 's' : ''}`);
+    reasons.push(
+      `${record.championships} Super Bowl championship${record.championships > 1 ? 's' : ''}`
+    );
   }
   if (record.careerWinPercentage >= 0.55) {
     reasons.push(`${Math.round(record.careerWinPercentage * 100)}% career win rate`);
@@ -401,11 +396,7 @@ function generateHighlights(record: CareerRecord): CareerHighlight[] {
   for (let i = 1; i < record.seasonHistory.length; i++) {
     const prev = record.seasonHistory[i - 1];
     const curr = record.seasonHistory[i];
-    if (
-      prev.teamId === curr.teamId &&
-      prev.wins < 6 &&
-      curr.wins >= 10
-    ) {
+    if (prev.teamId === curr.teamId && prev.wins < 6 && curr.wins >= 10) {
       highlights.push({
         type: 'turnaround',
         year: curr.year,
@@ -453,16 +444,24 @@ function generateTeamLegacies(record: CareerRecord): TeamLegacy[] {
     const achievements: string[] = [];
 
     if (tenure.championships > 0) {
-      achievements.push(`${tenure.championships} championship${tenure.championships > 1 ? 's' : ''}`);
+      achievements.push(
+        `${tenure.championships} championship${tenure.championships > 1 ? 's' : ''}`
+      );
     }
     if (tenure.conferenceChampionships > 0) {
-      achievements.push(`${tenure.conferenceChampionships} conference title${tenure.conferenceChampionships > 1 ? 's' : ''}`);
+      achievements.push(
+        `${tenure.conferenceChampionships} conference title${tenure.conferenceChampionships > 1 ? 's' : ''}`
+      );
     }
     if (tenure.divisionTitles > 0) {
-      achievements.push(`${tenure.divisionTitles} division title${tenure.divisionTitles > 1 ? 's' : ''}`);
+      achievements.push(
+        `${tenure.divisionTitles} division title${tenure.divisionTitles > 1 ? 's' : ''}`
+      );
     }
     if (tenure.playoffAppearances > 0) {
-      achievements.push(`${tenure.playoffAppearances} playoff appearance${tenure.playoffAppearances > 1 ? 's' : ''}`);
+      achievements.push(
+        `${tenure.playoffAppearances} playoff appearance${tenure.playoffAppearances > 1 ? 's' : ''}`
+      );
     }
 
     const fanMemory = generateFanMemory(tenure);

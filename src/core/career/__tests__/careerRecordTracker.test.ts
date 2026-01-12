@@ -118,11 +118,14 @@ describe('CareerRecordTracker', () => {
     it('should track championships', () => {
       let record = createTestCareer();
       record = startNewTeam(record, 'team-1', 'Team A', 2025);
-      record = recordSeason(record, createTestSeason({
-        wonChampionship: true,
-        wonConference: true,
-        wonDivision: true,
-      }));
+      record = recordSeason(
+        record,
+        createTestSeason({
+          wonChampionship: true,
+          wonConference: true,
+          wonDivision: true,
+        })
+      );
 
       expect(record.championships).toBe(1);
       expect(record.conferenceChampionships).toBe(1);
@@ -311,7 +314,10 @@ describe('CareerRecordTracker', () => {
     it('should include key stats for experienced GM', () => {
       let record = createTestCareer();
       record = startNewTeam(record, 'team-1', 'Team A', 2025);
-      record = recordSeason(record, createTestSeason({ wins: 12, losses: 5, wonChampionship: true }));
+      record = recordSeason(
+        record,
+        createTestSeason({ wins: 12, losses: 5, wonChampionship: true })
+      );
 
       const summary = getCareerSummary(record);
       expect(summary).toContain('1 season');

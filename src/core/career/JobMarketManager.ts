@@ -162,8 +162,8 @@ export function generateJobOpening(
  * Assesses a team's current situation
  */
 function assessTeamSituation(team: Team): TeamSituation {
-  const winPct = team.currentRecord.wins /
-    (team.currentRecord.wins + team.currentRecord.losses || 1);
+  const winPct =
+    team.currentRecord.wins / (team.currentRecord.wins + team.currentRecord.losses || 1);
 
   if (team.playoffSeed !== null && team.playoffSeed <= 3) {
     return 'contender';
@@ -203,9 +203,7 @@ function categorizeTraitValue(value: number): 'low' | 'moderate' | 'high' {
 /**
  * Determines fanbase expectations based on team history
  */
-function determineFanbaseExpectations(
-  team: Team
-): 'low' | 'moderate' | 'high' | 'championship' {
+function determineFanbaseExpectations(team: Team): 'low' | 'moderate' | 'high' | 'championship' {
   if (team.championships > 0 && team.lastChampionshipYear !== null) {
     return 'championship';
   }
@@ -364,14 +362,10 @@ export function calculateAllInterests(
  */
 export function getAvailableOpenings(state: JobMarketState): JobOpening[] {
   const interestedTeamIds = new Set(
-    state.teamInterests
-      .filter((ti) => ti.interestLevel !== 'none')
-      .map((ti) => ti.teamId)
+    state.teamInterests.filter((ti) => ti.interestLevel !== 'none').map((ti) => ti.teamId)
   );
 
-  return state.openings.filter(
-    (o) => !o.isFilled && interestedTeamIds.has(o.teamId)
-  );
+  return state.openings.filter((o) => !o.isFilled && interestedTeamIds.has(o.teamId));
 }
 
 /**
@@ -448,19 +442,14 @@ export function cleanupOldOpenings(state: JobMarketState): JobMarketState {
 
   return {
     ...state,
-    openings: state.openings.filter(
-      (o) => !o.isFilled && o.yearOpened >= currentYear - 1
-    ),
+    openings: state.openings.filter((o) => !o.isFilled && o.yearOpened >= currentYear - 1),
   };
 }
 
 /**
  * Updates reputation and recalculates interests
  */
-export function updateReputation(
-  state: JobMarketState,
-  newScore: number
-): JobMarketState {
+export function updateReputation(state: JobMarketState, newScore: number): JobMarketState {
   return {
     ...state,
     playerReputationScore: newScore,

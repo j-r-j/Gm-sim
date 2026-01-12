@@ -16,7 +16,6 @@ import {
   decideToRetire,
   getUnemploymentSummary,
   validateUnemploymentState,
-  UnemploymentState,
 } from '../UnemploymentYear';
 import { JobOpening } from '../JobMarketManager';
 
@@ -83,7 +82,16 @@ describe('UnemploymentYear', () => {
 
     it('should reset weekly tracking', () => {
       const previousState = createUnemploymentState(2024);
-      previousState.events = [{ id: 'old', type: 'media_speculation', week: 5, year: 2024, headline: 'Test', description: 'Test' }];
+      previousState.events = [
+        {
+          id: 'old',
+          type: 'media_speculation',
+          week: 5,
+          year: 2024,
+          headline: 'Test',
+          description: 'Test',
+        },
+      ];
 
       const newState = startUnemploymentYear(previousState, 2025);
 
@@ -247,9 +255,9 @@ describe('UnemploymentYear', () => {
 
       const result = completeConsultantJob(state);
 
-      expect(result.events.some((e) =>
-        e.type === 'consultant_offer' && e.headline.includes('Complete')
-      )).toBe(true);
+      expect(
+        result.events.some((e) => e.type === 'consultant_offer' && e.headline.includes('Complete'))
+      ).toBe(true);
     });
 
     it('should do nothing if no active job', () => {
@@ -330,9 +338,7 @@ describe('UnemploymentYear', () => {
       const state = createUnemploymentState(2025);
       const result = decideToRetire(state);
 
-      expect(result.events.some((e) =>
-        e.headline.toLowerCase().includes('step away')
-      )).toBe(true);
+      expect(result.events.some((e) => e.headline.toLowerCase().includes('step away'))).toBe(true);
     });
   });
 
@@ -340,7 +346,11 @@ describe('UnemploymentYear', () => {
     it('should return correct counts', () => {
       let state = createUnemploymentState(2025);
       state = simulateUnemploymentWeek(state, [createTestOpening({ id: 'op-1' })], []);
-      state = simulateUnemploymentWeek(state, [], [createTestOpening({ id: 'op-2', isFilled: true })]);
+      state = simulateUnemploymentWeek(
+        state,
+        [],
+        [createTestOpening({ id: 'op-2', isFilled: true })]
+      );
 
       const summary = getUnemploymentSummary(state);
 

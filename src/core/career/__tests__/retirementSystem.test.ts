@@ -50,15 +50,18 @@ describe('RetirementSystem', () => {
 
     // Add 5 seasons
     for (let i = 0; i < 5; i++) {
-      record = recordSeason(record, createTestSeason({
-        year: 2020 + i,
-        wins: 10 + i,
-        losses: 7 - i,
-        madePlayoffs: i >= 2,
-        wonDivision: i >= 3,
-        wonChampionship: i === 4,
-        wonConference: i === 4,
-      }));
+      record = recordSeason(
+        record,
+        createTestSeason({
+          year: 2020 + i,
+          wins: 10 + i,
+          losses: 7 - i,
+          madePlayoffs: i >= 2,
+          wonDivision: i >= 3,
+          wonChampionship: i === 4,
+          wonConference: i === 4,
+        })
+      );
     }
 
     return record;
@@ -164,7 +167,10 @@ describe('RetirementSystem', () => {
     it('should add points for championships', () => {
       let record = createCareerRecord('gm-1', 'Test GM');
       record = startNewTeam(record, 'team-1', 'Team', 2020);
-      record = recordSeason(record, createTestSeason({ wonChampionship: true, wonConference: true }));
+      record = recordSeason(
+        record,
+        createTestSeason({ wonChampionship: true, wonConference: true })
+      );
 
       const score = calculateLegacyScore(record);
 
@@ -325,8 +331,8 @@ describe('RetirementSystem', () => {
       const record = createTestCareerWithHistory();
       const summary = generateCareerSummary(record, 2025);
 
-      const expectedWinPct = record.totalWins /
-        (record.totalWins + record.totalLosses + record.totalTies);
+      const expectedWinPct =
+        record.totalWins / (record.totalWins + record.totalLosses + record.totalTies);
       expect(summary.stats.winPercentage).toBeCloseTo(expectedWinPct, 2);
     });
 
@@ -337,11 +343,14 @@ describe('RetirementSystem', () => {
 
       record = startNewTeam(record, 'team-2', 'Long Team', 2021);
       for (let i = 0; i < 5; i++) {
-        record = recordSeason(record, createTestSeason({
-          year: 2021 + i,
-          teamId: 'team-2',
-          teamName: 'Long Team',
-        }));
+        record = recordSeason(
+          record,
+          createTestSeason({
+            year: 2021 + i,
+            teamId: 'team-2',
+            teamName: 'Long Team',
+          })
+        );
       }
 
       const summary = generateCareerSummary(record, 2026);

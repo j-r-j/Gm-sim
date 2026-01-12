@@ -5,7 +5,6 @@
 
 import { Owner } from '../models/owner';
 import { JobOpening, TeamInterest, InterestLevel } from './JobMarketManager';
-import { ReputationTier } from './CareerRecordTracker';
 
 /**
  * Interview status
@@ -177,11 +176,11 @@ export function requestInterview(
  */
 function calculateScheduledWeek(currentWeek: number, interest: InterestLevel): number {
   const delays: Record<InterestLevel, number> = {
-    elite: 0,      // Immediate
-    high: 1,       // Next week
-    moderate: 2,   // Two weeks
-    low: 3,        // Three weeks
-    none: 99,      // Never (shouldn't happen)
+    elite: 0, // Immediate
+    high: 1, // Next week
+    moderate: 2, // Two weeks
+    low: 3, // Three weeks
+    none: 99, // Never (shouldn't happen)
   };
   return currentWeek + delays[interest];
 }
@@ -227,9 +226,7 @@ export function conductInterview(
 
   return {
     ...state,
-    interviews: state.interviews.map((i) =>
-      i.id === interviewId ? updatedInterview : i
-    ),
+    interviews: state.interviews.map((i) => (i.id === interviewId ? updatedInterview : i)),
   };
 }
 
@@ -430,16 +427,24 @@ function generateContractOffer(
   // Autonomy based on owner control trait
   const controlTrait = owner.personality.traits.control;
   const autonomyLevel: ContractOffer['autonomyLevel'] =
-    controlTrait <= 30 ? 'full' :
-    controlTrait <= 50 ? 'high' :
-    controlTrait <= 70 ? 'moderate' : 'low';
+    controlTrait <= 30
+      ? 'full'
+      : controlTrait <= 50
+        ? 'high'
+        : controlTrait <= 70
+          ? 'moderate'
+          : 'low';
 
   // Budget based on owner spending
   const spendingTrait = owner.personality.traits.spending;
   const budgetLevel: ContractOffer['budgetLevel'] =
-    spendingTrait >= 80 ? 'unlimited' :
-    spendingTrait >= 60 ? 'competitive' :
-    spendingTrait >= 40 ? 'moderate' : 'limited';
+    spendingTrait >= 80
+      ? 'unlimited'
+      : spendingTrait >= 60
+        ? 'competitive'
+        : spendingTrait >= 40
+          ? 'moderate'
+          : 'limited';
 
   return {
     teamId: owner.teamId,
@@ -486,10 +491,7 @@ export function acceptOffer(
 /**
  * Declines an offer
  */
-export function declineOffer(
-  state: InterviewState,
-  interviewId: string
-): InterviewState {
+export function declineOffer(state: InterviewState, interviewId: string): InterviewState {
   return {
     ...state,
     interviews: state.interviews.map((i) =>
