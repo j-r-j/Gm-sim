@@ -20,7 +20,12 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Position } from '../core/models/player/Position';
-import { DraftPickCard, TradeOfferCard, ProspectListItem, type TradeAsset } from '../components/draft';
+import {
+  DraftPickCard,
+  TradeOfferCard,
+  ProspectListItem,
+  type TradeAsset,
+} from '../components/draft';
 
 /**
  * Draft pick information
@@ -222,10 +227,7 @@ export function DraftRoomScreen({
     (pick: DraftPick, index: number, isRecent: boolean) => (
       <View
         key={`${isRecent ? 'recent' : 'upcoming'}-${pick.pickNumber}`}
-        style={[
-          styles.pickHistoryItem,
-          pick.teamId === userTeamId && styles.pickHistoryItemUser,
-        ]}
+        style={[styles.pickHistoryItem, pick.teamId === userTeamId && styles.pickHistoryItemUser]}
       >
         <View style={styles.pickNumberBadge}>
           <Text style={styles.pickNumberText}>#{pick.pickNumber}</Text>
@@ -306,9 +308,7 @@ export function DraftRoomScreen({
           style={[styles.tab, activeTab === 'board' && styles.tabActive]}
           onPress={() => setActiveTab('board')}
         >
-          <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>
-            Board
-          </Text>
+          <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>Board</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'trades' && styles.tabActive]}
@@ -322,9 +322,7 @@ export function DraftRoomScreen({
           style={[styles.tab, activeTab === 'picks' && styles.tabActive]}
           onPress={() => setActiveTab('picks')}
         >
-          <Text style={[styles.tabText, activeTab === 'picks' && styles.tabTextActive]}>
-            Picks
-          </Text>
+          <Text style={[styles.tabText, activeTab === 'picks' && styles.tabTextActive]}>Picks</Text>
         </TouchableOpacity>
       </View>
 
@@ -337,18 +335,11 @@ export function DraftRoomScreen({
               style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
               onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
             >
-              <Text
-                style={[
-                  styles.flagFilterText,
-                  showFlaggedOnly && styles.flagFilterTextActive,
-                ]}
-              >
+              <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
                 * Flagged Only
               </Text>
             </TouchableOpacity>
-            <Text style={styles.boardCount}>
-              {filteredProspects.length} available
-            </Text>
+            <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
           </View>
 
           <FlatList

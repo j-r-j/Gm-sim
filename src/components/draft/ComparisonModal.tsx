@@ -139,17 +139,13 @@ function PhysicalComparisonRow({
 }): React.JSX.Element {
   const v1 = value1 ?? 0;
   const v2 = value2 ?? 0;
-  const comparison = higherIsBetter
-    ? getComparisonColor(v1, v2)
-    : getComparisonColor(v2, v1);
+  const comparison = higherIsBetter ? getComparisonColor(v1, v2) : getComparisonColor(v2, v1);
 
   return (
     <View style={styles.comparisonRow}>
       <View style={styles.valueColumn}>
         {value1 !== null ? (
-          <Text style={[styles.physicalValue, { color: comparison.color1 }]}>
-            {format(value1)}
-          </Text>
+          <Text style={[styles.physicalValue, { color: comparison.color1 }]}>{format(value1)}</Text>
         ) : (
           <Text style={styles.naText}>--</Text>
         )}
@@ -159,9 +155,7 @@ function PhysicalComparisonRow({
       </View>
       <View style={styles.valueColumn}>
         {value2 !== null ? (
-          <Text style={[styles.physicalValue, { color: comparison.color2 }]}>
-            {format(value2)}
-          </Text>
+          <Text style={[styles.physicalValue, { color: comparison.color2 }]}>{format(value2)}</Text>
         ) : (
           <Text style={styles.naText}>--</Text>
         )}
@@ -186,10 +180,7 @@ export function ComparisonModal({
 
   // Get all unique skill names from both prospects
   const allSkillNames = [
-    ...new Set([
-      ...Object.keys(prospect1.skills),
-      ...Object.keys(prospect2.skills),
-    ]),
+    ...new Set([...Object.keys(prospect1.skills), ...Object.keys(prospect2.skills)]),
   ].sort();
 
   return (
@@ -259,7 +250,7 @@ export function ComparisonModal({
               label="Projected"
               value1={prospect1.projectedRound}
               value2={prospect2.projectedRound}
-              format={(v) => v === 0 ? 'UDFA' : `Rd ${v}`}
+              format={(v) => (v === 0 ? 'UDFA' : `Rd ${v}`)}
               higherIsBetter={false}
             />
           </View>
@@ -311,9 +302,7 @@ export function ComparisonModal({
           {/* Skills Comparison */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Skills (Ranges)</Text>
-            <Text style={styles.sectionSubtitle}>
-              Green indicates advantage
-            </Text>
+            <Text style={styles.sectionSubtitle}>Green indicates advantage</Text>
             {allSkillNames.map((skillName) => (
               <SkillComparisonRow
                 key={skillName}

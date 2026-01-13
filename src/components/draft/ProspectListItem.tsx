@@ -94,9 +94,7 @@ export function ProspectListItem({
     >
       {/* Rank Column */}
       <View style={styles.rankColumn}>
-        {overallRank !== null && (
-          <Text style={styles.overallRank}>#{overallRank}</Text>
-        )}
+        {overallRank !== null && <Text style={styles.overallRank}>#{overallRank}</Text>}
         {positionRank !== null && (
           <Text style={styles.positionRank}>
             {position} #{positionRank}
@@ -111,12 +109,18 @@ export function ProspectListItem({
             {name}
           </Text>
           {flagged && (
-            <TouchableOpacity onPress={onToggleFlag} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={onToggleFlag}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.flagIcon}>*</Text>
             </TouchableOpacity>
           )}
           {!flagged && onToggleFlag && (
-            <TouchableOpacity onPress={onToggleFlag} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={onToggleFlag}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.flagIconInactive}>*</Text>
             </TouchableOpacity>
           )}

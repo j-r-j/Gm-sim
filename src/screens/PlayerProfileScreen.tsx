@@ -14,7 +14,11 @@ import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '..
 import { Position } from '../core/models/player/Position';
 import { SkillValue, SKILL_NAMES_BY_POSITION } from '../core/models/player/TechnicalSkills';
 import { PhysicalAttributes } from '../core/models/player/PhysicalAttributes';
-import { HiddenTraits, ALL_POSITIVE_TRAITS, ALL_NEGATIVE_TRAITS } from '../core/models/player/HiddenTraits';
+import {
+  HiddenTraits,
+  ALL_POSITIVE_TRAITS,
+  ALL_NEGATIVE_TRAITS,
+} from '../core/models/player/HiddenTraits';
 import { SkillRangeDisplay, TraitBadges, PhysicalAttributesDisplay } from '../components/player';
 
 /**
@@ -324,13 +328,11 @@ export function PlayerProfileScreen({
             <Text style={styles.traitsNote}>
               Traits are revealed through gameplay events, training, and scout reports.
             </Text>
-            <TraitBadges
-              hiddenTraits={hiddenTraits}
-              maxUnknownPlaceholders={maxUnknown}
-            />
+            <TraitBadges hiddenTraits={hiddenTraits} maxUnknownPlaceholders={maxUnknown} />
             {revealedCount === 0 && (
               <Text style={styles.noTraitsText}>
-                No traits have been revealed yet. Play games, conduct interviews, and send scouts to learn more about this player.
+                No traits have been revealed yet. Play games, conduct interviews, and send scouts to
+                learn more about this player.
               </Text>
             )}
           </View>

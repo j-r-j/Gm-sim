@@ -73,7 +73,9 @@ export function SkillRangeDisplay({
   isRevealed = false,
 }: SkillRangeDisplayProps): React.JSX.Element {
   // Calculate if the skill should be shown as revealed (single value)
-  const showAsRevealed = isRevealed || (playerAge !== undefined && maturityAge !== undefined && playerAge >= maturityAge);
+  const showAsRevealed =
+    isRevealed ||
+    (playerAge !== undefined && maturityAge !== undefined && playerAge >= maturityAge);
 
   // For revealed skills, show the midpoint (which equals true value after maturity)
   const revealedValue = Math.round((perceivedMin + perceivedMax) / 2);
@@ -173,9 +175,7 @@ export function SkillRangeDisplay({
             {getUncertaintyLevel(perceivedMin, perceivedMax)}
           </Text>
           {playerAge !== undefined && maturityAge !== undefined && (
-            <Text style={styles.maturityText}>
-              Reveals at age {maturityAge}
-            </Text>
+            <Text style={styles.maturityText}>Reveals at age {maturityAge}</Text>
           )}
         </View>
       )}

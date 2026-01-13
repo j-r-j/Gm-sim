@@ -117,9 +117,7 @@ function getSkillRangeSummary(
 /**
  * Map position to skill group key
  */
-function getPositionGroupKey(
-  position: Position
-): keyof typeof SKILL_NAMES_BY_POSITION {
+function getPositionGroupKey(position: Position): keyof typeof SKILL_NAMES_BY_POSITION {
   switch (position) {
     case Position.QB:
       return 'QB';

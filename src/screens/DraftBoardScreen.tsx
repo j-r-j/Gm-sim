@@ -139,9 +139,7 @@ export function DraftBoardScreen({
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.collegeName.toLowerCase().includes(query)
+        (p) => p.name.toLowerCase().includes(query) || p.collegeName.toLowerCase().includes(query)
       );
     }
 
@@ -212,7 +210,10 @@ export function DraftBoardScreen({
   }, []);
 
   // Get comparison prospects
-  const comparisonProspects = useMemo((): [ComparisonProspect | null, ComparisonProspect | null] => {
+  const comparisonProspects = useMemo((): [
+    ComparisonProspect | null,
+    ComparisonProspect | null,
+  ] => {
     const p1 = prospects.find((p) => p.id === selectedProspects[0]) || null;
     const p2 = prospects.find((p) => p.id === selectedProspects[1]) || null;
     return [
@@ -302,10 +303,7 @@ export function DraftBoardScreen({
           contentContainerStyle={styles.filterContent}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[
-                styles.filterChip,
-                positionFilter === item.value && styles.filterChipActive,
-              ]}
+              style={[styles.filterChip, positionFilter === item.value && styles.filterChipActive]}
               onPress={() => setPositionFilter(item.value)}
             >
               <Text
@@ -327,12 +325,7 @@ export function DraftBoardScreen({
           style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
           onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
         >
-          <Text
-            style={[
-              styles.flagFilterText,
-              showFlaggedOnly && styles.flagFilterTextActive,
-            ]}
-          >
+          <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
             * Flagged Only
           </Text>
         </TouchableOpacity>

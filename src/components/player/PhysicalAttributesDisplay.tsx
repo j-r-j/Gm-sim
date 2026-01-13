@@ -117,7 +117,13 @@ function AttributeRow({
   return (
     <View style={[styles.attributeRow, compact && styles.attributeRowCompact]}>
       <Text style={[styles.attributeLabel, compact && styles.attributeLabelCompact]}>{label}</Text>
-      <Text style={[styles.attributeValue, { color: gradeColor }, compact && styles.attributeValueCompact]}>
+      <Text
+        style={[
+          styles.attributeValue,
+          { color: gradeColor },
+          compact && styles.attributeValueCompact,
+        ]}
+      >
         {value}
       </Text>
     </View>

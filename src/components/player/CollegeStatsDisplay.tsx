@@ -64,11 +64,22 @@ function QBStats({ stats }: { stats: QBCollegeStats }): React.JSX.Element {
   return (
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Passing</Text>
-      <StatRow label="Completions/Attempts" value={`${stats.passCompletions}/${stats.passAttempts}`} />
-      <StatRow label="Completion %" value={`${completionPct}%`} highlight={parseFloat(completionPct) >= 65} />
+      <StatRow
+        label="Completions/Attempts"
+        value={`${stats.passCompletions}/${stats.passAttempts}`}
+      />
+      <StatRow
+        label="Completion %"
+        value={`${completionPct}%`}
+        highlight={parseFloat(completionPct) >= 65}
+      />
       <StatRow label="Passing Yards" value={stats.passYards.toLocaleString()} />
       <StatRow label="Yards/Attempt" value={yardsPerAttempt} />
-      <StatRow label="Passing TDs" value={stats.passTouchdowns} highlight={stats.passTouchdowns >= 30} />
+      <StatRow
+        label="Passing TDs"
+        value={stats.passTouchdowns}
+        highlight={stats.passTouchdowns >= 30}
+      />
       <StatRow label="Interceptions" value={stats.interceptions} />
       <StatRow label="TD:INT Ratio" value={tdIntRatio} />
       <StatRow label="Sacks Taken" value={stats.sacksTaken} />
@@ -94,9 +105,21 @@ function RBStats({ stats }: { stats: RBCollegeStats }): React.JSX.Element {
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Rushing</Text>
       <StatRow label="Rush Attempts" value={stats.rushAttempts} />
-      <StatRow label="Rush Yards" value={stats.rushYards.toLocaleString()} highlight={stats.rushYards >= 1000} />
-      <StatRow label="Yards/Carry" value={yardsPerCarry} highlight={parseFloat(yardsPerCarry) >= 5.0} />
-      <StatRow label="Rush TDs" value={stats.rushTouchdowns} highlight={stats.rushTouchdowns >= 10} />
+      <StatRow
+        label="Rush Yards"
+        value={stats.rushYards.toLocaleString()}
+        highlight={stats.rushYards >= 1000}
+      />
+      <StatRow
+        label="Yards/Carry"
+        value={yardsPerCarry}
+        highlight={parseFloat(yardsPerCarry) >= 5.0}
+      />
+      <StatRow
+        label="Rush TDs"
+        value={stats.rushTouchdowns}
+        highlight={stats.rushTouchdowns >= 10}
+      />
 
       <Text style={[styles.statsSectionTitle, { marginTop: spacing.md }]}>Receiving</Text>
       <StatRow label="Receptions" value={stats.receptions} />
@@ -125,9 +148,21 @@ function WRStats({ stats }: { stats: WRCollegeStats }): React.JSX.Element {
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Receiving</Text>
       <StatRow label="Receptions" value={stats.receptions} highlight={stats.receptions >= 50} />
-      <StatRow label="Receiving Yards" value={stats.receivingYards.toLocaleString()} highlight={stats.receivingYards >= 1000} />
-      <StatRow label="Yards/Reception" value={yardsPerReception} highlight={parseFloat(yardsPerReception) >= 15} />
-      <StatRow label="Receiving TDs" value={stats.receivingTouchdowns} highlight={stats.receivingTouchdowns >= 8} />
+      <StatRow
+        label="Receiving Yards"
+        value={stats.receivingYards.toLocaleString()}
+        highlight={stats.receivingYards >= 1000}
+      />
+      <StatRow
+        label="Yards/Reception"
+        value={yardsPerReception}
+        highlight={parseFloat(yardsPerReception) >= 15}
+      />
+      <StatRow
+        label="Receiving TDs"
+        value={stats.receivingTouchdowns}
+        highlight={stats.receivingTouchdowns >= 8}
+      />
       <StatRow label="Drops" value={stats.drops} />
       <StatRow label="Catch Rate" value={`${catchRate}%`} />
 
@@ -155,7 +190,11 @@ function TEStats({ stats }: { stats: TECollegeStats }): React.JSX.Element {
 
       <Text style={[styles.statsSectionTitle, { marginTop: spacing.md }]}>Blocking</Text>
       <StatRow label="Blocks Graded" value={stats.blocksGraded} />
-      <StatRow label="Blocking Grade" value={stats.blockingGrade.toFixed(1)} highlight={stats.blockingGrade >= 80} />
+      <StatRow
+        label="Blocking Grade"
+        value={stats.blockingGrade.toFixed(1)}
+        highlight={stats.blockingGrade >= 80}
+      />
     </View>
   );
 }
@@ -177,8 +216,16 @@ function OLStats({ stats }: { stats: OLCollegeStats }): React.JSX.Element {
       <Text style={[styles.statsSectionTitle, { marginTop: spacing.md }]}>Performance</Text>
       <StatRow label="Sacks Allowed" value={stats.sacksAllowed} />
       <StatRow label="Penalties" value={stats.penaltiesCommitted} />
-      <StatRow label="Pass Block Grade" value={stats.passBlockGrade.toFixed(1)} highlight={stats.passBlockGrade >= 80} />
-      <StatRow label="Run Block Grade" value={stats.runBlockGrade.toFixed(1)} highlight={stats.runBlockGrade >= 80} />
+      <StatRow
+        label="Pass Block Grade"
+        value={stats.passBlockGrade.toFixed(1)}
+        highlight={stats.passBlockGrade >= 80}
+      />
+      <StatRow
+        label="Run Block Grade"
+        value={stats.runBlockGrade.toFixed(1)}
+        highlight={stats.runBlockGrade >= 80}
+      />
     </View>
   );
 }
@@ -191,7 +238,11 @@ function DLStats({ stats }: { stats: DLCollegeStats }): React.JSX.Element {
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Defense</Text>
       <StatRow label="Total Tackles" value={stats.totalTackles} />
-      <StatRow label="Tackles for Loss" value={stats.tacklesForLoss} highlight={stats.tacklesForLoss >= 10} />
+      <StatRow
+        label="Tackles for Loss"
+        value={stats.tacklesForLoss}
+        highlight={stats.tacklesForLoss >= 10}
+      />
       <StatRow label="Sacks" value={stats.sacks} highlight={stats.sacks >= 8} />
       <StatRow label="Forced Fumbles" value={stats.forcedFumbles} />
       <StatRow label="Passes Defended" value={stats.passesDefended} />
@@ -206,8 +257,16 @@ function LBStats({ stats }: { stats: LBCollegeStats }): React.JSX.Element {
   return (
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Defense</Text>
-      <StatRow label="Total Tackles" value={stats.totalTackles} highlight={stats.totalTackles >= 80} />
-      <StatRow label="Tackles for Loss" value={stats.tacklesForLoss} highlight={stats.tacklesForLoss >= 10} />
+      <StatRow
+        label="Total Tackles"
+        value={stats.totalTackles}
+        highlight={stats.totalTackles >= 80}
+      />
+      <StatRow
+        label="Tackles for Loss"
+        value={stats.tacklesForLoss}
+        highlight={stats.tacklesForLoss >= 10}
+      />
       <StatRow label="Sacks" value={stats.sacks} />
       <StatRow label="Interceptions" value={stats.interceptions} />
       <StatRow label="Passes Defended" value={stats.passesDefended} />
@@ -224,8 +283,16 @@ function DBStats({ stats }: { stats: DBCollegeStats }): React.JSX.Element {
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Defense</Text>
       <StatRow label="Total Tackles" value={stats.totalTackles} />
-      <StatRow label="Interceptions" value={stats.interceptions} highlight={stats.interceptions >= 4} />
-      <StatRow label="Passes Defended" value={stats.passesDefended} highlight={stats.passesDefended >= 10} />
+      <StatRow
+        label="Interceptions"
+        value={stats.interceptions}
+        highlight={stats.interceptions >= 4}
+      />
+      <StatRow
+        label="Passes Defended"
+        value={stats.passesDefended}
+        highlight={stats.passesDefended >= 10}
+      />
       <StatRow label="Forced Fumbles" value={stats.forcedFumbles} />
       <StatRow label="Touchdowns" value={stats.touchdowns} />
     </View>
@@ -248,18 +315,32 @@ function KPStats({ stats }: { stats: KPCollegeStats }): React.JSX.Element {
   return (
     <View style={styles.statsSection}>
       <Text style={styles.statsSectionTitle}>Field Goals</Text>
-      <StatRow label="FG Made/Attempted" value={`${stats.fieldGoalsMade}/${stats.fieldGoalAttempts}`} />
+      <StatRow
+        label="FG Made/Attempted"
+        value={`${stats.fieldGoalsMade}/${stats.fieldGoalAttempts}`}
+      />
       <StatRow label="FG %" value={`${fgPct}%`} highlight={parseFloat(fgPct) >= 80} />
-      <StatRow label="Long FG" value={`${stats.longFieldGoal} yds`} highlight={stats.longFieldGoal >= 50} />
+      <StatRow
+        label="Long FG"
+        value={`${stats.longFieldGoal} yds`}
+        highlight={stats.longFieldGoal >= 50}
+      />
 
       <Text style={[styles.statsSectionTitle, { marginTop: spacing.md }]}>Extra Points</Text>
-      <StatRow label="XP Made/Attempted" value={`${stats.extraPointsMade}/${stats.extraPointAttempts}`} />
+      <StatRow
+        label="XP Made/Attempted"
+        value={`${stats.extraPointsMade}/${stats.extraPointAttempts}`}
+      />
       <StatRow label="XP %" value={`${xpPct}%`} />
 
       <Text style={[styles.statsSectionTitle, { marginTop: spacing.md }]}>Punting</Text>
       <StatRow label="Punts" value={stats.punts} />
       <StatRow label="Punt Yards" value={stats.puntYards} />
-      <StatRow label="Punt Average" value={`${stats.puntAverage.toFixed(1)} yds`} highlight={stats.puntAverage >= 45} />
+      <StatRow
+        label="Punt Average"
+        value={`${stats.puntAverage.toFixed(1)} yds`}
+        highlight={stats.puntAverage >= 45}
+      />
       <StatRow label="Touchbacks" value={stats.touchbacks} />
     </View>
   );
@@ -268,7 +349,11 @@ function KPStats({ stats }: { stats: KPCollegeStats }): React.JSX.Element {
 /**
  * Render position-specific stats
  */
-function PositionStats({ positionStats }: { positionStats: PositionCollegeStats }): React.JSX.Element {
+function PositionStats({
+  positionStats,
+}: {
+  positionStats: PositionCollegeStats;
+}): React.JSX.Element {
   switch (positionStats.type) {
     case 'QB':
       return <QBStats stats={positionStats as QBCollegeStats} />;
@@ -299,11 +384,16 @@ function AwardBadge({ award }: { award: CollegeAward }): React.JSX.Element {
     award.prestige === 'national'
       ? colors.secondary
       : award.prestige === 'conference'
-      ? colors.primary
-      : colors.info;
+        ? colors.primary
+        : colors.info;
 
   return (
-    <View style={[styles.awardBadge, { backgroundColor: `${prestigeColor}20`, borderColor: prestigeColor }]}>
+    <View
+      style={[
+        styles.awardBadge,
+        { backgroundColor: `${prestigeColor}20`, borderColor: prestigeColor },
+      ]}
+    >
       <Text style={[styles.awardName, { color: prestigeColor }]}>{award.name}</Text>
       <Text style={styles.awardYear}>{award.year}</Text>
     </View>

@@ -76,9 +76,7 @@ export function DraftPickCard({
           <Text style={styles.teamName}>{teamName}</Text>
         </View>
         {originalTeamAbbr && originalTeamAbbr !== teamAbbr && (
-          <Text style={styles.tradedFrom}>
-            (via {originalTeamAbbr})
-          </Text>
+          <Text style={styles.tradedFrom}>(via {originalTeamAbbr})</Text>
         )}
       </View>
 

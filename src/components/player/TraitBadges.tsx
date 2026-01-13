@@ -164,9 +164,7 @@ export function TraitBadges({
   );
 
   const hasNoTraits =
-    revealedPositive.length === 0 &&
-    revealedNegative.length === 0 &&
-    unknownCount === 0;
+    revealedPositive.length === 0 && revealedNegative.length === 0 && unknownCount === 0;
 
   if (hasNoTraits) {
     return (

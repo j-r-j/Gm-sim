@@ -83,15 +83,11 @@ function AssetItem({ asset }: { asset: TradeAsset }): React.JSX.Element {
   return (
     <View style={styles.assetItem}>
       <View style={styles.assetIcon}>
-        <Text style={styles.assetIconText}>
-          {asset.type === 'pick' ? 'P' : 'PL'}
-        </Text>
+        <Text style={styles.assetIconText}>{asset.type === 'pick' ? 'P' : 'PL'}</Text>
       </View>
       <View style={styles.assetInfo}>
         <Text style={styles.assetLabel}>{asset.label}</Text>
-        {asset.detail && (
-          <Text style={styles.assetDetail}>{asset.detail}</Text>
-        )}
+        {asset.detail && <Text style={styles.assetDetail}>{asset.detail}</Text>}
       </View>
       {asset.value && (
         <View style={styles.assetValue}>
@@ -140,9 +136,7 @@ export function TradeOfferCard({
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>
-            {status.toUpperCase()}
-          </Text>
+          <Text style={[styles.statusText, { color: statusColor }]}>{status.toUpperCase()}</Text>
         </View>
       </View>
 
@@ -150,9 +144,7 @@ export function TradeOfferCard({
       <View style={styles.tradeContent}>
         {/* You receive */}
         <View style={styles.tradeColumn}>
-          <Text style={styles.columnHeader}>
-            {isIncoming ? 'You Receive' : 'They Receive'}
-          </Text>
+          <Text style={styles.columnHeader}>{isIncoming ? 'You Receive' : 'They Receive'}</Text>
           {(isIncoming ? offering : requesting).map((asset, index) => (
             <AssetItem key={`receive-${index}`} asset={asset} />
           ))}
@@ -167,9 +159,7 @@ export function TradeOfferCard({
 
         {/* You give */}
         <View style={styles.tradeColumn}>
-          <Text style={styles.columnHeader}>
-            {isIncoming ? 'You Give' : 'They Give'}
-          </Text>
+          <Text style={styles.columnHeader}>{isIncoming ? 'You Give' : 'They Give'}</Text>
           {(isIncoming ? requesting : offering).map((asset, index) => (
             <AssetItem key={`give-${index}`} asset={asset} />
           ))}
