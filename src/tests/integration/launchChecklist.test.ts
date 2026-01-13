@@ -236,9 +236,7 @@ function runLaunchCheckpoints(): LaunchReadinessReport {
     checkpoints.push({
       name: 'brandGuidelinesVerified',
       passed,
-      details: passed
-        ? 'Brand guidelines maintained'
-        : 'Brand guidelines violation detected',
+      details: passed ? 'Brand guidelines maintained' : 'Brand guidelines violation detected',
     });
   } catch (error) {
     checkpoints.push({

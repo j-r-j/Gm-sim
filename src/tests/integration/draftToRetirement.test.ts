@@ -14,7 +14,11 @@ import {
   createPlayerViewModel,
   validateViewModelPrivacy,
 } from '../../core/models/player/PlayerViewModel';
-import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../../core/models/player/Position';
+import {
+  Position,
+  OFFENSIVE_POSITIONS,
+  DEFENSIVE_POSITIONS,
+} from '../../core/models/player/Position';
 
 describe('Draft-to-Retirement Lifecycle Integration Tests', () => {
   describe('draft class generation', () => {

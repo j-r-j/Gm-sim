@@ -284,15 +284,7 @@ describe('Brand Guidelines Verification Tests', () => {
       expect(typeof viewModel.schemeFitDescription).toBe('string');
 
       // Should be qualitative language
-      const qualitativeTerms = [
-        'excellent',
-        'good',
-        'average',
-        'poor',
-        'fit',
-        'scheme',
-        'unknown',
-      ];
+      const qualitativeTerms = ['excellent', 'good', 'average', 'poor', 'fit', 'scheme', 'unknown'];
       const hasQualitativeTerm = qualitativeTerms.some((term) =>
         viewModel.schemeFitDescription.toLowerCase().includes(term)
       );

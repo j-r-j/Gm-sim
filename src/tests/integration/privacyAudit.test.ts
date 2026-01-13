@@ -34,7 +34,6 @@ const FORBIDDEN_TERMS = [
   'compositeRating',
 ];
 
-
 /**
  * Deep scan an object for forbidden terms
  */
@@ -311,7 +310,9 @@ describe('Privacy Audit Integration Tests', () => {
           const viewModel = createPlayerViewModel(player);
 
           if (!validateViewModelPrivacy(viewModel)) {
-            violations.push(`Team ${teamNum}, ${player.firstName} ${player.lastName}: Failed privacy`);
+            violations.push(
+              `Team ${teamNum}, ${player.firstName} ${player.lastName}: Failed privacy`
+            );
           }
         }
       }
