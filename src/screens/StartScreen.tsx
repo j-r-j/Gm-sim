@@ -11,13 +11,10 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { gameStorage, SaveSlot } from '../services/storage/GameStorage';
 import { GameState, getGameStateSummary } from '../core/models/game/GameState';
-
-const { width } = Dimensions.get('window');
 
 interface SaveSlotInfo {
   slot: SaveSlot;

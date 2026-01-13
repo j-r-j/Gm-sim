@@ -10,19 +10,19 @@ import {
   DEFAULT_GAME_SETTINGS,
   addCareerTeamEntry,
 } from '../core/models/game/GameState';
-import { createDefaultLeague, League } from '../core/models/league/League';
-import { Team, createTeamFromCity, createEmptyTeamRecord } from '../core/models/team/Team';
+import { createDefaultLeague } from '../core/models/league/League';
+import { Team, createTeamFromCity } from '../core/models/team/Team';
 import { FAKE_CITIES, FakeCity, getFullTeamName } from '../core/models/team/FakeCities';
 import { Player } from '../core/models/player/Player';
 import { generateRoster } from '../core/generators/player/PlayerGenerator';
 import { Coach, createDefaultCoach } from '../core/models/staff/Coach';
 import { Scout, createDefaultScout, createScoutContract } from '../core/models/staff/Scout';
-import { Owner, createDefaultOwner, NetWorth } from '../core/models/owner/Owner';
+import { Owner, NetWorth } from '../core/models/owner/Owner';
 import { createDefaultOwnerPersonality } from '../core/models/owner/OwnerPersonality';
 import { DraftPick } from '../core/models/league/DraftPick';
 import { generateFullName } from '../core/generators/player/NameGenerator';
-import { generateUUID, randomInt, randomElement } from '../core/generators/utils/RandomUtils';
-import { CoachRole, ScoutRole } from '../core/models/staff/StaffSalary';
+import { generateUUID, randomInt } from '../core/generators/utils/RandomUtils';
+import { CoachRole } from '../core/models/staff/StaffSalary';
 import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';
 
@@ -41,7 +41,7 @@ interface NewGameOptions {
 function createAllTeams(): Record<string, Team> {
   const teams: Record<string, Team> = {};
 
-  FAKE_CITIES.forEach((city, index) => {
+  FAKE_CITIES.forEach((city) => {
     const teamId = `team-${city.abbreviation}`;
     const ownerId = `owner-${city.abbreviation}`;
 
