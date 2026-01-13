@@ -1,0 +1,365 @@
+/**
+ * NewGameService
+ * Initializes a complete game state with all 32 teams, players, coaches, scouts, and owners
+ */
+
+import {
+  GameState,
+  SaveSlot,
+  createDefaultCareerStats,
+  DEFAULT_GAME_SETTINGS,
+  addCareerTeamEntry,
+} from '../core/models/game/GameState';
+import { createDefaultLeague, League } from '../core/models/league/League';
+import { Team, createTeamFromCity, createEmptyTeamRecord } from '../core/models/team/Team';
+import { FAKE_CITIES, FakeCity, getFullTeamName } from '../core/models/team/FakeCities';
+import { Player } from '../core/models/player/Player';
+import { generateRoster } from '../core/generators/player/PlayerGenerator';
+import { Coach, createDefaultCoach } from '../core/models/staff/Coach';
+import { Scout, createDefaultScout, createScoutContract } from '../core/models/staff/Scout';
+import { Owner, createDefaultOwner, NetWorth } from '../core/models/owner/Owner';
+import { createDefaultOwnerPersonality } from '../core/models/owner/OwnerPersonality';
+import { DraftPick } from '../core/models/league/DraftPick';
+import { generateFullName } from '../core/generators/player/NameGenerator';
+import { generateUUID, randomInt, randomElement } from '../core/generators/utils/RandomUtils';
+import { CoachRole } from '../core/models/staff/StaffSalary';
+import { ScoutRole, ScoutRegion } from '../core/models/staff/ScoutAttributes';
+
+const SALARY_CAP = 255000000; // $255 million
+
+interface NewGameOptions {
+  saveSlot: SaveSlot;
+  gmName: string;
+  selectedTeam: FakeCity;
+  startYear?: number;
+}
+
+/**
+ * Creates all 32 teams for the league
+ */
+function createAllTeams(): Record<string, Team> {
+  const teams: Record<string, Team> = {};
+
+  FAKE_CITIES.forEach((city, index) => {
+    const teamId = `team-${city.abbreviation}`;
+    const ownerId = `owner-${city.abbreviation}`;
+
+    const team = createTeamFromCity(teamId, city, ownerId, SALARY_CAP);
+
+    // Set some random history/prestige variance
+    const randomPrestige = 40 + randomInt(0, 40);
+    const randomPassion = 40 + randomInt(0, 40);
+
+    teams[teamId] = {
+      ...team,
+      prestige: randomPrestige,
+      fanbasePassion: randomPassion,
+      allTimeRecord: {
+        wins: randomInt(200, 600),
+        losses: randomInt(200, 600),
+        ties: randomInt(0, 20),
+      },
+      championships: randomInt(0, 5),
+      lastChampionshipYear: randomInt(0, 3) > 0 ? null : 2020 - randomInt(0, 30),
+    };
+  });
+
+  return teams;
+}
+
+/**
+ * Creates owner for a team
+ */
+function createOwnerForTeam(teamId: string): Owner {
+  const ownerId = `owner-${teamId.replace('team-', '')}`;
+  const { firstName, lastName } = generateFullName();
+
+  const netWorthOptions: NetWorth[] = ['modest', 'wealthy', 'billionaire', 'oligarch'];
+  const netWorthWeights = [0.15, 0.45, 0.3, 0.1];
+  let netWorth: NetWorth = 'wealthy';
+  const roll = Math.random();
+  let cumulative = 0;
+  for (let i = 0; i < netWorthWeights.length; i++) {
+    cumulative += netWorthWeights[i];
+    if (roll < cumulative) {
+      netWorth = netWorthOptions[i];
+      break;
+    }
+  }
+
+  return {
+    id: ownerId,
+    firstName,
+    lastName,
+    teamId,
+    personality: createDefaultOwnerPersonality(),
+    patienceMeter: 50 + randomInt(-20, 20),
+    trustLevel: 50 + randomInt(-10, 10),
+    activeDemands: [],
+    yearsAsOwner: randomInt(2, 25),
+    previousGMsFired: randomInt(0, 5),
+    championshipsWon: randomInt(0, 3),
+    netWorth,
+  };
+}
+
+/**
+ * Creates coaches for a team
+ */
+function createCoachesForTeam(teamId: string): Coach[] {
+  const coaches: Coach[] = [];
+
+  const coachRoles: CoachRole[] = [
+    'headCoach',
+    'offensiveCoordinator',
+    'defensiveCoordinator',
+    'specialTeamsCoordinator',
+    'qbCoach',
+    'rbCoach',
+    'wrCoach',
+    'teCoach',
+    'olCoach',
+    'dlCoach',
+    'lbCoach',
+    'dbCoach',
+  ];
+
+  for (const role of coachRoles) {
+    const { firstName, lastName } = generateFullName();
+    const coachId = generateUUID();
+
+    const coach = createDefaultCoach(coachId, firstName, lastName, role);
+    coach.teamId = teamId;
+    coach.isAvailable = false;
+    coach.attributes = {
+      ...coach.attributes,
+      age: 35 + randomInt(0, 30),
+      yearsExperience: randomInt(3, 25),
+    };
+    coach.contract = {
+      salaryPerYear: 500000 + randomInt(0, 5000000),
+      yearsTotal: randomInt(2, 5),
+      yearsRemaining: randomInt(1, 4),
+      buyout: 1000000,
+    };
+
+    coaches.push(coach);
+  }
+
+  return coaches;
+}
+
+/**
+ * Creates scouts for a team
+ */
+function createScoutsForTeam(teamId: string): Scout[] {
+  const scouts: Scout[] = [];
+
+  // Director of Player Personnel
+  const directorName = generateFullName();
+  const director = createDefaultScout(generateUUID(), directorName.firstName, directorName.lastName, 'director');
+  director.teamId = teamId;
+  director.isAvailable = false;
+  director.contract = createScoutContract(500000 + randomInt(0, 300000), 3);
+  scouts.push(director);
+
+  // National Scout
+  const nationalName = generateFullName();
+  const national = createDefaultScout(generateUUID(), nationalName.firstName, nationalName.lastName, 'nationalScout');
+  national.teamId = teamId;
+  national.isAvailable = false;
+  national.contract = createScoutContract(200000 + randomInt(0, 150000), 3);
+  scouts.push(national);
+
+  // 4 Regional Scouts
+  const regions: ScoutRegion[] = ['northeast', 'southeast', 'midwest', 'west'];
+  for (const region of regions) {
+    const name = generateFullName();
+    const regionalScout = createDefaultScout(generateUUID(), name.firstName, name.lastName, 'regionalScout');
+    regionalScout.teamId = teamId;
+    regionalScout.region = region;
+    regionalScout.isAvailable = false;
+    regionalScout.contract = createScoutContract(100000 + randomInt(0, 100000), 2);
+    scouts.push(regionalScout);
+  }
+
+  // Pro Scout
+  const proName = generateFullName();
+  const proScout = createDefaultScout(generateUUID(), proName.firstName, proName.lastName, 'proScout');
+  proScout.teamId = teamId;
+  proScout.isAvailable = false;
+  proScout.contract = createScoutContract(150000 + randomInt(0, 100000), 2);
+  scouts.push(proScout);
+
+  return scouts;
+}
+
+/**
+ * Creates draft picks for all teams for the upcoming draft
+ */
+function createDraftPicks(teamIds: string[], year: number): Record<string, DraftPick> {
+  const draftPicks: Record<string, DraftPick> = {};
+
+  for (let round = 1; round <= 7; round++) {
+    teamIds.forEach((teamId, index) => {
+      const pickNumber = (round - 1) * 32 + index + 1;
+      const pickId = `pick-${year}-${round}-${pickNumber}`;
+
+      draftPicks[pickId] = {
+        id: pickId,
+        year,
+        round,
+        pickInRound: index + 1,
+        overallPick: pickNumber,
+        originalTeamId: teamId,
+        currentTeamId: teamId,
+        usedForPlayerId: null,
+      };
+    });
+  }
+
+  return draftPicks;
+}
+
+/**
+ * Creates a complete new game state
+ */
+export function createNewGame(options: NewGameOptions): GameState {
+  const { saveSlot, gmName, selectedTeam, startYear = 2025 } = options;
+
+  // Create all 32 teams
+  const teams = createAllTeams();
+  const teamIds = Object.keys(teams);
+
+  // Find user's team
+  const userTeamId = `team-${selectedTeam.abbreviation}`;
+  const userTeam = teams[userTeamId];
+
+  // Set user as GM of their team
+  teams[userTeamId] = {
+    ...userTeam,
+    gmId: gmName,
+  };
+
+  // Create players for all teams
+  const players: Record<string, Player> = {};
+  for (const teamId of teamIds) {
+    const roster = generateRoster(teamId);
+    const playerIds: string[] = [];
+
+    for (const player of roster) {
+      players[player.id] = player;
+      playerIds.push(player.id);
+    }
+
+    // Assign roster to team
+    teams[teamId] = {
+      ...teams[teamId],
+      rosterPlayerIds: playerIds,
+    };
+  }
+
+  // Create owners for all teams
+  const owners: Record<string, Owner> = {};
+  for (const teamId of teamIds) {
+    const owner = createOwnerForTeam(teamId);
+    owners[owner.id] = owner;
+  }
+
+  // Create coaches for all teams
+  const coaches: Record<string, Coach> = {};
+  for (const teamId of teamIds) {
+    const teamCoaches = createCoachesForTeam(teamId);
+    for (const coach of teamCoaches) {
+      coaches[coach.id] = coach;
+    }
+  }
+
+  // Create scouts for all teams
+  const scouts: Record<string, Scout> = {};
+  for (const teamId of teamIds) {
+    const teamScouts = createScoutsForTeam(teamId);
+    for (const scout of teamScouts) {
+      scouts[scout.id] = scout;
+    }
+  }
+
+  // Create draft picks
+  const draftPicks = createDraftPicks(teamIds, startYear);
+
+  // Create league
+  const league = createDefaultLeague('league-1', teamIds, startYear);
+  // Start in regular season week 1 for immediate gameplay
+  league.calendar = {
+    currentYear: startYear,
+    currentWeek: 1,
+    currentPhase: 'regularSeason',
+    offseasonPhase: null,
+  };
+
+  // Initialize standings with team IDs
+  const afcTeams = teamIds.filter((id) => teams[id].conference === 'AFC');
+  const nfcTeams = teamIds.filter((id) => teams[id].conference === 'NFC');
+
+  league.standings = {
+    afc: {
+      north: afcTeams.filter((id) => teams[id].division === 'North'),
+      south: afcTeams.filter((id) => teams[id].division === 'South'),
+      east: afcTeams.filter((id) => teams[id].division === 'East'),
+      west: afcTeams.filter((id) => teams[id].division === 'West'),
+    },
+    nfc: {
+      north: nfcTeams.filter((id) => teams[id].division === 'North'),
+      south: nfcTeams.filter((id) => teams[id].division === 'South'),
+      east: nfcTeams.filter((id) => teams[id].division === 'East'),
+      west: nfcTeams.filter((id) => teams[id].division === 'West'),
+    },
+  };
+
+  // Create career stats with initial team entry
+  const careerStats = addCareerTeamEntry(
+    createDefaultCareerStats(),
+    userTeamId,
+    getFullTeamName(selectedTeam),
+    startYear
+  );
+
+  const now = new Date().toISOString();
+
+  return {
+    saveSlot,
+    createdAt: now,
+    lastSavedAt: now,
+    userTeamId,
+    userName: gmName,
+    league,
+    teams,
+    players,
+    coaches,
+    scouts,
+    owners,
+    draftPicks,
+    prospects: {}, // Will be populated during offseason/draft
+    careerStats,
+    gameSettings: { ...DEFAULT_GAME_SETTINGS },
+  };
+}
+
+/**
+ * Gets a summary of team information for selection screen
+ */
+export function getTeamSelectionInfo(city: FakeCity): {
+  fullName: string;
+  conference: string;
+  division: string;
+  marketSize: string;
+  stadiumType: string;
+} {
+  return {
+    fullName: getFullTeamName(city),
+    conference: city.conference,
+    division: `${city.conference} ${city.division}`,
+    marketSize: city.marketSize.charAt(0).toUpperCase() + city.marketSize.slice(1),
+    stadiumType: city.stadiumType,
+  };
+}
