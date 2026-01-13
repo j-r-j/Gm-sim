@@ -39,7 +39,11 @@ interface StartScreenProps {
   onSettings: () => void;
 }
 
-export function StartScreen({ onNewGame, onContinue, onSettings }: StartScreenProps): React.JSX.Element {
+export function StartScreen({
+  onNewGame,
+  onContinue,
+  onSettings,
+}: StartScreenProps): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [saveSlots, setSaveSlots] = useState<SaveSlotInfo[]>([]);
   const [showContinueModal, setShowContinueModal] = useState(false);
@@ -107,11 +111,7 @@ export function StartScreen({ onNewGame, onContinue, onSettings }: StartScreenPr
 
         {/* Main Menu Buttons */}
         <View style={styles.menuSection}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={onNewGame}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.primaryButton} onPress={onNewGame} activeOpacity={0.8}>
             <Text style={styles.primaryButtonText}>New Game</Text>
             <Text style={styles.primaryButtonSubtext}>Start your GM career</Text>
           </TouchableOpacity>
@@ -127,11 +127,7 @@ export function StartScreen({ onNewGame, onContinue, onSettings }: StartScreenPr
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={styles.tertiaryButton}
-            onPress={onSettings}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.tertiaryButton} onPress={onSettings} activeOpacity={0.8}>
             <Text style={styles.tertiaryButtonText}>Settings</Text>
           </TouchableOpacity>
         </View>
@@ -146,34 +142,32 @@ export function StartScreen({ onNewGame, onContinue, onSettings }: StartScreenPr
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>Select Save</Text>
 
-            {saveSlots.filter((s: SaveSlotInfo) => s.exists).map((slotInfo: SaveSlotInfo) => (
-              <TouchableOpacity
-                key={slotInfo.slot}
-                style={styles.saveSlotButton}
-                onPress={() => {
-                  setShowContinueModal(false);
-                  onContinue(slotInfo.slot);
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={styles.saveSlotHeader}>
-                  <Text style={styles.saveSlotTitle}>
-                    Slot {slotInfo.slot + 1}
-                  </Text>
-                  <Text style={styles.saveSlotTeam}>
-                    {slotInfo.summary?.teamName}
-                  </Text>
-                </View>
-                <View style={styles.saveSlotInfo}>
-                  <Text style={styles.saveSlotDetail}>
-                    {slotInfo.summary?.userName} • Year {slotInfo.summary?.year}
-                  </Text>
-                  <Text style={styles.saveSlotDetail}>
-                    Record: {slotInfo.summary?.record} • {slotInfo.summary?.phase}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {saveSlots
+              .filter((s: SaveSlotInfo) => s.exists)
+              .map((slotInfo: SaveSlotInfo) => (
+                <TouchableOpacity
+                  key={slotInfo.slot}
+                  style={styles.saveSlotButton}
+                  onPress={() => {
+                    setShowContinueModal(false);
+                    onContinue(slotInfo.slot);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.saveSlotHeader}>
+                    <Text style={styles.saveSlotTitle}>Slot {slotInfo.slot + 1}</Text>
+                    <Text style={styles.saveSlotTeam}>{slotInfo.summary?.teamName}</Text>
+                  </View>
+                  <View style={styles.saveSlotInfo}>
+                    <Text style={styles.saveSlotDetail}>
+                      {slotInfo.summary?.userName} • Year {slotInfo.summary?.year}
+                    </Text>
+                    <Text style={styles.saveSlotDetail}>
+                      Record: {slotInfo.summary?.record} • {slotInfo.summary?.phase}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
 
             <TouchableOpacity
               style={styles.cancelButton}

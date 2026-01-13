@@ -32,7 +32,10 @@ interface TeamSelectionScreenProps {
 
 type ViewMode = 'conference' | 'all';
 
-export function TeamSelectionScreen({ onSelectTeam, onBack }: TeamSelectionScreenProps): React.JSX.Element {
+export function TeamSelectionScreen({
+  onSelectTeam,
+  onBack,
+}: TeamSelectionScreenProps): React.JSX.Element {
   const [selectedTeam, setSelectedTeam] = useState<FakeCity | null>(null);
   const [gmName, setGmName] = useState('');
   const [saveSlot, setSaveSlot] = useState<SaveSlot>(0);
@@ -114,9 +117,7 @@ export function TeamSelectionScreen({ onSelectTeam, onBack }: TeamSelectionScree
                   </TouchableOpacity>
 
                   {isExpanded && (
-                    <View style={styles.teamsContainer}>
-                      {teams.map(renderTeamCard)}
-                    </View>
+                    <View style={styles.teamsContainer}>{teams.map(renderTeamCard)}</View>
                   )}
                 </View>
               );
@@ -132,11 +133,7 @@ export function TeamSelectionScreen({ onSelectTeam, onBack }: TeamSelectionScree
       getFullTeamName(a).localeCompare(getFullTeamName(b))
     );
 
-    return (
-      <View style={styles.allTeamsGrid}>
-        {sortedTeams.map(renderTeamCard)}
-      </View>
-    );
+    return <View style={styles.allTeamsGrid}>{sortedTeams.map(renderTeamCard)}</View>;
   };
 
   return (
@@ -156,7 +153,9 @@ export function TeamSelectionScreen({ onSelectTeam, onBack }: TeamSelectionScree
           style={[styles.viewModeButton, viewMode === 'conference' && styles.viewModeButtonActive]}
           onPress={() => setViewMode('conference')}
         >
-          <Text style={[styles.viewModeText, viewMode === 'conference' && styles.viewModeTextActive]}>
+          <Text
+            style={[styles.viewModeText, viewMode === 'conference' && styles.viewModeTextActive]}
+          >
             By Division
           </Text>
         </TouchableOpacity>
@@ -204,7 +203,9 @@ export function TeamSelectionScreen({ onSelectTeam, onBack }: TeamSelectionScree
                   style={[styles.saveSlotButton, saveSlot === slot && styles.saveSlotButtonActive]}
                   onPress={() => setSaveSlot(slot)}
                 >
-                  <Text style={[styles.saveSlotText, saveSlot === slot && styles.saveSlotTextActive]}>
+                  <Text
+                    style={[styles.saveSlotText, saveSlot === slot && styles.saveSlotTextActive]}
+                  >
                     {slot + 1}
                   </Text>
                 </TouchableOpacity>

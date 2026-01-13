@@ -162,7 +162,12 @@ function createScoutsForTeam(teamId: string): Scout[] {
 
   // Director of Player Personnel
   const directorName = generateFullName();
-  const director = createDefaultScout(generateUUID(), directorName.firstName, directorName.lastName, 'scoutingDirector');
+  const director = createDefaultScout(
+    generateUUID(),
+    directorName.firstName,
+    directorName.lastName,
+    'scoutingDirector'
+  );
   director.teamId = teamId;
   director.isAvailable = false;
   director.contract = createScoutContract(500000 + randomInt(0, 300000), 3);
@@ -170,7 +175,12 @@ function createScoutsForTeam(teamId: string): Scout[] {
 
   // National Scout
   const nationalName = generateFullName();
-  const national = createDefaultScout(generateUUID(), nationalName.firstName, nationalName.lastName, 'nationalScout');
+  const national = createDefaultScout(
+    generateUUID(),
+    nationalName.firstName,
+    nationalName.lastName,
+    'nationalScout'
+  );
   national.teamId = teamId;
   national.isAvailable = false;
   national.contract = createScoutContract(200000 + randomInt(0, 150000), 3);
@@ -180,7 +190,12 @@ function createScoutsForTeam(teamId: string): Scout[] {
   const regions: ScoutRegion[] = ['northeast', 'southeast', 'midwest', 'west'];
   for (const region of regions) {
     const name = generateFullName();
-    const regionalScout = createDefaultScout(generateUUID(), name.firstName, name.lastName, 'regionalScout');
+    const regionalScout = createDefaultScout(
+      generateUUID(),
+      name.firstName,
+      name.lastName,
+      'regionalScout'
+    );
     regionalScout.teamId = teamId;
     regionalScout.region = region;
     regionalScout.isAvailable = false;
@@ -190,7 +205,12 @@ function createScoutsForTeam(teamId: string): Scout[] {
 
   // Pro Scout
   const proName = generateFullName();
-  const proScout = createDefaultScout(generateUUID(), proName.firstName, proName.lastName, 'proScout');
+  const proScout = createDefaultScout(
+    generateUUID(),
+    proName.firstName,
+    proName.lastName,
+    'proScout'
+  );
   proScout.teamId = teamId;
   proScout.isAvailable = false;
   proScout.contract = createScoutContract(150000 + randomInt(0, 100000), 2);

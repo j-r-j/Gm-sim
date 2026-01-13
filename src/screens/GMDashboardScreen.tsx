@@ -4,14 +4,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
@@ -119,7 +112,10 @@ function getWeekDisplay(week: number, phase: string): string {
   return '';
 }
 
-export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProps): React.JSX.Element {
+export function GMDashboardScreen({
+  gameState,
+  onAction,
+}: GMDashboardScreenProps): React.JSX.Element {
   const userTeam: Team = gameState.teams[gameState.userTeamId];
   const { calendar } = gameState.league;
   const phase = calendar.currentPhase;
@@ -144,9 +140,7 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
           <Text style={styles.yearText}>{calendar.currentYear}</Text>
           <Text style={styles.phaseText}>{getPhaseDisplay(phase)}</Text>
           {!isOffseason && (
-            <Text style={styles.weekText}>
-              {getWeekDisplay(calendar.currentWeek, phase)}
-            </Text>
+            <Text style={styles.weekText}>{getWeekDisplay(calendar.currentWeek, phase)}</Text>
           )}
         </View>
       </View>
@@ -248,9 +242,7 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
         />
 
         {/* Offseason Actions */}
-        <Text style={styles.sectionTitle}>
-          {isOffseason ? 'Offseason' : 'Player Acquisition'}
-        </Text>
+        <Text style={styles.sectionTitle}>{isOffseason ? 'Offseason' : 'Player Acquisition'}</Text>
 
         <MenuCard
           title="Draft Board"
@@ -283,8 +275,7 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
             <Text style={styles.advanceButtonSubtext}>
               {isOffseason
                 ? `Current: ${calendar.offseasonPhase ? OFFSEASON_PHASES[calendar.offseasonPhase] : 'Offseason'}`
-                : 'Simulate to next week'
-              }
+                : 'Simulate to next week'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -293,26 +284,17 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
         <Text style={styles.sectionTitle}>System</Text>
 
         <View style={styles.systemButtons}>
-          <TouchableOpacity
-            style={styles.systemButton}
-            onPress={() => onAction('saveGame')}
-          >
+          <TouchableOpacity style={styles.systemButton} onPress={() => onAction('saveGame')}>
             <Text style={styles.systemButtonIcon}>💾</Text>
             <Text style={styles.systemButtonText}>Save</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.systemButton}
-            onPress={() => onAction('settings')}
-          >
+          <TouchableOpacity style={styles.systemButton} onPress={() => onAction('settings')}>
             <Text style={styles.systemButtonIcon}>⚙️</Text>
             <Text style={styles.systemButtonText}>Settings</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.systemButton}
-            onPress={() => onAction('mainMenu')}
-          >
+          <TouchableOpacity style={styles.systemButton} onPress={() => onAction('mainMenu')}>
             <Text style={styles.systemButtonIcon}>🏠</Text>
             <Text style={styles.systemButtonText}>Menu</Text>
           </TouchableOpacity>
@@ -323,9 +305,7 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
           <Text style={styles.careerTitle}>Career Stats</Text>
           <View style={styles.careerStats}>
             <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>
-                {gameState.careerStats.seasonsCompleted}
-              </Text>
+              <Text style={styles.careerStatValue}>{gameState.careerStats.seasonsCompleted}</Text>
               <Text style={styles.careerStatLabel}>Seasons</Text>
             </View>
             <View style={styles.careerStat}>
@@ -335,15 +315,11 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
               <Text style={styles.careerStatLabel}>Record</Text>
             </View>
             <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>
-                {gameState.careerStats.playoffAppearances}
-              </Text>
+              <Text style={styles.careerStatValue}>{gameState.careerStats.playoffAppearances}</Text>
               <Text style={styles.careerStatLabel}>Playoffs</Text>
             </View>
             <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>
-                {gameState.careerStats.championships}
-              </Text>
+              <Text style={styles.careerStatValue}>{gameState.careerStats.championships}</Text>
               <Text style={styles.careerStatLabel}>Titles</Text>
             </View>
           </View>
