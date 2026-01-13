@@ -46,8 +46,8 @@ export function TeamSelectionScreen({ onSelectTeam, onBack }: TeamSelectionScree
   };
 
   const toggleDivision = (key: string) => {
-    setExpandedDivisions((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    setExpandedDivisions((prev: string[]) =>
+      prev.includes(key) ? prev.filter((k: string) => k !== key) : [...prev, key]
     );
   };
 

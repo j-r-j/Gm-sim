@@ -15,6 +15,7 @@ import {
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
+import { OFFSEASON_PHASES } from '../core/models/league/League';
 
 export type DashboardAction =
   | 'roster'
@@ -123,8 +124,8 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
   const { calendar } = gameState.league;
   const phase = calendar.currentPhase;
   const isOffseason = phase === 'offseason';
-  const isDraft = calendar.offseasonPhase === 'draft';
-  const isFreeAgency = calendar.offseasonPhase === 'free_agency';
+  const isDraft = calendar.offseasonPhase === 8; // NFL Draft is phase 8
+  const isFreeAgency = calendar.offseasonPhase === 4 || calendar.offseasonPhase === 5; // Free Agency phases
 
   return (
     <SafeAreaView style={styles.container}>
@@ -281,7 +282,7 @@ export function GMDashboardScreen({ gameState, onAction }: GMDashboardScreenProp
             </Text>
             <Text style={styles.advanceButtonSubtext}>
               {isOffseason
-                ? `Current: ${getPhaseDisplay(calendar.offseasonPhase || '')}`
+                ? `Current: ${calendar.offseasonPhase ? OFFSEASON_PHASES[calendar.offseasonPhase] : 'Offseason'}`
                 : 'Simulate to next week'
               }
             </Text>
