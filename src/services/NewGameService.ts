@@ -22,8 +22,9 @@ import { createDefaultOwnerPersonality } from '../core/models/owner/OwnerPersona
 import { DraftPick } from '../core/models/league/DraftPick';
 import { generateFullName } from '../core/generators/player/NameGenerator';
 import { generateUUID, randomInt, randomElement } from '../core/generators/utils/RandomUtils';
-import { CoachRole } from '../core/models/staff/StaffSalary';
-import { ScoutRole, ScoutRegion } from '../core/models/staff/ScoutAttributes';
+import { CoachRole, ScoutRole } from '../core/models/staff/StaffSalary';
+import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
+import { createCoachContract } from '../core/models/staff/CoachContract';
 
 const SALARY_CAP = 255000000; // $255 million
 
@@ -136,12 +137,16 @@ function createCoachesForTeam(teamId: string): Coach[] {
       age: 35 + randomInt(0, 30),
       yearsExperience: randomInt(3, 25),
     };
-    coach.contract = {
+    const yearsTotal = randomInt(2, 5);
+    coach.contract = createCoachContract({
+      id: generateUUID(),
+      coachId: coachId,
+      teamId: teamId,
+      yearsTotal,
       salaryPerYear: 500000 + randomInt(0, 5000000),
-      yearsTotal: randomInt(2, 5),
-      yearsRemaining: randomInt(1, 4),
-      buyout: 1000000,
-    };
+      guaranteedMoney: randomInt(500000, 3000000),
+      startYear: 2025,
+    });
 
     coaches.push(coach);
   }
@@ -157,7 +162,7 @@ function createScoutsForTeam(teamId: string): Scout[] {
 
   // Director of Player Personnel
   const directorName = generateFullName();
-  const director = createDefaultScout(generateUUID(), directorName.firstName, directorName.lastName, 'director');
+  const director = createDefaultScout(generateUUID(), directorName.firstName, directorName.lastName, 'scoutingDirector');
   director.teamId = teamId;
   director.isAvailable = false;
   director.contract = createScoutContract(500000 + randomInt(0, 300000), 3);
@@ -209,11 +214,11 @@ function createDraftPicks(teamIds: string[], year: number): Record<string, Draft
         id: pickId,
         year,
         round,
-        pickInRound: index + 1,
         overallPick: pickNumber,
         originalTeamId: teamId,
         currentTeamId: teamId,
-        usedForPlayerId: null,
+        selectedPlayerId: null,
+        tradeHistory: [],
       };
     });
   }

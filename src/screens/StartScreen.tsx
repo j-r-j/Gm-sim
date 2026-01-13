@@ -70,10 +70,10 @@ export function StartScreen({ onNewGame, onContinue, onSettings }: StartScreenPr
     setLoading(false);
   };
 
-  const hasSavedGames = saveSlots.some((s) => s.exists);
+  const hasSavedGames = saveSlots.some((s: SaveSlotInfo) => s.exists);
 
   const handleContinue = () => {
-    const existingSlots = saveSlots.filter((s) => s.exists);
+    const existingSlots = saveSlots.filter((s: SaveSlotInfo) => s.exists);
     if (existingSlots.length === 1) {
       onContinue(existingSlots[0].slot);
     } else {
@@ -146,7 +146,7 @@ export function StartScreen({ onNewGame, onContinue, onSettings }: StartScreenPr
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>Select Save</Text>
 
-            {saveSlots.filter((s) => s.exists).map((slotInfo) => (
+            {saveSlots.filter((s: SaveSlotInfo) => s.exists).map((slotInfo: SaveSlotInfo) => (
               <TouchableOpacity
                 key={slotInfo.slot}
                 style={styles.saveSlotButton}
