@@ -348,6 +348,7 @@ export function simulateWeek(
         result,
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Error simulating game ${game.gameId}:`, error);
     }
   }

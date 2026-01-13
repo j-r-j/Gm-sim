@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx eas build:configure)",
+      "Bash(npm install:*)",
+      "Bash(eas build:configure:*)"
+    ]
+  }
+}

@@ -27,17 +27,17 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id"
-      }
-    },
-    "owner": "your-expo-username",
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "extra": {
+      "eas": {
+        "projectId": "2bd95139-1652-41ca-a038-f2dc4eb90558"
+      }
+    },
+    "owner": "jrj2225",
     "updates": {
-      "url": "https://u.expo.dev/your-project-id"
+      "url": "https://u.expo.dev/2bd95139-1652-41ca-a038-f2dc4eb90558"
     }
   }
 }
