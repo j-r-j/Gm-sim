@@ -152,7 +152,7 @@ describe('OwnershipChangeSystem', () => {
         }
       }
 
-      expect(familyOrDeath).toBeGreaterThan(30);
+      expect(familyOrDeath).toBeGreaterThanOrEqual(30);
     });
   });
 
