@@ -20,7 +20,12 @@ interface MenuButtonProps {
   color?: string;
 }
 
-function MenuButton({ title, subtitle, onPress, color = colors.primary }: MenuButtonProps): React.JSX.Element {
+function MenuButton({
+  title,
+  subtitle,
+  onPress,
+  color = colors.primary,
+}: MenuButtonProps): React.JSX.Element {
   return (
     <TouchableOpacity
       style={[styles.menuButton, { borderLeftColor: color }]}
@@ -68,8 +73,8 @@ export function HomeScreen({ onNavigate }: HomeScreenProps): React.JSX.Element {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Web Preview Mode</Text>
           <Text style={styles.infoText}>
-            This is a demo view of the app's screens. The full game logic and
-            simulation engine are connected - tap any screen to explore the UI.
+            This is a demo view of the app's screens. The full game logic and simulation engine are
+            connected - tap any screen to explore the UI.
           </Text>
         </View>
       </ScrollView>

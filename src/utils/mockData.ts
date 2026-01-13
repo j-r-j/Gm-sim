@@ -216,7 +216,10 @@ export const mockProspects: DraftBoardProspect[] = [
 /**
  * Mock player profile data
  */
-export const mockPlayerProfile: Omit<PlayerProfileScreenProps, 'onBack' | 'onToggleFlag' | 'onUpdateNotes' | 'onUpdateTier'> = {
+export const mockPlayerProfile: Omit<
+  PlayerProfileScreenProps,
+  'onBack' | 'onToggleFlag' | 'onUpdateNotes' | 'onUpdateTier'
+> = {
   playerId: 'player-demo-1',
   firstName: 'Marcus',
   lastName: 'Williams',
@@ -284,7 +287,11 @@ function createMockPlayer(id: string, firstName: string, lastName: string, posit
     skills: {},
     hiddenTraits: { positive: [], negative: [], revealedToUser: [] },
     itFactor: { value: 60 },
-    consistency: { tier: 'average' as const, currentStreak: 'neutral' as const, streakGamesRemaining: 0 },
+    consistency: {
+      tier: 'average' as const,
+      currentStreak: 'neutral' as const,
+      streakGamesRemaining: 0,
+    },
     schemeFits: {
       offensive: {
         westCoast: 'neutral' as const,
@@ -303,7 +310,11 @@ function createMockPlayer(id: string, firstName: string, lastName: string, posit
         blitzHeavy: 'neutral' as const,
       },
     },
-    roleFit: { ceiling: 'solidStarter' as const, currentRole: 'solidStarter' as const, roleEffectiveness: 70 },
+    roleFit: {
+      ceiling: 'solidStarter' as const,
+      currentRole: 'solidStarter' as const,
+      roleEffectiveness: 70,
+    },
     contractId: null,
     injuryStatus: {
       severity: 'none' as const,
@@ -360,8 +371,36 @@ function createMockTeamGameState(teamId: string, teamName: string): TeamGameStat
   const p = createMockPlayer(`${teamId}-p`, 'Demo', 'Punter', Position.P);
 
   const allPlayers = new Map();
-  [qb, rb1, rb2, wr1, wr2, wr3, te1, te2, lt, lg, c, rg, rt,
-   de1, de2, dt1, dt2, olb1, olb2, ilb1, ilb2, cb1, cb2, cb3, fs, ss, k, p].forEach(player => {
+  [
+    qb,
+    rb1,
+    rb2,
+    wr1,
+    wr2,
+    wr3,
+    te1,
+    te2,
+    lt,
+    lg,
+    c,
+    rg,
+    rt,
+    de1,
+    de2,
+    dt1,
+    dt2,
+    olb1,
+    olb2,
+    ilb1,
+    ilb2,
+    cb1,
+    cb2,
+    cb3,
+    fs,
+    ss,
+    k,
+    p,
+  ].forEach((player) => {
     allPlayers.set(player.id, player);
   });
 
