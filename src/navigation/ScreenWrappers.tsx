@@ -49,6 +49,7 @@ import { ScoutingReportsScreen } from '../screens/ScoutingReportsScreen';
 import { BigBoardScreen } from '../screens/BigBoardScreen';
 import { RFAScreen, RFAPlayerView } from '../screens/RFAScreen';
 import { CompPickTrackerScreen } from '../screens/CompPickTrackerScreen';
+import { RumorMillScreen } from '../screens/RumorMillScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -94,6 +95,7 @@ import {
   calculateCompValue,
 } from '../core/freeAgency/CompensatoryPickCalculator';
 import { Position } from '../core/models/player/Position';
+import { Rumor } from '../core/news/RumorMill';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -3104,6 +3106,112 @@ export function CompPickTrackerScreenWrapper({
     <CompPickTrackerScreen
       gameState={gameState}
       summary={summary}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// RUMOR MILL SCREEN
+// ============================================
+
+export function RumorMillScreenWrapper({
+  navigation,
+}: ScreenProps<'RumorMill'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Rumor Mill..." />;
+  }
+
+  const currentYear = gameState.league.calendar.currentYear;
+  const currentWeek = gameState.league.calendar.currentWeek;
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const teamName = userTeam ? `${userTeam.city} ${userTeam.nickname}` : 'Your Team';
+
+  // Generate sample rumors for display
+  // In production, these would come from gameState.rumors or similar
+  const mockRumors: Rumor[] = [
+    {
+      id: 'rumor-1',
+      type: 'trade_interest',
+      headline: 'Report: Multiple Teams Interested in Trade',
+      body: 'According to league sources, several teams have expressed interest in acquiring key players before the deadline. No trade is imminent, but conversations have taken place.',
+      isTrue: true,
+      sourceConfidence: 'moderate',
+      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      priority: 'medium',
+      expiresAt: Date.now() + 5 * 24 * 60 * 60 * 1000,
+      isResolved: false,
+    },
+    {
+      id: 'rumor-2',
+      type: 'contract_demand',
+      headline: 'Star Player Seeking New Contract',
+      body: 'Sources indicate a key player is seeking a new contract extension. The player believes they have outperformed their current deal and wants to be paid among the top at their position.',
+      isTrue: false,
+      sourceConfidence: 'whisper',
+      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      priority: 'low',
+      expiresAt: Date.now() + 4 * 24 * 60 * 60 * 1000,
+      isResolved: false,
+    },
+    {
+      id: 'rumor-3',
+      type: 'coaching',
+      headline: `Hot Seat: ${teamName} Coach Under Pressure?`,
+      body: `Sources say the coaching position with ${teamName} could be in jeopardy if results don't improve. The pressure is mounting after recent struggles.`,
+      isTrue: false,
+      sourceConfidence: 'whisper',
+      timestamp: Date.now() - 5 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek > 1 ? currentWeek - 1 : currentWeek,
+      priority: 'medium',
+      expiresAt: Date.now() + 2 * 24 * 60 * 60 * 1000,
+      isResolved: true,
+      resolution: 'Reports of coaching changes were premature. The staff remains intact.',
+    },
+    {
+      id: 'rumor-4',
+      type: 'injury_recovery',
+      headline: 'Injured Star Making Rapid Progress',
+      body: 'Good news on the injury front: sources indicate an injured player is making excellent progress in rehab. An early return may be possible.',
+      isTrue: true,
+      sourceConfidence: 'strong',
+      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      priority: 'high',
+      expiresAt: Date.now() + 6 * 24 * 60 * 60 * 1000,
+      isResolved: false,
+    },
+    {
+      id: 'rumor-5',
+      type: 'locker_room',
+      headline: 'Sources: Tension Building in Locker Room',
+      body: 'Multiple sources describe tension in the locker room. The specifics are unclear, but chemistry may be becoming an issue for the team.',
+      isTrue: true,
+      sourceConfidence: 'moderate',
+      timestamp: Date.now() - 4 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek > 1 ? currentWeek - 1 : currentWeek,
+      priority: 'medium',
+      expiresAt: Date.now() - 1 * 24 * 60 * 60 * 1000, // Expired
+      isResolved: true,
+      resolution:
+        'Sources were right about locker room issues. The team has made roster changes to address the situation.',
+    },
+  ];
+
+  return (
+    <RumorMillScreen
+      gameState={gameState}
+      rumors={mockRumors}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
