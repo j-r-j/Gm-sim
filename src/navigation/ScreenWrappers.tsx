@@ -40,9 +40,11 @@ import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
 import { CoachProfileScreen } from '../screens/CoachProfileScreen';
 import { DepthChartScreen } from '../screens/DepthChartScreen';
 import { OwnerRelationsScreen } from '../screens/OwnerRelationsScreen';
+import { ContractManagementScreen } from '../screens/ContractManagementScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
+import { PlayerContract } from '../core/contracts';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -562,6 +564,9 @@ export function DashboardScreenWrapper({
         case 'ownerRelations':
           navigation.navigate('OwnerRelations');
           break;
+        case 'contracts':
+          navigation.navigate('ContractManagement');
+          break;
         case 'draft':
           if (
             gameState?.league.calendar.currentPhase === 'offseason' &&
@@ -792,6 +797,116 @@ export function OwnerRelationsScreenWrapper({
         Alert.alert(
           'Owner Demand',
           `${demand.description}\n\nDeadline: Week ${demand.deadline}\n\nConsequence: ${demand.consequence}`
+        );
+      }}
+    />
+  );
+}
+
+// ============================================
+// CONTRACT MANAGEMENT SCREEN
+// ============================================
+
+export function ContractManagementScreenWrapper({
+  navigation,
+}: ScreenProps<'ContractManagement'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading contracts..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  // Build cap status from team finances
+  // Note: In a full implementation, we'd track SalaryCapState in GameState
+  // For now, we create a mock cap status from team finances
+  const capStatus = {
+    salaryCap: 255000, // $255M cap in thousands
+    currentCapUsage: Math.round(
+      255000 - userTeam.finances.capSpace / 1000 // Convert dollars to thousands
+    ),
+    capSpace: Math.round(userTeam.finances.capSpace / 1000),
+    deadMoney: 0,
+    effectiveCapSpace: Math.round(userTeam.finances.capSpace / 1000),
+    percentUsed: ((255000 - userTeam.finances.capSpace / 1000) / 255000) * 100,
+    top51Total: 0,
+    isOverCap: userTeam.finances.capSpace < 0,
+    meetsFloor: true,
+    rolloverFromPreviousYear: 0,
+  };
+
+  // Get contracts from players on the roster
+  // In a full implementation, we'd track PlayerContract objects in GameState
+  // For now, we create mock contracts from player data
+  const contracts: PlayerContract[] = userTeam.rosterPlayerIds
+    .map((playerId) => {
+      const player = gameState.players[playerId];
+      if (!player) return null;
+
+      // Create a mock contract based on player data
+      const contract: PlayerContract = {
+        id: `contract-${playerId}`,
+        playerId,
+        playerName: `${player.firstName} ${player.lastName}`,
+        teamId: userTeam.id,
+        position: player.position,
+        status: 'active',
+        type: player.experience <= 3 ? 'rookie' : 'veteran',
+        signedYear: gameState.league.calendar.currentYear - player.experience,
+        totalYears: 4,
+        yearsRemaining: Math.max(1, 4 - player.experience),
+        totalValue: Math.round(Math.random() * 50000 + 1000), // Mock value
+        guaranteedMoney: Math.round(Math.random() * 20000 + 500),
+        signingBonus: Math.round(Math.random() * 10000),
+        averageAnnualValue: Math.round(Math.random() * 15000 + 500),
+        yearlyBreakdown: [
+          {
+            year: 1,
+            baseSalary: Math.round(Math.random() * 10000 + 500),
+            prorationedBonus: Math.round(Math.random() * 2000),
+            rosterBonus: 0,
+            workoutBonus: 0,
+            optionBonus: 0,
+            incentivesLTBE: 0,
+            incentivesNLTBE: 0,
+            capHit: Math.round(Math.random() * 12000 + 500),
+            isGuaranteed: Math.random() > 0.5,
+            isGuaranteedForInjury: Math.random() > 0.7,
+            isVoidYear: false,
+          },
+        ],
+        voidYears: 0,
+        hasNoTradeClause: Math.random() > 0.9,
+        hasNoTagClause: false,
+        originalContractId: null,
+        notes: [],
+      };
+      return contract;
+    })
+    .filter((c): c is PlayerContract => c !== null);
+
+  return (
+    <ContractManagementScreen
+      gameState={gameState}
+      capStatus={capStatus}
+      contracts={contracts}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => {
+        navigation.navigate('PlayerProfile', { playerId });
+      }}
+      onCutPlayer={(playerId, breakdown) => {
+        const player = gameState.players[playerId];
+        Alert.alert(
+          'Cut Analysis',
+          `${player?.firstName} ${player?.lastName}\n\n` +
+            `Standard Cut:\n` +
+            `  Cap Savings: $${(breakdown.standardCut.capSavings / 1000).toFixed(1)}M\n` +
+            `  Dead Money: $${(breakdown.standardCut.deadMoney / 1000).toFixed(1)}M\n\n` +
+            `Post-June 1:\n` +
+            `  Cap Savings: $${(breakdown.postJune1Cut.capSavings / 1000).toFixed(1)}M\n` +
+            `  Dead Money: $${(breakdown.postJune1Cut.deadMoney / 1000).toFixed(1)}M\n\n` +
+            `Recommendation: ${breakdown.bestOptionReason}`
         );
       }}
     />

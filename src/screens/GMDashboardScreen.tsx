@@ -20,6 +20,7 @@ export type DashboardAction =
   | 'freeAgency'
   | 'staff'
   | 'finances'
+  | 'contracts'
   | 'gamecast'
   | 'news'
   | 'offseason'
@@ -286,10 +287,18 @@ export function GMDashboardScreen({
 
         <MenuCard
           title="Finances"
-          subtitle="Salary cap and contracts"
+          subtitle="Salary cap overview"
           icon="💰"
           color={colors.success}
           onPress={() => onAction('finances')}
+        />
+
+        <MenuCard
+          title="Contracts"
+          subtitle="Manage player contracts"
+          icon="📝"
+          color={colors.warning}
+          onPress={() => onAction('contracts')}
         />
 
         {/* Season Actions */}

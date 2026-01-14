@@ -19,7 +19,6 @@ import { Position } from '../core/models/player/Position';
 import {
   DepthChart,
   PositionDepthView,
-  POSITION_GROUPS,
   getPositionGroupDepths,
   getDepthLabel,
   getPositionDisplayName,
@@ -180,7 +179,7 @@ export function DepthChartScreen({
         const newDepthChart = swapPlayers(depthChart, selectedPlayerId, playerId);
         onDepthChartChange(newDepthChart);
         Alert.alert('Players Swapped', 'Depth chart updated');
-      } catch (error) {
+      } catch {
         Alert.alert('Error', 'Could not swap players');
       }
       setSelectedPlayerId(null);
