@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npx eas build:configure)",
       "Bash(npm install:*)",
-      "Bash(eas build:configure:*)"
+      "Bash(eas build:configure:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm test:*)",
+      "Bash(npx ts-node:*)"
     ]
   }
 }

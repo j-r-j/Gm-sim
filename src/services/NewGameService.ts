@@ -31,6 +31,7 @@ import { createCoachContract } from '../core/models/staff/CoachContract';
 import { createNewsFeedState } from '../core/news/NewsFeedManager';
 import { createPatienceMeterState } from '../core/career/PatienceMeterManager';
 import { createDefaultTenureStats } from '../core/career/FiringMechanics';
+import { seedInitialFreeAgentPool } from '../core/freeAgency/FreeAgentSeeder';
 
 const SALARY_CAP = 255000000; // $255 million
 
@@ -289,6 +290,12 @@ export function createNewGame(options: NewGameOptions): GameState {
       ...teams[teamId],
       rosterPlayerIds: playerIds,
     };
+  }
+
+  // Seed initial free agent pool (approximately 250 free agents)
+  const freeAgents = seedInitialFreeAgentPool(startYear);
+  for (const freeAgent of freeAgents) {
+    players[freeAgent.id] = freeAgent;
   }
 
   // Create owners for all teams
