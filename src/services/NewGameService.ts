@@ -32,6 +32,8 @@ import { CoachRole } from '../core/models/staff/StaffSalary';
 import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';
 import { createNewsFeedState } from '../core/news/NewsFeedManager';
+import { createPatienceMeterState } from '../core/career/PatienceMeterManager';
+import { createDefaultTenureStats } from '../core/career/FiringMechanics';
 
 const SALARY_CAP = 255000000; // $255 million
 
@@ -386,6 +388,17 @@ export function createNewGame(options: NewGameOptions): GameState {
 
   const now = new Date().toISOString();
 
+  // Get user's team owner for patience initialization
+  const userOwnerId = `owner-${selectedTeam.abbreviation}`;
+  const userOwner = owners[userOwnerId];
+
+  // Initialize patience meter with owner's starting patience
+  const initialPatience = userOwner?.patienceMeter ?? 50;
+  const patienceMeter = createPatienceMeterState(userOwnerId, initialPatience, 1, startYear);
+
+  // Initialize tenure stats
+  const tenureStats = createDefaultTenureStats();
+
   return {
     saveSlot,
     createdAt: now,
@@ -404,6 +417,8 @@ export function createNewGame(options: NewGameOptions): GameState {
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
     newsReadStatus: {},
     newsFeed: createNewsFeedState(startYear, 1),
+    patienceMeter,
+    tenureStats,
   };
 }
 

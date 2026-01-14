@@ -108,6 +108,12 @@ export interface GameState {
 
   // News feed state (optional for backward compatibility)
   newsFeed?: import('../../news/NewsFeedManager').NewsFeedState;
+
+  // Patience meter state (optional for backward compatibility)
+  patienceMeter?: import('../../career/PatienceMeterManager').PatienceMeterState;
+
+  // Tenure stats for career tracking
+  tenureStats?: import('../../career/FiringMechanics').TenureStats;
 }
 
 /**

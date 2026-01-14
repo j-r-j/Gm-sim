@@ -26,6 +26,7 @@ import { FreeAgencyScreen, FreeAgent, ContractOffer } from './src/screens/FreeAg
 import { TradeScreen, TradeProposal, TradeAsset } from './src/screens/TradeScreen';
 import { CutPreview, ExtensionOffer } from './src/screens/RosterScreen';
 import { PlayoffBracketScreen, PlayoffMatchup, PlayoffSeed } from './src/screens/PlayoffBracketScreen';
+import { CareerSummaryScreen } from './src/screens/CareerSummaryScreen';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -48,6 +49,23 @@ import {
   NewsFeedState,
 } from './src/core/news/NewsFeedManager';
 import { LeagueNewsContext, InjuryNewsContext } from './src/core/news/NewsGenerators';
+import {
+  createPatienceMeterState,
+  updatePatienceValue,
+  PatienceMeterState,
+  createPatienceViewModel,
+  isAtRisk,
+} from './src/core/career/PatienceMeterManager';
+import {
+  shouldFire,
+  createFiringRecord,
+  FiringRecord,
+  TenureStats,
+  createDefaultTenureStats,
+  calculateLegacy,
+  getLegacyDescription,
+  FiringContext,
+} from './src/core/career/FiringMechanics';
 
 // Navigation types
 type Screen =
@@ -68,7 +86,9 @@ type Screen =
   | 'staff'
   | 'finances'
   | 'news'
-  | 'settings';
+  | 'settings'
+  | 'fired'
+  | 'careerSummary';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('loading');
@@ -81,6 +101,9 @@ export default function App() {
   const [draftedProspects, setDraftedProspects] = useState<Record<string, string>>({}); // prospectId -> teamId
   const [autoPickEnabled, setAutoPickEnabled] = useState(false);
   const [draftPaused, setDraftPaused] = useState(false);
+
+  // Firing state
+  const [firingRecord, setFiringRecord] = useState<FiringRecord | null>(null);
 
   // Initialize app
   useEffect(() => {
@@ -321,6 +344,91 @@ export default function App() {
         }
       }
 
+      // Update patience meter based on game results
+      let updatedPatienceMeter = gameState.patienceMeter;
+      const userTeam = updatedTeams[gameState.userTeamId];
+      const userOwnerId = `owner-${userTeam.abbreviation}`;
+      const userOwner = gameState.owners[userOwnerId];
+
+      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && userTeam && userOwner) {
+        // Initialize patience meter if not exists
+        if (!updatedPatienceMeter) {
+          updatedPatienceMeter = createPatienceMeterState(
+            userOwnerId,
+            userOwner.patienceMeter || 50,
+            calendar.currentWeek,
+            calendar.currentYear
+          );
+        }
+
+        // Calculate patience change based on team performance
+        const wins = userTeam.currentRecord.wins;
+        const losses = userTeam.currentRecord.losses;
+        const winPct = (wins + losses) > 0 ? wins / (wins + losses) : 0.5;
+
+        let patienceChange = 0;
+        if (winPct >= 0.7) {
+          patienceChange = 3; // Winning team
+        } else if (winPct >= 0.5) {
+          patienceChange = 1; // Above .500
+        } else if (winPct >= 0.35) {
+          patienceChange = -2; // Losing record
+        } else {
+          patienceChange = -4; // Bad record
+        }
+
+        // Apply owner patience modifier
+        const ownerPatience = userOwner.personality?.traits?.patience || 50;
+        const modifier = ownerPatience < 30 ? 1.5 : ownerPatience > 70 ? 0.5 : 1.0;
+        patienceChange = Math.round(patienceChange * modifier);
+
+        // Update patience meter
+        const eventDesc = patienceChange > 0
+          ? `Team performance: ${wins}-${losses}`
+          : `Concerns over ${losses} losses`;
+        updatedPatienceMeter = updatePatienceValue(
+          updatedPatienceMeter,
+          patienceChange,
+          calendar.currentWeek,
+          calendar.currentYear,
+          eventDesc
+        );
+
+        // Check for firing
+        const firingContext: FiringContext = {
+          consecutiveLosingSeason: losses > wins ? 1 : 0,
+          missedPlayoffsCount: 0,
+          ownerDefianceCount: 0,
+          majorScandals: 0,
+          recentPatienceHistory: updatedPatienceMeter.history.slice(-5).map(h => h.value),
+          ownershipJustChanged: false,
+          seasonExpectation: 'competitive',
+        };
+
+        const firingCheck = shouldFire(updatedPatienceMeter, firingContext, userOwner);
+
+        if (firingCheck.shouldFire) {
+          // Create firing record
+          const tenureStats = gameState.tenureStats || createDefaultTenureStats();
+          const record = createFiringRecord(
+            gameState.userName,
+            gameState.userTeamId,
+            userOwner,
+            calendar.currentYear,
+            calendar.currentWeek,
+            tenureStats,
+            updatedPatienceMeter,
+            firingContext,
+            0, // years remaining
+            3000000 // annual salary
+          );
+          setFiringRecord(record);
+          setCurrentScreen('fired');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Advance news feed week
       updatedNewsFeed = advanceNewsFeedWeek(updatedNewsFeed, calendar.currentYear, calendar.currentWeek + 1);
 
@@ -365,6 +473,7 @@ export default function App() {
         teams: updatedTeams,
         players: updatedPlayers,
         newsFeed: updatedNewsFeed,
+        patienceMeter: updatedPatienceMeter || gameState.patienceMeter,
       };
 
       setGameState(updatedState);
@@ -1412,6 +1521,46 @@ export default function App() {
               // Persist flag change to storage
               await saveGameState(updatedState);
             }
+          }}
+        />
+      </>
+    );
+  }
+
+  // Fired Screen
+  if (currentScreen === 'fired' && firingRecord) {
+    const teamName = gameState
+      ? `${gameState.teams[gameState.userTeamId].city} ${gameState.teams[gameState.userTeamId].nickname}`
+      : 'Your Team';
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <CareerSummaryScreen
+          firingRecord={firingRecord}
+          teamName={teamName}
+          onContinue={() => {
+            // For now, just go back to main menu
+            // In full implementation, would allow finding new job
+            Alert.alert(
+              'Looking for New Job',
+              'Job market feature coming soon. For now, you can start a new career.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setGameState(null);
+                    setFiringRecord(null);
+                    setCurrentScreen('start');
+                  },
+                },
+              ]
+            );
+          }}
+          onMainMenu={() => {
+            setGameState(null);
+            setFiringRecord(null);
+            setCurrentScreen('start');
           }}
         />
       </>
