@@ -54,6 +54,15 @@ import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
 import { CoachingTreeScreen } from '../screens/CoachingTreeScreen';
 import { JobMarketScreen } from '../screens/JobMarketScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
+import { CombineProDayScreen } from '../screens/CombineProDayScreen';
+import {
+  CombineResults,
+  CombineGrade,
+  MedicalGrade,
+  CombineSummary,
+} from '../core/draft/CombineSimulator';
+import { ProDayResults, ProDayType, ProDaySummary } from '../core/draft/ProDaySimulator';
+import { Prospect } from '../core/draft/Prospect';
 import {
   createJobMarketState,
   calculateAllInterests,
@@ -3614,6 +3623,141 @@ export function CareerLegacyScreenWrapper({
           },
         ]);
       }}
+    />
+  );
+}
+
+// ============================================
+// COMBINE/PRO DAY SCREEN
+// ============================================
+
+export function CombineScreenWrapper({ navigation }: ScreenProps<'Combine'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Combine Results..." />;
+  }
+
+  // Get prospects from game state
+  const allProspects = Object.values(gameState.prospects);
+
+  // Create mock combine results for demonstration
+  const combineResults = new Map<string, CombineResults>();
+  const proDayResults = new Map<string, ProDayResults>();
+
+  // Generate mock results for top 50 prospects
+  allProspects.slice(0, 50).forEach((prospect: Prospect, index: number) => {
+    const invited = index < 35;
+    if (invited) {
+      combineResults.set(prospect.id, {
+        prospectId: prospect.id,
+        invited: true,
+        participated: Math.random() > 0.05,
+        measurements: {
+          height: prospect.player.physical.height,
+          weight: prospect.player.physical.weight,
+          armLength: prospect.player.physical.armLength,
+          handSize: prospect.player.physical.handSize,
+          wingspan: prospect.player.physical.armLength * 2 + prospect.player.physical.height * 0.15,
+        },
+        workoutResults: {
+          fortyYardDash: 4.4 + Math.random() * 0.4,
+          benchPress: Math.floor(15 + Math.random() * 15),
+          verticalJump: 30 + Math.random() * 12,
+          broadJump: 100 + Math.random() * 30,
+          twentyYardShuttle: 4.0 + Math.random() * 0.4,
+          threeConeDrill: 6.7 + Math.random() * 0.6,
+          sixtyYardShuttle: Math.random() > 0.5 ? 11 + Math.random() : null,
+        },
+        interviewImpressions: [],
+        medicalEvaluation: {
+          grade: Math.random() > 0.8 ? MedicalGrade.MINOR_CONCERNS : MedicalGrade.CLEAN,
+          concerns: [],
+          durabilityRating: 70 + Math.floor(Math.random() * 25),
+          passedPhysical: true,
+          flaggedConditions: [],
+        },
+        overallGrade: [
+          CombineGrade.EXCEPTIONAL,
+          CombineGrade.ABOVE_AVERAGE,
+          CombineGrade.AVERAGE,
+          CombineGrade.BELOW_AVERAGE,
+        ][Math.floor(Math.random() * 4)],
+      });
+    }
+
+    // Everyone gets a pro day
+    proDayResults.set(prospect.id, {
+      prospectId: prospect.id,
+      collegeProgramId: prospect.collegeProgramId,
+      workoutType: invited ? ProDayType.POSITION_WORKOUT : ProDayType.FULL_WORKOUT,
+      measurements: {
+        height: prospect.player.physical.height,
+        weight: prospect.player.physical.weight,
+        armLength: prospect.player.physical.armLength,
+        handSize: prospect.player.physical.handSize,
+        wingspan: prospect.player.physical.armLength * 2 + prospect.player.physical.height * 0.15,
+      },
+      workoutResults: {
+        fortyYardDash: 4.4 + Math.random() * 0.4,
+        benchPress: Math.floor(15 + Math.random() * 15),
+        verticalJump: 30 + Math.random() * 12,
+        broadJump: 100 + Math.random() * 30,
+        twentyYardShuttle: 4.0 + Math.random() * 0.4,
+        threeConeDrill: 6.7 + Math.random() * 0.6,
+        sixtyYardShuttle: null,
+      },
+      positionWorkouts: {
+        receivingDrills: {
+          catchRate: 75 + Math.random() * 20,
+          routeRunning: 5 + Math.random() * 4,
+          handsGrade: 5 + Math.random() * 4,
+        },
+      },
+      attendance: Array.from({ length: 10 + Math.floor(Math.random() * 10) }, (_, i) => ({
+        teamId: `team-${i}`,
+        attendeeLevel: 'area_scout' as const,
+        privateWorkoutRequested: Math.random() > 0.9,
+      })),
+      overallGrade: 5 + Math.random() * 4,
+      observations: ['Good energy throughout workout', 'Showed natural hands'],
+      date: Date.now(),
+    });
+  });
+
+  const combineSummary: CombineSummary = {
+    totalInvited: 35,
+    totalParticipated: 33,
+    gradeDistribution: {
+      [CombineGrade.EXCEPTIONAL]: 3,
+      [CombineGrade.ABOVE_AVERAGE]: 8,
+      [CombineGrade.AVERAGE]: 15,
+      [CombineGrade.BELOW_AVERAGE]: 5,
+      [CombineGrade.POOR]: 2,
+      [CombineGrade.DID_NOT_PARTICIPATE]: 2,
+    },
+    medicalRedFlags: 3,
+    averageFortyTime: 4.58,
+  };
+
+  const proDaySummary: ProDaySummary = {
+    totalProDays: 50,
+    averageGrade: 6.5,
+    fullWorkouts: 15,
+    positionWorkouts: 30,
+    privateWorkoutsRequested: 8,
+  };
+
+  return (
+    <CombineProDayScreen
+      gameState={gameState}
+      prospects={allProspects.slice(0, 50)}
+      combineResults={combineResults}
+      proDayResults={proDayResults}
+      combineSummary={combineSummary}
+      proDaySummary={proDaySummary}
+      onBack={() => navigation.goBack()}
+      onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
     />
   );
 }
