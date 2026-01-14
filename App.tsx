@@ -25,6 +25,7 @@ import { DraftRoomScreen, DraftPick as DraftRoomPick, DraftRoomProspect, TradeOf
 import { FreeAgencyScreen, FreeAgent, ContractOffer } from './src/screens/FreeAgencyScreen';
 import { TradeScreen, TradeProposal, TradeAsset } from './src/screens/TradeScreen';
 import { CutPreview, ExtensionOffer } from './src/screens/RosterScreen';
+import { PlayoffBracketScreen, PlayoffMatchup, PlayoffSeed } from './src/screens/PlayoffBracketScreen';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -36,6 +37,8 @@ import { colors } from './src/styles';
 // Utilities for converting data
 import { convertProspectsToDraftBoard, sortProspectsByRank } from './src/utils/prospectUtils';
 import { setupGame, GameConfig } from './src/core/game/GameSetup';
+import { simulateWeek, advanceWeek, WeekResults } from './src/core/season/WeekSimulator';
+import { Team } from './src/core/models/team/Team';
 
 // Navigation types
 type Screen =
@@ -48,6 +51,7 @@ type Screen =
   | 'draftRoom'
   | 'freeAgency'
   | 'trade'
+  | 'playoffBracket'
   | 'playerProfile'
   | 'schedule'
   | 'standings'
@@ -159,56 +163,195 @@ export default function App() {
     }
   }, [gameState]);
 
-  // Handle advance week
-  const handleAdvanceWeek = useCallback(() => {
+  // Handle advance week with full league simulation
+  const handleAdvanceWeek = useCallback(async () => {
     if (!gameState) return;
 
-    // Simulate advancing the week
-    const { calendar } = gameState.league;
-    let newWeek = calendar.currentWeek + 1;
-    let newPhase = calendar.currentPhase;
-    let newYear = calendar.currentYear;
-    let offseasonPhase = calendar.offseasonPhase;
+    setIsLoading(true);
 
-    // Handle phase transitions
-    if (newPhase === 'regularSeason' && newWeek > 18) {
-      newWeek = 19;
-      newPhase = 'playoffs';
-    } else if (newPhase === 'playoffs' && newWeek > 22) {
-      newWeek = 1;
-      newPhase = 'offseason';
-      offseasonPhase = 1;
-    } else if (newPhase === 'offseason') {
-      if (offseasonPhase && offseasonPhase >= 12) {
-        newPhase = 'preseason';
-        offseasonPhase = null;
-        newYear = calendar.currentYear + 1;
-        newWeek = 1;
-      } else {
-        offseasonPhase = (offseasonPhase || 0) + 1;
+    try {
+      const { calendar, schedule } = gameState.league;
+
+      // Skip if no schedule
+      if (!schedule) {
+        Alert.alert('Error', 'No schedule available');
+        setIsLoading(false);
+        return;
       }
-    } else if (newPhase === 'preseason' && newWeek > 4) {
-      newWeek = 1;
-      newPhase = 'regularSeason';
-    }
 
-    const updatedState: GameState = {
-      ...gameState,
-      league: {
-        ...gameState.league,
-        calendar: {
-          ...calendar,
-          currentWeek: newWeek,
-          currentPhase: newPhase,
-          currentYear: newYear,
-          offseasonPhase,
+      let newWeek = calendar.currentWeek;
+      let newPhase = calendar.currentPhase;
+      let newYear = calendar.currentYear;
+      let offseasonPhase = calendar.offseasonPhase;
+
+      // Copy teams for updating records
+      const updatedTeams = { ...gameState.teams };
+      const updatedSchedule = { ...schedule };
+      let updatedPlayers = { ...gameState.players };
+
+      // Simulate games if in regular season or playoffs
+      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && schedule.regularSeason) {
+        // Simulate ALL games for current week (including user's game if not played)
+        const weekResults = simulateWeek(
+          calendar.currentWeek,
+          schedule,
+          gameState,
+          gameState.userTeamId,
+          true // simulate user game if not already played
+        );
+
+        // Update team records based on game results
+        for (const { game, result } of weekResults.games) {
+          const homeTeam = updatedTeams[game.homeTeamId];
+          const awayTeam = updatedTeams[game.awayTeamId];
+
+          if (homeTeam && awayTeam) {
+            // Update records
+            if (result.isTie) {
+              updatedTeams[game.homeTeamId] = {
+                ...homeTeam,
+                currentRecord: {
+                  ...homeTeam.currentRecord,
+                  ties: homeTeam.currentRecord.ties + 1,
+                },
+              };
+              updatedTeams[game.awayTeamId] = {
+                ...awayTeam,
+                currentRecord: {
+                  ...awayTeam.currentRecord,
+                  ties: awayTeam.currentRecord.ties + 1,
+                },
+              };
+            } else if (result.winnerId === game.homeTeamId) {
+              updatedTeams[game.homeTeamId] = {
+                ...homeTeam,
+                currentRecord: {
+                  ...homeTeam.currentRecord,
+                  wins: homeTeam.currentRecord.wins + 1,
+                },
+              };
+              updatedTeams[game.awayTeamId] = {
+                ...awayTeam,
+                currentRecord: {
+                  ...awayTeam.currentRecord,
+                  losses: awayTeam.currentRecord.losses + 1,
+                },
+              };
+            } else {
+              updatedTeams[game.homeTeamId] = {
+                ...homeTeam,
+                currentRecord: {
+                  ...homeTeam.currentRecord,
+                  losses: homeTeam.currentRecord.losses + 1,
+                },
+              };
+              updatedTeams[game.awayTeamId] = {
+                ...awayTeam,
+                currentRecord: {
+                  ...awayTeam.currentRecord,
+                  wins: awayTeam.currentRecord.wins + 1,
+                },
+              };
+            }
+          }
+
+          // Update schedule with completed game
+          if (updatedSchedule.regularSeason) {
+            updatedSchedule.regularSeason = updatedSchedule.regularSeason.map(g =>
+              g.gameId === game.gameId ? game : g
+            );
+          }
+        }
+
+        // Process injuries from week results
+        for (const injury of weekResults.injuryReport) {
+          const player = updatedPlayers[injury.playerId];
+          if (player) {
+            updatedPlayers[injury.playerId] = {
+              ...player,
+              injuryStatus: {
+                ...player.injuryStatus,
+                severity: injury.weeksRemaining > 4 ? 'ir' : 'out',
+                weeksRemaining: injury.weeksRemaining,
+              },
+            };
+          }
+        }
+      }
+
+      // Process injury recovery for all players
+      const advanceResult = advanceWeek(calendar.currentWeek, gameState);
+      for (const recoveredPlayerId of advanceResult.recoveredPlayers) {
+        const player = updatedPlayers[recoveredPlayerId];
+        if (player) {
+          updatedPlayers[recoveredPlayerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              severity: 'none',
+              weeksRemaining: 0,
+            },
+          };
+        }
+      }
+
+      // Advance week counter
+      newWeek = calendar.currentWeek + 1;
+
+      // Handle phase transitions
+      if (newPhase === 'regularSeason' && newWeek > 18) {
+        newWeek = 19;
+        newPhase = 'playoffs';
+      } else if (newPhase === 'playoffs' && newWeek > 22) {
+        newWeek = 1;
+        newPhase = 'offseason';
+        offseasonPhase = 1;
+      } else if (newPhase === 'offseason') {
+        if (offseasonPhase && offseasonPhase >= 12) {
+          newPhase = 'preseason';
+          offseasonPhase = null;
+          newYear = calendar.currentYear + 1;
+          newWeek = 1;
+        } else {
+          offseasonPhase = (offseasonPhase || 0) + 1;
+        }
+      } else if (newPhase === 'preseason' && newWeek > 4) {
+        newWeek = 1;
+        newPhase = 'regularSeason';
+      }
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          calendar: {
+            ...calendar,
+            currentWeek: newWeek,
+            currentPhase: newPhase,
+            currentYear: newYear,
+            offseasonPhase,
+          },
+          schedule: updatedSchedule,
         },
-      },
-    };
+        teams: updatedTeams,
+        players: updatedPlayers,
+      };
 
-    setGameState(updatedState);
-    Alert.alert('Week Advanced', `Now in ${newPhase === 'offseason' ? 'Offseason Phase ' + offseasonPhase : 'Week ' + newWeek}`);
-  }, [gameState]);
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+
+      // Show summary
+      const phaseLabel = newPhase === 'offseason'
+        ? `Offseason Phase ${offseasonPhase}`
+        : `Week ${newWeek}`;
+      Alert.alert('Week Advanced', `Now in ${phaseLabel}`);
+    } catch (error) {
+      console.error('Error advancing week:', error);
+      Alert.alert('Error', 'Failed to advance week');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState, saveGameState]);
 
   // Handle dashboard actions
   const handleDashboardAction = useCallback((action: DashboardAction) => {
@@ -232,7 +375,12 @@ export default function App() {
         setCurrentScreen('schedule');
         break;
       case 'standings':
-        setCurrentScreen('standings');
+        // Show playoff bracket during playoffs, otherwise standings
+        if (gameState?.league.calendar.currentPhase === 'playoffs') {
+          setCurrentScreen('playoffBracket');
+        } else {
+          setCurrentScreen('standings');
+        }
         break;
       case 'freeAgency':
         setCurrentScreen('freeAgency');
@@ -586,6 +734,111 @@ export default function App() {
             }
             return 'rejected';
           }}
+        />
+      </>
+    );
+  }
+
+  // Playoff Bracket Screen
+  if (currentScreen === 'playoffBracket') {
+    // Generate playoff seeds based on standings (simplified)
+    const generateSeeds = (conference: 'AFC' | 'NFC'): PlayoffSeed[] => {
+      const confTeams = Object.values(gameState.teams)
+        .filter(t => t.conference === conference)
+        .sort((a, b) => {
+          // Sort by wins, then by head-to-head (simplified)
+          if (b.currentRecord.wins !== a.currentRecord.wins) {
+            return b.currentRecord.wins - a.currentRecord.wins;
+          }
+          return b.currentRecord.losses - a.currentRecord.losses;
+        })
+        .slice(0, 7);
+
+      return confTeams.map((team, index) => ({
+        seed: index + 1,
+        teamId: team.id,
+        record: team.currentRecord,
+        conference,
+      }));
+    };
+
+    const afcSeeds = generateSeeds('AFC');
+    const nfcSeeds = generateSeeds('NFC');
+
+    // Generate matchups based on current playoff week
+    const generateMatchups = (): PlayoffMatchup[] => {
+      const matchups: PlayoffMatchup[] = [];
+      const week = gameState.league.calendar.currentWeek;
+
+      // Wild Card matchups (seeds 2 vs 7, 3 vs 6, 4 vs 5)
+      // 1 seed has bye
+      for (const conf of ['AFC', 'NFC'] as const) {
+        const seeds = conf === 'AFC' ? afcSeeds : nfcSeeds;
+
+        matchups.push({
+          gameId: `wc-${conf}-1`,
+          round: 'wildCard',
+          conference: conf,
+          homeSeed: 2,
+          awaySeed: 7,
+          homeTeamId: seeds[1]?.teamId || null,
+          awayTeamId: seeds[6]?.teamId || null,
+          homeScore: week > 19 ? 28 + Math.floor(Math.random() * 7) : null,
+          awayScore: week > 19 ? 21 + Math.floor(Math.random() * 7) : null,
+          winnerId: week > 19 ? seeds[1]?.teamId || null : null,
+          isComplete: week > 19,
+        });
+
+        matchups.push({
+          gameId: `wc-${conf}-2`,
+          round: 'wildCard',
+          conference: conf,
+          homeSeed: 3,
+          awaySeed: 6,
+          homeTeamId: seeds[2]?.teamId || null,
+          awayTeamId: seeds[5]?.teamId || null,
+          homeScore: week > 19 ? 24 + Math.floor(Math.random() * 10) : null,
+          awayScore: week > 19 ? 17 + Math.floor(Math.random() * 7) : null,
+          winnerId: week > 19 ? seeds[2]?.teamId || null : null,
+          isComplete: week > 19,
+        });
+
+        matchups.push({
+          gameId: `wc-${conf}-3`,
+          round: 'wildCard',
+          conference: conf,
+          homeSeed: 4,
+          awaySeed: 5,
+          homeTeamId: seeds[3]?.teamId || null,
+          awayTeamId: seeds[4]?.teamId || null,
+          homeScore: week > 19 ? 21 + Math.floor(Math.random() * 10) : null,
+          awayScore: week > 19 ? 14 + Math.floor(Math.random() * 14) : null,
+          winnerId: week > 19 ? seeds[3]?.teamId || null : null,
+          isComplete: week > 19,
+        });
+      }
+
+      return matchups;
+    };
+
+    const matchups = generateMatchups();
+    const currentRound = gameState.league.calendar.currentWeek <= 18 ? 'wildCard' :
+                         gameState.league.calendar.currentWeek <= 20 ? 'divisional' :
+                         gameState.league.calendar.currentWeek <= 21 ? 'conference' :
+                         gameState.league.calendar.currentWeek <= 22 ? 'superBowl' : 'complete';
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <PlayoffBracketScreen
+          teams={gameState.teams}
+          afcSeeds={afcSeeds}
+          nfcSeeds={nfcSeeds}
+          matchups={matchups}
+          userTeamId={gameState.userTeamId}
+          currentRound={currentRound}
+          championId={null}
+          onBack={goToDashboard}
         />
       </>
     );
