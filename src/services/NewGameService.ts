@@ -24,6 +24,10 @@ import { generateFullName } from '../core/generators/player/NameGenerator';
 import { generateUUID, randomInt } from '../core/generators/utils/RandomUtils';
 import { generateDraftClass } from '../core/draft/DraftClassGenerator';
 import { Prospect } from '../core/draft/Prospect';
+import {
+  generateSeasonSchedule,
+  PreviousYearStandings,
+} from '../core/season/ScheduleGenerator';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';
@@ -350,6 +354,26 @@ export function createNewGame(options: NewGameOptions): GameState {
       west: nfcTeams.filter((id) => teams[id].division === 'West'),
     },
   };
+
+  // Generate season schedule
+  // For new game, use current standings as "previous year" standings
+  const previousYearStandings: PreviousYearStandings = {
+    AFC: {
+      North: league.standings.afc.north,
+      South: league.standings.afc.south,
+      East: league.standings.afc.east,
+      West: league.standings.afc.west,
+    },
+    NFC: {
+      North: league.standings.nfc.north,
+      South: league.standings.nfc.south,
+      East: league.standings.nfc.east,
+      West: league.standings.nfc.west,
+    },
+  };
+
+  const teamArray = Object.values(teams);
+  league.schedule = generateSeasonSchedule(teamArray, previousYearStandings, startYear);
 
   // Create career stats with initial team entry
   const careerStats = addCareerTeamEntry(
