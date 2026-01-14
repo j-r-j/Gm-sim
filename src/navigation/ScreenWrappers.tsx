@@ -48,6 +48,7 @@ import { FinalCutsScreen } from '../screens/FinalCutsScreen';
 import { ScoutingReportsScreen } from '../screens/ScoutingReportsScreen';
 import { BigBoardScreen } from '../screens/BigBoardScreen';
 import { RFAScreen, RFAPlayerView } from '../screens/RFAScreen';
+import { CompPickTrackerScreen } from '../screens/CompPickTrackerScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -59,14 +60,12 @@ import {
   generatePositionBattlePreview,
 } from '../core/offseason/phases/OTAsPhase';
 import {
-  TrainingCampSummary,
   createPositionBattle,
   generateDevelopmentReveal,
   generateCampInjury,
   getTrainingCampSummary,
 } from '../core/offseason/phases/TrainingCampPhase';
 import {
-  PreseasonSummary,
   simulatePreseasonGame,
   createPreseasonEvaluation,
   getPreseasonSummary,
@@ -77,19 +76,23 @@ import {
   getFinalCutsSummary,
   isPracticeSquadEligible,
 } from '../core/offseason/phases/FinalCutsPhase';
-import { ScoutReport, formatReportForDisplay } from '../core/scouting/ScoutReportGenerator';
+import { ScoutReport } from '../core/scouting/ScoutReportGenerator';
 import {
   DraftTier,
   DraftBoardViewModel,
   DraftBoardProspectView,
 } from '../core/scouting/DraftBoardManager';
 import { NeedLevel, ProspectRanking } from '../core/scouting/BigBoardGenerator';
+import { TenderOffer, OfferSheet, recommendTenderLevel } from '../core/freeAgency/RFATenderSystem';
 import {
-  TenderOffer,
-  OfferSheet,
-  TenderLevel,
-  recommendTenderLevel,
-} from '../core/freeAgency/RFATenderSystem';
+  FADeparture,
+  FAAcquisition,
+  TeamCompPickSummary,
+  CompensatoryPickAward,
+  CompPickEntitlement,
+  determineCompPickRound,
+  calculateCompValue,
+} from '../core/freeAgency/CompensatoryPickCalculator';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -2963,6 +2966,146 @@ export function RFAScreenWrapper({ navigation }: ScreenProps<'RFA'>): React.JSX.
       onDeclineOffer={(offerSheetId) => {
         Alert.alert('Offer Declined', `You have declined to match offer sheet ${offerSheetId}.`);
       }}
+    />
+  );
+}
+
+// ============================================
+// COMP PICK TRACKER SCREEN
+// ============================================
+
+export function CompPickTrackerScreenWrapper({
+  navigation,
+}: ScreenProps<'CompPickTracker'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Comp Pick Tracker..." />;
+  }
+
+  const currentYear = gameState.league.calendar.currentYear;
+  const userTeamId = gameState.userTeamId;
+
+  // Generate mock losses (players who left in free agency)
+  const mockLosses: FADeparture[] = [
+    {
+      id: 'dep-1',
+      playerId: 'lost-player-1',
+      playerName: 'Marcus Williams',
+      position: Position.FS,
+      previousTeamId: userTeamId,
+      newTeamId: 'team-002',
+      contractAAV: 15000,
+      contractYears: 4,
+      contractTotal: 60000,
+      age: 27,
+      overallRating: 82,
+      year: currentYear,
+      qualifyingContract: true,
+    },
+    {
+      id: 'dep-2',
+      playerId: 'lost-player-2',
+      playerName: 'Derek Thompson',
+      position: Position.DE,
+      previousTeamId: userTeamId,
+      newTeamId: 'team-005',
+      contractAAV: 9500,
+      contractYears: 3,
+      contractTotal: 28500,
+      age: 29,
+      overallRating: 76,
+      year: currentYear,
+      qualifyingContract: true,
+    },
+  ];
+
+  // Generate mock gains (players signed in free agency)
+  const mockGains: FAAcquisition[] = [
+    {
+      id: 'acq-1',
+      playerId: 'signed-player-1',
+      playerName: 'James Carter',
+      position: Position.CB,
+      newTeamId: userTeamId,
+      previousTeamId: 'team-010',
+      contractAAV: 7000,
+      contractYears: 2,
+      contractTotal: 14000,
+      age: 28,
+      overallRating: 73,
+      year: currentYear,
+      qualifyingContract: true,
+    },
+  ];
+
+  // Calculate entitlements and picks
+  const entitlements: CompPickEntitlement[] = mockLosses.map((loss) => {
+    const netValue = calculateCompValue(loss.contractAAV, loss.age, loss.overallRating);
+    const projectedRound = determineCompPickRound(netValue);
+    const matchedGain = mockGains.find(
+      (g) => g.qualifyingContract && g.contractAAV >= loss.contractAAV * 0.8
+    );
+
+    return {
+      teamId: userTeamId,
+      lostPlayerId: loss.playerId,
+      lostPlayerName: loss.playerName,
+      lostPlayerAAV: loss.contractAAV,
+      matchedWithGain: !!matchedGain,
+      matchedGainPlayerId: matchedGain?.playerId || null,
+      netValue,
+      projectedRound: matchedGain ? null : projectedRound,
+      reasoning: matchedGain
+        ? `Negated by signing of ${matchedGain.playerName}`
+        : projectedRound
+          ? `Qualifies for Round ${projectedRound} pick`
+          : 'Below minimum threshold',
+    };
+  });
+
+  // Calculate awarded picks
+  const awardedPicks: CompensatoryPickAward[] = entitlements
+    .filter((e) => e.projectedRound !== null)
+    .map((e) => ({
+      teamId: userTeamId,
+      round: e.projectedRound!,
+      reason: `Lost ${e.lostPlayerName} (${formatSalary(e.lostPlayerAAV)} AAV)`,
+      associatedLossPlayerId: e.lostPlayerId,
+      associatedLossPlayerName: e.lostPlayerName,
+      netValue: e.netValue,
+      year: currentYear + 1,
+    }));
+
+  // Build summary
+  const summary: TeamCompPickSummary = {
+    teamId: userTeamId,
+    year: currentYear,
+    totalLosses: mockLosses.length,
+    totalGains: mockGains.length,
+    netLossValue:
+      mockLosses.reduce((acc, l) => acc + l.contractAAV, 0) -
+      mockGains.reduce((acc, g) => acc + g.contractAAV, 0),
+    qualifyingLosses: mockLosses.filter((l) => l.qualifyingContract),
+    qualifyingGains: mockGains.filter((g) => g.qualifyingContract),
+    entitlements,
+    awardedPicks,
+  };
+
+  // Helper to format salary
+  function formatSalary(amount: number): string {
+    if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(1)}M`;
+    }
+    return `$${amount}K`;
+  }
+
+  return (
+    <CompPickTrackerScreen
+      gameState={gameState}
+      summary={summary}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
   );
 }

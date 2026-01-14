@@ -41,6 +41,7 @@ import {
   ScoutingReportsScreenWrapper,
   BigBoardScreenWrapper,
   RFAScreenWrapper,
+  CompPickTrackerScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -111,6 +112,7 @@ export function AppNavigator(): React.JSX.Element {
 
       {/* Free Agency */}
       <Stack.Screen name="RFA" component={RFAScreenWrapper} />
+      <Stack.Screen name="CompPickTracker" component={CompPickTrackerScreenWrapper} />
 
       {/* Career */}
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />

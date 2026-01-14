@@ -81,6 +81,7 @@ export type RootStackParamList = {
 
   // Free Agency Advanced (Tier 2)
   RFA: undefined;
+  CompPickTracker: undefined;
 
   // News/Rumors (Tier 3)
   RumorMill: undefined;
@@ -167,6 +168,7 @@ export const Routes = {
 
   // RFA
   RFA: 'RFA',
+  CompPickTracker: 'CompPickTracker',
 
   // News
   RumorMill: 'RumorMill',

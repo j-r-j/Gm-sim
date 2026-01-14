@@ -173,7 +173,7 @@ function ProspectRow({
  */
 export function BigBoardScreen({
   viewModel,
-  rankings,
+  rankings: _rankings,
   positionalNeeds,
   onBack,
   onProspectSelect,

@@ -225,34 +225,6 @@ function RosterPlayerCard({
 }
 
 /**
- * Cut player card (simpler version for cuts tab)
- */
-function CutPlayerCard({
-  player,
-  onPress,
-}: {
-  player: CutEvaluationPlayer;
-  onPress: () => void;
-}): React.JSX.Element {
-  return (
-    <TouchableOpacity style={styles.cutPlayerCard} onPress={onPress}>
-      <View style={styles.cutPlayerInfo}>
-        <Text style={styles.playerName}>{player.playerName}</Text>
-        <Text style={styles.playerPosition}>{player.position}</Text>
-      </View>
-      <View style={styles.cutPlayerStats}>
-        <Text style={styles.cutStatText}>OVR: {player.overallRating}</Text>
-        <Text style={styles.cutStatText}>Camp: {player.preseasonGrade}</Text>
-      </View>
-      <View style={styles.cutPlayerSavings}>
-        <Text style={styles.savingsValue}>{formatMoney(player.salary - player.deadCapIfCut)}</Text>
-        <Text style={styles.savingsLabel}>Cap Saved</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-/**
  * Practice squad card
  */
 function PracticeSquadCard({
