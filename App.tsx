@@ -21,6 +21,7 @@ import { StaffScreen } from './src/screens/StaffScreen';
 import { FinancesScreen } from './src/screens/FinancesScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { NewsScreen } from './src/screens/NewsScreen';
+import { DraftRoomScreen, DraftPick as DraftRoomPick, DraftRoomProspect, TradeOffer } from './src/screens/DraftRoomScreen';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -41,6 +42,7 @@ type Screen =
   | 'dashboard'
   | 'gamecast'
   | 'draftBoard'
+  | 'draftRoom'
   | 'playerProfile'
   | 'schedule'
   | 'standings'
@@ -55,6 +57,12 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Draft state
+  const [draftCurrentPick, setDraftCurrentPick] = useState(1);
+  const [draftedProspects, setDraftedProspects] = useState<Record<string, string>>({}); // prospectId -> teamId
+  const [autoPickEnabled, setAutoPickEnabled] = useState(false);
+  const [draftPaused, setDraftPaused] = useState(false);
 
   // Initialize app
   useEffect(() => {
@@ -204,7 +212,13 @@ export default function App() {
         setCurrentScreen('gamecast');
         break;
       case 'draft':
-        setCurrentScreen('draftBoard');
+        // Navigate to draft room during draft phase, otherwise show draft board
+        if (gameState?.league.calendar.currentPhase === 'offseason' &&
+            gameState?.league.calendar.offseasonPhase === 7) {
+          setCurrentScreen('draftRoom');
+        } else {
+          setCurrentScreen('draftBoard');
+        }
         break;
       case 'roster':
         setCurrentScreen('roster');
@@ -689,6 +703,111 @@ export default function App() {
               // Persist flag change to storage
               await saveGameState(updatedState);
             }
+          }}
+          onBack={goToDashboard}
+        />
+      </>
+    );
+  }
+
+  // Draft Room Screen
+  if (currentScreen === 'draftRoom') {
+    const teamIds = Object.keys(gameState.teams);
+    const totalPicks = teamIds.length * 7; // 7 rounds
+
+    // Build draft order (simplified - in real implementation would use trade logic)
+    const draftOrder = Array.from({ length: totalPicks }, (_, i) => {
+      const round = Math.floor(i / teamIds.length) + 1;
+      const pickInRound = i % teamIds.length;
+      // Serpentine order: odd rounds normal, even rounds reversed
+      const teamIndex = round % 2 === 1 ? pickInRound : teamIds.length - 1 - pickInRound;
+      return {
+        round,
+        pickNumber: i + 1,
+        teamId: teamIds[teamIndex],
+        teamName: `${gameState.teams[teamIds[teamIndex]].city} ${gameState.teams[teamIds[teamIndex]].nickname}`,
+        teamAbbr: gameState.teams[teamIds[teamIndex]].abbreviation,
+      };
+    });
+
+    const currentPickInfo = draftOrder[draftCurrentPick - 1] || draftOrder[0];
+    const recentPicks = draftOrder
+      .slice(Math.max(0, draftCurrentPick - 6), draftCurrentPick - 1)
+      .map(pick => ({
+        ...pick,
+        selectedProspectId: Object.entries(draftedProspects).find(([_, teamId]) =>
+          draftOrder.find(p => p.pickNumber === pick.pickNumber && p.teamId === teamId)
+        )?.[0],
+      }));
+    const upcomingPicks = draftOrder.slice(draftCurrentPick, draftCurrentPick + 5);
+
+    // Convert prospects to DraftRoomProspect format
+    const availableProspects: DraftRoomProspect[] = Object.values(gameState.prospects)
+      .filter(p => !draftedProspects[p.id])
+      .map((p, index) => ({
+        id: p.id,
+        name: `${p.player.firstName} ${p.player.lastName}`,
+        position: p.player.position,
+        collegeName: p.collegeName,
+        projectedRound: p.consensusProjection?.projectedRound ?? null,
+        projectedPickRange: p.consensusProjection?.projectedPickRange ?? null,
+        userTier: p.userTier,
+        flagged: p.flagged,
+        positionRank: index + 1,
+        overallRank: index + 1,
+        isDrafted: false,
+      }));
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <DraftRoomScreen
+          currentPick={currentPickInfo}
+          userTeamId={gameState.userTeamId}
+          recentPicks={recentPicks}
+          upcomingPicks={upcomingPicks}
+          availableProspects={availableProspects}
+          tradeOffers={[]}
+          autoPickEnabled={autoPickEnabled}
+          isPaused={draftPaused}
+          onSelectProspect={async (prospectId) => {
+            // Draft the prospect for current team
+            const newDraftedProspects = {
+              ...draftedProspects,
+              [prospectId]: currentPickInfo.teamId,
+            };
+            setDraftedProspects(newDraftedProspects);
+
+            // Advance to next pick
+            if (draftCurrentPick < totalPicks) {
+              setDraftCurrentPick(draftCurrentPick + 1);
+            } else {
+              // Draft complete
+              Alert.alert('Draft Complete', 'The draft has concluded!');
+              goToDashboard();
+            }
+          }}
+          onViewProspect={(prospectId) => {
+            setSelectedProspectId(prospectId);
+            setCurrentScreen('playerProfile');
+          }}
+          onAcceptTrade={(tradeId) => {
+            Alert.alert('Trade Accepted', `Trade ${tradeId} accepted`);
+          }}
+          onRejectTrade={(tradeId) => {
+            Alert.alert('Trade Rejected', `Trade ${tradeId} rejected`);
+          }}
+          onCounterTrade={(tradeId) => {
+            Alert.alert('Counter Trade', `Counter offer for trade ${tradeId}`);
+          }}
+          onProposeTrade={() => {
+            Alert.alert('Propose Trade', 'Trade proposal feature coming soon');
+          }}
+          onToggleAutoPick={() => {
+            setAutoPickEnabled(!autoPickEnabled);
+          }}
+          onTogglePause={() => {
+            setDraftPaused(!draftPaused);
           }}
           onBack={goToDashboard}
         />
