@@ -1,0 +1,1718 @@
+/**
+ * Screen Wrappers
+ * Bridge components that adapt existing screens to React Navigation
+ *
+ * These wrappers:
+ * 1. Use the GameContext for state
+ * 2. Convert navigation.navigate() calls to the old onBack/onAction patterns
+ * 3. Pass route params where needed
+ *
+ * This allows incremental migration - screens can be updated one at a time.
+ */
+
+import React, { useCallback } from 'react';
+import { Alert, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
+import { useGame } from './GameContext';
+import { ScreenProps } from './types';
+import { colors, spacing, fontSize } from '../styles';
+
+// Import all existing screens
+import { StartScreen } from '../screens/StartScreen';
+import { TeamSelectionScreen } from '../screens/TeamSelectionScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { GMDashboardScreen, DashboardAction } from '../screens/GMDashboardScreen';
+import { RosterScreen } from '../screens/RosterScreen';
+import { StaffScreen } from '../screens/StaffScreen';
+import { FinancesScreen } from '../screens/FinancesScreen';
+import { ScheduleScreen } from '../screens/ScheduleScreen';
+import { StandingsScreen } from '../screens/StandingsScreen';
+import { NewsScreen } from '../screens/NewsScreen';
+import { GamecastScreen } from '../screens/GamecastScreen';
+import { PlayoffBracketScreen, PlayoffMatchup, PlayoffSeed } from '../screens/PlayoffBracketScreen';
+import { TradeScreen } from '../screens/TradeScreen';
+import { DraftBoardScreen } from '../screens/DraftBoardScreen';
+import { DraftRoomScreen, DraftRoomProspect } from '../screens/DraftRoomScreen';
+import { FreeAgencyScreen, FreeAgent } from '../screens/FreeAgencyScreen';
+import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
+import { OffseasonScreen } from '../screens/OffseasonScreen';
+import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
+
+// Core imports
+import { GameState } from '../core/models/game/GameState';
+import { createNewGame } from '../services/NewGameService';
+import { gameStorage, SaveSlot } from '../services/storage/GameStorage';
+import { FakeCity } from '../core/models/team/FakeCities';
+import { setupGame, GameConfig } from '../core/game/GameSetup';
+import { simulateWeek, advanceWeek } from '../core/season/WeekSimulator';
+import {
+  createOffSeasonState,
+  completeTask as completeOffseasonTask,
+  advancePhase as advanceOffseasonPhase,
+  canAdvancePhase,
+  PHASE_ORDER,
+} from '../core/offseason/OffSeasonPhaseManager';
+import {
+  createNewsFeedState,
+  generateAndAddLeagueNews,
+  advanceNewsFeedWeek,
+  getAllNews,
+} from '../core/news/NewsFeedManager';
+import { LeagueNewsContext } from '../core/news/NewsGenerators';
+import { createPatienceMeterState, updatePatienceValue } from '../core/career/PatienceMeterManager';
+import {
+  shouldFire,
+  createFiringRecord,
+  createDefaultTenureStats,
+  FiringContext,
+} from '../core/career/FiringMechanics';
+import { convertProspectsToDraftBoard, sortProspectsByRank } from '../utils/prospectUtils';
+
+// ============================================
+// START SCREEN
+// ============================================
+
+export function StartScreenWrapper({ navigation }: ScreenProps<'Start'>): React.JSX.Element {
+  const { setGameState, setIsLoading } = useGame();
+
+  const handleNewGame = useCallback(() => {
+    navigation.navigate('TeamSelection');
+  }, [navigation]);
+
+  const handleContinue = useCallback(
+    async (slot: SaveSlot) => {
+      setIsLoading(true);
+      try {
+        const loadedState = await gameStorage.load<GameState>(slot);
+        if (loadedState) {
+          setGameState(loadedState);
+          navigation.navigate('Dashboard');
+        } else {
+          Alert.alert('Error', 'Could not load save file.');
+        }
+      } catch (error) {
+        console.error('Error loading game:', error);
+        Alert.alert('Error', 'Failed to load game. The save file may be corrupted.');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [navigation, setGameState, setIsLoading]
+  );
+
+  const handleSettings = useCallback(() => {
+    navigation.navigate('Settings');
+  }, [navigation]);
+
+  return (
+    <StartScreen
+      onNewGame={handleNewGame}
+      onContinue={handleContinue}
+      onSettings={handleSettings}
+    />
+  );
+}
+
+// ============================================
+// TEAM SELECTION SCREEN
+// ============================================
+
+export function TeamSelectionScreenWrapper({
+  navigation,
+}: ScreenProps<'TeamSelection'>): React.JSX.Element {
+  const { setGameState, setIsLoading } = useGame();
+
+  const handleTeamSelected = useCallback(
+    async (team: FakeCity, gmName: string, saveSlot: SaveSlot) => {
+      setIsLoading(true);
+      try {
+        const newGameState = createNewGame({
+          saveSlot,
+          gmName,
+          selectedTeam: team,
+          startYear: 2025,
+        });
+
+        await gameStorage.save(saveSlot, newGameState);
+        setGameState(newGameState);
+        navigation.navigate('Dashboard');
+      } catch (error) {
+        console.error('Error creating new game:', error);
+        Alert.alert('Error', 'Failed to create new game. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [navigation, setGameState, setIsLoading]
+  );
+
+  const handleBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  return <TeamSelectionScreen onSelectTeam={handleTeamSelected} onBack={handleBack} />;
+}
+
+// ============================================
+// SETTINGS SCREEN
+// ============================================
+
+export function SettingsScreenWrapper({ navigation }: ScreenProps<'Settings'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  const currentSettings = gameState?.gameSettings || {
+    simulationSpeed: 'normal' as const,
+    autoSaveEnabled: true,
+    notificationsEnabled: true,
+  };
+
+  const handleBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  const handleUpdateSettings = useCallback(
+    async (updates: Partial<typeof currentSettings>) => {
+      if (gameState) {
+        const updatedState: GameState = {
+          ...gameState,
+          gameSettings: { ...currentSettings, ...updates },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+      }
+    },
+    [gameState, setGameState, saveGameState, currentSettings]
+  );
+
+  const handleClearData = useCallback(async () => {
+    await Promise.all([gameStorage.delete(0), gameStorage.delete(1), gameStorage.delete(2)]);
+    setGameState(null);
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Start' }],
+      })
+    );
+  }, [navigation, setGameState]);
+
+  return (
+    <SettingsScreen
+      settings={currentSettings}
+      onUpdateSettings={handleUpdateSettings}
+      onBack={handleBack}
+      onClearData={handleClearData}
+      version="1.0.0"
+    />
+  );
+}
+
+// ============================================
+// DASHBOARD SCREEN
+// ============================================
+
+export function DashboardScreenWrapper({
+  navigation,
+}: ScreenProps<'Dashboard'>): React.JSX.Element {
+  const { gameState, setGameState, saveGame, saveGameState, setIsLoading, setFiringRecord } =
+    useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading game..." />;
+  }
+
+  // Advance week handler (complex logic moved from App.tsx)
+  const handleAdvanceWeek = useCallback(async () => {
+    if (!gameState) return;
+
+    setIsLoading(true);
+
+    try {
+      const { calendar, schedule } = gameState.league;
+
+      if (!schedule) {
+        Alert.alert('Error', 'No schedule available');
+        setIsLoading(false);
+        return;
+      }
+
+      let newWeek = calendar.currentWeek;
+      let newPhase = calendar.currentPhase;
+      let newYear = calendar.currentYear;
+      let offseasonPhase = calendar.offseasonPhase;
+
+      const updatedTeams = { ...gameState.teams };
+      const updatedSchedule = { ...schedule };
+      let updatedPlayers = { ...gameState.players };
+
+      // Simulate games if in regular season or playoffs
+      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && schedule.regularSeason) {
+        const weekResults = simulateWeek(
+          calendar.currentWeek,
+          schedule,
+          gameState,
+          gameState.userTeamId,
+          true
+        );
+
+        // Update team records
+        for (const { game, result } of weekResults.games) {
+          const homeTeam = updatedTeams[game.homeTeamId];
+          const awayTeam = updatedTeams[game.awayTeamId];
+
+          if (homeTeam && awayTeam) {
+            if (result.isTie) {
+              updatedTeams[game.homeTeamId] = {
+                ...homeTeam,
+                currentRecord: {
+                  ...homeTeam.currentRecord,
+                  ties: homeTeam.currentRecord.ties + 1,
+                },
+              };
+              updatedTeams[game.awayTeamId] = {
+                ...awayTeam,
+                currentRecord: {
+                  ...awayTeam.currentRecord,
+                  ties: awayTeam.currentRecord.ties + 1,
+                },
+              };
+            } else if (result.winnerId === game.homeTeamId) {
+              updatedTeams[game.homeTeamId] = {
+                ...homeTeam,
+                currentRecord: {
+                  ...homeTeam.currentRecord,
+                  wins: homeTeam.currentRecord.wins + 1,
+                },
+              };
+              updatedTeams[game.awayTeamId] = {
+                ...awayTeam,
+                currentRecord: {
+                  ...awayTeam.currentRecord,
+                  losses: awayTeam.currentRecord.losses + 1,
+                },
+              };
+            } else {
+              updatedTeams[game.homeTeamId] = {
+                ...homeTeam,
+                currentRecord: {
+                  ...homeTeam.currentRecord,
+                  losses: homeTeam.currentRecord.losses + 1,
+                },
+              };
+              updatedTeams[game.awayTeamId] = {
+                ...awayTeam,
+                currentRecord: {
+                  ...awayTeam.currentRecord,
+                  wins: awayTeam.currentRecord.wins + 1,
+                },
+              };
+            }
+          }
+
+          if (updatedSchedule.regularSeason) {
+            updatedSchedule.regularSeason = updatedSchedule.regularSeason.map((g) =>
+              g.gameId === game.gameId ? game : g
+            );
+          }
+        }
+
+        // Process injuries
+        for (const injury of weekResults.injuryReport) {
+          const player = updatedPlayers[injury.playerId];
+          if (player) {
+            updatedPlayers[injury.playerId] = {
+              ...player,
+              injuryStatus: {
+                ...player.injuryStatus,
+                severity: injury.weeksRemaining > 4 ? 'ir' : 'out',
+                weeksRemaining: injury.weeksRemaining,
+              },
+            };
+          }
+        }
+      }
+
+      // Process injury recovery
+      const advanceResult = advanceWeek(calendar.currentWeek, gameState);
+      for (const recoveredPlayerId of advanceResult.recoveredPlayers) {
+        const player = updatedPlayers[recoveredPlayerId];
+        if (player) {
+          updatedPlayers[recoveredPlayerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              severity: 'none',
+              weeksRemaining: 0,
+            },
+          };
+        }
+      }
+
+      // Generate news
+      let updatedNewsFeed =
+        gameState.newsFeed || createNewsFeedState(calendar.currentYear, calendar.currentWeek);
+
+      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && schedule.regularSeason) {
+        const userTeam = updatedTeams[gameState.userTeamId];
+        if (userTeam) {
+          const userGameNews: LeagueNewsContext = {
+            teamId: gameState.userTeamId,
+            teamName: `${userTeam.city} ${userTeam.nickname}`,
+            winStreak:
+              userTeam.currentRecord.wins > userTeam.currentRecord.losses
+                ? userTeam.currentRecord.wins
+                : undefined,
+          };
+          updatedNewsFeed = generateAndAddLeagueNews(updatedNewsFeed, userGameNews);
+        }
+      }
+
+      // Update patience meter
+      let updatedPatienceMeter = gameState.patienceMeter;
+      const userTeam = updatedTeams[gameState.userTeamId];
+      const userOwnerId = `owner-${userTeam.abbreviation}`;
+      const userOwner = gameState.owners[userOwnerId];
+
+      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && userTeam && userOwner) {
+        if (!updatedPatienceMeter) {
+          updatedPatienceMeter = createPatienceMeterState(
+            userOwnerId,
+            userOwner.patienceMeter || 50,
+            calendar.currentWeek,
+            calendar.currentYear
+          );
+        }
+
+        const wins = userTeam.currentRecord.wins;
+        const losses = userTeam.currentRecord.losses;
+        const winPct = wins + losses > 0 ? wins / (wins + losses) : 0.5;
+
+        let patienceChange = 0;
+        if (winPct >= 0.7) {
+          patienceChange = 3;
+        } else if (winPct >= 0.5) {
+          patienceChange = 1;
+        } else if (winPct >= 0.35) {
+          patienceChange = -2;
+        } else {
+          patienceChange = -4;
+        }
+
+        const ownerPatience = userOwner.personality?.traits?.patience || 50;
+        const modifier = ownerPatience < 30 ? 1.5 : ownerPatience > 70 ? 0.5 : 1.0;
+        patienceChange = Math.round(patienceChange * modifier);
+
+        const eventDesc =
+          patienceChange > 0
+            ? `Team performance: ${wins}-${losses}`
+            : `Concerns over ${losses} losses`;
+        updatedPatienceMeter = updatePatienceValue(
+          updatedPatienceMeter,
+          patienceChange,
+          calendar.currentWeek,
+          calendar.currentYear,
+          eventDesc
+        );
+
+        // Check for firing
+        const firingContext: FiringContext = {
+          consecutiveLosingSeason: losses > wins ? 1 : 0,
+          missedPlayoffsCount: 0,
+          ownerDefianceCount: 0,
+          majorScandals: 0,
+          recentPatienceHistory: updatedPatienceMeter.history.slice(-5).map((h) => h.value),
+          ownershipJustChanged: false,
+          seasonExpectation: 'competitive',
+        };
+
+        const firingCheck = shouldFire(updatedPatienceMeter, firingContext, userOwner);
+
+        if (firingCheck.shouldFire) {
+          const tenureStats = gameState.tenureStats || createDefaultTenureStats();
+          const record = createFiringRecord(
+            gameState.userName,
+            gameState.userTeamId,
+            userOwner,
+            calendar.currentYear,
+            calendar.currentWeek,
+            tenureStats,
+            updatedPatienceMeter,
+            firingContext,
+            0,
+            3000000
+          );
+          setFiringRecord(record);
+          navigation.navigate('Fired');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      updatedNewsFeed = advanceNewsFeedWeek(
+        updatedNewsFeed,
+        calendar.currentYear,
+        calendar.currentWeek + 1
+      );
+
+      newWeek = calendar.currentWeek + 1;
+
+      // Handle phase transitions
+      if (newPhase === 'regularSeason' && newWeek > 18) {
+        newWeek = 19;
+        newPhase = 'playoffs';
+      } else if (newPhase === 'playoffs' && newWeek > 22) {
+        newWeek = 1;
+        newPhase = 'offseason';
+        offseasonPhase = 1;
+
+        if (!gameState.offseasonState) {
+          const newOffseasonState = createOffSeasonState(newYear);
+          const updatedState: GameState = {
+            ...gameState,
+            offseasonState: newOffseasonState,
+            league: {
+              ...gameState.league,
+              calendar: {
+                ...calendar,
+                currentWeek: newWeek,
+                currentPhase: newPhase,
+                currentYear: newYear,
+                offseasonPhase: 1,
+              },
+            },
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+          Alert.alert(
+            'Season Complete',
+            'The offseason begins. Complete offseason tasks to prepare for next season.'
+          );
+          setIsLoading(false);
+          return;
+        }
+      } else if (newPhase === 'offseason') {
+        if (offseasonPhase && offseasonPhase >= 12) {
+          newPhase = 'preseason';
+          offseasonPhase = null;
+          newYear = calendar.currentYear + 1;
+          newWeek = 1;
+        } else {
+          offseasonPhase = (offseasonPhase || 0) + 1;
+        }
+      } else if (newPhase === 'preseason' && newWeek > 4) {
+        newWeek = 1;
+        newPhase = 'regularSeason';
+      }
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          calendar: {
+            ...calendar,
+            currentWeek: newWeek,
+            currentPhase: newPhase,
+            currentYear: newYear,
+            offseasonPhase,
+          },
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+        players: updatedPlayers,
+        newsFeed: updatedNewsFeed,
+        patienceMeter: updatedPatienceMeter || gameState.patienceMeter,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+
+      const phaseLabel =
+        newPhase === 'offseason' ? `Offseason Phase ${offseasonPhase}` : `Week ${newWeek}`;
+      Alert.alert('Week Advanced', `Now in ${phaseLabel}`);
+    } catch (error) {
+      console.error('Error advancing week:', error);
+      Alert.alert('Error', 'Failed to advance week');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState, setGameState, saveGameState, setIsLoading, setFiringRecord, navigation]);
+
+  const handleAction = useCallback(
+    (action: DashboardAction) => {
+      switch (action) {
+        case 'gamecast':
+          navigation.navigate('Gamecast');
+          break;
+        case 'draft':
+          if (
+            gameState?.league.calendar.currentPhase === 'offseason' &&
+            gameState?.league.calendar.offseasonPhase === 7
+          ) {
+            navigation.navigate('DraftRoom');
+          } else {
+            navigation.navigate('DraftBoard');
+          }
+          break;
+        case 'roster':
+          navigation.navigate('Roster');
+          break;
+        case 'schedule':
+          navigation.navigate('Schedule');
+          break;
+        case 'standings':
+          if (gameState?.league.calendar.currentPhase === 'playoffs') {
+            navigation.navigate('PlayoffBracket');
+          } else {
+            navigation.navigate('Standings');
+          }
+          break;
+        case 'freeAgency':
+          navigation.navigate('FreeAgency');
+          break;
+        case 'staff':
+          navigation.navigate('Staff');
+          break;
+        case 'finances':
+          navigation.navigate('Finances');
+          break;
+        case 'news':
+          navigation.navigate('News');
+          break;
+        case 'offseason':
+          navigation.navigate('Offseason');
+          break;
+        case 'advanceWeek':
+          handleAdvanceWeek();
+          break;
+        case 'saveGame':
+          saveGame();
+          break;
+        case 'settings':
+          navigation.navigate('Settings');
+          break;
+        case 'mainMenu':
+          Alert.alert('Return to Main Menu', 'Any unsaved progress will be lost. Are you sure?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Yes',
+              onPress: () => {
+                setGameState(null);
+                navigation.dispatch(
+                  CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'Start' }],
+                  })
+                );
+              },
+            },
+          ]);
+          break;
+      }
+    },
+    [gameState, navigation, handleAdvanceWeek, saveGame, setGameState]
+  );
+
+  return <GMDashboardScreen gameState={gameState} onAction={handleAction} />;
+}
+
+// ============================================
+// ROSTER SCREEN
+// ============================================
+
+export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading roster..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+  const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2;
+
+  return (
+    <RosterScreen
+      rosterIds={userTeam.rosterPlayerIds}
+      players={gameState.players}
+      capSpace={capSpace}
+      onBack={() => navigation.goBack()}
+      onSelectPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+      onGetCutPreview={(playerId) => {
+        const player = gameState.players[playerId];
+        if (!player) return null;
+        const estimatedSalary = 2000000 + Math.random() * 10000000;
+        return {
+          playerId,
+          playerName: `${player.firstName} ${player.lastName}`,
+          capSavings: estimatedSalary * 0.7,
+          deadMoney: estimatedSalary * 0.3,
+          recommendation:
+            player.age >= 30 ? 'Consider releasing - aging player' : 'Still productive',
+        };
+      }}
+      onCutPlayer={async (playerId) => {
+        const player = gameState.players[playerId];
+        if (!player) return false;
+
+        const updatedRoster = userTeam.rosterPlayerIds.filter((id) => id !== playerId);
+        const updatedTeam = {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+        };
+        const updatedState: GameState = {
+          ...gameState,
+          teams: {
+            ...gameState.teams,
+            [userTeam.id]: updatedTeam,
+          },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+        return true;
+      }}
+      isExtensionEligible={(playerId) => {
+        const player = gameState.players[playerId];
+        return player ? player.experience >= 2 : false;
+      }}
+      onExtendPlayer={async (_playerId, offer) => {
+        const aav = offer.totalValue / offer.years;
+        if (aav >= 5000000 && offer.guaranteed >= offer.totalValue * 0.3) {
+          return 'accepted';
+        } else if (aav >= 3000000) {
+          return 'counter';
+        }
+        return 'rejected';
+      }}
+      onTrade={() => navigation.navigate('Trade')}
+    />
+  );
+}
+
+// ============================================
+// STAFF SCREEN
+// ============================================
+
+export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading staff..." />;
+  }
+
+  const teamCoaches = Object.values(gameState.coaches).filter(
+    (coach) => coach.teamId === gameState.userTeamId
+  );
+
+  const teamScouts = Object.values(gameState.scouts).filter(
+    (scout) => scout.teamId === gameState.userTeamId
+  );
+
+  return (
+    <StaffScreen
+      coaches={teamCoaches}
+      scouts={teamScouts}
+      onBack={() => navigation.goBack()}
+      onSelectStaff={(staffId, type) => {
+        if (type === 'coach') {
+          // For now, show alert. CoachProfile screen will be added in Tier 1.1
+          const coach = gameState.coaches[staffId];
+          if (coach) {
+            Alert.alert(
+              `${coach.firstName} ${coach.lastName}`,
+              `Role: ${coach.role}\nReputation: ${coach.attributes.reputation}`
+            );
+          }
+        }
+      }}
+    />
+  );
+}
+
+// ============================================
+// FINANCES SCREEN
+// ============================================
+
+export function FinancesScreenWrapper({ navigation }: ScreenProps<'Finances'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading finances..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const salaryCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+
+  return (
+    <FinancesScreen
+      team={userTeam}
+      players={gameState.players}
+      salaryCap={salaryCap}
+      onBack={() => navigation.goBack()}
+      onSelectPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// SCHEDULE SCREEN
+// ============================================
+
+export function ScheduleScreenWrapper({ navigation }: ScreenProps<'Schedule'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading schedule..." />;
+  }
+
+  const schedule = gameState.league.schedule;
+  const scheduleGames = schedule ? schedule.regularSeason : [];
+
+  return (
+    <ScheduleScreen
+      userTeamId={gameState.userTeamId}
+      teams={gameState.teams}
+      schedule={scheduleGames}
+      currentWeek={gameState.league.calendar.currentWeek}
+      onBack={() => navigation.goBack()}
+      onSelectGame={(game) => {
+        if (game.week === gameState.league.calendar.currentWeek) {
+          navigation.navigate('Gamecast');
+        }
+      }}
+    />
+  );
+}
+
+// ============================================
+// STANDINGS SCREEN
+// ============================================
+
+export function StandingsScreenWrapper({
+  navigation,
+}: ScreenProps<'Standings'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading standings..." />;
+  }
+
+  return (
+    <StandingsScreen
+      teams={gameState.teams}
+      userTeamId={gameState.userTeamId}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// NEWS SCREEN
+// ============================================
+
+export function NewsScreenWrapper({ navigation }: ScreenProps<'News'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading news..." />;
+  }
+
+  const currentWeek = gameState.league.calendar.currentWeek;
+  const currentYear = gameState.league.calendar.currentYear;
+  const readStatus = gameState.newsReadStatus || {};
+
+  const mapCategory = (
+    category: string
+  ): 'trade' | 'injury' | 'team' | 'league' | 'yourTeam' | 'draft' | 'freeAgency' => {
+    const mapping: Record<
+      string,
+      'trade' | 'injury' | 'team' | 'league' | 'yourTeam' | 'draft' | 'freeAgency'
+    > = {
+      trade: 'trade',
+      injury: 'injury',
+      team: 'team',
+      league: 'league',
+      draft: 'draft',
+      signing: 'freeAgency',
+      performance: 'team',
+      milestone: 'team',
+      coaching: 'team',
+    };
+    return mapping[category] || 'league';
+  };
+
+  let newsItems;
+  if (gameState.newsFeed && gameState.newsFeed.newsItems.length > 0) {
+    newsItems = getAllNews(gameState.newsFeed).map((item) => ({
+      id: item.id,
+      headline: item.headline,
+      summary: item.body,
+      date:
+        typeof item.timestamp === 'number'
+          ? new Date(item.timestamp).toISOString()
+          : item.timestamp,
+      category: mapCategory(item.category),
+      week: item.week,
+      year: item.season,
+      relatedTeamIds: item.teamId ? [item.teamId] : [],
+      isRead: item.isRead || readStatus[item.id] || false,
+      priority: item.priority as 'breaking' | 'normal' | 'minor',
+    }));
+  } else {
+    newsItems = [
+      {
+        id: '1',
+        headline: 'Season Underway',
+        summary: `Week ${currentWeek} of the ${currentYear} season is here.`,
+        date: new Date().toISOString(),
+        category: 'league' as const,
+        week: currentWeek,
+        year: currentYear,
+        relatedTeamIds: [],
+        isRead: readStatus['1'] || false,
+        priority: 'normal' as const,
+      },
+      {
+        id: '2',
+        headline: 'Draft Class Revealed',
+        summary: `${Object.keys(gameState.prospects).length} prospects available for the upcoming draft.`,
+        date: new Date().toISOString(),
+        category: 'draft' as const,
+        week: currentWeek,
+        year: currentYear,
+        relatedTeamIds: [],
+        isRead: readStatus['2'] || false,
+        priority: 'normal' as const,
+      },
+    ];
+  }
+
+  return (
+    <NewsScreen
+      news={newsItems}
+      currentWeek={currentWeek}
+      currentYear={currentYear}
+      onBack={() => navigation.goBack()}
+      onMarkRead={async (newsId) => {
+        const updatedState: GameState = {
+          ...gameState,
+          newsReadStatus: {
+            ...readStatus,
+            [newsId]: true,
+          },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+      }}
+    />
+  );
+}
+
+// ============================================
+// GAMECAST SCREEN
+// ============================================
+
+export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading gamecast..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const opponentTeamIds = Object.keys(gameState.teams).filter((id) => id !== gameState.userTeamId);
+  const opponentId =
+    opponentTeamIds[gameState.league.calendar.currentWeek % opponentTeamIds.length];
+
+  const gameConfig: GameConfig = {
+    homeTeamId: gameState.userTeamId,
+    awayTeamId: opponentId,
+    week: gameState.league.calendar.currentWeek,
+    isPlayoff: gameState.league.calendar.currentPhase === 'playoffs',
+  };
+
+  const teamsMap = new Map(Object.entries(gameState.teams));
+  const playersMap = new Map(Object.entries(gameState.players));
+  const coachesMap = new Map(Object.entries(gameState.coaches));
+
+  let realGameSetup;
+  try {
+    realGameSetup = setupGame(gameConfig, teamsMap, playersMap, coachesMap);
+  } catch (error) {
+    console.error('Error setting up game:', error);
+    Alert.alert('Error', 'Failed to set up game. Please try again.');
+    navigation.goBack();
+    return <LoadingFallback message="Error setting up game..." />;
+  }
+
+  return (
+    <GamecastScreen
+      gameSetup={realGameSetup}
+      gameInfo={{
+        week: gameState.league.calendar.currentWeek,
+        date: new Date().toISOString().split('T')[0],
+      }}
+      onBack={() => navigation.goBack()}
+      onGameEnd={async (result) => {
+        const won = result.homeScore > result.awayScore;
+        const lost = result.homeScore < result.awayScore;
+        const currentStreak = userTeam.currentRecord.streak;
+        const newStreak = won
+          ? currentStreak > 0
+            ? currentStreak + 1
+            : 1
+          : lost
+            ? currentStreak < 0
+              ? currentStreak - 1
+              : -1
+            : 0;
+
+        const updatedTeam = {
+          ...userTeam,
+          currentRecord: {
+            ...userTeam.currentRecord,
+            wins: userTeam.currentRecord.wins + (won ? 1 : 0),
+            losses: userTeam.currentRecord.losses + (lost ? 1 : 0),
+            ties: userTeam.currentRecord.ties + (!won && !lost ? 1 : 0),
+            pointsFor: userTeam.currentRecord.pointsFor + result.homeScore,
+            pointsAgainst: userTeam.currentRecord.pointsAgainst + result.awayScore,
+            streak: newStreak,
+          },
+        };
+
+        const updatedState: GameState = {
+          ...gameState,
+          teams: {
+            ...gameState.teams,
+            [userTeam.id]: updatedTeam,
+          },
+        };
+
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+        navigation.goBack();
+      }}
+    />
+  );
+}
+
+// ============================================
+// PLAYOFF BRACKET SCREEN
+// ============================================
+
+export function PlayoffBracketScreenWrapper({
+  navigation,
+}: ScreenProps<'PlayoffBracket'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading playoffs..." />;
+  }
+
+  const generateSeeds = (conference: 'AFC' | 'NFC'): PlayoffSeed[] => {
+    const confTeams = Object.values(gameState.teams)
+      .filter((t) => t.conference === conference)
+      .sort((a, b) => {
+        if (b.currentRecord.wins !== a.currentRecord.wins) {
+          return b.currentRecord.wins - a.currentRecord.wins;
+        }
+        return b.currentRecord.losses - a.currentRecord.losses;
+      })
+      .slice(0, 7);
+
+    return confTeams.map((team, index) => ({
+      seed: index + 1,
+      teamId: team.id,
+      record: team.currentRecord,
+      conference,
+    }));
+  };
+
+  const afcSeeds = generateSeeds('AFC');
+  const nfcSeeds = generateSeeds('NFC');
+
+  const generateMatchups = (): PlayoffMatchup[] => {
+    const matchups: PlayoffMatchup[] = [];
+    const week = gameState.league.calendar.currentWeek;
+
+    for (const conf of ['AFC', 'NFC'] as const) {
+      const seeds = conf === 'AFC' ? afcSeeds : nfcSeeds;
+
+      matchups.push({
+        gameId: `wc-${conf}-1`,
+        round: 'wildCard',
+        conference: conf,
+        homeSeed: 2,
+        awaySeed: 7,
+        homeTeamId: seeds[1]?.teamId || null,
+        awayTeamId: seeds[6]?.teamId || null,
+        homeScore: week > 19 ? 28 + Math.floor(Math.random() * 7) : null,
+        awayScore: week > 19 ? 21 + Math.floor(Math.random() * 7) : null,
+        winnerId: week > 19 ? seeds[1]?.teamId || null : null,
+        isComplete: week > 19,
+      });
+
+      matchups.push({
+        gameId: `wc-${conf}-2`,
+        round: 'wildCard',
+        conference: conf,
+        homeSeed: 3,
+        awaySeed: 6,
+        homeTeamId: seeds[2]?.teamId || null,
+        awayTeamId: seeds[5]?.teamId || null,
+        homeScore: week > 19 ? 24 + Math.floor(Math.random() * 10) : null,
+        awayScore: week > 19 ? 17 + Math.floor(Math.random() * 7) : null,
+        winnerId: week > 19 ? seeds[2]?.teamId || null : null,
+        isComplete: week > 19,
+      });
+
+      matchups.push({
+        gameId: `wc-${conf}-3`,
+        round: 'wildCard',
+        conference: conf,
+        homeSeed: 4,
+        awaySeed: 5,
+        homeTeamId: seeds[3]?.teamId || null,
+        awayTeamId: seeds[4]?.teamId || null,
+        homeScore: week > 19 ? 21 + Math.floor(Math.random() * 10) : null,
+        awayScore: week > 19 ? 14 + Math.floor(Math.random() * 14) : null,
+        winnerId: week > 19 ? seeds[3]?.teamId || null : null,
+        isComplete: week > 19,
+      });
+    }
+
+    return matchups;
+  };
+
+  const matchups = generateMatchups();
+  const currentRound =
+    gameState.league.calendar.currentWeek <= 18
+      ? 'wildCard'
+      : gameState.league.calendar.currentWeek <= 20
+        ? 'divisional'
+        : gameState.league.calendar.currentWeek <= 21
+          ? 'conference'
+          : gameState.league.calendar.currentWeek <= 22
+            ? 'superBowl'
+            : 'complete';
+
+  return (
+    <PlayoffBracketScreen
+      teams={gameState.teams}
+      afcSeeds={afcSeeds}
+      nfcSeeds={nfcSeeds}
+      matchups={matchups}
+      userTeamId={gameState.userTeamId}
+      currentRound={currentRound}
+      championId={null}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// TRADE SCREEN
+// ============================================
+
+export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading trade..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  return (
+    <TradeScreen
+      userTeam={userTeam}
+      teams={gameState.teams}
+      players={gameState.players}
+      draftPicks={gameState.draftPicks}
+      onBack={() => navigation.goBack()}
+      onSubmitTrade={async (proposal) => {
+        const offeredValue = proposal.assetsOffered.reduce((sum, a) => sum + a.value, 0);
+        const requestedValue = proposal.assetsRequested.reduce((sum, a) => sum + a.value, 0);
+
+        if (offeredValue >= requestedValue * 0.85) {
+          const updatedTeams = { ...gameState.teams };
+          const userTeamCopy = { ...updatedTeams[proposal.offeringTeamId] };
+          const partnerTeamCopy = { ...updatedTeams[proposal.receivingTeamId] };
+
+          for (const asset of proposal.assetsOffered) {
+            if (asset.type === 'player') {
+              userTeamCopy.rosterPlayerIds = userTeamCopy.rosterPlayerIds.filter(
+                (id) => id !== asset.playerId
+              );
+              partnerTeamCopy.rosterPlayerIds = [
+                ...partnerTeamCopy.rosterPlayerIds,
+                asset.playerId,
+              ];
+            }
+          }
+          for (const asset of proposal.assetsRequested) {
+            if (asset.type === 'player') {
+              partnerTeamCopy.rosterPlayerIds = partnerTeamCopy.rosterPlayerIds.filter(
+                (id) => id !== asset.playerId
+              );
+              userTeamCopy.rosterPlayerIds = [...userTeamCopy.rosterPlayerIds, asset.playerId];
+            }
+          }
+
+          const updatedPicks = { ...gameState.draftPicks };
+          for (const asset of proposal.assetsOffered) {
+            if (asset.type === 'pick' && updatedPicks[asset.pickId]) {
+              updatedPicks[asset.pickId] = {
+                ...updatedPicks[asset.pickId],
+                currentTeamId: proposal.receivingTeamId,
+              };
+            }
+          }
+          for (const asset of proposal.assetsRequested) {
+            if (asset.type === 'pick' && updatedPicks[asset.pickId]) {
+              updatedPicks[asset.pickId] = {
+                ...updatedPicks[asset.pickId],
+                currentTeamId: proposal.offeringTeamId,
+              };
+            }
+          }
+
+          updatedTeams[proposal.offeringTeamId] = userTeamCopy;
+          updatedTeams[proposal.receivingTeamId] = partnerTeamCopy;
+
+          const updatedState: GameState = {
+            ...gameState,
+            teams: updatedTeams,
+            draftPicks: updatedPicks,
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+          return 'accepted';
+        } else if (offeredValue >= requestedValue * 0.7) {
+          return 'counter';
+        }
+        return 'rejected';
+      }}
+    />
+  );
+}
+
+// ============================================
+// DRAFT BOARD SCREEN
+// ============================================
+
+export function DraftBoardScreenWrapper({
+  navigation,
+}: ScreenProps<'DraftBoard'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading draft board..." />;
+  }
+
+  const draftBoardProspects = sortProspectsByRank(
+    convertProspectsToDraftBoard(gameState.prospects)
+  );
+
+  return (
+    <DraftBoardScreen
+      prospects={draftBoardProspects}
+      draftYear={gameState.league.calendar.currentYear}
+      onSelectProspect={(id) => navigation.navigate('PlayerProfile', { prospectId: id })}
+      onToggleFlag={async (id) => {
+        const prospect = gameState.prospects[id];
+        if (prospect) {
+          const updatedState: GameState = {
+            ...gameState,
+            prospects: {
+              ...gameState.prospects,
+              [id]: {
+                ...prospect,
+                flagged: !prospect.flagged,
+              },
+            },
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+        }
+      }}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// DRAFT ROOM SCREEN
+// ============================================
+
+export function DraftRoomScreenWrapper({
+  navigation,
+}: ScreenProps<'DraftRoom'>): React.JSX.Element {
+  const {
+    gameState,
+    draftCurrentPick,
+    draftedProspects,
+    autoPickEnabled,
+    draftPaused,
+    setDraftCurrentPick,
+    setDraftedProspects,
+    setAutoPickEnabled,
+    setDraftPaused,
+  } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading draft room..." />;
+  }
+
+  const teamIds = Object.keys(gameState.teams);
+  const totalPicks = teamIds.length * 7;
+
+  const draftOrder = Array.from({ length: totalPicks }, (_, i) => {
+    const round = Math.floor(i / teamIds.length) + 1;
+    const pickInRound = i % teamIds.length;
+    const teamIndex = round % 2 === 1 ? pickInRound : teamIds.length - 1 - pickInRound;
+    return {
+      round,
+      pickNumber: i + 1,
+      teamId: teamIds[teamIndex],
+      teamName: `${gameState.teams[teamIds[teamIndex]].city} ${gameState.teams[teamIds[teamIndex]].nickname}`,
+      teamAbbr: gameState.teams[teamIds[teamIndex]].abbreviation,
+    };
+  });
+
+  const currentPickInfo = draftOrder[draftCurrentPick - 1] || draftOrder[0];
+  const recentPicks = draftOrder
+    .slice(Math.max(0, draftCurrentPick - 6), draftCurrentPick - 1)
+    .map((pick) => ({
+      ...pick,
+      selectedProspectId: Object.entries(draftedProspects).find(([_, teamId]) =>
+        draftOrder.find((p) => p.pickNumber === pick.pickNumber && p.teamId === teamId)
+      )?.[0],
+    }));
+  const upcomingPicks = draftOrder.slice(draftCurrentPick, draftCurrentPick + 5);
+
+  const availableProspects: DraftRoomProspect[] = Object.values(gameState.prospects)
+    .filter((p) => !draftedProspects[p.id])
+    .map((p, index) => ({
+      id: p.id,
+      name: `${p.player.firstName} ${p.player.lastName}`,
+      position: p.player.position,
+      collegeName: p.collegeName,
+      projectedRound: p.consensusProjection?.projectedRound ?? null,
+      projectedPickRange: p.consensusProjection?.projectedPickRange ?? null,
+      userTier: p.userTier,
+      flagged: p.flagged,
+      positionRank: index + 1,
+      overallRank: index + 1,
+      isDrafted: false,
+    }));
+
+  return (
+    <DraftRoomScreen
+      currentPick={currentPickInfo}
+      userTeamId={gameState.userTeamId}
+      recentPicks={recentPicks}
+      upcomingPicks={upcomingPicks}
+      availableProspects={availableProspects}
+      tradeOffers={[]}
+      autoPickEnabled={autoPickEnabled}
+      isPaused={draftPaused}
+      onSelectProspect={async (prospectId) => {
+        const newDraftedProspects = {
+          ...draftedProspects,
+          [prospectId]: currentPickInfo.teamId,
+        };
+        setDraftedProspects(newDraftedProspects);
+
+        if (draftCurrentPick < totalPicks) {
+          setDraftCurrentPick(draftCurrentPick + 1);
+        } else {
+          Alert.alert('Draft Complete', 'The draft has concluded!');
+          navigation.goBack();
+        }
+      }}
+      onViewProspect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+      onAcceptTrade={(tradeId) => Alert.alert('Trade Accepted', `Trade ${tradeId} accepted`)}
+      onRejectTrade={(tradeId) => Alert.alert('Trade Rejected', `Trade ${tradeId} rejected`)}
+      onCounterTrade={(tradeId) =>
+        Alert.alert('Counter Trade', `Counter offer for trade ${tradeId}`)
+      }
+      onProposeTrade={() => Alert.alert('Propose Trade', 'Trade proposal feature coming soon')}
+      onToggleAutoPick={() => setAutoPickEnabled(!autoPickEnabled)}
+      onTogglePause={() => setDraftPaused(!draftPaused)}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// FREE AGENCY SCREEN
+// ============================================
+
+export function FreeAgencyScreenWrapper({
+  navigation,
+}: ScreenProps<'FreeAgency'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading free agency..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+  const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2;
+
+  const freeAgents: FreeAgent[] = Object.values(gameState.players)
+    .filter((p) => {
+      const isOnRoster = Object.values(gameState.teams).some(
+        (t) =>
+          t.rosterPlayerIds.includes(p.id) ||
+          t.practiceSquadIds.includes(p.id) ||
+          t.injuredReserveIds.includes(p.id)
+      );
+      return !isOnRoster;
+    })
+    .slice(0, 50)
+    .map((p) => ({
+      id: p.id,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      position: p.position,
+      age: p.age,
+      experience: p.experience || 0,
+      estimatedValue: 2000000 + Math.random() * 15000000,
+      skills: Object.fromEntries(
+        Object.entries(p.skills).map(([key, skill]) => [
+          key,
+          { perceivedMin: skill.perceivedMin, perceivedMax: skill.perceivedMax },
+        ])
+      ),
+    }));
+
+  return (
+    <FreeAgencyScreen
+      freeAgents={freeAgents}
+      capSpace={capSpace}
+      teamName={`${userTeam.city} ${userTeam.nickname}`}
+      onMakeOffer={async (playerId, offer) => {
+        const agent = freeAgents.find((a) => a.id === playerId);
+        if (!agent) return 'rejected';
+
+        const offerRatio = offer.annualSalary / agent.estimatedValue;
+        if (offerRatio >= 0.9) {
+          const player = gameState.players[playerId];
+          if (player) {
+            const updatedTeam = {
+              ...userTeam,
+              rosterPlayerIds: [...userTeam.rosterPlayerIds, playerId],
+              finances: userTeam.finances
+                ? {
+                    ...userTeam.finances,
+                    capSpace: userTeam.finances.capSpace - offer.annualSalary,
+                    currentCapUsage: userTeam.finances.currentCapUsage + offer.annualSalary,
+                  }
+                : userTeam.finances,
+            };
+            const updatedState: GameState = {
+              ...gameState,
+              teams: {
+                ...gameState.teams,
+                [userTeam.id]: updatedTeam,
+              },
+            };
+            setGameState(updatedState);
+            await saveGameState(updatedState);
+          }
+          return 'accepted';
+        } else if (offerRatio >= 0.7) {
+          return 'counter';
+        }
+        return 'rejected';
+      }}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// PLAYER PROFILE SCREEN
+// ============================================
+
+export function PlayerProfileScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'PlayerProfile'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+  const { playerId, prospectId } = route.params;
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading player..." />;
+  }
+
+  const realProspect = prospectId ? gameState.prospects[prospectId] : null;
+  const realPlayer = playerId ? gameState.players[playerId] : null;
+
+  let profileData = null;
+
+  if (realProspect) {
+    profileData = {
+      playerId: realProspect.id,
+      firstName: realProspect.player.firstName,
+      lastName: realProspect.player.lastName,
+      position: realProspect.player.position,
+      age: realProspect.player.age,
+      experience: 0,
+      skills: realProspect.player.skills as Record<
+        string,
+        { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }
+      >,
+      physical: realProspect.player.physical,
+      physicalsRevealed: realProspect.physicalsRevealed,
+      hiddenTraits: realProspect.player.hiddenTraits,
+      collegeName: realProspect.collegeName,
+      draftYear: realProspect.draftYear,
+      projectedRound: realProspect.consensusProjection?.projectedRound ?? null,
+      projectedPickRange: realProspect.consensusProjection?.projectedPickRange ?? null,
+      userTier: realProspect.userTier,
+      flagged: realProspect.flagged,
+    };
+  } else if (realPlayer) {
+    profileData = {
+      playerId: realPlayer.id,
+      firstName: realPlayer.firstName,
+      lastName: realPlayer.lastName,
+      position: realPlayer.position,
+      age: realPlayer.age,
+      experience: realPlayer.experience || 0,
+      skills: realPlayer.skills as Record<
+        string,
+        { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }
+      >,
+      physical: realPlayer.physical,
+      physicalsRevealed: true,
+      hiddenTraits: realPlayer.hiddenTraits,
+      collegeName: undefined,
+      draftYear: undefined,
+      projectedRound: null,
+      projectedPickRange: null,
+      userTier: null,
+      flagged: false,
+    };
+  }
+
+  if (!profileData) {
+    navigation.goBack();
+    return <LoadingFallback message="Player not found..." />;
+  }
+
+  return (
+    <PlayerProfileScreen
+      {...profileData}
+      onBack={() => navigation.goBack()}
+      onToggleFlag={async () => {
+        if (realProspect) {
+          const updatedState: GameState = {
+            ...gameState,
+            prospects: {
+              ...gameState.prospects,
+              [realProspect.id]: {
+                ...realProspect,
+                flagged: !realProspect.flagged,
+              },
+            },
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+        }
+      }}
+    />
+  );
+}
+
+// ============================================
+// OFFSEASON SCREEN
+// ============================================
+
+export function OffseasonScreenWrapper({
+  navigation,
+}: ScreenProps<'Offseason'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading offseason..." />;
+  }
+
+  let offseasonState = gameState.offseasonState;
+  if (!offseasonState) {
+    offseasonState = createOffSeasonState(gameState.league.calendar.currentYear);
+  }
+
+  const handleCompleteTask = async (taskId: string) => {
+    const newOffseasonState = completeOffseasonTask(offseasonState!, taskId);
+    const updatedState: GameState = {
+      ...gameState,
+      offseasonState: newOffseasonState,
+    };
+    setGameState(updatedState);
+    await saveGameState(updatedState);
+  };
+
+  const handleAdvanceOffseasonPhase = async () => {
+    if (!canAdvancePhase(offseasonState!)) return;
+
+    const newOffseasonState = advanceOffseasonPhase(offseasonState!);
+
+    if (newOffseasonState.isComplete) {
+      const updatedState: GameState = {
+        ...gameState,
+        offseasonState: undefined,
+        league: {
+          ...gameState.league,
+          calendar: {
+            ...gameState.league.calendar,
+            currentPhase: 'preseason',
+            currentWeek: 1,
+            offseasonPhase: null,
+            currentYear: gameState.league.calendar.currentYear + 1,
+          },
+        },
+      };
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+      Alert.alert('Offseason Complete', 'Preseason begins!');
+      navigation.goBack();
+    } else {
+      const phaseIndex = PHASE_ORDER.indexOf(newOffseasonState.currentPhase);
+      const updatedState: GameState = {
+        ...gameState,
+        offseasonState: newOffseasonState,
+        league: {
+          ...gameState.league,
+          calendar: {
+            ...gameState.league.calendar,
+            offseasonPhase: phaseIndex + 1,
+          },
+        },
+      };
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+    }
+  };
+
+  return (
+    <OffseasonScreen
+      offseasonState={offseasonState}
+      year={gameState.league.calendar.currentYear}
+      onCompleteTask={handleCompleteTask}
+      onAdvancePhase={handleAdvanceOffseasonPhase}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// CAREER SUMMARY SCREEN
+// ============================================
+
+export function CareerSummaryScreenWrapper({
+  navigation: _navigation,
+}: ScreenProps<'CareerSummary'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading career summary..." />;
+  }
+
+  // This screen is typically shown after firing, so we may not have firingRecord here
+  // For general career viewing, we'd need different data
+  return (
+    <View style={styles.fallbackContainer}>
+      <Text style={styles.fallbackText}>Career Summary</Text>
+      <Text style={styles.fallbackSubtext}>Coming soon...</Text>
+    </View>
+  );
+}
+
+// ============================================
+// FIRED SCREEN
+// ============================================
+
+export function FiredScreenWrapper({ navigation }: ScreenProps<'Fired'>): React.JSX.Element {
+  const { gameState, firingRecord, setGameState, setFiringRecord } = useGame();
+
+  if (!firingRecord || !gameState) {
+    navigation.goBack();
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  const teamName = `${gameState.teams[gameState.userTeamId].city} ${gameState.teams[gameState.userTeamId].nickname}`;
+
+  return (
+    <CareerSummaryScreen
+      firingRecord={firingRecord}
+      teamName={teamName}
+      onContinue={() => {
+        Alert.alert(
+          'Looking for New Job',
+          'Job market feature coming soon. For now, you can start a new career.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setGameState(null);
+                setFiringRecord(null);
+                navigation.dispatch(
+                  CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'Start' }],
+                  })
+                );
+              },
+            },
+          ]
+        );
+      }}
+      onMainMenu={() => {
+        setGameState(null);
+        setFiringRecord(null);
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Start' }],
+          })
+        );
+      }}
+    />
+  );
+}
+
+// ============================================
+// LOADING FALLBACK
+// ============================================
+
+function LoadingFallback({ message }: { message: string }): React.JSX.Element {
+  return (
+    <View style={styles.fallbackContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={styles.fallbackText}>{message}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fallbackContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    padding: spacing.xl,
+  },
+  fallbackText: {
+    marginTop: spacing.md,
+    fontSize: fontSize.lg,
+    color: colors.text,
+  },
+  fallbackSubtext: {
+    marginTop: spacing.sm,
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+});
