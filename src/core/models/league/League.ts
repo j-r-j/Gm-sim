@@ -3,6 +3,8 @@
  * Defines league calendar, settings, standings, and events
  */
 
+import { SeasonSchedule } from '../../season/ScheduleGenerator';
+
 /**
  * Season phases
  */
@@ -177,6 +179,9 @@ export interface League {
   // Settings
   settings: LeagueSettings;
 
+  // Schedule
+  schedule: SeasonSchedule | null;
+
   // Current season state
   standings: DivisionStandings;
   playoffBracket: PlayoffBracket | null;
@@ -337,6 +342,9 @@ export function validateLeague(league: League): boolean {
     }
   }
 
+  // Schedule (optional, null or object)
+  if (league.schedule !== null && typeof league.schedule !== 'object') return false;
+
   // Events
   if (!Array.isArray(league.upcomingEvents)) return false;
   for (const event of league.upcomingEvents) {
@@ -359,6 +367,7 @@ export function createDefaultLeague(id: string, teamIds: string[], year: number)
     teamIds,
     calendar: createDefaultCalendar(year),
     settings: { ...DEFAULT_LEAGUE_SETTINGS },
+    schedule: null,
     standings: createEmptyStandings(),
     playoffBracket: null,
     seasonHistory: [],
