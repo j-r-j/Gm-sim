@@ -37,6 +37,7 @@ import { FreeAgencyScreen, FreeAgent } from '../screens/FreeAgencyScreen';
 import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
 import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
+import { CoachProfileScreen } from '../screens/CoachProfileScreen';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -713,12 +714,14 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
       onBack={() => navigation.goBack()}
       onSelectStaff={(staffId, type) => {
         if (type === 'coach') {
-          // For now, show alert. CoachProfile screen will be added in Tier 1.1
-          const coach = gameState.coaches[staffId];
-          if (coach) {
+          navigation.navigate('CoachProfile', { coachId: staffId });
+        } else {
+          // Scout profile - to be implemented
+          const scout = gameState.scouts[staffId];
+          if (scout) {
             Alert.alert(
-              `${coach.firstName} ${coach.lastName}`,
-              `Role: ${coach.role}\nReputation: ${coach.attributes.reputation}`
+              `${scout.firstName} ${scout.lastName}`,
+              `Region: ${scout.attributes.regionKnowledge || 'General'}\nExperience: ${scout.attributes.experience}`
             );
           }
         }
@@ -1604,6 +1607,80 @@ export function OffseasonScreenWrapper({
       onCompleteTask={handleCompleteTask}
       onAdvancePhase={handleAdvanceOffseasonPhase}
       onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// COACH PROFILE SCREEN
+// ============================================
+
+export function CoachProfileScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'CoachProfile'>): React.JSX.Element {
+  const { gameState } = useGame();
+  const { coachId } = route.params;
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading coach profile..." />;
+  }
+
+  const coach = gameState.coaches[coachId];
+
+  if (!coach) {
+    navigation.goBack();
+    return <LoadingFallback message="Coach not found..." />;
+  }
+
+  const isOwnTeam = coach.teamId === gameState.userTeamId;
+  const team = coach.teamId ? gameState.teams[coach.teamId] : null;
+  const teamName = team ? `${team.city} ${team.nickname}` : undefined;
+
+  const handleManageCoach = (action: 'extend' | 'fire' | 'promote') => {
+    // Coach management actions - will be fully implemented in Tier 1.2
+    switch (action) {
+      case 'extend':
+        Alert.alert(
+          'Extend Contract',
+          `Contract extension for ${coach.firstName} ${coach.lastName} will be available in a future update.`
+        );
+        break;
+      case 'fire':
+        Alert.alert(
+          'Release Coach',
+          `Are you sure you want to release ${coach.firstName} ${coach.lastName}?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Release',
+              style: 'destructive',
+              onPress: () => {
+                Alert.alert(
+                  'Coming Soon',
+                  'Coach release functionality will be available in a future update.'
+                );
+              },
+            },
+          ]
+        );
+        break;
+      case 'promote':
+        Alert.alert(
+          'Promote to Head Coach',
+          `Promoting ${coach.firstName} ${coach.lastName} to Head Coach will be available in a future update.`
+        );
+        break;
+    }
+  };
+
+  return (
+    <CoachProfileScreen
+      coach={coach}
+      isOwnTeam={isOwnTeam}
+      teamName={teamName}
+      onBack={() => navigation.goBack()}
+      onManageCoach={isOwnTeam ? handleManageCoach : undefined}
     />
   );
 }
