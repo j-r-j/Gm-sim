@@ -46,6 +46,7 @@ import { TrainingCampScreen } from '../screens/TrainingCampScreen';
 import { PreseasonScreen } from '../screens/PreseasonScreen';
 import { FinalCutsScreen } from '../screens/FinalCutsScreen';
 import { ScoutingReportsScreen } from '../screens/ScoutingReportsScreen';
+import { BigBoardScreen } from '../screens/BigBoardScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -76,6 +77,12 @@ import {
   isPracticeSquadEligible,
 } from '../core/offseason/phases/FinalCutsPhase';
 import { ScoutReport, formatReportForDisplay } from '../core/scouting/ScoutReportGenerator';
+import {
+  DraftTier,
+  DraftBoardViewModel,
+  DraftBoardProspectView,
+} from '../core/scouting/DraftBoardManager';
+import { NeedLevel, ProspectRanking } from '../core/scouting/BigBoardGenerator';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -2704,6 +2711,164 @@ export function ScoutingReportsScreenWrapper({
         Alert.alert(
           'Focus Scouting Requested',
           `A scout will be assigned to do a comprehensive evaluation of ${prospect?.player.firstName} ${prospect?.player.lastName}.`
+        );
+      }}
+    />
+  );
+}
+
+// ============================================
+// BIG BOARD SCREEN
+// ============================================
+
+export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Big Board..." />;
+  }
+
+  // Generate draft board view model from prospects
+  const prospects = Object.values(gameState.prospects || {});
+  const draftYear = gameState.league.calendar.currentYear;
+
+  // Build prospect views from prospects
+  const prospectViews: DraftBoardProspectView[] = prospects.slice(0, 100).map((prospect, index) => {
+    const player = prospect.player;
+    const skillEntries = Object.values(player.skills);
+    const avgSkill =
+      skillEntries.length > 0
+        ? Math.round(
+            skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+              skillEntries.length
+          )
+        : 65;
+
+    // Calculate tier based on projected round
+    const projectedRound =
+      prospect.consensusProjection?.projectedRound ||
+      Math.max(1, Math.min(7, Math.ceil((100 - avgSkill) / 12)));
+
+    const tier: DraftTier =
+      projectedRound === 1 && avgSkill >= 80
+        ? 'elite'
+        : projectedRound === 1
+          ? 'first_round'
+          : projectedRound === 2
+            ? 'second_round'
+            : projectedRound <= 3
+              ? 'day_two'
+              : projectedRound <= 5
+                ? 'day_three'
+                : projectedRound <= 6
+                  ? 'priority_fa'
+                  : 'draftable';
+
+    const rangeWidth = 15;
+    const overallMin = Math.max(0, avgSkill - rangeWidth);
+    const overallMax = Math.min(99, avgSkill + rangeWidth);
+
+    const confidenceScore = prospect.scoutReportIds?.length > 0 ? 70 : 40;
+
+    return {
+      prospectId: prospect.id,
+      prospectName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      userRank: index < 20 ? index + 1 : null,
+      directorRank: index < 50 ? index + 1 : null,
+      consensusRank: index + 1,
+      overallRange: `${overallMin}-${overallMax}`,
+      projectedRound: `${projectedRound}`,
+      tier,
+      confidence: confidenceScore >= 70 ? 'High' : confidenceScore >= 50 ? 'Med' : 'Low',
+      confidenceScore,
+      reportCount: prospect.scoutReportIds?.length || 0,
+      hasFocusReport: (prospect.scoutReportIds?.length || 0) > 1,
+      needsMoreScouting: confidenceScore < 60,
+      isLocked: false,
+      userNotes: prospect.userNotes || '',
+    };
+  });
+
+  // Build view model
+  const viewModel: DraftBoardViewModel = {
+    teamId: gameState.userTeamId,
+    draftYear,
+    totalProspects: prospectViews.length,
+    rankedProspects: prospectViews.filter((p) => p.userRank !== null).length,
+    unrankedProspects: prospectViews.filter((p) => p.userRank === null).length,
+    prospects: prospectViews,
+    tierCounts: {
+      elite: prospectViews.filter((p) => p.tier === 'elite').length,
+      first_round: prospectViews.filter((p) => p.tier === 'first_round').length,
+      second_round: prospectViews.filter((p) => p.tier === 'second_round').length,
+      day_two: prospectViews.filter((p) => p.tier === 'day_two').length,
+      day_three: prospectViews.filter((p) => p.tier === 'day_three').length,
+      priority_fa: prospectViews.filter((p) => p.tier === 'priority_fa').length,
+      draftable: prospectViews.filter((p) => p.tier === 'draftable').length,
+    },
+    positionCounts: prospectViews.reduce(
+      (acc, p) => {
+        acc[p.position] = (acc[p.position] || 0) + 1;
+        return acc;
+      },
+      {} as Partial<Record<Position, number>>
+    ),
+    averageConfidence:
+      prospectViews.length > 0
+        ? Math.round(
+            prospectViews.reduce((acc, p) => acc + p.confidenceScore, 0) / prospectViews.length
+          )
+        : 0,
+    focusedCount: prospectViews.filter((p) => p.hasFocusReport).length,
+    needsScoutingCount: prospectViews.filter((p) => p.needsMoreScouting).length,
+  };
+
+  // Build rankings (simplified)
+  const rankings: ProspectRanking[] = prospectViews.slice(0, 50).map((p, i) => ({
+    prospectId: p.prospectId,
+    prospectName: p.prospectName,
+    position: p.position,
+    rawScore: p.confidenceScore,
+    needAdjustedScore: p.confidenceScore,
+    finalRank: i + 1,
+    skillScore: p.confidenceScore,
+    confidenceScore: p.confidenceScore,
+    needBonus: 0,
+    reliabilityWeight: 1,
+    projectedRound: parseInt(p.projectedRound),
+    tier: p.tier || 'draftable',
+    reportCount: p.reportCount,
+    hasFocusReport: p.hasFocusReport,
+  }));
+
+  // Build positional needs (mock based on roster composition)
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const rosterPositions = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id]?.position)
+    .filter((p) => p !== undefined);
+
+  const positionalNeeds: Partial<Record<Position, NeedLevel>> = {};
+  for (const pos of Object.values(Position)) {
+    const count = rosterPositions.filter((p) => p === pos).length;
+    const need: NeedLevel =
+      count === 0 ? 'critical' : count === 1 ? 'high' : count <= 3 ? 'moderate' : 'low';
+    positionalNeeds[pos] = need;
+  }
+
+  return (
+    <BigBoardScreen
+      gameState={gameState}
+      viewModel={viewModel}
+      rankings={rankings}
+      positionalNeeds={positionalNeeds}
+      onBack={() => navigation.goBack()}
+      onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+      onToggleLock={(prospectId) => {
+        const prospect = gameState.prospects[prospectId];
+        Alert.alert(
+          'Ranking Locked',
+          `${prospect?.player.firstName} ${prospect?.player.lastName}'s ranking has been locked on your board.`
         );
       }}
     />
