@@ -22,6 +22,7 @@ import { FinancesScreen } from './src/screens/FinancesScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { NewsScreen } from './src/screens/NewsScreen';
 import { DraftRoomScreen, DraftPick as DraftRoomPick, DraftRoomProspect, TradeOffer } from './src/screens/DraftRoomScreen';
+import { FreeAgencyScreen, FreeAgent, ContractOffer } from './src/screens/FreeAgencyScreen';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -43,6 +44,7 @@ type Screen =
   | 'gamecast'
   | 'draftBoard'
   | 'draftRoom'
+  | 'freeAgency'
   | 'playerProfile'
   | 'schedule'
   | 'standings'
@@ -230,8 +232,7 @@ export default function App() {
         setCurrentScreen('standings');
         break;
       case 'freeAgency':
-        // Free agency requires additional implementation
-        Alert.alert('Coming Soon', 'Free Agency screen is coming in a future update.');
+        setCurrentScreen('freeAgency');
         break;
       case 'staff':
         setCurrentScreen('staff');
@@ -516,6 +517,89 @@ export default function App() {
               );
             }
           }}
+        />
+      </>
+    );
+  }
+
+  // Free Agency Screen
+  if (currentScreen === 'freeAgency') {
+    const userTeam = gameState.teams[gameState.userTeamId];
+    const capSpace = userTeam.finances?.capSpace || 50000000;
+
+    // Get players without a team (free agents)
+    // In a real implementation, we'd have a separate free agent pool
+    // For now, create some simulated free agents from existing player data
+    const freeAgents: FreeAgent[] = Object.values(gameState.players)
+      .filter(p => {
+        // Find players not on any team's roster
+        const isOnRoster = Object.values(gameState.teams).some(
+          t => t.rosterPlayerIds.includes(p.id) ||
+               t.practiceSquadIds.includes(p.id) ||
+               t.injuredReserveIds.includes(p.id)
+        );
+        return !isOnRoster;
+      })
+      .slice(0, 50) // Limit to 50 for performance
+      .map(p => ({
+        id: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        position: p.position,
+        age: p.age,
+        experience: p.experience || 0,
+        estimatedValue: 2000000 + (Math.random() * 15000000), // $2M - $17M
+        skills: Object.fromEntries(
+          Object.entries(p.skills).map(([key, skill]) => [
+            key,
+            { perceivedMin: skill.perceivedMin, perceivedMax: skill.perceivedMax }
+          ])
+        ),
+      }));
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <FreeAgencyScreen
+          freeAgents={freeAgents}
+          capSpace={capSpace}
+          teamName={`${userTeam.city} ${userTeam.nickname}`}
+          onMakeOffer={async (playerId, offer) => {
+            // Simple offer evaluation: accept if offer >= 90% of estimated value
+            const agent = freeAgents.find(a => a.id === playerId);
+            if (!agent) return 'rejected';
+
+            const offerRatio = offer.annualSalary / agent.estimatedValue;
+            if (offerRatio >= 0.9) {
+              // Accept - add player to roster
+              const player = gameState.players[playerId];
+              if (player) {
+                const updatedTeam = {
+                  ...userTeam,
+                  rosterPlayerIds: [...userTeam.rosterPlayerIds, playerId],
+                  finances: userTeam.finances ? {
+                    ...userTeam.finances,
+                    capSpace: userTeam.finances.capSpace - offer.annualSalary,
+                    currentCapUsage: userTeam.finances.currentCapUsage + offer.annualSalary,
+                  } : userTeam.finances,
+                };
+                const updatedState: GameState = {
+                  ...gameState,
+                  teams: {
+                    ...gameState.teams,
+                    [userTeam.id]: updatedTeam,
+                  },
+                };
+                setGameState(updatedState);
+                await saveGameState(updatedState);
+              }
+              return 'accepted';
+            } else if (offerRatio >= 0.7) {
+              return 'counter';
+            }
+            return 'rejected';
+          }}
+          onBack={goToDashboard}
         />
       </>
     );
