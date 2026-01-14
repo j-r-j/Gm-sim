@@ -53,12 +53,14 @@ import { RumorMillScreen } from '../screens/RumorMillScreen';
 import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
 import { CoachingTreeScreen } from '../screens/CoachingTreeScreen';
 import { JobMarketScreen } from '../screens/JobMarketScreen';
+import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import {
   createJobMarketState,
   calculateAllInterests,
   JobMarketState,
 } from '../core/career/JobMarketManager';
 import { createInterviewState, InterviewState } from '../core/career/InterviewSystem';
+import { createCareerRecord } from '../core/career/CareerRecordTracker';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -3530,6 +3532,87 @@ export function JobMarketScreenWrapper({
       }}
       onDeclineOffer={(_interviewId) => {
         Alert.alert('Offer Declined', 'You have declined the offer.');
+      }}
+    />
+  );
+}
+
+// ============================================
+// CAREER LEGACY SCREEN
+// ============================================
+
+export function CareerLegacyScreenWrapper({
+  navigation,
+}: ScreenProps<'CareerLegacy'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Career Legacy..." />;
+  }
+
+  const currentYear = gameState.league.calendar.currentYear;
+
+  // Create a career record - in a real implementation this would come from gameState
+  // For now, create a sample career based on the current game state
+  const baseRecord = createCareerRecord('gm-player', 'You');
+
+  // Build career record from user team's history
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const enhancedRecord = {
+    ...baseRecord,
+    totalSeasons: Math.max(1, currentYear - 2024),
+    totalWins: userTeam.currentRecord.wins + (currentYear - 2024) * 8,
+    totalLosses: userTeam.currentRecord.losses + (currentYear - 2024) * 9,
+    careerWinPercentage: 0.47 + Math.random() * 0.1,
+    championships: userTeam.championships,
+    conferenceChampionships: 0,
+    divisionTitles: 0,
+    playoffAppearances: userTeam.playoffSeed ? 1 : 0,
+    teamsWorkedFor: [
+      {
+        teamId: userTeam.id,
+        teamName: userTeam.nickname,
+        startYear: 2024,
+        endYear: null,
+        seasons: Math.max(1, currentYear - 2024),
+        totalWins: userTeam.currentRecord.wins + (currentYear - 2024) * 8,
+        totalLosses: userTeam.currentRecord.losses + (currentYear - 2024) * 9,
+        totalTies: 0,
+        winPercentage: 0.47,
+        playoffAppearances: userTeam.playoffSeed ? 1 : 0,
+        divisionTitles: 0,
+        conferenceChampionships: 0,
+        championships: userTeam.championships,
+        wasFired: false,
+        reasonForDeparture: 'current' as const,
+      },
+    ],
+    currentTeamId: userTeam.id,
+    reputationScore: 50 + userTeam.championships * 20 + (userTeam.playoffSeed ? 5 : 0),
+    seasonHistory: [],
+    achievements: [],
+    yearsUnemployed: 0,
+    timesFired: 0,
+    isRetired: false,
+    retirementYear: null,
+  };
+
+  return (
+    <CareerLegacyScreen
+      gameState={gameState}
+      careerRecord={enhancedRecord}
+      onBack={() => navigation.goBack()}
+      onRetire={() => {
+        Alert.alert('Retire?', 'Are you sure you want to retire? This will end your career.', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Retire',
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert('Retirement', 'You have announced your retirement from the league.');
+            },
+          },
+        ]);
       }}
     />
   );
