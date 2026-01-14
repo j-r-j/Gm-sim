@@ -68,6 +68,14 @@ import {
   FiringContext,
 } from '../core/career/FiringMechanics';
 import { convertProspectsToDraftBoard, sortProspectsByRank } from '../utils/prospectUtils';
+import {
+  canFireCoach,
+  canPromoteCoach,
+  canExtendCoach,
+  fireCoachAction,
+  promoteCoachAction,
+  getExtensionRecommendation,
+} from '../core/coaching/CoachManagementActions';
 
 // ============================================
 // START SCREEN
@@ -1619,7 +1627,7 @@ export function CoachProfileScreenWrapper({
   navigation,
   route,
 }: ScreenProps<'CoachProfile'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
   const { coachId } = route.params;
 
   if (!gameState) {
@@ -1638,39 +1646,132 @@ export function CoachProfileScreenWrapper({
   const teamName = team ? `${team.city} ${team.nickname}` : undefined;
 
   const handleManageCoach = (action: 'extend' | 'fire' | 'promote') => {
-    // Coach management actions - will be fully implemented in Tier 1.2
+    const teamId = gameState.userTeamId;
+    const coachName = `${coach.firstName} ${coach.lastName}`;
+
     switch (action) {
-      case 'extend':
+      case 'extend': {
+        // Check if extension is possible
+        const validation = canExtendCoach(gameState, coachId, teamId);
+        if (!validation.canPerform) {
+          Alert.alert('Cannot Extend', validation.reason || 'Extension not available');
+          return;
+        }
+
+        // Get recommended terms
+        const recommendation = getExtensionRecommendation(gameState, coachId);
+        if (!recommendation.eligible) {
+          Alert.alert('Cannot Extend', recommendation.reason || 'Extension not available');
+          return;
+        }
+
+        // Show extension offer dialog
+        const years = recommendation.recommendedYears || 2;
+        const salary = recommendation.recommendedSalary || coach.contract!.salaryPerYear;
+        const guaranteed = recommendation.recommendedGuaranteed || salary * years * 0.4;
+
         Alert.alert(
-          'Extend Contract',
-          `Contract extension for ${coach.firstName} ${coach.lastName} will be available in a future update.`
-        );
-        break;
-      case 'fire':
-        Alert.alert(
-          'Release Coach',
-          `Are you sure you want to release ${coach.firstName} ${coach.lastName}?`,
+          'Contract Extension',
+          `Offer ${coachName} a ${years}-year extension at $${formatCurrencyShort(salary)}/year?\n\nTotal Value: $${formatCurrencyShort(salary * years)}\nGuaranteed: $${formatCurrencyShort(guaranteed)}`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
-              text: 'Release',
-              style: 'destructive',
+              text: 'Offer Extension',
               onPress: () => {
-                Alert.alert(
-                  'Coming Soon',
-                  'Coach release functionality will be available in a future update.'
-                );
+                // For now, auto-accept. Future: negotiation system
+                const { extendCoachAction } = require('../core/coaching/CoachManagementActions');
+                const result = extendCoachAction(gameState, coachId, teamId, {
+                  yearsAdded: years,
+                  newSalaryPerYear: salary,
+                  newGuaranteed: guaranteed,
+                  signingBonus: Math.round(salary * 0.1),
+                });
+
+                if (result.success) {
+                  setGameState(result.gameState);
+                  saveGameState(result.gameState);
+                  Alert.alert('Extension Complete', result.message);
+                } else {
+                  Alert.alert('Extension Failed', result.message);
+                }
               },
             },
           ]
         );
         break;
-      case 'promote':
+      }
+
+      case 'fire': {
+        // Validate firing
+        const validation = canFireCoach(gameState, coachId, teamId);
+        if (!validation.canPerform) {
+          Alert.alert('Cannot Release', validation.reason || 'Cannot release this coach');
+          return;
+        }
+
+        // Build confirmation message
+        const deadMoney = coach.contract?.deadMoneyIfFired || 0;
+        let confirmMessage = `Are you sure you want to release ${coachName}?`;
+        if (deadMoney > 0) {
+          confirmMessage += `\n\nDead Money: $${formatCurrencyShort(deadMoney)}`;
+        }
+        if (validation.warning) {
+          confirmMessage += `\n\nWarning: ${validation.warning}`;
+        }
+
+        Alert.alert('Release Coach', confirmMessage, [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Release',
+            style: 'destructive',
+            onPress: () => {
+              const result = fireCoachAction(gameState, coachId, teamId);
+
+              if (result.success) {
+                setGameState(result.gameState);
+                saveGameState(result.gameState);
+                Alert.alert('Coach Released', result.message);
+                navigation.goBack();
+              } else {
+                Alert.alert('Release Failed', result.message);
+              }
+            },
+          },
+        ]);
+        break;
+      }
+
+      case 'promote': {
+        // Validate promotion
+        const validation = canPromoteCoach(gameState, coachId, teamId);
+        if (!validation.canPerform) {
+          Alert.alert('Cannot Promote', validation.reason || 'Cannot promote this coach');
+          return;
+        }
+
         Alert.alert(
           'Promote to Head Coach',
-          `Promoting ${coach.firstName} ${coach.lastName} to Head Coach will be available in a future update.`
+          `Are you sure you want to promote ${coachName} to Head Coach?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Promote',
+              onPress: () => {
+                const result = promoteCoachAction(gameState, coachId, teamId);
+
+                if (result.success) {
+                  setGameState(result.gameState);
+                  saveGameState(result.gameState);
+                  Alert.alert('Promotion Complete', result.message);
+                } else {
+                  Alert.alert('Promotion Failed', result.message);
+                }
+              },
+            },
+          ]
         );
         break;
+      }
     }
   };
 
@@ -1683,6 +1784,19 @@ export function CoachProfileScreenWrapper({
       onManageCoach={isOwnTeam ? handleManageCoach : undefined}
     />
   );
+}
+
+/**
+ * Format currency for short display (e.g., "2.5M")
+ */
+function formatCurrencyShort(amount: number): string {
+  if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(1)}M`;
+  }
+  if (amount >= 1_000) {
+    return `${(amount / 1_000).toFixed(0)}K`;
+  }
+  return amount.toString();
 }
 
 // ============================================
