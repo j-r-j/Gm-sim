@@ -50,6 +50,7 @@ import { BigBoardScreen } from '../screens/BigBoardScreen';
 import { RFAScreen, RFAPlayerView } from '../screens/RFAScreen';
 import { CompPickTrackerScreen } from '../screens/CompPickTrackerScreen';
 import { RumorMillScreen } from '../screens/RumorMillScreen';
+import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -96,6 +97,9 @@ import {
 } from '../core/freeAgency/CompensatoryPickCalculator';
 import { Position } from '../core/models/player/Position';
 import { Rumor } from '../core/news/RumorMill';
+import { WeeklyDigest } from '../core/news/WeeklyDigest';
+import { NewsItem } from '../core/news/NewsGenerators';
+import { NewsFeedCategory } from '../core/news/StoryTemplates';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -3212,6 +3216,156 @@ export function RumorMillScreenWrapper({
     <RumorMillScreen
       gameState={gameState}
       rumors={mockRumors}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// WEEKLY DIGEST SCREEN
+// ============================================
+
+export function WeeklyDigestScreenWrapper({
+  navigation,
+}: ScreenProps<'WeeklyDigest'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Weekly Digest..." />;
+  }
+
+  const currentYear = gameState.league.calendar.currentYear;
+  const currentWeek = gameState.league.calendar.currentWeek;
+
+  // Generate sample news items
+  const mockNews: NewsItem[] = [
+    {
+      id: 'news-1',
+      category: 'performance' as NewsFeedCategory,
+      headline: 'Star Quarterback Dominates in Week ' + currentWeek,
+      body: 'The franchise quarterback delivered another stellar performance, completing 28 of 35 passes for 320 yards and 3 touchdowns.',
+      priority: 'high',
+      isPositive: true,
+      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      isRead: false,
+      revealsTraitHint: false,
+    },
+    {
+      id: 'news-2',
+      category: 'injury' as NewsFeedCategory,
+      headline: 'Starting Linebacker Leaves Game with Knee Injury',
+      body: 'The team is awaiting MRI results after their starting linebacker went down with a non-contact knee injury in the third quarter.',
+      priority: 'breaking',
+      isPositive: false,
+      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      isRead: false,
+      revealsTraitHint: false,
+    },
+    {
+      id: 'news-3',
+      category: 'trade' as NewsFeedCategory,
+      headline: 'Teams Swap Mid-Round Draft Picks',
+      body: 'In a minor move, two teams exchanged mid-round draft picks as they continue to build for the future.',
+      priority: 'low',
+      isPositive: true,
+      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      isRead: true,
+      revealsTraitHint: false,
+    },
+    {
+      id: 'news-4',
+      category: 'performance' as NewsFeedCategory,
+      headline: 'Rookie Shows Surprising Work Ethic',
+      body: 'Sources say the first-round pick has been the first to arrive and last to leave practice every day. Coaches are impressed with his dedication.',
+      priority: 'medium',
+      isPositive: true,
+      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      isRead: false,
+      revealsTraitHint: true,
+      hintedTrait: 'hard_worker',
+    },
+    {
+      id: 'news-5',
+      category: 'coaching' as NewsFeedCategory,
+      headline: 'Defensive Coordinator Praises Unit After Shutout',
+      body: 'The defense held their opponent scoreless for the first time this season, with the coordinator crediting improved communication.',
+      priority: 'medium',
+      isPositive: true,
+      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      isRead: true,
+      revealsTraitHint: false,
+    },
+  ];
+
+  // Generate sample rumors
+  const mockRumors: Rumor[] = [
+    {
+      id: 'rumor-1',
+      type: 'trade_interest',
+      headline: 'Report: Multiple Teams Interested in Trade',
+      body: 'League sources indicate several teams have made calls about potential trade targets.',
+      isTrue: true,
+      sourceConfidence: 'moderate',
+      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      priority: 'medium',
+      expiresAt: Date.now() + 5 * 24 * 60 * 60 * 1000,
+      isResolved: false,
+    },
+    {
+      id: 'rumor-2',
+      type: 'contract_demand',
+      headline: 'Star Player Seeking Extension',
+      body: 'Sources say negotiations have begun on a contract extension for a key player.',
+      isTrue: false,
+      sourceConfidence: 'whisper',
+      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
+      season: currentYear,
+      week: currentWeek,
+      priority: 'low',
+      expiresAt: Date.now() + 4 * 24 * 60 * 60 * 1000,
+      isResolved: false,
+    },
+  ];
+
+  // Get unique categories
+  const categoriesWithNews = Array.from(
+    new Set(mockNews.map((n) => n.category))
+  ) as NewsFeedCategory[];
+
+  // Build digest
+  const digest: WeeklyDigest = {
+    id: `digest-s${currentYear}-w${currentWeek}`,
+    season: currentYear,
+    week: currentWeek,
+    headline: 'Busy Week Around the League',
+    summary: `Here's what you need to know from Week ${currentWeek}: 1 injury report was filed this week. We saw 2 noteworthy individual performances. Plus, 2 rumors are swirling around the league.`,
+    topStories: mockNews,
+    activeRumors: mockRumors,
+    traitHintingNews: mockNews.filter((n) => n.revealsTraitHint),
+    totalNewsCount: mockNews.length,
+    unreadCount: mockNews.filter((n) => !n.isRead).length,
+    categoriesWithNews,
+    timestamp: Date.now(),
+    isViewed: false,
+  };
+
+  return (
+    <WeeklyDigestScreen
+      gameState={gameState}
+      digest={digest}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />

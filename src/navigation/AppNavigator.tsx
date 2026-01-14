@@ -43,6 +43,7 @@ import {
   RFAScreenWrapper,
   CompPickTrackerScreenWrapper,
   RumorMillScreenWrapper,
+  WeeklyDigestScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -117,6 +118,7 @@ export function AppNavigator(): React.JSX.Element {
 
       {/* News & Rumors */}
       <Stack.Screen name="RumorMill" component={RumorMillScreenWrapper} />
+      <Stack.Screen name="WeeklyDigest" component={WeeklyDigestScreenWrapper} />
 
       {/* Career */}
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />
