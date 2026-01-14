@@ -104,6 +104,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('loading');
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Draft state
@@ -761,7 +762,9 @@ export default function App() {
   if (currentScreen === 'roster') {
     const userTeam = gameState.teams[gameState.userTeamId];
     // Calculate cap space (simplified)
-    const capSpace = userTeam.finances?.capSpace || 50000000;
+    // Calculate cap space from league settings if not available on team
+    const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+    const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2; // Default to 20% of cap if unknown
 
     return (
       <>
@@ -772,14 +775,9 @@ export default function App() {
           capSpace={capSpace}
           onBack={goToDashboard}
           onSelectPlayer={(playerId) => {
-            // Could navigate to player detail
-            const player = gameState.players[playerId];
-            if (player) {
-              Alert.alert(
-                `${player.firstName} ${player.lastName}`,
-                `Position: ${player.position}\nAge: ${player.age}`
-              );
-            }
+            // Navigate to player profile
+            setSelectedPlayerId(playerId);
+            setCurrentScreen('playerProfile');
           }}
           onGetCutPreview={(playerId) => {
             const player = gameState.players[playerId];
@@ -1057,7 +1055,8 @@ export default function App() {
   // Finances Screen
   if (currentScreen === 'finances') {
     const userTeam = gameState.teams[gameState.userTeamId];
-    const salaryCap = 255000000; // $255M NFL cap
+    // Use salary cap from league settings (stored in thousands)
+    const salaryCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
 
     return (
       <>
@@ -1068,13 +1067,9 @@ export default function App() {
           salaryCap={salaryCap}
           onBack={goToDashboard}
           onSelectPlayer={(playerId) => {
-            const player = gameState.players[playerId];
-            if (player) {
-              Alert.alert(
-                `${player.firstName} ${player.lastName}`,
-                `Position: ${player.position}`
-              );
-            }
+            // Navigate to player profile
+            setSelectedPlayerId(playerId);
+            setCurrentScreen('playerProfile');
           }}
         />
       </>
@@ -1084,7 +1079,9 @@ export default function App() {
   // Free Agency Screen
   if (currentScreen === 'freeAgency') {
     const userTeam = gameState.teams[gameState.userTeamId];
-    const capSpace = userTeam.finances?.capSpace || 50000000;
+    // Calculate cap space from league settings if not available on team
+    const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+    const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2; // Default to 20% of cap if unknown
 
     // Get players without a team (free agents)
     // In a real implementation, we'd have a separate free agent pool
@@ -1499,29 +1496,58 @@ export default function App() {
       ? gameState.prospects[selectedProspectId]
       : null;
 
-    // Build profile data from real prospect
-    const profileData = realProspect
-      ? {
-          playerId: realProspect.id,
-          firstName: realProspect.player.firstName,
-          lastName: realProspect.player.lastName,
-          position: realProspect.player.position,
-          age: realProspect.player.age,
-          experience: 0,
-          skills: realProspect.player.skills as Record<string, { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }>,
-          physical: realProspect.player.physical,
-          physicalsRevealed: realProspect.physicalsRevealed,
-          hiddenTraits: realProspect.player.hiddenTraits,
-          collegeName: realProspect.collegeName,
-          draftYear: realProspect.draftYear,
-          projectedRound: realProspect.consensusProjection?.projectedRound ?? null,
-          projectedPickRange: realProspect.consensusProjection?.projectedPickRange ?? null,
-          userTier: realProspect.userTier,
-          flagged: realProspect.flagged,
-        }
+    // If coming from roster/finances, find the player
+    const realPlayer = selectedPlayerId
+      ? gameState.players[selectedPlayerId]
       : null;
 
-    // If no prospect found, go back to dashboard
+    // Build profile data from real prospect or player
+    let profileData = null;
+    let previousScreen: Screen = 'dashboard';
+
+    if (realProspect) {
+      profileData = {
+        playerId: realProspect.id,
+        firstName: realProspect.player.firstName,
+        lastName: realProspect.player.lastName,
+        position: realProspect.player.position,
+        age: realProspect.player.age,
+        experience: 0,
+        skills: realProspect.player.skills as Record<string, { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }>,
+        physical: realProspect.player.physical,
+        physicalsRevealed: realProspect.physicalsRevealed,
+        hiddenTraits: realProspect.player.hiddenTraits,
+        collegeName: realProspect.collegeName,
+        draftYear: realProspect.draftYear,
+        projectedRound: realProspect.consensusProjection?.projectedRound ?? null,
+        projectedPickRange: realProspect.consensusProjection?.projectedPickRange ?? null,
+        userTier: realProspect.userTier,
+        flagged: realProspect.flagged,
+      };
+      previousScreen = 'draftBoard';
+    } else if (realPlayer) {
+      profileData = {
+        playerId: realPlayer.id,
+        firstName: realPlayer.firstName,
+        lastName: realPlayer.lastName,
+        position: realPlayer.position,
+        age: realPlayer.age,
+        experience: realPlayer.experience || 0,
+        skills: realPlayer.skills as Record<string, { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }>,
+        physical: realPlayer.physical,
+        physicalsRevealed: true, // Roster players are fully scouted
+        hiddenTraits: realPlayer.hiddenTraits,
+        collegeName: undefined,
+        draftYear: undefined,
+        projectedRound: null,
+        projectedPickRange: null,
+        userTier: null,
+        flagged: false,
+      };
+      previousScreen = 'roster';
+    }
+
+    // If no player found, go back to dashboard
     if (!profileData) {
       goToDashboard();
       return null;
@@ -1536,6 +1562,9 @@ export default function App() {
             if (selectedProspectId) {
               setSelectedProspectId(null);
               setCurrentScreen('draftBoard');
+            } else if (selectedPlayerId) {
+              setSelectedPlayerId(null);
+              setCurrentScreen(previousScreen);
             } else {
               goToDashboard();
             }
