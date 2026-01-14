@@ -47,6 +47,7 @@ import { PreseasonScreen } from '../screens/PreseasonScreen';
 import { FinalCutsScreen } from '../screens/FinalCutsScreen';
 import { ScoutingReportsScreen } from '../screens/ScoutingReportsScreen';
 import { BigBoardScreen } from '../screens/BigBoardScreen';
+import { RFAScreen, RFAPlayerView } from '../screens/RFAScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -83,6 +84,12 @@ import {
   DraftBoardProspectView,
 } from '../core/scouting/DraftBoardManager';
 import { NeedLevel, ProspectRanking } from '../core/scouting/BigBoardGenerator';
+import {
+  TenderOffer,
+  OfferSheet,
+  TenderLevel,
+  recommendTenderLevel,
+} from '../core/freeAgency/RFATenderSystem';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -2870,6 +2877,91 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
           'Ranking Locked',
           `${prospect?.player.firstName} ${prospect?.player.lastName}'s ranking has been locked on your board.`
         );
+      }}
+    />
+  );
+}
+
+// ============================================
+// RFA SCREEN
+// ============================================
+
+export function RFAScreenWrapper({ navigation }: ScreenProps<'RFA'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading RFA Management..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const salaryCap = 255000000; // $255M cap
+
+  // Find eligible RFAs (players with 3 or fewer accrued seasons on expiring deals)
+  const rosterPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter((p) => p !== undefined);
+
+  const eligibleRFAs: RFAPlayerView[] = rosterPlayers
+    .filter((player) => player.experience >= 2 && player.experience <= 3)
+    .slice(0, 10)
+    .map((player) => {
+      const skillEntries = Object.values(player.skills);
+      const overallRating =
+        skillEntries.length > 0
+          ? Math.round(
+              skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+                skillEntries.length
+            )
+          : 65;
+
+      const draftRound = Math.ceil((100 - overallRating) / 14) || 5;
+      const recommendedTender = recommendTenderLevel(overallRating, player.position, draftRound);
+
+      return {
+        playerId: player.id,
+        playerName: `${player.firstName} ${player.lastName}`,
+        position: player.position,
+        age: player.age,
+        experience: player.experience,
+        overallRating,
+        draftRound,
+        currentStatus: 'untokendered' as const,
+        recommendedTender,
+      };
+    });
+
+  // Mock active tenders (none submitted yet)
+  const activeTenders: TenderOffer[] = [];
+
+  // Mock offer sheets
+  const offerSheets: OfferSheet[] = [];
+  const incomingOffers: OfferSheet[] = [];
+
+  return (
+    <RFAScreen
+      gameState={gameState}
+      eligibleRFAs={eligibleRFAs}
+      activeTenders={activeTenders}
+      offerSheets={offerSheets}
+      incomingOffers={incomingOffers}
+      salaryCap={salaryCap}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+      onSubmitTender={(playerId, level) => {
+        const player = gameState.players[playerId];
+        Alert.alert(
+          'Tender Submitted',
+          `A ${level.replace('_', ' ')} tender has been placed on ${player?.firstName} ${player?.lastName}.`
+        );
+      }}
+      onWithdrawTender={(tenderId) => {
+        Alert.alert('Tender Withdrawn', `Tender ${tenderId} has been withdrawn.`);
+      }}
+      onMatchOffer={(offerSheetId) => {
+        Alert.alert('Offer Matched', `You have matched offer sheet ${offerSheetId}.`);
+      }}
+      onDeclineOffer={(offerSheetId) => {
+        Alert.alert('Offer Declined', `You have declined to match offer sheet ${offerSheetId}.`);
       }}
     />
   );
