@@ -22,8 +22,9 @@ import { GameState, updateLastSaved } from './src/core/models/game/GameState';
 import { FakeCity } from './src/core/models/team/FakeCities';
 import { colors } from './src/styles';
 
-// Mock data for screens that need it
-import { mockProspects, mockPlayerProfile, mockGameSetup } from './src/utils/mockData';
+// Utilities for converting data
+import { convertProspectsToDraftBoard, sortProspectsByRank } from './src/utils/prospectUtils';
+import { setupGame, GameConfig } from './src/core/game/GameSetup';
 
 // Navigation types
 type Screen =
@@ -328,11 +329,41 @@ export default function App() {
   if (currentScreen === 'gamecast') {
     const userTeam = gameState.teams[gameState.userTeamId];
 
+    // Find an opponent (pick a team from a different division)
+    const opponentTeamIds = Object.keys(gameState.teams).filter(
+      (id) => id !== gameState.userTeamId
+    );
+    const opponentId = opponentTeamIds[gameState.league.calendar.currentWeek % opponentTeamIds.length];
+
+    // Create game config
+    const gameConfig: GameConfig = {
+      homeTeamId: gameState.userTeamId,
+      awayTeamId: opponentId,
+      week: gameState.league.calendar.currentWeek,
+      isPlayoff: gameState.league.calendar.currentPhase === 'playoffs',
+    };
+
+    // Convert Records to Maps for setupGame
+    const teamsMap = new Map(Object.entries(gameState.teams));
+    const playersMap = new Map(Object.entries(gameState.players));
+    const coachesMap = new Map(Object.entries(gameState.coaches));
+
+    // Create real game setup
+    let realGameSetup;
+    try {
+      realGameSetup = setupGame(gameConfig, teamsMap, playersMap, coachesMap);
+    } catch (error) {
+      console.error('Error setting up game:', error);
+      Alert.alert('Error', 'Failed to set up game. Please try again.');
+      goToDashboard();
+      return null;
+    }
+
     return (
       <>
         <StatusBar style="light" />
         <GamecastScreen
-          gameSetup={mockGameSetup}
+          gameSetup={realGameSetup}
           gameInfo={{
             week: gameState.league.calendar.currentWeek,
             date: new Date().toISOString().split('T')[0],
@@ -369,18 +400,36 @@ export default function App() {
 
   // Draft Board Screen
   if (currentScreen === 'draftBoard') {
+    // Convert real prospects to DraftBoardProspect format
+    const draftBoardProspects = sortProspectsByRank(
+      convertProspectsToDraftBoard(gameState.prospects)
+    );
+
     return (
       <>
         <StatusBar style="light" />
         <DraftBoardScreen
-          prospects={mockProspects}
+          prospects={draftBoardProspects}
           draftYear={gameState.league.calendar.currentYear}
           onSelectProspect={(id) => {
             setSelectedProspectId(id);
             setCurrentScreen('playerProfile');
           }}
           onToggleFlag={(id) => {
-            console.log('Toggle flag for:', id);
+            // Toggle flag in game state
+            const prospect = gameState.prospects[id];
+            if (prospect) {
+              setGameState({
+                ...gameState,
+                prospects: {
+                  ...gameState.prospects,
+                  [id]: {
+                    ...prospect,
+                    flagged: !prospect.flagged,
+                  },
+                },
+              });
+            }
           }}
           onBack={goToDashboard}
         />
@@ -390,31 +439,38 @@ export default function App() {
 
   // Player Profile Screen
   if (currentScreen === 'playerProfile') {
-    // If coming from draft board, find that prospect
-    const prospect = selectedProspectId
-      ? mockProspects.find((p) => p.id === selectedProspectId)
+    // If coming from draft board, find that prospect from real data
+    const realProspect = selectedProspectId
+      ? gameState.prospects[selectedProspectId]
       : null;
 
-    const profileData = prospect
+    // Build profile data from real prospect
+    const profileData = realProspect
       ? {
-          playerId: prospect.id,
-          firstName: prospect.name.split(' ')[0],
-          lastName: prospect.name.split(' ').slice(1).join(' '),
-          position: prospect.position,
-          age: prospect.age,
+          playerId: realProspect.id,
+          firstName: realProspect.player.firstName,
+          lastName: realProspect.player.lastName,
+          position: realProspect.player.position,
+          age: realProspect.player.age,
           experience: 0,
-          skills: prospect.skills,
-          physical: prospect.physical!,
-          physicalsRevealed: true,
-          hiddenTraits: { positive: [], negative: [], revealedToUser: [] },
-          collegeName: prospect.collegeName,
-          draftYear: gameState.league.calendar.currentYear,
-          projectedRound: prospect.projectedRound,
-          projectedPickRange: prospect.projectedPickRange,
-          userTier: prospect.userTier,
-          flagged: prospect.flagged,
+          skills: realProspect.player.skills as Record<string, { trueValue: number; perceivedMin: number; perceivedMax: number; maturityAge: number }>,
+          physical: realProspect.player.physical,
+          physicalsRevealed: realProspect.physicalsRevealed,
+          hiddenTraits: realProspect.player.hiddenTraits,
+          collegeName: realProspect.collegeName,
+          draftYear: realProspect.draftYear,
+          projectedRound: realProspect.consensusProjection?.projectedRound ?? null,
+          projectedPickRange: realProspect.consensusProjection?.projectedPickRange ?? null,
+          userTier: realProspect.userTier,
+          flagged: realProspect.flagged,
         }
-      : mockPlayerProfile;
+      : null;
+
+    // If no prospect found, go back to dashboard
+    if (!profileData) {
+      goToDashboard();
+      return null;
+    }
 
     return (
       <>
@@ -430,7 +486,19 @@ export default function App() {
             }
           }}
           onToggleFlag={() => {
-            console.log('Toggle flag');
+            // Toggle flag in game state
+            if (realProspect) {
+              setGameState({
+                ...gameState,
+                prospects: {
+                  ...gameState.prospects,
+                  [realProspect.id]: {
+                    ...realProspect,
+                    flagged: !realProspect.flagged,
+                  },
+                },
+              });
+            }
           }}
         />
       </>

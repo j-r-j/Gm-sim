@@ -22,6 +22,8 @@ import { createDefaultOwnerPersonality } from '../core/models/owner/OwnerPersona
 import { DraftPick } from '../core/models/league/DraftPick';
 import { generateFullName } from '../core/generators/player/NameGenerator';
 import { generateUUID, randomInt } from '../core/generators/utils/RandomUtils';
+import { generateDraftClass } from '../core/draft/DraftClassGenerator';
+import { Prospect } from '../core/draft/Prospect';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';
@@ -55,13 +57,14 @@ function createAllTeams(): Record<string, Team> {
       ...team,
       prestige: randomPrestige,
       fanbasePassion: randomPassion,
+      // Initialize with clean slate for new game (no historical data)
       allTimeRecord: {
-        wins: randomInt(200, 600),
-        losses: randomInt(200, 600),
-        ties: randomInt(0, 20),
+        wins: 0,
+        losses: 0,
+        ties: 0,
       },
-      championships: randomInt(0, 5),
-      lastChampionshipYear: randomInt(0, 3) > 0 ? null : 2020 - randomInt(0, 30),
+      championships: 0,
+      lastChampionshipYear: null,
     };
   });
 
@@ -312,6 +315,13 @@ export function createNewGame(options: NewGameOptions): GameState {
   // Create draft picks
   const draftPicks = createDraftPicks(teamIds, startYear);
 
+  // Generate draft class prospects
+  const draftClass = generateDraftClass({ year: startYear });
+  const prospects: Record<string, Prospect> = {};
+  for (const prospect of draftClass.prospects) {
+    prospects[prospect.id] = prospect;
+  }
+
   // Create league
   const league = createDefaultLeague('league-1', teamIds, startYear);
   // Start in regular season week 1 for immediate gameplay
@@ -364,7 +374,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     scouts,
     owners,
     draftPicks,
-    prospects: {}, // Will be populated during offseason/draft
+    prospects,
     careerStats,
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
   };

@@ -343,8 +343,8 @@ export function GamecastScreen({
           awayScore={gameState.score.away}
           quarter={gameState.clock.quarter}
           timeRemaining={gameState.clock.timeRemaining}
-          homeTimeouts={3} // TODO: Get from game state when available
-          awayTimeouts={3}
+          homeTimeouts={gameSetup.homeTeamState.timeoutsRemaining}
+          awayTimeouts={gameSetup.awayTeamState.timeoutsRemaining}
           possession={isGameOver ? null : gameState.field.possession}
           isGameOver={isGameOver}
         />
