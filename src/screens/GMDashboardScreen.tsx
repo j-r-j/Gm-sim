@@ -13,6 +13,7 @@ import { createPatienceViewModel, PatienceViewModel } from '../core/career/Patie
 
 export type DashboardAction =
   | 'roster'
+  | 'depthChart'
   | 'schedule'
   | 'standings'
   | 'draft'
@@ -259,6 +260,14 @@ export function GMDashboardScreen({
           icon="👥"
           color={colors.primary}
           onPress={() => onAction('roster')}
+        />
+
+        <MenuCard
+          title="Depth Chart"
+          subtitle="Set starters and backups"
+          icon="📊"
+          color={colors.secondary}
+          onPress={() => onAction('depthChart')}
         />
 
         <MenuCard

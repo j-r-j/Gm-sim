@@ -117,6 +117,9 @@ export interface GameState {
 
   // Offseason state (optional for backward compatibility)
   offseasonState?: import('../../offseason/OffSeasonPhaseManager').OffSeasonState;
+
+  // Depth charts (optional for backward compatibility)
+  depthCharts?: Record<string, import('../../roster/DepthChartManager').DepthChart>;
 }
 
 /**

@@ -38,6 +38,8 @@ import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
 import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
 import { CoachProfileScreen } from '../screens/CoachProfileScreen';
+import { DepthChartScreen } from '../screens/DepthChartScreen';
+import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -551,6 +553,9 @@ export function DashboardScreenWrapper({
         case 'gamecast':
           navigation.navigate('Gamecast');
           break;
+        case 'depthChart':
+          navigation.navigate('DepthChart');
+          break;
         case 'draft':
           if (
             gameState?.league.calendar.currentPhase === 'offseason' &&
@@ -692,6 +697,53 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
         return 'rejected';
       }}
       onTrade={() => navigation.navigate('Trade')}
+    />
+  );
+}
+
+// ============================================
+// DEPTH CHART SCREEN
+// ============================================
+
+export function DepthChartScreenWrapper({
+  navigation,
+}: ScreenProps<'DepthChart'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading depth chart..." />;
+  }
+
+  // Get or generate depth chart for user's team
+  const userTeamId = gameState.userTeamId;
+  const existingDepthChart = gameState.depthCharts?.[userTeamId];
+
+  // Use existing or generate new depth chart
+  const depthChart: DepthChart = existingDepthChart || generateDepthChart(gameState, userTeamId);
+
+  const handleDepthChartChange = async (newDepthChart: DepthChart) => {
+    const updatedState: GameState = {
+      ...gameState,
+      depthCharts: {
+        ...gameState.depthCharts,
+        [userTeamId]: newDepthChart,
+      },
+    };
+    setGameState(updatedState);
+    await saveGameState(updatedState);
+  };
+
+  const handlePlayerSelect = (playerId: string) => {
+    navigation.navigate('PlayerProfile', { playerId });
+  };
+
+  return (
+    <DepthChartScreen
+      gameState={gameState}
+      depthChart={depthChart}
+      onBack={() => navigation.goBack()}
+      onDepthChartChange={handleDepthChartChange}
+      onPlayerSelect={handlePlayerSelect}
     />
   );
 }

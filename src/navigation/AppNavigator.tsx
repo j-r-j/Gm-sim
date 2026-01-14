@@ -31,6 +31,7 @@ import {
   CareerSummaryScreenWrapper,
   FiredScreenWrapper,
   CoachProfileScreenWrapper,
+  DepthChartScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -78,6 +79,9 @@ export function AppNavigator(): React.JSX.Element {
       {/* Profile screens */}
       <Stack.Screen name="PlayerProfile" component={PlayerProfileScreenWrapper} />
       <Stack.Screen name="CoachProfile" component={CoachProfileScreenWrapper} />
+
+      {/* Depth Chart */}
+      <Stack.Screen name="DepthChart" component={DepthChartScreenWrapper} />
 
       {/* Offseason */}
       <Stack.Screen name="Offseason" component={OffseasonScreenWrapper} />
