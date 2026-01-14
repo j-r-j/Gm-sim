@@ -42,6 +42,7 @@ import { DepthChartScreen } from '../screens/DepthChartScreen';
 import { OwnerRelationsScreen } from '../screens/OwnerRelationsScreen';
 import { ContractManagementScreen } from '../screens/ContractManagementScreen';
 import { OTAsScreen } from '../screens/OTAsScreen';
+import { TrainingCampScreen } from '../screens/TrainingCampScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -52,6 +53,13 @@ import {
   generateRookieIntegrationReport,
   generatePositionBattlePreview,
 } from '../core/offseason/phases/OTAsPhase';
+import {
+  TrainingCampSummary,
+  createPositionBattle,
+  generateDevelopmentReveal,
+  generateCampInjury,
+  getTrainingCampSummary,
+} from '../core/offseason/phases/TrainingCampPhase';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -1841,6 +1849,7 @@ export function OffseasonScreenWrapper({
       onAdvancePhase={handleAdvanceOffseasonPhase}
       onBack={() => navigation.goBack()}
       onViewOTAReports={() => navigation.navigate('OTAs')}
+      onViewTrainingCamp={() => navigation.navigate('TrainingCamp')}
     />
   );
 }
@@ -2212,6 +2221,117 @@ export function OTAsScreenWrapper({ navigation }: ScreenProps<'OTAs'>): React.JS
 
   return (
     <OTAsScreen
+      gameState={gameState}
+      summary={summary}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// TRAINING CAMP SCREEN WRAPPER
+// ============================================
+
+export function TrainingCampScreenWrapper({
+  navigation,
+}: ScreenProps<'TrainingCamp'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Training Camp..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  // Get roster players
+  const rosterPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter((p) => p !== undefined);
+
+  // Generate position battles
+  // Group players by position and create battles for key positions
+  const playersByPosition = new Map<Position, typeof rosterPlayers>();
+  for (const player of rosterPlayers) {
+    const pos = player.position;
+    if (!playersByPosition.has(pos)) {
+      playersByPosition.set(pos, []);
+    }
+    playersByPosition.get(pos)!.push(player);
+  }
+
+  const battles = [];
+  for (const [position, players] of playersByPosition) {
+    // Only create battles if there are at least 2 players at the position
+    if (players.length >= 2) {
+      // Sort by perceived skill (average of perceived min/max)
+      const sortedPlayers = [...players].sort((a, b) => {
+        const aSkill =
+          Object.values(a.skills).reduce(
+            (sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2,
+            0
+          ) / Math.max(Object.keys(a.skills).length, 1);
+        const bSkill =
+          Object.values(b.skills).reduce(
+            (sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2,
+            0
+          ) / Math.max(Object.keys(b.skills).length, 1);
+        return bSkill - aSkill;
+      });
+
+      // Create starter battle if top 2 are close
+      if (sortedPlayers.length >= 2) {
+        const top2 = sortedPlayers.slice(0, 2);
+        const competitors = top2.map((p) => {
+          const avgSkill =
+            Object.values(p.skills).reduce(
+              (sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2,
+              0
+            ) / Math.max(Object.keys(p.skills).length, 1);
+          return {
+            playerId: p.id,
+            playerName: `${p.firstName} ${p.lastName}`,
+            initialRating: Math.round(avgSkill),
+          };
+        });
+
+        const battle = createPositionBattle(position, 'starter', competitors);
+        battles.push(battle);
+      }
+    }
+  }
+
+  // Generate development reveals for roster players
+  const reveals = rosterPlayers
+    .map((player) =>
+      generateDevelopmentReveal(
+        player.id,
+        `${player.firstName} ${player.lastName}`,
+        player.position,
+        player.age,
+        player.experience
+      )
+    )
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  // Generate camp injuries
+  const injuries = rosterPlayers
+    .map((player) => {
+      const isInjuryProne = player.hiddenTraits?.negative?.includes('injuryProne') ?? false;
+      return generateCampInjury(
+        player.id,
+        `${player.firstName} ${player.lastName}`,
+        player.position,
+        isInjuryProne
+      );
+    })
+    .filter((i): i is NonNullable<typeof i> => i !== null);
+
+  // Build summary
+  const summary = getTrainingCampSummary(battles, reveals, injuries);
+
+  return (
+    <TrainingCampScreen
       gameState={gameState}
       summary={summary}
       onBack={() => navigation.goBack()}
