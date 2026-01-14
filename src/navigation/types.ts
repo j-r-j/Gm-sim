@@ -87,6 +87,11 @@ export type RootStackParamList = {
   RumorMill: undefined;
   WeeklyDigest: undefined;
 
+  // Coaching Tree (Tier 3)
+  CoachingTree: {
+    coachId: string;
+  };
+
   // Career (Tier 3)
   JobMarket: undefined;
   Interview: {
@@ -173,6 +178,9 @@ export const Routes = {
   // News
   RumorMill: 'RumorMill',
   WeeklyDigest: 'WeeklyDigest',
+
+  // Coaching Tree
+  CoachingTree: 'CoachingTree',
 
   // Career
   CareerSummary: 'CareerSummary',

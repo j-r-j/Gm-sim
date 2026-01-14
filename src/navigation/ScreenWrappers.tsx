@@ -51,6 +51,7 @@ import { RFAScreen, RFAPlayerView } from '../screens/RFAScreen';
 import { CompPickTrackerScreen } from '../screens/CompPickTrackerScreen';
 import { RumorMillScreen } from '../screens/RumorMillScreen';
 import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
+import { CoachingTreeScreen } from '../screens/CoachingTreeScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -3368,6 +3369,44 @@ export function WeeklyDigestScreenWrapper({
       digest={digest}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// COACHING TREE SCREEN
+// ============================================
+
+export function CoachingTreeScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'CoachingTree'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Coaching Tree..." />;
+  }
+
+  const { coachId } = route.params;
+
+  // Find the coach
+  const coach = gameState.coaches[coachId];
+  if (!coach) {
+    return <LoadingFallback message="Coach not found..." />;
+  }
+
+  // Get all coaches in the league for tree comparisons
+  const allCoaches = Object.values(gameState.coaches);
+
+  return (
+    <CoachingTreeScreen
+      gameState={gameState}
+      coach={coach}
+      relatedCoaches={allCoaches}
+      onBack={() => navigation.goBack()}
+      onCoachSelect={(selectedCoachId) =>
+        navigation.navigate('CoachProfile', { coachId: selectedCoachId })
+      }
     />
   );
 }
