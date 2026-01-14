@@ -18,7 +18,11 @@ export const colors = {
   background: '#f7fafc',
   backgroundDark: '#1a202c',
   surface: '#ffffff',
+  surfaceLight: '#f0f4f8',
   surfaceDark: '#2d3748',
+
+  // Accent colors
+  accent: '#805ad5', // Purple
 
   // Text colors
   text: '#1a202c',

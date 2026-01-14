@@ -14,6 +14,13 @@ import { GMDashboardScreen, DashboardAction } from './src/screens/GMDashboardScr
 import { GamecastScreen } from './src/screens/GamecastScreen';
 import { DraftBoardScreen } from './src/screens/DraftBoardScreen';
 import { PlayerProfileScreen } from './src/screens/PlayerProfileScreen';
+import { ScheduleScreen } from './src/screens/ScheduleScreen';
+import { StandingsScreen } from './src/screens/StandingsScreen';
+import { RosterScreen } from './src/screens/RosterScreen';
+import { StaffScreen } from './src/screens/StaffScreen';
+import { FinancesScreen } from './src/screens/FinancesScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { NewsScreen } from './src/screens/NewsScreen';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -35,6 +42,12 @@ type Screen =
   | 'gamecast'
   | 'draftBoard'
   | 'playerProfile'
+  | 'schedule'
+  | 'standings'
+  | 'roster'
+  | 'staff'
+  | 'finances'
+  | 'news'
   | 'settings';
 
 export default function App() {
@@ -185,17 +198,26 @@ export default function App() {
         setCurrentScreen('draftBoard');
         break;
       case 'roster':
-        // For now, show player profile as placeholder
-        setCurrentScreen('playerProfile');
+        setCurrentScreen('roster');
         break;
       case 'schedule':
+        setCurrentScreen('schedule');
+        break;
       case 'standings':
+        setCurrentScreen('standings');
+        break;
       case 'freeAgency':
+        // Free agency requires additional implementation
+        Alert.alert('Coming Soon', 'Free Agency screen is coming in a future update.');
+        break;
       case 'staff':
+        setCurrentScreen('staff');
+        break;
       case 'finances':
+        setCurrentScreen('finances');
+        break;
       case 'news':
-        // Placeholder - these will navigate to their respective screens
-        Alert.alert('Coming Soon', `${action} screen is coming in a future update.`);
+        setCurrentScreen('news');
         break;
       case 'advanceWeek':
         handleAdvanceWeek();
@@ -278,21 +300,40 @@ export default function App() {
     );
   }
 
-  // Settings Screen (placeholder)
+  // Settings Screen
   if (currentScreen === 'settings') {
+    const currentSettings = gameState?.gameSettings || {
+      simulationSpeed: 'normal' as const,
+      autoSaveEnabled: true,
+      notificationsEnabled: true,
+    };
+
     return (
       <>
         <StatusBar style="light" />
-        <View style={styles.placeholderContainer}>
-          <Text style={styles.placeholderTitle}>Settings</Text>
-          <Text style={styles.placeholderText}>Settings screen coming soon!</Text>
-          <Text
-            style={styles.backLink}
-            onPress={gameState ? goToDashboard : goToStart}
-          >
-            Go Back
-          </Text>
-        </View>
+        <SettingsScreen
+          settings={currentSettings}
+          onUpdateSettings={(updates) => {
+            if (gameState) {
+              setGameState({
+                ...gameState,
+                gameSettings: { ...currentSettings, ...updates },
+              });
+            }
+          }}
+          onBack={gameState ? goToDashboard : goToStart}
+          onClearData={async () => {
+            // Delete each slot individually
+            await Promise.all([
+              gameStorage.delete(0),
+              gameStorage.delete(1),
+              gameStorage.delete(2),
+            ]);
+            setGameState(null);
+            setCurrentScreen('start');
+          }}
+          version="1.0.0"
+        />
       </>
     );
   }
@@ -320,6 +361,185 @@ export default function App() {
         <GMDashboardScreen
           gameState={gameState}
           onAction={handleDashboardAction}
+        />
+      </>
+    );
+  }
+
+  // Schedule Screen
+  if (currentScreen === 'schedule') {
+    const schedule = gameState.league.schedule;
+    const scheduleGames = schedule ? schedule.regularSeason : [];
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <ScheduleScreen
+          userTeamId={gameState.userTeamId}
+          teams={gameState.teams}
+          schedule={scheduleGames}
+          currentWeek={gameState.league.calendar.currentWeek}
+          onBack={goToDashboard}
+          onSelectGame={(game) => {
+            if (game.week === gameState.league.calendar.currentWeek) {
+              setCurrentScreen('gamecast');
+            }
+          }}
+        />
+      </>
+    );
+  }
+
+  // Standings Screen
+  if (currentScreen === 'standings') {
+    return (
+      <>
+        <StatusBar style="light" />
+        <StandingsScreen
+          teams={gameState.teams}
+          userTeamId={gameState.userTeamId}
+          onBack={goToDashboard}
+        />
+      </>
+    );
+  }
+
+  // Roster Screen
+  if (currentScreen === 'roster') {
+    const userTeam = gameState.teams[gameState.userTeamId];
+    // Calculate cap space (simplified)
+    const capSpace = userTeam.finances?.capSpace || 50000000;
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <RosterScreen
+          rosterIds={userTeam.rosterPlayerIds}
+          players={gameState.players}
+          capSpace={capSpace}
+          onBack={goToDashboard}
+          onSelectPlayer={(playerId) => {
+            // Could navigate to player detail
+            const player = gameState.players[playerId];
+            if (player) {
+              Alert.alert(
+                `${player.firstName} ${player.lastName}`,
+                `Position: ${player.position}\nAge: ${player.age}`
+              );
+            }
+          }}
+        />
+      </>
+    );
+  }
+
+  // Staff Screen
+  if (currentScreen === 'staff') {
+    // Get coaches for user's team
+    const teamCoaches = Object.values(gameState.coaches).filter(
+      (coach) => coach.teamId === gameState.userTeamId
+    );
+
+    // Get scouts for user's team
+    const teamScouts = Object.values(gameState.scouts).filter(
+      (scout) => scout.teamId === gameState.userTeamId
+    );
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <StaffScreen
+          coaches={teamCoaches}
+          scouts={teamScouts}
+          onBack={goToDashboard}
+          onSelectStaff={(staffId, type) => {
+            if (type === 'coach') {
+              const coach = gameState.coaches[staffId];
+              if (coach) {
+                Alert.alert(
+                  `${coach.firstName} ${coach.lastName}`,
+                  `Role: ${coach.role}\nReputation: ${coach.attributes.reputation}`
+                );
+              }
+            }
+          }}
+        />
+      </>
+    );
+  }
+
+  // Finances Screen
+  if (currentScreen === 'finances') {
+    const userTeam = gameState.teams[gameState.userTeamId];
+    const salaryCap = 255000000; // $255M NFL cap
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <FinancesScreen
+          team={userTeam}
+          players={gameState.players}
+          salaryCap={salaryCap}
+          onBack={goToDashboard}
+          onSelectPlayer={(playerId) => {
+            const player = gameState.players[playerId];
+            if (player) {
+              Alert.alert(
+                `${player.firstName} ${player.lastName}`,
+                `Position: ${player.position}`
+              );
+            }
+          }}
+        />
+      </>
+    );
+  }
+
+  // News Screen
+  if (currentScreen === 'news') {
+    const currentWeek = gameState.league.calendar.currentWeek;
+    const currentYear = gameState.league.calendar.currentYear;
+
+    // Generate some placeholder news items based on game state
+    const newsItems = [
+      {
+        id: '1',
+        headline: 'Season Underway',
+        summary: `Week ${currentWeek} of the ${currentYear} season is here.`,
+        date: new Date().toISOString(),
+        category: 'league' as const,
+        week: currentWeek,
+        year: currentYear,
+        relatedTeamIds: [],
+        isRead: false,
+        priority: 'normal' as const,
+      },
+      {
+        id: '2',
+        headline: 'Draft Class Revealed',
+        summary: `${Object.keys(gameState.prospects).length} prospects available for the upcoming draft.`,
+        date: new Date().toISOString(),
+        category: 'draft' as const,
+        week: currentWeek,
+        year: currentYear,
+        relatedTeamIds: [],
+        isRead: false,
+        priority: 'normal' as const,
+      },
+    ];
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <NewsScreen
+          news={newsItems}
+          currentWeek={currentWeek}
+          currentYear={currentYear}
+          onBack={goToDashboard}
+          onMarkRead={(newsId) => {
+            // Could persist read state in game state
+            console.log('Marked as read:', newsId);
+          }}
         />
       </>
     );
