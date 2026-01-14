@@ -23,6 +23,7 @@ export type DashboardAction =
   | 'gamecast'
   | 'news'
   | 'offseason'
+  | 'ownerRelations'
   | 'advanceWeek'
   | 'settings'
   | 'saveGame'
@@ -222,13 +223,15 @@ export function GMDashboardScreen({
         )}
       </View>
 
-      {/* Job Security Status */}
+      {/* Job Security Status (tap to see Owner Relations) */}
       {patienceViewModel && (
-        <View
+        <TouchableOpacity
           style={[
             styles.jobSecurityBar,
             { borderLeftColor: getJobSecurityColor(patienceViewModel.status) },
           ]}
+          onPress={() => onAction('ownerRelations')}
+          activeOpacity={0.7}
         >
           <View style={styles.jobSecurityLeft}>
             <Text
@@ -241,12 +244,15 @@ export function GMDashboardScreen({
             </Text>
             <Text style={styles.jobSecurityTrend}>{patienceViewModel.trendDescription}</Text>
           </View>
-          {patienceViewModel.isAtRisk && (
-            <View style={styles.jobSecurityWarning}>
-              <Text style={styles.jobSecurityWarningText}>!</Text>
-            </View>
-          )}
-        </View>
+          <View style={styles.jobSecurityRight}>
+            {patienceViewModel.isAtRisk && (
+              <View style={styles.jobSecurityWarning}>
+                <Text style={styles.jobSecurityWarningText}>!</Text>
+              </View>
+            )}
+            <Text style={styles.jobSecurityArrow}>→</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       {/* Main Menu Grid */}
@@ -504,6 +510,15 @@ const styles = StyleSheet.create({
   },
   jobSecurityLeft: {
     flex: 1,
+  },
+  jobSecurityRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  jobSecurityArrow: {
+    fontSize: fontSize.lg,
+    color: colors.textSecondary,
   },
   jobSecurityStatus: {
     fontSize: fontSize.sm,

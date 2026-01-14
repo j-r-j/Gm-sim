@@ -39,7 +39,10 @@ import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
 import { CoachProfileScreen } from '../screens/CoachProfileScreen';
 import { DepthChartScreen } from '../screens/DepthChartScreen';
+import { OwnerRelationsScreen } from '../screens/OwnerRelationsScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
+import { createOwnerViewModel } from '../core/models/owner';
+import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -556,6 +559,9 @@ export function DashboardScreenWrapper({
         case 'depthChart':
           navigation.navigate('DepthChart');
           break;
+        case 'ownerRelations':
+          navigation.navigate('OwnerRelations');
+          break;
         case 'draft':
           if (
             gameState?.league.calendar.currentPhase === 'offseason' &&
@@ -744,6 +750,50 @@ export function DepthChartScreenWrapper({
       onBack={() => navigation.goBack()}
       onDepthChartChange={handleDepthChartChange}
       onPlayerSelect={handlePlayerSelect}
+    />
+  );
+}
+
+// ============================================
+// OWNER RELATIONS SCREEN
+// ============================================
+
+export function OwnerRelationsScreenWrapper({
+  navigation,
+}: ScreenProps<'OwnerRelations'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading owner relations..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const ownerId = `owner-${userTeam.abbreviation}`;
+  const owner = gameState.owners[ownerId];
+
+  if (!owner) {
+    return <LoadingFallback message="Owner not found..." />;
+  }
+
+  const ownerViewModel = createOwnerViewModel(owner);
+  const patienceView = gameState.patienceMeter
+    ? createPatienceViewModel(gameState.patienceMeter)
+    : null;
+
+  return (
+    <OwnerRelationsScreen
+      owner={ownerViewModel}
+      patienceView={patienceView}
+      teamName={`${userTeam.city} ${userTeam.nickname}`}
+      currentWeek={gameState.league.calendar.currentWeek}
+      onBack={() => navigation.goBack()}
+      onDemandPress={(demand) => {
+        // Future: Navigate to demand-specific screen
+        Alert.alert(
+          'Owner Demand',
+          `${demand.description}\n\nDeadline: Week ${demand.deadline}\n\nConsequence: ${demand.consequence}`
+        );
+      }}
     />
   );
 }

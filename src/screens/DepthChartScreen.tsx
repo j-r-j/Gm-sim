@@ -166,11 +166,7 @@ export function DepthChartScreen({
     return getPositionGroupDepths(gameState, depthChart, activeTab);
   }, [gameState, depthChart, activeTab]);
 
-  const handlePlayerSelect = (
-    playerId: string | null,
-    position: Position,
-    _depth: 1 | 2 | 3
-  ) => {
+  const handlePlayerSelect = (playerId: string | null, position: Position, _depth: 1 | 2 | 3) => {
     if (!playerId) {
       // Empty slot - clear selection
       setSelectedPlayerId(null);
@@ -239,9 +235,7 @@ export function DepthChartScreen({
             style={[styles.tab, activeTab === tab && styles.activeTab]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab}
-            </Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </View>

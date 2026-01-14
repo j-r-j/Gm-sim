@@ -4,7 +4,12 @@
  */
 
 import { Player } from '../models/player/Player';
-import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS, SPECIAL_TEAMS_POSITIONS } from '../models/player/Position';
+import {
+  Position,
+  OFFENSIVE_POSITIONS,
+  DEFENSIVE_POSITIONS,
+  SPECIAL_TEAMS_POSITIONS,
+} from '../models/player/Position';
 import { GameState } from '../models/game/GameState';
 
 /**
@@ -82,13 +87,26 @@ export const POSITION_GROUPS: PositionGroup[] = [
  */
 export const DEPTH_CHART_POSITIONS: Position[] = [
   // Offense
-  Position.QB, Position.RB, Position.WR, Position.TE,
-  Position.LT, Position.LG, Position.C, Position.RG, Position.RT,
+  Position.QB,
+  Position.RB,
+  Position.WR,
+  Position.TE,
+  Position.LT,
+  Position.LG,
+  Position.C,
+  Position.RG,
+  Position.RT,
   // Defense
-  Position.DE, Position.DT, Position.OLB, Position.ILB,
-  Position.CB, Position.FS, Position.SS,
+  Position.DE,
+  Position.DT,
+  Position.OLB,
+  Position.ILB,
+  Position.CB,
+  Position.FS,
+  Position.SS,
   // Special Teams
-  Position.K, Position.P,
+  Position.K,
+  Position.P,
 ];
 
 // ============================================
@@ -177,18 +195,18 @@ export function generateDepthChart(gameState: GameState, teamId: string): DepthC
 
   // Get all players on the team's roster
   const rosterPlayers = team.rosterPlayerIds
-    .map(id => gameState.players[id])
+    .map((id) => gameState.players[id])
     .filter((p): p is Player => p !== undefined);
 
   const entries: DepthChartEntry[] = [];
 
   // For each position, rank players and assign depth
   for (const position of DEPTH_CHART_POSITIONS) {
-    const positionPlayers = rosterPlayers.filter(p => p.position === position);
+    const positionPlayers = rosterPlayers.filter((p) => p.position === position);
 
     // Rank players at this position
     const rankedPlayers = positionPlayers
-      .map(player => ({
+      .map((player) => ({
         player,
         overallRating: calculatePlayerOverallRating(player),
       }))
@@ -220,11 +238,11 @@ export function getPositionDepth(
   depthChart: DepthChart,
   position: Position
 ): PositionDepthView {
-  const positionEntries = depthChart.entries.filter(e => e.position === position);
+  const positionEntries = depthChart.entries.filter((e) => e.position === position);
 
   const getPlayerAtDepth = (depth: DepthSlot): Player | null => {
-    const entry = positionEntries.find(e => e.depth === depth);
-    return entry ? gameState.players[entry.playerId] ?? null : null;
+    const entry = positionEntries.find((e) => e.depth === depth);
+    return entry ? (gameState.players[entry.playerId] ?? null) : null;
   };
 
   return {
@@ -243,13 +261,13 @@ export function getPositionGroupDepths(
   depthChart: DepthChart,
   groupName: string
 ): PositionDepthView[] {
-  const group = POSITION_GROUPS.find(g => g.name === groupName);
+  const group = POSITION_GROUPS.find((g) => g.name === groupName);
   if (!group) return [];
 
   // Filter to depth chart positions only
-  const positions = group.positions.filter(p => DEPTH_CHART_POSITIONS.includes(p));
+  const positions = group.positions.filter((p) => DEPTH_CHART_POSITIONS.includes(p));
 
-  return positions.map(position => getPositionDepth(gameState, depthChart, position));
+  return positions.map((position) => getPositionDepth(gameState, depthChart, position));
 }
 
 // ============================================
@@ -264,18 +282,18 @@ export function movePlayerToDepth(
   playerId: string,
   newDepth: DepthSlot
 ): DepthChart {
-  const entry = depthChart.entries.find(e => e.playerId === playerId);
+  const entry = depthChart.entries.find((e) => e.playerId === playerId);
   if (!entry) {
     throw new Error('Player not found in depth chart');
   }
 
   // Find current player at target depth
   const currentAtDepth = depthChart.entries.find(
-    e => e.position === entry.position && e.depth === newDepth
+    (e) => e.position === entry.position && e.depth === newDepth
   );
 
   // Swap if there's someone at that depth
-  const updatedEntries = depthChart.entries.map(e => {
+  const updatedEntries = depthChart.entries.map((e) => {
     if (e.playerId === playerId) {
       return { ...e, depth: newDepth };
     }
@@ -301,8 +319,8 @@ export function swapPlayers(
   playerId1: string,
   playerId2: string
 ): DepthChart {
-  const entry1 = depthChart.entries.find(e => e.playerId === playerId1);
-  const entry2 = depthChart.entries.find(e => e.playerId === playerId2);
+  const entry1 = depthChart.entries.find((e) => e.playerId === playerId1);
+  const entry2 = depthChart.entries.find((e) => e.playerId === playerId2);
 
   if (!entry1 || !entry2) {
     throw new Error('Players not found in depth chart');
@@ -312,7 +330,7 @@ export function swapPlayers(
     throw new Error('Can only swap players at the same position');
   }
 
-  const updatedEntries = depthChart.entries.map(e => {
+  const updatedEntries = depthChart.entries.map((e) => {
     if (e.playerId === playerId1) {
       return { ...e, depth: entry2.depth };
     }
@@ -333,13 +351,10 @@ export function swapPlayers(
 /**
  * Get starters for a team
  */
-export function getStarters(
-  gameState: GameState,
-  depthChart: DepthChart
-): Player[] {
+export function getStarters(gameState: GameState, depthChart: DepthChart): Player[] {
   return depthChart.entries
-    .filter(e => e.depth === 1)
-    .map(e => gameState.players[e.playerId])
+    .filter((e) => e.depth === 1)
+    .map((e) => gameState.players[e.playerId])
     .filter((p): p is Player => p !== undefined);
 }
 
@@ -389,10 +404,10 @@ export function getPositionDisplayName(position: Position): string {
  */
 export function isDepthChartComplete(depthChart: DepthChart): boolean {
   const starterPositions = new Set(
-    depthChart.entries.filter(e => e.depth === 1).map(e => e.position)
+    depthChart.entries.filter((e) => e.depth === 1).map((e) => e.position)
   );
 
-  return DEPTH_CHART_POSITIONS.every(pos => starterPositions.has(pos));
+  return DEPTH_CHART_POSITIONS.every((pos) => starterPositions.has(pos));
 }
 
 /**
@@ -400,8 +415,8 @@ export function isDepthChartComplete(depthChart: DepthChart): boolean {
  */
 export function getMissingStarters(depthChart: DepthChart): Position[] {
   const starterPositions = new Set(
-    depthChart.entries.filter(e => e.depth === 1).map(e => e.position)
+    depthChart.entries.filter((e) => e.depth === 1).map((e) => e.position)
   );
 
-  return DEPTH_CHART_POSITIONS.filter(pos => !starterPositions.has(pos));
+  return DEPTH_CHART_POSITIONS.filter((pos) => !starterPositions.has(pos));
 }
