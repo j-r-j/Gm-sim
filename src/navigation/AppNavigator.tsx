@@ -37,6 +37,7 @@ import {
   OTAsScreenWrapper,
   TrainingCampScreenWrapper,
   PreseasonScreenWrapper,
+  FinalCutsScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -99,6 +100,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="OTAs" component={OTAsScreenWrapper} />
       <Stack.Screen name="TrainingCamp" component={TrainingCampScreenWrapper} />
       <Stack.Screen name="Preseason" component={PreseasonScreenWrapper} />
+      <Stack.Screen name="FinalCuts" component={FinalCutsScreenWrapper} />
 
       {/* Career */}
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />

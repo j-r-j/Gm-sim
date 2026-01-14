@@ -44,6 +44,7 @@ import { ContractManagementScreen } from '../screens/ContractManagementScreen';
 import { OTAsScreen } from '../screens/OTAsScreen';
 import { TrainingCampScreen } from '../screens/TrainingCampScreen';
 import { PreseasonScreen } from '../screens/PreseasonScreen';
+import { FinalCutsScreen } from '../screens/FinalCutsScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -67,6 +68,12 @@ import {
   createPreseasonEvaluation,
   getPreseasonSummary,
 } from '../core/offseason/phases/PreseasonPhase';
+import {
+  CutEvaluationPlayer,
+  evaluateRosterForCuts,
+  getFinalCutsSummary,
+  isPracticeSquadEligible,
+} from '../core/offseason/phases/FinalCutsPhase';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -1858,6 +1865,7 @@ export function OffseasonScreenWrapper({
       onViewOTAReports={() => navigation.navigate('OTAs')}
       onViewTrainingCamp={() => navigation.navigate('TrainingCamp')}
       onViewPreseason={() => navigation.navigate('Preseason')}
+      onViewFinalCuts={() => navigation.navigate('FinalCuts')}
     />
   );
 }
@@ -2446,6 +2454,103 @@ export function PreseasonScreenWrapper({
     <PreseasonScreen
       gameState={gameState}
       summary={summary}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// FINAL CUTS SCREEN WRAPPER
+// ============================================
+
+export function FinalCutsScreenWrapper({
+  navigation,
+}: ScreenProps<'FinalCuts'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Final Cuts..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  // Get roster players and convert to cut evaluation format
+  const rosterPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter((p) => p !== undefined);
+
+  const cutEvaluationPlayers: CutEvaluationPlayer[] = rosterPlayers.map((player) => {
+    const skills = Object.values(player.skills);
+    const overallRating =
+      skills.length > 0
+        ? Math.round(
+            skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+              skills.length
+          )
+        : 50;
+
+    // Mock salary/contract data (would come from actual contract in real implementation)
+    const baseSalary = overallRating * 50 + player.experience * 200;
+    const guaranteed = player.experience <= 1 ? baseSalary * 0.5 : baseSalary * 0.2;
+    const deadCap = player.experience <= 2 ? baseSalary * 0.3 : baseSalary * 0.1;
+
+    // Determine PS eligibility
+    const psEligible = isPracticeSquadEligible(player.experience, 0, player.experience >= 4);
+
+    // Calculate recommendation based on rating and experience
+    let recommendation: CutEvaluationPlayer['recommendation'] = 'keep';
+    if (overallRating < 50) {
+      recommendation = psEligible ? 'practice_squad' : 'cut';
+    } else if (overallRating < 60) {
+      recommendation = 'practice_squad';
+    } else if (overallRating >= 75) {
+      recommendation = 'keep';
+    }
+
+    const notes: string[] = [];
+    if (psEligible) notes.push('Practice squad eligible');
+    if (player.experience === 0) notes.push('Rookie - needs development');
+    if (player.age >= 30) notes.push('Veteran presence');
+
+    return {
+      playerId: player.id,
+      playerName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      age: player.age,
+      experience: player.experience,
+      overallRating,
+      preseasonGrade: Math.round(overallRating + (Math.random() * 10 - 5)),
+      salary: Math.round(baseSalary),
+      guaranteed: Math.round(guaranteed),
+      deadCapIfCut: Math.round(deadCap),
+      isVested: player.experience >= 4,
+      practiceSquadEligible: psEligible,
+      recommendation,
+      notes,
+    };
+  });
+
+  // Evaluate roster for cuts
+  const evaluation = evaluateRosterForCuts(cutEvaluationPlayers, 53);
+
+  // Build summary
+  const summary = getFinalCutsSummary(
+    evaluation.cut,
+    evaluation.practiceSquad.slice(0, 16),
+    evaluation.ir,
+    [], // No waiver claims in this mock
+    evaluation.keep
+  );
+
+  return (
+    <FinalCutsScreen
+      gameState={gameState}
+      summary={summary}
+      rosterSize={rosterPlayers.length}
+      maxRosterSize={53}
+      practiceSquadSize={Math.min(evaluation.practiceSquad.length, 16)}
+      maxPracticeSquadSize={16}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
