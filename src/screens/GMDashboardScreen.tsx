@@ -21,6 +21,7 @@ export type DashboardAction =
   | 'finances'
   | 'gamecast'
   | 'news'
+  | 'offseason'
   | 'advanceWeek'
   | 'settings'
   | 'saveGame'
@@ -306,6 +307,17 @@ export function GMDashboardScreen({
 
         {/* Offseason Actions */}
         <Text style={styles.sectionTitle}>{isOffseason ? 'Offseason' : 'Player Acquisition'}</Text>
+
+        {isOffseason && (
+          <MenuCard
+            title="Offseason Tasks"
+            subtitle="Complete offseason activities"
+            icon="📋"
+            color={colors.warning}
+            onPress={() => onAction('offseason')}
+            badge="ACTIVE"
+          />
+        )}
 
         <MenuCard
           title="Draft Board"

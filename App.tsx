@@ -27,6 +27,15 @@ import { TradeScreen, TradeProposal, TradeAsset } from './src/screens/TradeScree
 import { CutPreview, ExtensionOffer } from './src/screens/RosterScreen';
 import { PlayoffBracketScreen, PlayoffMatchup, PlayoffSeed } from './src/screens/PlayoffBracketScreen';
 import { CareerSummaryScreen } from './src/screens/CareerSummaryScreen';
+import { OffseasonScreen } from './src/screens/OffseasonScreen';
+import {
+  createOffSeasonState,
+  completeTask as completeOffseasonTask,
+  advancePhase as advanceOffseasonPhase,
+  OffSeasonState,
+  canAdvancePhase,
+  PHASE_ORDER,
+} from './src/core/offseason/OffSeasonPhaseManager';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -88,7 +97,8 @@ type Screen =
   | 'news'
   | 'settings'
   | 'fired'
-  | 'careerSummary';
+  | 'careerSummary'
+  | 'offseason';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('loading');
@@ -443,6 +453,29 @@ export default function App() {
         newWeek = 1;
         newPhase = 'offseason';
         offseasonPhase = 1;
+        // Initialize offseason state when transitioning to offseason
+        if (!gameState.offseasonState) {
+          const newOffseasonState = createOffSeasonState(newYear);
+          const updatedState: GameState = {
+            ...gameState,
+            offseasonState: newOffseasonState,
+            league: {
+              ...gameState.league,
+              calendar: {
+                ...calendar,
+                currentWeek: newWeek,
+                currentPhase: newPhase,
+                currentYear: newYear,
+                offseasonPhase: 1,
+              },
+            },
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+          Alert.alert('Season Complete', 'The offseason begins. Complete offseason tasks to prepare for next season.');
+          setIsLoading(false);
+          return;
+        }
       } else if (newPhase === 'offseason') {
         if (offseasonPhase && offseasonPhase >= 12) {
           newPhase = 'preseason';
@@ -532,6 +565,9 @@ export default function App() {
         break;
       case 'news':
         setCurrentScreen('news');
+        break;
+      case 'offseason':
+        setCurrentScreen('offseason');
         break;
       case 'advanceWeek':
         handleAdvanceWeek();
@@ -1522,6 +1558,82 @@ export default function App() {
               await saveGameState(updatedState);
             }
           }}
+        />
+      </>
+    );
+  }
+
+  // Offseason Screen
+  if (currentScreen === 'offseason') {
+    // Initialize offseason state if not exists
+    let offseasonState = gameState.offseasonState;
+    if (!offseasonState) {
+      offseasonState = createOffSeasonState(gameState.league.calendar.currentYear);
+    }
+
+    const handleCompleteTask = async (taskId: string) => {
+      const newOffseasonState = completeOffseasonTask(offseasonState!, taskId);
+      const updatedState: GameState = {
+        ...gameState,
+        offseasonState: newOffseasonState,
+      };
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+    };
+
+    const handleAdvanceOffseasonPhase = async () => {
+      if (!canAdvancePhase(offseasonState!)) return;
+
+      const newOffseasonState = advanceOffseasonPhase(offseasonState!);
+
+      // If offseason is complete, transition to preseason/regular season
+      if (newOffseasonState.isComplete) {
+        const updatedState: GameState = {
+          ...gameState,
+          offseasonState: undefined, // Clear offseason state
+          league: {
+            ...gameState.league,
+            calendar: {
+              ...gameState.league.calendar,
+              currentPhase: 'preseason',
+              currentWeek: 1,
+              offseasonPhase: null,
+              currentYear: gameState.league.calendar.currentYear + 1,
+            },
+          },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+        Alert.alert('Offseason Complete', 'Preseason begins!');
+        goToDashboard();
+      } else {
+        // Update to next phase
+        const phaseIndex = PHASE_ORDER.indexOf(newOffseasonState.currentPhase);
+        const updatedState: GameState = {
+          ...gameState,
+          offseasonState: newOffseasonState,
+          league: {
+            ...gameState.league,
+            calendar: {
+              ...gameState.league.calendar,
+              offseasonPhase: phaseIndex + 1,
+            },
+          },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+      }
+    };
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <OffseasonScreen
+          offseasonState={offseasonState}
+          year={gameState.league.calendar.currentYear}
+          onCompleteTask={handleCompleteTask}
+          onAdvancePhase={handleAdvanceOffseasonPhase}
+          onBack={goToDashboard}
         />
       </>
     );

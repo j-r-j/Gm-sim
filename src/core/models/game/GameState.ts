@@ -114,6 +114,9 @@ export interface GameState {
 
   // Tenure stats for career tracking
   tenureStats?: import('../../career/FiringMechanics').TenureStats;
+
+  // Offseason state (optional for backward compatibility)
+  offseasonState?: import('../../offseason/OffSeasonPhaseManager').OffSeasonState;
 }
 
 /**
