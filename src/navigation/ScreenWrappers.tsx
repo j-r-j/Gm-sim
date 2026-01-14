@@ -45,6 +45,7 @@ import { OTAsScreen } from '../screens/OTAsScreen';
 import { TrainingCampScreen } from '../screens/TrainingCampScreen';
 import { PreseasonScreen } from '../screens/PreseasonScreen';
 import { FinalCutsScreen } from '../screens/FinalCutsScreen';
+import { ScoutingReportsScreen } from '../screens/ScoutingReportsScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -74,6 +75,7 @@ import {
   getFinalCutsSummary,
   isPracticeSquadEligible,
 } from '../core/offseason/phases/FinalCutsPhase';
+import { ScoutReport, formatReportForDisplay } from '../core/scouting/ScoutReportGenerator';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -2553,6 +2555,157 @@ export function FinalCutsScreenWrapper({
       maxPracticeSquadSize={16}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// SCOUTING REPORTS SCREEN
+// ============================================
+
+export function ScoutingReportsScreenWrapper({
+  navigation,
+}: ScreenProps<'ScoutingReports'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Scout Reports..." />;
+  }
+
+  // Generate scout reports from prospects
+  const prospects = Object.values(gameState.prospects || {});
+  const scouts = Object.values(gameState.scouts).filter(
+    (scout) => scout.teamId === gameState.userTeamId
+  );
+  const primaryScout = scouts[0];
+
+  // Create mock scout reports from prospects (Prospect has nested player property)
+  const reports: ScoutReport[] = prospects.slice(0, 50).map((prospect, index) => {
+    const isAutoReport = index % 3 !== 0; // 2/3 auto, 1/3 focus
+    const scoutingHours = isAutoReport ? 2 : 8;
+
+    // Calculate skill ranges from player skills (using perceived values)
+    const player = prospect.player;
+    const skillEntries = Object.values(player.skills);
+    const getAvgSkill = (): number => {
+      if (skillEntries.length === 0) return 65;
+      const sum = skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0);
+      return Math.round(sum / skillEntries.length);
+    };
+
+    const overallAvg = getAvgSkill();
+    const physicalAvg = Math.round((player.physical.speed || 70) * 0.5 + overallAvg * 0.5);
+    const technicalAvg = overallAvg;
+
+    // Add uncertainty based on report type
+    const rangeWidth = isAutoReport ? 25 : 10;
+    const confidenceLevel: 'low' | 'medium' | 'high' = isAutoReport
+      ? 'low'
+      : overallAvg >= 70
+        ? 'high'
+        : 'medium';
+
+    // Build visible traits from hidden traits (HiddenTraits has positive/negative arrays)
+    const allTraits = [
+      ...(player.hiddenTraits?.positive || []).map((t) => ({ name: t, category: 'character' })),
+      ...(player.hiddenTraits?.negative || []).map((t) => ({ name: t, category: 'character' })),
+    ];
+    const visibleTraits = allTraits.slice(0, isAutoReport ? 1 : allTraits.length);
+
+    const projectedRound =
+      prospect.consensusProjection?.projectedRound ||
+      Math.max(1, Math.min(7, Math.ceil((100 - overallAvg) / 12)));
+
+    return {
+      id: `report-${prospect.id}`,
+      prospectId: prospect.id,
+      prospectName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      reportType: isAutoReport ? 'auto' : 'focus',
+      generatedAt: Date.now() - index * 86400000,
+      scoutId: primaryScout?.id || 'scout-1',
+      scoutName: primaryScout ? `${primaryScout.firstName} ${primaryScout.lastName}` : 'Head Scout',
+      physicalMeasurements: {
+        height: `${Math.floor(player.physical.height / 12)}'${player.physical.height % 12}"`,
+        weight: player.physical.weight,
+        college: prospect.collegeName || 'Unknown',
+        fortyYardDash: 4.3 + Math.random() * 0.7,
+        verticalJump: 28 + Math.random() * 12,
+      },
+      skillRanges: {
+        overall: {
+          min: Math.max(0, overallAvg - rangeWidth),
+          max: Math.min(99, overallAvg + rangeWidth),
+          confidence: confidenceLevel,
+        },
+        physical: {
+          min: Math.max(0, physicalAvg - rangeWidth),
+          max: Math.min(99, physicalAvg + rangeWidth),
+          confidence: confidenceLevel,
+        },
+        technical: {
+          min: Math.max(0, technicalAvg - rangeWidth),
+          max: Math.min(99, technicalAvg + rangeWidth),
+          confidence: confidenceLevel,
+        },
+      },
+      visibleTraits: visibleTraits.map((trait) => ({
+        name: trait.name,
+        category: trait.category as 'physical' | 'mental' | 'character' | 'skill',
+        analysis: `Demonstrates ${trait.name.toLowerCase()} tendency`,
+      })),
+      hiddenTraitCount: Math.max(0, allTraits.length - visibleTraits.length),
+      draftProjection: {
+        roundMin: Math.max(1, projectedRound - (isAutoReport ? 1 : 0)),
+        roundMax: Math.min(7, projectedRound + (isAutoReport ? 1 : 0)),
+        pickRangeDescription:
+          projectedRound === 1
+            ? 'First Round'
+            : projectedRound === 2
+              ? 'Day 2 Pick'
+              : projectedRound <= 4
+                ? 'Day 3 Pick'
+                : 'Late Round',
+        overallGrade:
+          overallAvg >= 80
+            ? 'Elite Prospect'
+            : overallAvg >= 70
+              ? 'First-Round Talent'
+              : overallAvg >= 60
+                ? 'Day 2 Value'
+                : 'Developmental',
+      },
+      confidence: {
+        level: confidenceLevel,
+        score: isAutoReport ? 40 : 75,
+        factors: [
+          {
+            factor: isAutoReport ? 'Limited tape' : 'Full evaluation',
+            impact: isAutoReport ? 'negative' : 'positive',
+            description: isAutoReport
+              ? 'Only basic game film reviewed'
+              : 'Comprehensive scouting conducted',
+          },
+        ],
+      },
+      needsMoreScouting: isAutoReport && overallAvg >= 65,
+      scoutingHours,
+    };
+  });
+
+  return (
+    <ScoutingReportsScreen
+      gameState={gameState}
+      reports={reports}
+      onBack={() => navigation.goBack()}
+      onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+      onRequestFocusScouting={(prospectId) => {
+        const prospect = gameState.prospects[prospectId];
+        Alert.alert(
+          'Focus Scouting Requested',
+          `A scout will be assigned to do a comprehensive evaluation of ${prospect?.player.firstName} ${prospect?.player.lastName}.`
+        );
+      }}
     />
   );
 }
