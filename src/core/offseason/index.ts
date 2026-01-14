@@ -9,6 +9,9 @@
 export {
   // Types
   type OffSeasonPhaseType,
+  type TaskActionType,
+  type TaskTargetScreen,
+  type TaskCompletionCondition,
   type OffSeasonTask,
   type PhaseTaskStatus,
   type OffSeasonEventType,

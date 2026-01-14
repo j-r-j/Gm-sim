@@ -10,7 +10,7 @@
  * This allows incremental migration - screens can be updated one at a time.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Alert, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 import { useGame } from './GameContext';
@@ -133,6 +133,7 @@ import {
   advancePhase as advanceOffseasonPhase,
   canAdvancePhase,
   PHASE_ORDER,
+  TaskTargetScreen,
 } from '../core/offseason/OffSeasonPhaseManager';
 import {
   createNewsFeedState,
@@ -157,6 +158,101 @@ import {
   promoteCoachAction,
   getExtensionRecommendation,
 } from '../core/coaching/CoachManagementActions';
+import {
+  getCurrentPhaseTasks,
+  OffSeasonTask,
+} from '../core/offseason/OffSeasonPhaseManager';
+
+// ============================================
+// OFFSEASON TASK COMPLETION HELPER
+// ============================================
+
+/**
+ * Helper to mark offseason tasks as complete based on screen visits and conditions.
+ * Returns the updated gameState if a task was completed, or the original state if not.
+ */
+function tryCompleteOffseasonTask(
+  gameState: GameState,
+  taskId: string
+): GameState | null {
+  const offseasonState = gameState.offseasonState;
+  if (!offseasonState) return null;
+
+  // Get current phase tasks
+  const tasks = getCurrentPhaseTasks(offseasonState);
+  const task = tasks.find((t) => t.id === taskId);
+
+  // Only complete if task exists and is not already complete
+  if (!task || task.isComplete) return null;
+
+  // Mark task complete
+  const newOffseasonState = completeOffseasonTask(offseasonState, taskId);
+
+  return {
+    ...gameState,
+    offseasonState: newOffseasonState,
+  };
+}
+
+/**
+ * Find and complete a task by its target screen (for 'view' type tasks)
+ */
+function tryCompleteViewTask(
+  gameState: GameState,
+  targetScreen: TaskTargetScreen
+): GameState | null {
+  const offseasonState = gameState.offseasonState;
+  if (!offseasonState) return null;
+
+  // Get current phase tasks
+  const tasks = getCurrentPhaseTasks(offseasonState);
+
+  // Find view tasks that target this screen and are not complete
+  const viewTask = tasks.find(
+    (t) =>
+      t.actionType === 'view' &&
+      t.targetScreen === targetScreen &&
+      !t.isComplete
+  );
+
+  if (!viewTask) return null;
+
+  // Mark task complete
+  const newOffseasonState = completeOffseasonTask(offseasonState, viewTask.id);
+
+  return {
+    ...gameState,
+    offseasonState: newOffseasonState,
+  };
+}
+
+/**
+ * Validate that all blocking conditions are met before advancing offseason phase
+ * Returns an error message if validation fails, or null if OK to advance
+ */
+function validateOffseasonPhaseAdvance(gameState: GameState): string | null {
+  const offseasonState = gameState.offseasonState;
+  if (!offseasonState) return null;
+
+  const currentPhase = offseasonState.currentPhase;
+
+  // Check phase-specific validations
+  if (currentPhase === 'final_cuts') {
+    const userTeam = gameState.teams[gameState.userTeamId];
+    const rosterSize = userTeam?.rosterPlayerIds?.length ?? 0;
+
+    if (rosterSize > 53) {
+      return `Roster must be 53 or fewer players before advancing. Current roster: ${rosterSize}. Please cut ${rosterSize - 53} player(s).`;
+    }
+  }
+
+  // Add other phase validations here as needed
+  // if (currentPhase === 'draft') {
+  //   // Validate draft is complete
+  // }
+
+  return null;
+}
 
 // ============================================
 // START SCREEN
@@ -580,13 +676,115 @@ export function DashboardScreenWrapper({
           return;
         }
       } else if (newPhase === 'offseason') {
-        if (offseasonPhase && offseasonPhase >= 12) {
-          newPhase = 'preseason';
-          offseasonPhase = null;
-          newYear = calendar.currentYear + 1;
-          newWeek = 1;
+        // Use unified offseason state management
+        const currentOffseasonState = gameState.offseasonState;
+        if (currentOffseasonState) {
+          // Check if we can advance (required tasks complete)
+          if (!canAdvancePhase(currentOffseasonState)) {
+            Alert.alert(
+              'Cannot Advance',
+              'Complete required offseason tasks before advancing. Go to Offseason Tasks to see what needs to be done.'
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          // Validate phase-specific requirements (e.g., roster size for final_cuts)
+          const validationError = validateOffseasonPhaseAdvance(gameState);
+          if (validationError) {
+            Alert.alert('Cannot Advance', validationError);
+            setIsLoading(false);
+            return;
+          }
+
+          // Advance the offseason phase properly
+          const newOffseasonState = advanceOffseasonPhase(currentOffseasonState);
+
+          if (newOffseasonState.isComplete) {
+            // Offseason complete - transition to preseason
+            newPhase = 'preseason';
+            offseasonPhase = null;
+            newYear = calendar.currentYear + 1;
+            newWeek = 1;
+
+            const updatedState: GameState = {
+              ...gameState,
+              offseasonState: undefined, // Clear offseason state
+              league: {
+                ...gameState.league,
+                calendar: {
+                  ...calendar,
+                  currentWeek: newWeek,
+                  currentPhase: newPhase,
+                  currentYear: newYear,
+                  offseasonPhase: null,
+                },
+              },
+              teams: updatedTeams,
+              players: updatedPlayers,
+              newsFeed: updatedNewsFeed,
+              patienceMeter: updatedPatienceMeter,
+            };
+            setGameState(updatedState);
+            await saveGameState(updatedState);
+            Alert.alert('Offseason Complete', 'Preseason begins!');
+            setIsLoading(false);
+            return;
+          } else {
+            // Sync calendar.offseasonPhase with offseasonState
+            const phaseIndex = PHASE_ORDER.indexOf(newOffseasonState.currentPhase);
+            offseasonPhase = phaseIndex + 1;
+
+            const updatedState: GameState = {
+              ...gameState,
+              offseasonState: newOffseasonState,
+              league: {
+                ...gameState.league,
+                calendar: {
+                  ...calendar,
+                  currentWeek: newWeek,
+                  currentPhase: newPhase,
+                  currentYear: newYear,
+                  offseasonPhase,
+                },
+              },
+              teams: updatedTeams,
+              players: updatedPlayers,
+              newsFeed: updatedNewsFeed,
+              patienceMeter: updatedPatienceMeter,
+            };
+            setGameState(updatedState);
+            await saveGameState(updatedState);
+            setIsLoading(false);
+            return;
+          }
         } else {
-          offseasonPhase = (offseasonPhase || 0) + 1;
+          // Fallback: create offseason state if missing
+          const newOffseasonState = createOffSeasonState(newYear);
+          offseasonPhase = 1;
+
+          const updatedState: GameState = {
+            ...gameState,
+            offseasonState: newOffseasonState,
+            league: {
+              ...gameState.league,
+              calendar: {
+                ...calendar,
+                currentWeek: newWeek,
+                currentPhase: newPhase,
+                currentYear: newYear,
+                offseasonPhase: 1,
+              },
+            },
+            teams: updatedTeams,
+            players: updatedPlayers,
+            newsFeed: updatedNewsFeed,
+            patienceMeter: updatedPatienceMeter,
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+          setIsLoading(false);
+          return;
         }
       } else if (newPhase === 'preseason' && newWeek > 4) {
         newWeek = 1;
@@ -840,7 +1038,18 @@ export function DepthChartScreenWrapper({
 export function OwnerRelationsScreenWrapper({
   navigation,
 }: ScreenProps<'OwnerRelations'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'OwnerRelations');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading owner relations..." />;
@@ -992,7 +1201,18 @@ export function ContractManagementScreenWrapper({
 // ============================================
 
 export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'Staff');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading staff..." />;
@@ -1034,7 +1254,18 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
 // ============================================
 
 export function FinancesScreenWrapper({ navigation }: ScreenProps<'Finances'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'Finances');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading finances..." />;
@@ -1506,6 +1737,17 @@ export function DraftBoardScreenWrapper({
 }: ScreenProps<'DraftBoard'>): React.JSX.Element {
   const { gameState, setGameState, saveGameState } = useGame();
 
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'DraftBoard');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
+
   if (!gameState) {
     return <LoadingFallback message="Loading draft board..." />;
   }
@@ -1653,6 +1895,17 @@ export function FreeAgencyScreenWrapper({
   navigation,
 }: ScreenProps<'FreeAgency'>): React.JSX.Element {
   const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'FreeAgency');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading free agency..." />;
@@ -1847,6 +2100,62 @@ export function OffseasonScreenWrapper({
     offseasonState = createOffSeasonState(gameState.league.calendar.currentYear);
   }
 
+  // Get roster size for validation display
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const rosterSize = userTeam?.rosterPlayerIds?.length ?? 0;
+
+  /**
+   * Handle task action - navigate to appropriate screen
+   */
+  const handleTaskAction = (taskId: string, targetScreen: TaskTargetScreen) => {
+    // Map target screens to navigation routes
+    switch (targetScreen) {
+      case 'DraftBoard':
+        navigation.navigate('DraftBoard');
+        break;
+      case 'DraftRoom':
+        navigation.navigate('DraftRoom');
+        break;
+      case 'FreeAgency':
+        navigation.navigate('FreeAgency');
+        break;
+      case 'Staff':
+        navigation.navigate('Staff');
+        break;
+      case 'Finances':
+        navigation.navigate('Finances');
+        break;
+      case 'ContractManagement':
+        navigation.navigate('ContractManagement');
+        break;
+      case 'Roster':
+        navigation.navigate('Roster');
+        break;
+      case 'FinalCuts':
+        navigation.navigate('FinalCuts');
+        break;
+      case 'OTAs':
+        navigation.navigate('OTAs');
+        break;
+      case 'TrainingCamp':
+        navigation.navigate('TrainingCamp');
+        break;
+      case 'Preseason':
+        navigation.navigate('Preseason');
+        break;
+      case 'SeasonRecap':
+        navigation.navigate('CareerSummary');
+        break;
+      case 'OwnerRelations':
+        navigation.navigate('OwnerRelations');
+        break;
+      default:
+        // Unknown screen - just complete the task
+        handleCompleteTask(taskId);
+        return;
+    }
+  };
+
   const handleCompleteTask = async (taskId: string) => {
     const newOffseasonState = completeOffseasonTask(offseasonState!, taskId);
     const updatedState: GameState = {
@@ -1859,6 +2168,13 @@ export function OffseasonScreenWrapper({
 
   const handleAdvanceOffseasonPhase = async () => {
     if (!canAdvancePhase(offseasonState!)) return;
+
+    // Validate phase-specific requirements
+    const validationError = validateOffseasonPhaseAdvance(gameState);
+    if (validationError) {
+      Alert.alert('Cannot Advance', validationError);
+      return;
+    }
 
     const newOffseasonState = advanceOffseasonPhase(offseasonState!);
 
@@ -1903,13 +2219,11 @@ export function OffseasonScreenWrapper({
     <OffseasonScreen
       offseasonState={offseasonState}
       year={gameState.league.calendar.currentYear}
+      rosterSize={rosterSize}
+      onTaskAction={handleTaskAction}
       onCompleteTask={handleCompleteTask}
       onAdvancePhase={handleAdvanceOffseasonPhase}
       onBack={() => navigation.goBack()}
-      onViewOTAReports={() => navigation.navigate('OTAs')}
-      onViewTrainingCamp={() => navigation.navigate('TrainingCamp')}
-      onViewPreseason={() => navigation.navigate('Preseason')}
-      onViewFinalCuts={() => navigation.navigate('FinalCuts')}
     />
   );
 }
@@ -2175,7 +2489,18 @@ export function FiredScreenWrapper({ navigation }: ScreenProps<'Fired'>): React.
 // ============================================
 
 export function OTAsScreenWrapper({ navigation }: ScreenProps<'OTAs'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'OTAs');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading OTAs..." />;
@@ -2296,7 +2621,18 @@ export function OTAsScreenWrapper({ navigation }: ScreenProps<'OTAs'>): React.JS
 export function TrainingCampScreenWrapper({
   navigation,
 }: ScreenProps<'TrainingCamp'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'TrainingCamp');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading Training Camp..." />;
@@ -2407,7 +2743,18 @@ export function TrainingCampScreenWrapper({
 export function PreseasonScreenWrapper({
   navigation,
 }: ScreenProps<'Preseason'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'Preseason');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading Preseason..." />;
@@ -2511,7 +2858,32 @@ export function PreseasonScreenWrapper({
 export function FinalCutsScreenWrapper({
   navigation,
 }: ScreenProps<'FinalCuts'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task and validate roster size
+  useEffect(() => {
+    if (gameState) {
+      const userTeam = gameState.teams[gameState.userTeamId];
+      const rosterSize = userTeam?.rosterPlayerIds?.length ?? 0;
+
+      // First, complete the view task for visiting this screen
+      let updatedState = tryCompleteViewTask(gameState, 'FinalCuts');
+
+      // Then, if roster is at or below 53, auto-complete the cut_to_53 task
+      if (rosterSize <= 53) {
+        const stateToCheck = updatedState || gameState;
+        const cutTaskState = tryCompleteOffseasonTask(stateToCheck, 'cut_to_53');
+        if (cutTaskState) {
+          updatedState = cutTaskState;
+        }
+      }
+
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, [gameState?.teams[gameState?.userTeamId]?.rosterPlayerIds?.length]); // Re-run when roster size changes
 
   if (!gameState) {
     return <LoadingFallback message="Loading Final Cuts..." />;
