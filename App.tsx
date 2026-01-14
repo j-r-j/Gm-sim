@@ -23,6 +23,8 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { NewsScreen } from './src/screens/NewsScreen';
 import { DraftRoomScreen, DraftPick as DraftRoomPick, DraftRoomProspect, TradeOffer } from './src/screens/DraftRoomScreen';
 import { FreeAgencyScreen, FreeAgent, ContractOffer } from './src/screens/FreeAgencyScreen';
+import { TradeScreen, TradeProposal, TradeAsset } from './src/screens/TradeScreen';
+import { CutPreview, ExtensionOffer } from './src/screens/RosterScreen';
 
 // Services and Models
 import { createNewGame } from './src/services/NewGameService';
@@ -45,6 +47,7 @@ type Screen =
   | 'draftBoard'
   | 'draftRoom'
   | 'freeAgency'
+  | 'trade'
   | 'playerProfile'
   | 'schedule'
   | 'standings'
@@ -454,6 +457,134 @@ export default function App() {
                 `Position: ${player.position}\nAge: ${player.age}`
               );
             }
+          }}
+          onGetCutPreview={(playerId) => {
+            const player = gameState.players[playerId];
+            if (!player) return null;
+            // Simplified cut preview - in reality would use CutCalculator
+            const estimatedSalary = 2000000 + Math.random() * 10000000;
+            return {
+              playerId,
+              playerName: `${player.firstName} ${player.lastName}`,
+              capSavings: estimatedSalary * 0.7,
+              deadMoney: estimatedSalary * 0.3,
+              recommendation: player.age >= 30 ? 'Consider releasing - aging player' : 'Still productive',
+            };
+          }}
+          onCutPlayer={async (playerId) => {
+            const player = gameState.players[playerId];
+            if (!player) return false;
+
+            // Remove player from roster
+            const updatedRoster = userTeam.rosterPlayerIds.filter(id => id !== playerId);
+            const updatedTeam = {
+              ...userTeam,
+              rosterPlayerIds: updatedRoster,
+            };
+            const updatedState: GameState = {
+              ...gameState,
+              teams: {
+                ...gameState.teams,
+                [userTeam.id]: updatedTeam,
+              },
+            };
+            setGameState(updatedState);
+            await saveGameState(updatedState);
+            return true;
+          }}
+          isExtensionEligible={(playerId) => {
+            // Players in final 2 years are extension eligible (simplified)
+            const player = gameState.players[playerId];
+            return player ? player.experience >= 2 : false;
+          }}
+          onExtendPlayer={async (_playerId, offer) => {
+            // Simplified extension logic
+            const aav = offer.totalValue / offer.years;
+            if (aav >= 5000000 && offer.guaranteed >= offer.totalValue * 0.3) {
+              return 'accepted';
+            } else if (aav >= 3000000) {
+              return 'counter';
+            }
+            return 'rejected';
+          }}
+          onTrade={() => setCurrentScreen('trade')}
+        />
+      </>
+    );
+  }
+
+  // Trade Screen
+  if (currentScreen === 'trade') {
+    const userTeam = gameState.teams[gameState.userTeamId];
+
+    return (
+      <>
+        <StatusBar style="light" />
+        <TradeScreen
+          userTeam={userTeam}
+          teams={gameState.teams}
+          players={gameState.players}
+          draftPicks={gameState.draftPicks}
+          onBack={() => setCurrentScreen('roster')}
+          onSubmitTrade={async (proposal) => {
+            // Simplified trade evaluation
+            const offeredValue = proposal.assetsOffered.reduce((sum, a) => sum + a.value, 0);
+            const requestedValue = proposal.assetsRequested.reduce((sum, a) => sum + a.value, 0);
+
+            if (offeredValue >= requestedValue * 0.85) {
+              // Accept trade - process it
+              const updatedTeams = { ...gameState.teams };
+              const userTeamCopy = { ...updatedTeams[proposal.offeringTeamId] };
+              const partnerTeamCopy = { ...updatedTeams[proposal.receivingTeamId] };
+
+              // Move players
+              for (const asset of proposal.assetsOffered) {
+                if (asset.type === 'player') {
+                  userTeamCopy.rosterPlayerIds = userTeamCopy.rosterPlayerIds.filter(id => id !== asset.playerId);
+                  partnerTeamCopy.rosterPlayerIds = [...partnerTeamCopy.rosterPlayerIds, asset.playerId];
+                }
+              }
+              for (const asset of proposal.assetsRequested) {
+                if (asset.type === 'player') {
+                  partnerTeamCopy.rosterPlayerIds = partnerTeamCopy.rosterPlayerIds.filter(id => id !== asset.playerId);
+                  userTeamCopy.rosterPlayerIds = [...userTeamCopy.rosterPlayerIds, asset.playerId];
+                }
+              }
+
+              // Update draft picks
+              const updatedPicks = { ...gameState.draftPicks };
+              for (const asset of proposal.assetsOffered) {
+                if (asset.type === 'pick' && updatedPicks[asset.pickId]) {
+                  updatedPicks[asset.pickId] = {
+                    ...updatedPicks[asset.pickId],
+                    currentTeamId: proposal.receivingTeamId,
+                  };
+                }
+              }
+              for (const asset of proposal.assetsRequested) {
+                if (asset.type === 'pick' && updatedPicks[asset.pickId]) {
+                  updatedPicks[asset.pickId] = {
+                    ...updatedPicks[asset.pickId],
+                    currentTeamId: proposal.offeringTeamId,
+                  };
+                }
+              }
+
+              updatedTeams[proposal.offeringTeamId] = userTeamCopy;
+              updatedTeams[proposal.receivingTeamId] = partnerTeamCopy;
+
+              const updatedState: GameState = {
+                ...gameState,
+                teams: updatedTeams,
+                draftPicks: updatedPicks,
+              };
+              setGameState(updatedState);
+              await saveGameState(updatedState);
+              return 'accepted';
+            } else if (offeredValue >= requestedValue * 0.7) {
+              return 'counter';
+            }
+            return 'rejected';
           }}
         />
       </>
