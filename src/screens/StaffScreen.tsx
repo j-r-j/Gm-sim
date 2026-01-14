@@ -4,14 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
@@ -35,13 +28,7 @@ type StaffTab = 'coaches' | 'scouts';
 /**
  * Coach card component
  */
-function CoachCard({
-  coach,
-  onPress,
-}: {
-  coach: Coach;
-  onPress?: () => void;
-}) {
+function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
@@ -66,13 +53,7 @@ function CoachCard({
 /**
  * Scout card component
  */
-function ScoutCard({
-  scout,
-  onPress,
-}: {
-  scout: Scout;
-  onPress?: () => void;
-}) {
+function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
@@ -84,7 +65,8 @@ function ScoutCard({
             {scout.firstName} {scout.lastName}
           </Text>
           <Text style={styles.staffRole}>
-            {scout.attributes.regionKnowledge || 'General'} Region • {scout.attributes.positionSpecialty || 'All'} Specialist
+            {scout.attributes.regionKnowledge || 'General'} Region •{' '}
+            {scout.attributes.positionSpecialty || 'All'} Specialist
           </Text>
         </View>
       </View>
@@ -117,12 +99,7 @@ function formatRole(role: string): string {
   return roleMap[role] || role;
 }
 
-export function StaffScreen({
-  coaches,
-  scouts,
-  onBack,
-  onSelectStaff,
-}: StaffScreenProps) {
+export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScreenProps) {
   const [activeTab, setActiveTab] = useState<StaffTab>('coaches');
 
   // Sort coaches by role importance
@@ -180,10 +157,7 @@ export function StaffScreen({
           data={sortedCoaches}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <CoachCard
-              coach={item}
-              onPress={() => onSelectStaff?.(item.id, 'coach')}
-            />
+            <CoachCard coach={item} onPress={() => onSelectStaff?.(item.id, 'coach')} />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -198,10 +172,7 @@ export function StaffScreen({
           data={scouts}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ScoutCard
-              scout={item}
-              onPress={() => onSelectStaff?.(item.id, 'scout')}
-            />
+            <ScoutCard scout={item} onPress={() => onSelectStaff?.(item.id, 'scout')} />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

@@ -4,14 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import {
   OffSeasonState,
@@ -71,17 +64,10 @@ function ProgressBar({ progress }: { progress: OffSeasonProgress }): React.JSX.E
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
         <Text style={styles.progressLabel}>Offseason Progress</Text>
-        <Text style={styles.progressValue}>
-          Phase {progress.currentPhaseNumber} of 12
-        </Text>
+        <Text style={styles.progressValue}>Phase {progress.currentPhaseNumber} of 12</Text>
       </View>
       <View style={styles.progressBarBg}>
-        <View
-          style={[
-            styles.progressBarFill,
-            { width: `${progress.percentComplete}%` },
-          ]}
-        />
+        <View style={[styles.progressBarFill, { width: `${progress.percentComplete}%` }]} />
       </View>
       <Text style={styles.progressPercent}>{progress.percentComplete}% Complete</Text>
     </View>
@@ -134,11 +120,7 @@ export function OffseasonScreen({
           <View style={styles.taskSection}>
             <Text style={styles.sectionTitle}>Required Tasks</Text>
             {requiredTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={() => onCompleteTask(task.id)}
-              />
+              <TaskCard key={task.id} task={task} onComplete={() => onCompleteTask(task.id)} />
             ))}
           </View>
         )}
@@ -148,11 +130,7 @@ export function OffseasonScreen({
           <View style={styles.taskSection}>
             <Text style={styles.sectionTitle}>Optional Tasks</Text>
             {optionalTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={() => onCompleteTask(task.id)}
-              />
+              <TaskCard key={task.id} task={task} onComplete={() => onCompleteTask(task.id)} />
             ))}
           </View>
         )}
@@ -160,10 +138,7 @@ export function OffseasonScreen({
         {/* Advance Button */}
         <View style={styles.advanceSection}>
           <TouchableOpacity
-            style={[
-              styles.advanceButton,
-              !progress.canAdvance && styles.advanceButtonDisabled,
-            ]}
+            style={[styles.advanceButton, !progress.canAdvance && styles.advanceButtonDisabled]}
             onPress={onAdvancePhase}
             disabled={!progress.canAdvance}
           >
@@ -172,9 +147,7 @@ export function OffseasonScreen({
             </Text>
           </TouchableOpacity>
           {!progress.canAdvance && (
-            <Text style={styles.advanceHint}>
-              Complete all required tasks to advance
-            </Text>
+            <Text style={styles.advanceHint}>Complete all required tasks to advance</Text>
           )}
         </View>
 
@@ -182,11 +155,14 @@ export function OffseasonScreen({
         {offseasonState.events.length > 0 && (
           <View style={styles.eventsSection}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
-            {offseasonState.events.slice(-5).reverse().map((event) => (
-              <View key={event.id} style={styles.eventItem}>
-                <Text style={styles.eventText}>{event.description}</Text>
-              </View>
-            ))}
+            {offseasonState.events
+              .slice(-5)
+              .reverse()
+              .map((event) => (
+                <View key={event.id} style={styles.eventItem}>
+                  <Text style={styles.eventText}>{event.description}</Text>
+                </View>
+              ))}
           </View>
         )}
       </ScrollView>

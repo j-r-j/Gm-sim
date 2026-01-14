@@ -90,7 +90,7 @@ function TeamSelector({
 }) {
   const sortedTeams = useMemo(() => {
     return Object.values(teams)
-      .filter(t => t.id !== excludeTeamId)
+      .filter((t) => t.id !== excludeTeamId)
       .sort((a, b) => a.city.localeCompare(b.city));
   }, [teams, excludeTeamId]);
 
@@ -103,17 +103,11 @@ function TeamSelector({
       contentContainerStyle={styles.teamSelectorContent}
       renderItem={({ item }) => (
         <TouchableOpacity
-          style={[
-            styles.teamChip,
-            selectedTeamId === item.id && styles.teamChipActive,
-          ]}
+          style={[styles.teamChip, selectedTeamId === item.id && styles.teamChipActive]}
           onPress={() => onSelect(item.id)}
         >
           <Text
-            style={[
-              styles.teamChipText,
-              selectedTeamId === item.id && styles.teamChipTextActive,
-            ]}
+            style={[styles.teamChipText, selectedTeamId === item.id && styles.teamChipTextActive]}
           >
             {item.abbreviation}
           </Text>
@@ -126,13 +120,7 @@ function TeamSelector({
 /**
  * Asset card component
  */
-function AssetCard({
-  asset,
-  onRemove,
-}: {
-  asset: TradeAsset;
-  onRemove: () => void;
-}) {
+function AssetCard({ asset, onRemove }: { asset: TradeAsset; onRemove: () => void }) {
   return (
     <View style={styles.assetCard}>
       <View style={styles.assetInfo}>
@@ -216,9 +204,7 @@ export function TradeScreen({
 
   // Get user's players
   const userPlayers = useMemo(() => {
-    return userTeam.rosterPlayerIds
-      .map(id => players[id])
-      .filter(Boolean);
+    return userTeam.rosterPlayerIds.map((id) => players[id]).filter(Boolean);
   }, [userTeam, players]);
 
   // Get partner's players
@@ -226,22 +212,22 @@ export function TradeScreen({
     if (!tradePartner) return [];
     const partner = teams[tradePartner];
     if (!partner) return [];
-    return partner.rosterPlayerIds
-      .map(id => players[id])
-      .filter(Boolean);
+    return partner.rosterPlayerIds.map((id) => players[id]).filter(Boolean);
   }, [tradePartner, teams, players]);
 
   // Get user's draft picks
   const userPicks = useMemo(() => {
-    return Object.values(draftPicks)
-      .filter(p => p.currentTeamId === userTeam.id && !p.selectedPlayerId);
+    return Object.values(draftPicks).filter(
+      (p) => p.currentTeamId === userTeam.id && !p.selectedPlayerId
+    );
   }, [draftPicks, userTeam.id]);
 
   // Get partner's draft picks
   const partnerPicks = useMemo(() => {
     if (!tradePartner) return [];
-    return Object.values(draftPicks)
-      .filter(p => p.currentTeamId === tradePartner && !p.selectedPlayerId);
+    return Object.values(draftPicks).filter(
+      (p) => p.currentTeamId === tradePartner && !p.selectedPlayerId
+    );
   }, [draftPicks, tradePartner]);
 
   // Calculate trade values
@@ -257,20 +243,28 @@ export function TradeScreen({
 
   // Add asset to offer
   const addToOffer = (asset: TradeAsset) => {
-    if (assetsOffered.some(a =>
-      (a.type === 'player' && asset.type === 'player' && a.playerId === asset.playerId) ||
-      (a.type === 'pick' && asset.type === 'pick' && a.pickId === asset.pickId)
-    )) return;
+    if (
+      assetsOffered.some(
+        (a) =>
+          (a.type === 'player' && asset.type === 'player' && a.playerId === asset.playerId) ||
+          (a.type === 'pick' && asset.type === 'pick' && a.pickId === asset.pickId)
+      )
+    )
+      return;
     setAssetsOffered([...assetsOffered, asset]);
     setShowAssetPicker(null);
   };
 
   // Add asset to request
   const addToRequest = (asset: TradeAsset) => {
-    if (assetsRequested.some(a =>
-      (a.type === 'player' && asset.type === 'player' && a.playerId === asset.playerId) ||
-      (a.type === 'pick' && asset.type === 'pick' && a.pickId === asset.pickId)
-    )) return;
+    if (
+      assetsRequested.some(
+        (a) =>
+          (a.type === 'player' && asset.type === 'player' && a.playerId === asset.playerId) ||
+          (a.type === 'pick' && asset.type === 'pick' && a.pickId === asset.pickId)
+      )
+    )
+      return;
     setAssetsRequested([...assetsRequested, asset]);
     setShowAssetPicker(null);
   };
@@ -391,17 +385,15 @@ export function TradeScreen({
 
             {/* Trade Value */}
             {(assetsOffered.length > 0 || assetsRequested.length > 0) && (
-              <TradeValueIndicator
-                offeredValue={offeredValue}
-                requestedValue={requestedValue}
-              />
+              <TradeValueIndicator offeredValue={offeredValue} requestedValue={requestedValue} />
             )}
 
             {/* Submit Button */}
             <TouchableOpacity
               style={[
                 styles.submitButton,
-                (assetsOffered.length === 0 || assetsRequested.length === 0) && styles.submitButtonDisabled,
+                (assetsOffered.length === 0 || assetsRequested.length === 0) &&
+                  styles.submitButtonDisabled,
               ]}
               onPress={handleSubmitTrade}
               disabled={assetsOffered.length === 0 || assetsRequested.length === 0}
@@ -428,7 +420,7 @@ export function TradeScreen({
             <ScrollView style={styles.assetList}>
               {/* Players */}
               <Text style={styles.assetGroupTitle}>Players</Text>
-              {(showAssetPicker === 'offer' ? userPlayers : partnerPlayers).map(player => (
+              {(showAssetPicker === 'offer' ? userPlayers : partnerPlayers).map((player) => (
                 <TouchableOpacity
                   key={player.id}
                   style={styles.assetListItem}
@@ -440,7 +432,11 @@ export function TradeScreen({
                       position: player.position,
                       value: 5000000 + Math.random() * 15000000, // Simplified value
                     };
-                    showAssetPicker === 'offer' ? addToOffer(asset) : addToRequest(asset);
+                    if (showAssetPicker === 'offer') {
+                      addToOffer(asset);
+                    } else {
+                      addToRequest(asset);
+                    }
                   }}
                 >
                   <Text style={styles.assetListPosition}>{player.position}</Text>
@@ -452,7 +448,7 @@ export function TradeScreen({
 
               {/* Draft Picks */}
               <Text style={styles.assetGroupTitle}>Draft Picks</Text>
-              {(showAssetPicker === 'offer' ? userPicks : partnerPicks).map(pick => (
+              {(showAssetPicker === 'offer' ? userPicks : partnerPicks).map((pick) => (
                 <TouchableOpacity
                   key={pick.id}
                   style={styles.assetListItem}
@@ -464,11 +460,17 @@ export function TradeScreen({
                       year: pick.year,
                       value: (8 - pick.round) * 2000000, // Simplified value
                     };
-                    showAssetPicker === 'offer' ? addToOffer(asset) : addToRequest(asset);
+                    if (showAssetPicker === 'offer') {
+                      addToOffer(asset);
+                    } else {
+                      addToRequest(asset);
+                    }
                   }}
                 >
                   <Text style={styles.assetListPosition}>Rd {pick.round}</Text>
-                  <Text style={styles.assetListName}>{pick.year} Pick #{pick.overallPick}</Text>
+                  <Text style={styles.assetListName}>
+                    {pick.year} Pick #{pick.overallPick}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

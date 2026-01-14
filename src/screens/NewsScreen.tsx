@@ -4,14 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 
 /**
@@ -74,13 +67,7 @@ const CATEGORY_COLORS: Record<NewsItem['category'], string> = {
 /**
  * News card component
  */
-function NewsCard({
-  item,
-  onPress,
-}: {
-  item: NewsItem;
-  onPress?: () => void;
-}) {
+function NewsCard({ item, onPress }: { item: NewsItem; onPress?: () => void }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -97,27 +84,19 @@ function NewsCard({
       activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
-        <View
-          style={[styles.categoryBadge, { backgroundColor: CATEGORY_COLORS[item.category] }]}
-        >
-          <Text style={styles.categoryText}>
-            {CATEGORY_LABELS[item.category]}
-          </Text>
+        <View style={[styles.categoryBadge, { backgroundColor: CATEGORY_COLORS[item.category] }]}>
+          <Text style={styles.categoryText}>{CATEGORY_LABELS[item.category]}</Text>
         </View>
         <Text style={styles.dateText}>Week {item.week}</Text>
       </View>
 
-      <Text style={[styles.headline, !item.isRead && styles.unreadHeadline]}>
-        {item.headline}
-      </Text>
+      <Text style={[styles.headline, !item.isRead && styles.unreadHeadline]}>{item.headline}</Text>
 
       <Text style={styles.summary} numberOfLines={expanded ? undefined : 2}>
         {item.summary}
       </Text>
 
-      {expanded && item.fullText && (
-        <Text style={styles.fullText}>{item.fullText}</Text>
-      )}
+      {expanded && item.fullText && <Text style={styles.fullText}>{item.fullText}</Text>}
 
       {item.priority === 'breaking' && (
         <View style={styles.breakingBadge}>
@@ -136,17 +115,15 @@ function EmptyState() {
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>📰</Text>
       <Text style={styles.emptyTitle}>No News Yet</Text>
-      <Text style={styles.emptyText}>
-        News will appear here as the season progresses.
-      </Text>
+      <Text style={styles.emptyText}>News will appear here as the season progresses.</Text>
     </View>
   );
 }
 
 export function NewsScreen({
   news,
-  currentWeek,
-  currentYear,
+  currentWeek: _currentWeek,
+  currentYear: _currentYear,
   onBack,
   onMarkRead,
 }: NewsScreenProps) {
@@ -172,12 +149,16 @@ export function NewsScreen({
   }, [news, filter]);
 
   // Count unread
-  const unreadCount = useMemo(
-    () => news.filter((n) => !n.isRead).length,
-    [news]
-  );
+  const unreadCount = useMemo(() => news.filter((n) => !n.isRead).length, [news]);
 
-  const filterButtons: CategoryFilter[] = ['all', 'yourTeam', 'trade', 'injury', 'draft', 'freeAgency'];
+  const filterButtons: CategoryFilter[] = [
+    'all',
+    'yourTeam',
+    'trade',
+    'injury',
+    'draft',
+    'freeAgency',
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -208,9 +189,7 @@ export function NewsScreen({
               style={[styles.filterButton, filter === item && styles.filterActive]}
               onPress={() => setFilter(item)}
             >
-              <Text
-                style={[styles.filterText, filter === item && styles.filterTextActive]}
-              >
+              <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>
                 {CATEGORY_LABELS[item]}
               </Text>
             </TouchableOpacity>
@@ -227,12 +206,7 @@ export function NewsScreen({
         <FlatList
           data={filteredNews}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <NewsCard
-              item={item}
-              onPress={() => onMarkRead?.(item.id)}
-            />
-          )}
+          renderItem={({ item }) => <NewsCard item={item} onPress={() => onMarkRead?.(item.id)} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />

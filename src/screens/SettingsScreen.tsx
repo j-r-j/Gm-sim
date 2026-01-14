@@ -3,7 +3,7 @@
  * User preferences and game settings
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -92,12 +92,7 @@ function SelectSetting({
             style={[styles.optionButton, value === option.value && styles.optionButtonActive]}
             onPress={() => onChange(option.value)}
           >
-            <Text
-              style={[
-                styles.optionText,
-                value === option.value && styles.optionTextActive,
-              ]}
-            >
+            <Text style={[styles.optionText, value === option.value && styles.optionTextActive]}>
               {option.label}
             </Text>
           </TouchableOpacity>
@@ -167,9 +162,7 @@ export function SettingsScreen({
               { label: 'Fast', value: 'fast' },
             ]}
             value={settings.simulationSpeed}
-            onChange={(value) =>
-              onUpdateSettings({ simulationSpeed: value as SimulationSpeed })
-            }
+            onChange={(value) => onUpdateSettings({ simulationSpeed: value as SimulationSpeed })}
           />
           <ToggleSetting
             label="Auto-Save"

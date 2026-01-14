@@ -24,10 +24,7 @@ import { generateFullName } from '../core/generators/player/NameGenerator';
 import { generateUUID, randomInt } from '../core/generators/utils/RandomUtils';
 import { generateDraftClass } from '../core/draft/DraftClassGenerator';
 import { Prospect } from '../core/draft/Prospect';
-import {
-  generateSeasonSchedule,
-  PreviousYearStandings,
-} from '../core/season/ScheduleGenerator';
+import { generateSeasonSchedule, PreviousYearStandings } from '../core/season/ScheduleGenerator';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';

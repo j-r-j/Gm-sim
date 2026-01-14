@@ -4,14 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { ScheduledGame } from '../core/season/ScheduleGenerator';
 import { Team } from '../core/models/team/Team';
@@ -62,13 +55,7 @@ interface DisplayGame {
 /**
  * Game card component
  */
-function GameCard({
-  game,
-  onPress,
-}: {
-  game: DisplayGame;
-  onPress?: () => void;
-}) {
+function GameCard({ game, onPress }: { game: DisplayGame; onPress?: () => void }) {
   if (game.isBye) {
     return (
       <View style={[styles.gameCard, styles.byeCard]}>

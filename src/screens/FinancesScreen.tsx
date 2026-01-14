@@ -4,14 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
@@ -59,27 +52,16 @@ function formatCurrency(amount: number): string {
 /**
  * Cap bar component
  */
-function CapBar({
-  used,
-  total,
-  deadMoney,
-}: {
-  used: number;
-  total: number;
-  deadMoney: number;
-}) {
+function CapBar({ used, total, deadMoney }: { used: number; total: number; deadMoney: number }) {
   const usedPercent = Math.min((used / total) * 100, 100);
   const deadPercent = Math.min((deadMoney / total) * 100, 100);
   const available = total - used;
-  const availablePercent = 100 - usedPercent;
 
   return (
     <View style={styles.capBarContainer}>
       <View style={styles.capBar}>
         <View style={[styles.capBarUsed, { width: `${usedPercent}%` }]} />
-        {deadMoney > 0 && (
-          <View style={[styles.capBarDead, { width: `${deadPercent}%` }]} />
-        )}
+        {deadMoney > 0 && <View style={[styles.capBarDead, { width: `${deadPercent}%` }]} />}
       </View>
       <View style={styles.capBarLabels}>
         <View style={styles.capBarLegend}>
@@ -104,13 +86,7 @@ function CapBar({
 /**
  * Contract row component
  */
-function ContractRow({
-  contract,
-  onPress,
-}: {
-  contract: ContractSummary;
-  onPress?: () => void;
-}) {
+function ContractRow({ contract, onPress }: { contract: ContractSummary; onPress?: () => void }) {
   return (
     <TouchableOpacity style={styles.contractRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.contractInfo}>
@@ -242,10 +218,7 @@ export function FinancesScreen({
         data={financials.contracts}
         keyExtractor={(item) => item.playerId}
         renderItem={({ item }) => (
-          <ContractRow
-            contract={item}
-            onPress={() => onSelectPlayer?.(item.playerId)}
-          />
+          <ContractRow contract={item} onPress={() => onSelectPlayer?.(item.playerId)} />
         )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}

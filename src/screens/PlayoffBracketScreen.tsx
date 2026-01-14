@@ -4,14 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Team } from '../core/models/team/Team';
 
@@ -179,14 +172,16 @@ function ConferenceBracket({
   teams: Record<string, Team>;
   userTeamId: string;
 }) {
-  const confMatchups = matchups.filter(m => m.conference === conference);
-  const wildCardMatchups = confMatchups.filter(m => m.round === 'wildCard');
-  const divisionalMatchups = confMatchups.filter(m => m.round === 'divisional');
-  const conferenceMatchup = confMatchups.find(m => m.round === 'conference');
+  const confMatchups = matchups.filter((m) => m.conference === conference);
+  const wildCardMatchups = confMatchups.filter((m) => m.round === 'wildCard');
+  const divisionalMatchups = confMatchups.filter((m) => m.round === 'divisional');
+  const conferenceMatchup = confMatchups.find((m) => m.round === 'conference');
 
   return (
     <View style={styles.conferenceBracket}>
-      <Text style={[styles.conferenceTitle, conference === 'AFC' ? styles.afcTitle : styles.nfcTitle]}>
+      <Text
+        style={[styles.conferenceTitle, conference === 'AFC' ? styles.afcTitle : styles.nfcTitle]}
+      >
         {conference}
       </Text>
 
@@ -246,7 +241,7 @@ export function PlayoffBracketScreen({
   onBack,
 }: PlayoffBracketScreenProps): React.JSX.Element {
   const superBowlMatchup = useMemo(() => {
-    return matchups.find(m => m.round === 'superBowl');
+    return matchups.find((m) => m.round === 'superBowl');
   }, [matchups]);
 
   const championTeam = championId ? teams[championId] : null;
@@ -302,7 +297,10 @@ export function PlayoffBracketScreen({
         {/* Current round indicator */}
         <View style={styles.roundIndicator}>
           <Text style={styles.roundIndicatorText}>
-            Current Round: {currentRound === 'complete' ? 'Season Complete' : currentRound.replace(/([A-Z])/g, ' $1').trim()}
+            Current Round:{' '}
+            {currentRound === 'complete'
+              ? 'Season Complete'
+              : currentRound.replace(/([A-Z])/g, ' $1').trim()}
           </Text>
         </View>
       </ScrollView>

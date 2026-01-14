@@ -4,20 +4,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Team } from '../core/models/team/Team';
-import {
-  calculateStandings,
-  StandingsEntry,
-} from '../services/StandingsService';
+import { calculateStandings, StandingsEntry } from '../services/StandingsService';
 
 /**
  * Props for StandingsScreen
@@ -49,15 +39,14 @@ function StandingsRow({
     <View style={[styles.row, isUserTeam && styles.userTeamRow]}>
       <Text style={[styles.rankCell, isUserTeam && styles.userTeamText]}>{rank}</Text>
       <View style={styles.teamCell}>
-        <Text style={[styles.teamAbbr, isUserTeam && styles.userTeamText]}>
-          {entry.teamAbbr}
-        </Text>
+        <Text style={[styles.teamAbbr, isUserTeam && styles.userTeamText]}>{entry.teamAbbr}</Text>
         <Text style={[styles.teamName, isUserTeam && styles.userTeamText]} numberOfLines={1}>
           {entry.teamName}
         </Text>
       </View>
       <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>
-        {entry.wins}-{entry.losses}{entry.ties > 0 ? `-${entry.ties}` : ''}
+        {entry.wins}-{entry.losses}
+        {entry.ties > 0 ? `-${entry.ties}` : ''}
       </Text>
       <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>
         {entry.pct.toFixed(3).slice(1)}
@@ -71,7 +60,8 @@ function StandingsRow({
           entry.pointsDiff > 0 ? styles.positive : entry.pointsDiff < 0 ? styles.negative : null,
         ]}
       >
-        {entry.pointsDiff > 0 ? '+' : ''}{entry.pointsDiff}
+        {entry.pointsDiff > 0 ? '+' : ''}
+        {entry.pointsDiff}
       </Text>
       <Text style={[styles.streakCell, isUserTeam && styles.userTeamText]}>{entry.streak}</Text>
     </View>
@@ -128,18 +118,11 @@ function DivisionSection({
   );
 }
 
-export function StandingsScreen({
-  teams,
-  userTeamId,
-  onBack,
-}: StandingsScreenProps) {
+export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('division');
 
   // Calculate standings
-  const standings = useMemo(
-    () => calculateStandings(teams, userTeamId),
-    [teams, userTeamId]
-  );
+  const standings = useMemo(() => calculateStandings(teams, userTeamId), [teams, userTeamId]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -158,9 +141,7 @@ export function StandingsScreen({
           style={[styles.toggleButton, viewMode === 'division' && styles.toggleActive]}
           onPress={() => setViewMode('division')}
         >
-          <Text
-            style={[styles.toggleText, viewMode === 'division' && styles.toggleTextActive]}
-          >
+          <Text style={[styles.toggleText, viewMode === 'division' && styles.toggleTextActive]}>
             By Division
           </Text>
         </TouchableOpacity>
@@ -168,9 +149,7 @@ export function StandingsScreen({
           style={[styles.toggleButton, viewMode === 'conference' && styles.toggleActive]}
           onPress={() => setViewMode('conference')}
         >
-          <Text
-            style={[styles.toggleText, viewMode === 'conference' && styles.toggleTextActive]}
-          >
+          <Text style={[styles.toggleText, viewMode === 'conference' && styles.toggleTextActive]}>
             By Conference
           </Text>
         </TouchableOpacity>

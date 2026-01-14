@@ -16,7 +16,11 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Player } from '../core/models/player/Player';
-import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS, SPECIAL_TEAMS_POSITIONS } from '../core/models/player/Position';
+import {
+  OFFENSIVE_POSITIONS,
+  DEFENSIVE_POSITIONS,
+  SPECIAL_TEAMS_POSITIONS,
+} from '../core/models/player/Position';
 
 /**
  * Cut preview info passed to the screen
@@ -59,7 +63,10 @@ export interface RosterScreenProps {
   /** Check if player is extension eligible */
   isExtensionEligible?: (playerId: string) => boolean;
   /** Callback to extend a player */
-  onExtendPlayer?: (playerId: string, offer: ExtensionOffer) => Promise<'accepted' | 'rejected' | 'counter'>;
+  onExtendPlayer?: (
+    playerId: string,
+    offer: ExtensionOffer
+  ) => Promise<'accepted' | 'rejected' | 'counter'>;
   /** Navigate to trade screen */
   onTrade?: () => void;
 }
@@ -116,7 +123,10 @@ function PlayerCard({
             {player.firstName} {player.lastName}
           </Text>
           <Text style={styles.playerDetails}>
-            Age {player.age} • {player.experience === 0 ? 'Rookie' : `${player.experience} yr${player.experience > 1 ? 's' : ''}`}
+            Age {player.age} •{' '}
+            {player.experience === 0
+              ? 'Rookie'
+              : `${player.experience} yr${player.experience > 1 ? 's' : ''}`}
           </Text>
         </View>
       </View>
@@ -375,13 +385,22 @@ export function RosterScreen({
 
       switch (result) {
         case 'accepted':
-          Alert.alert('Extension Signed!', `${selectedPlayer.firstName} ${selectedPlayer.lastName} has agreed to the extension!`);
+          Alert.alert(
+            'Extension Signed!',
+            `${selectedPlayer.firstName} ${selectedPlayer.lastName} has agreed to the extension!`
+          );
           break;
         case 'rejected':
-          Alert.alert('Extension Rejected', `${selectedPlayer.firstName} ${selectedPlayer.lastName} declined the offer.`);
+          Alert.alert(
+            'Extension Rejected',
+            `${selectedPlayer.firstName} ${selectedPlayer.lastName} declined the offer.`
+          );
           break;
         case 'counter':
-          Alert.alert('Counter Offer', `${selectedPlayer.firstName} ${selectedPlayer.lastName} wants different terms.`);
+          Alert.alert(
+            'Counter Offer',
+            `${selectedPlayer.firstName} ${selectedPlayer.lastName} wants different terms.`
+          );
           break;
       }
       setSelectedPlayer(null);
@@ -398,7 +417,11 @@ export function RosterScreen({
       .filter(Boolean)
       .sort((a, b) => {
         // Sort by position group, then position, then name
-        const posOrder = [...OFFENSIVE_POSITIONS, ...DEFENSIVE_POSITIONS, ...SPECIAL_TEAMS_POSITIONS];
+        const posOrder = [
+          ...OFFENSIVE_POSITIONS,
+          ...DEFENSIVE_POSITIONS,
+          ...SPECIAL_TEAMS_POSITIONS,
+        ];
         const aIndex = posOrder.indexOf(a.position);
         const bIndex = posOrder.indexOf(b.position);
         if (aIndex !== bIndex) return aIndex - bIndex;
@@ -429,7 +452,9 @@ export function RosterScreen({
   const counts = useMemo(() => {
     const offense = rosterPlayers.filter((p) => OFFENSIVE_POSITIONS.includes(p.position)).length;
     const defense = rosterPlayers.filter((p) => DEFENSIVE_POSITIONS.includes(p.position)).length;
-    const special = rosterPlayers.filter((p) => SPECIAL_TEAMS_POSITIONS.includes(p.position)).length;
+    const special = rosterPlayers.filter((p) =>
+      SPECIAL_TEAMS_POSITIONS.includes(p.position)
+    ).length;
     return { offense, defense, special, total: rosterPlayers.length };
   }, [rosterPlayers]);
 
@@ -477,10 +502,13 @@ export function RosterScreen({
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === 'all' ? `All (${counts.total})` :
-               f === 'offense' ? `OFF (${counts.offense})` :
-               f === 'defense' ? `DEF (${counts.defense})` :
-               `ST (${counts.special})`}
+              {f === 'all'
+                ? `All (${counts.total})`
+                : f === 'offense'
+                  ? `OFF (${counts.offense})`
+                  : f === 'defense'
+                    ? `DEF (${counts.defense})`
+                    : `ST (${counts.special})`}
             </Text>
           </TouchableOpacity>
         ))}

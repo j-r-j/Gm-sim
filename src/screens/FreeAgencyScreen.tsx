@@ -16,7 +16,6 @@ import {
   Alert,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
-import { Player } from '../core/models/player/Player';
 import { Position } from '../core/models/player/Position';
 
 /**
@@ -53,7 +52,10 @@ export interface FreeAgencyScreenProps {
   /** User's team name */
   teamName: string;
   /** Callback to make an offer */
-  onMakeOffer: (playerId: string, offer: ContractOffer) => Promise<'accepted' | 'rejected' | 'counter'>;
+  onMakeOffer: (
+    playerId: string,
+    offer: ContractOffer
+  ) => Promise<'accepted' | 'rejected' | 'counter'>;
   /** Callback to go back */
   onBack: () => void;
 }
@@ -179,7 +181,12 @@ function OfferModal({
                   style={[styles.yearButton, years === String(y) && styles.yearButtonActive]}
                   onPress={() => setYears(String(y))}
                 >
-                  <Text style={[styles.yearButtonText, years === String(y) && styles.yearButtonTextActive]}>
+                  <Text
+                    style={[
+                      styles.yearButtonText,
+                      years === String(y) && styles.yearButtonTextActive,
+                    ]}
+                  >
                     {y}
                   </Text>
                 </TouchableOpacity>
@@ -280,13 +287,22 @@ export function FreeAgencyScreen({
 
     switch (result) {
       case 'accepted':
-        Alert.alert('Offer Accepted!', `${selectedAgent.firstName} ${selectedAgent.lastName} has signed with ${teamName}!`);
+        Alert.alert(
+          'Offer Accepted!',
+          `${selectedAgent.firstName} ${selectedAgent.lastName} has signed with ${teamName}!`
+        );
         break;
       case 'rejected':
-        Alert.alert('Offer Rejected', `${selectedAgent.firstName} ${selectedAgent.lastName} has declined your offer.`);
+        Alert.alert(
+          'Offer Rejected',
+          `${selectedAgent.firstName} ${selectedAgent.lastName} has declined your offer.`
+        );
         break;
       case 'counter':
-        Alert.alert('Counter Offer', `${selectedAgent.firstName} ${selectedAgent.lastName} wants more money.`);
+        Alert.alert(
+          'Counter Offer',
+          `${selectedAgent.firstName} ${selectedAgent.lastName} wants more money.`
+        );
         break;
     }
   };
@@ -316,10 +332,7 @@ export function FreeAgencyScreen({
           keyExtractor={(item) => item}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[
-                styles.filterChip,
-                positionFilter === item && styles.filterChipActive,
-              ]}
+              style={[styles.filterChip, positionFilter === item && styles.filterChipActive]}
               onPress={() => setPositionFilter(item as PositionFilter)}
             >
               <Text

@@ -116,9 +116,7 @@ export function calculateStandings(
   byConference: Record<string, StandingsEntry[]>;
   all: StandingsEntry[];
 } {
-  const entries = Object.values(teams).map((team) =>
-    createStandingsEntry(team, userTeamId)
-  );
+  const entries = Object.values(teams).map((team) => createStandingsEntry(team, userTeamId));
 
   // Group by division
   const byDivision: Record<string, Record<string, StandingsEntry[]>> = {
@@ -158,16 +156,12 @@ export function calculateStandings(
 /**
  * Updates division standings in League format from team data
  */
-export function updateDivisionStandings(
-  teams: Record<string, Team>
-): DivisionStandings {
+export function updateDivisionStandings(teams: Record<string, Team>): DivisionStandings {
   const teamArray = Object.values(teams);
 
   // Helper to get sorted team IDs for a division
   const getSortedDivisionTeams = (conf: string, div: string): string[] => {
-    const divisionTeams = teamArray.filter(
-      (t) => t.conference === conf && t.division === div
-    );
+    const divisionTeams = teamArray.filter((t) => t.conference === conf && t.division === div);
     // Sort by record
     divisionTeams.sort((a, b) => {
       const aPct = calculatePct(
@@ -213,9 +207,7 @@ export function calculatePlayoffSeeds(
   teams: Record<string, Team>,
   conference: 'AFC' | 'NFC'
 ): string[] {
-  const confTeams = Object.values(teams).filter(
-    (t) => t.conference === conference
-  );
+  const confTeams = Object.values(teams).filter((t) => t.conference === conference);
 
   // Group by division and sort
   const divisions: Record<string, Team[]> = { North: [], South: [], East: [], West: [] };

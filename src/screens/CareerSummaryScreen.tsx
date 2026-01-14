@@ -4,14 +4,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { FiringRecord, getLegacyDescription } from '../core/career/FiringMechanics';
 
@@ -36,9 +29,7 @@ export function CareerSummaryScreen({
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>You've Been Relieved of Your Duties</Text>
-          <Text style={styles.headerSubtitle}>
-            {teamName} has decided to go in a new direction
-          </Text>
+          <Text style={styles.headerSubtitle}>{teamName} has decided to go in a new direction</Text>
         </View>
 
         {/* Public Statement */}
@@ -55,7 +46,9 @@ export function CareerSummaryScreen({
           <View style={[styles.statementBox, styles.internalBox]}>
             <Text style={styles.internalReason}>{reason.primaryReason}</Text>
             {reason.secondaryReasons.map((r, i) => (
-              <Text key={i} style={styles.secondaryReason}>- {r}</Text>
+              <Text key={i} style={styles.secondaryReason}>
+                - {r}
+              </Text>
             ))}
           </View>
         </View>
@@ -69,7 +62,9 @@ export function CareerSummaryScreen({
               <Text style={styles.statLabel}>Seasons</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{tenure.totalWins}-{tenure.totalLosses}</Text>
+              <Text style={styles.statValue}>
+                {tenure.totalWins}-{tenure.totalLosses}
+              </Text>
               <Text style={styles.statLabel}>Record</Text>
             </View>
             <View style={styles.statItem}>
@@ -99,16 +94,16 @@ export function CareerSummaryScreen({
               {legacy.overall.toUpperCase()}
             </Text>
             <Text style={styles.legacyScore}>Score: {legacy.score}/100</Text>
-            <Text style={styles.legacyDescription}>
-              {getLegacyDescription(legacy)}
-            </Text>
+            <Text style={styles.legacyDescription}>{getLegacyDescription(legacy)}</Text>
           </View>
 
           {legacy.achievements.length > 0 && (
             <View style={styles.legacyList}>
               <Text style={styles.legacyListTitle}>Achievements</Text>
               {legacy.achievements.map((a, i) => (
-                <Text key={i} style={styles.achievementItem}>+ {a}</Text>
+                <Text key={i} style={styles.achievementItem}>
+                  + {a}
+                </Text>
               ))}
             </View>
           )}
@@ -117,7 +112,9 @@ export function CareerSummaryScreen({
             <View style={styles.legacyList}>
               <Text style={styles.legacyListTitle}>Shortcomings</Text>
               {legacy.failures.map((f, i) => (
-                <Text key={i} style={styles.failureItem}>- {f}</Text>
+                <Text key={i} style={styles.failureItem}>
+                  - {f}
+                </Text>
               ))}
             </View>
           )}

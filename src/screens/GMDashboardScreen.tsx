@@ -223,9 +223,19 @@ export function GMDashboardScreen({
 
       {/* Job Security Status */}
       {patienceViewModel && (
-        <View style={[styles.jobSecurityBar, { borderLeftColor: getJobSecurityColor(patienceViewModel.status) }]}>
+        <View
+          style={[
+            styles.jobSecurityBar,
+            { borderLeftColor: getJobSecurityColor(patienceViewModel.status) },
+          ]}
+        >
           <View style={styles.jobSecurityLeft}>
-            <Text style={[styles.jobSecurityStatus, { color: getJobSecurityColor(patienceViewModel.status) }]}>
+            <Text
+              style={[
+                styles.jobSecurityStatus,
+                { color: getJobSecurityColor(patienceViewModel.status) },
+              ]}
+            >
               {getJobSecurityLabel(patienceViewModel.status)}
             </Text>
             <Text style={styles.jobSecurityTrend}>{patienceViewModel.trendDescription}</Text>
