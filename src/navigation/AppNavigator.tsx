@@ -45,6 +45,7 @@ import {
   RumorMillScreenWrapper,
   WeeklyDigestScreenWrapper,
   CoachingTreeScreenWrapper,
+  JobMarketScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -125,6 +126,7 @@ export function AppNavigator(): React.JSX.Element {
       {/* Career */}
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />
       <Stack.Screen name="Fired" component={FiredScreenWrapper} />
+      <Stack.Screen name="JobMarket" component={JobMarketScreenWrapper} />
 
       {/* ==================
           NEW SCREENS (Tier 1+)

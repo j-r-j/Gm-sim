@@ -52,6 +52,13 @@ import { CompPickTrackerScreen } from '../screens/CompPickTrackerScreen';
 import { RumorMillScreen } from '../screens/RumorMillScreen';
 import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
 import { CoachingTreeScreen } from '../screens/CoachingTreeScreen';
+import { JobMarketScreen } from '../screens/JobMarketScreen';
+import {
+  createJobMarketState,
+  calculateAllInterests,
+  JobMarketState,
+} from '../core/career/JobMarketManager';
+import { createInterviewState, InterviewState } from '../core/career/InterviewSystem';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -3407,6 +3414,123 @@ export function CoachingTreeScreenWrapper({
       onCoachSelect={(selectedCoachId) =>
         navigation.navigate('CoachProfile', { coachId: selectedCoachId })
       }
+    />
+  );
+}
+
+// ============================================
+// JOB MARKET SCREEN
+// ============================================
+
+export function JobMarketScreenWrapper({
+  navigation,
+}: ScreenProps<'JobMarket'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Job Market..." />;
+  }
+
+  const currentYear = gameState.league.calendar.currentYear;
+  const currentWeek = gameState.league.calendar.currentWeek;
+
+  // Create mock job market state for demonstration
+  // In a real implementation, this would come from gameState
+  const baseJobMarket = createJobMarketState(currentYear, 50);
+
+  // Generate sample job openings based on teams
+  const teamIds = Object.keys(gameState.teams);
+  const sampleOpenings = teamIds.slice(0, 3).map((teamId) => {
+    const team = gameState.teams[teamId];
+    const ownerId = `owner-${team.abbreviation}`;
+    const owner = gameState.owners[ownerId];
+
+    return {
+      id: `opening-${team.id}-${currentYear}`,
+      teamId: team.id,
+      teamName: team.nickname,
+      teamCity: team.city,
+      conference: team.conference,
+      division: team.division,
+      reason: 'fired' as const,
+      dateOpened: currentWeek,
+      yearOpened: currentYear,
+      situation:
+        team.currentRecord.wins >= 10
+          ? ('playoff_team' as const)
+          : team.currentRecord.wins <= 4
+            ? ('full_rebuild' as const)
+            : ('mediocre' as const),
+      lastSeasonRecord: { wins: team.currentRecord.wins, losses: team.currentRecord.losses },
+      playoffAppearancesLast5Years: team.playoffSeed ? 1 : 0, // Derived from current season
+      championshipsLast10Years: team.championships,
+      currentRosterTalent: Math.min(
+        100,
+        Math.max(20, team.prestige + Math.floor(Math.random() * 20))
+      ),
+      ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown Owner',
+      ownerPatience:
+        owner?.personality.traits.patience <= 35
+          ? ('low' as const)
+          : owner?.personality.traits.patience >= 65
+            ? ('high' as const)
+            : ('moderate' as const),
+      ownerSpending:
+        owner?.personality.traits.spending <= 35
+          ? ('low' as const)
+          : owner?.personality.traits.spending >= 65
+            ? ('high' as const)
+            : ('moderate' as const),
+      ownerControl:
+        owner?.personality.traits.control <= 35
+          ? ('low' as const)
+          : owner?.personality.traits.control >= 65
+            ? ('high' as const)
+            : ('moderate' as const),
+      marketSize: team.marketSize,
+      prestige: team.prestige,
+      fanbaseExpectations:
+        team.championships > 0
+          ? ('championship' as const)
+          : team.prestige >= 70
+            ? ('high' as const)
+            : team.prestige >= 40
+              ? ('moderate' as const)
+              : ('low' as const),
+      isFilled: false,
+      filledByPlayerId: null,
+    };
+  });
+
+  const jobMarket: JobMarketState = {
+    ...baseJobMarket,
+    openings: sampleOpenings,
+  };
+
+  // Calculate interests
+  const jobMarketWithInterests = calculateAllInterests(jobMarket, 0, 0.5, 0);
+
+  // Create interview state
+  const interviewState: InterviewState = createInterviewState(currentYear, currentWeek);
+
+  return (
+    <JobMarketScreen
+      gameState={gameState}
+      jobMarket={jobMarketWithInterests}
+      interviewState={interviewState}
+      onBack={() => navigation.goBack()}
+      onRequestInterview={(openingId) => {
+        Alert.alert(
+          'Interview Requested',
+          `You've requested an interview for position ${openingId}`
+        );
+      }}
+      onAcceptOffer={(_interviewId) => {
+        Alert.alert('Offer Accepted', 'Congratulations on your new position!');
+      }}
+      onDeclineOffer={(_interviewId) => {
+        Alert.alert('Offer Declined', 'You have declined the offer.');
+      }}
     />
   );
 }
