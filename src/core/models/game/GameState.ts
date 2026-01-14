@@ -10,6 +10,7 @@ import { Coach, validateCoach } from '../staff/Coach';
 import { Scout, validateScout } from '../staff/Scout';
 import { Owner, validateOwner } from '../owner/Owner';
 import { DraftPick, validateDraftPick } from '../league/DraftPick';
+import { Prospect as DraftProspect, validateProspect } from '../../draft/Prospect';
 
 /**
  * Save slot options (3 slots supported)
@@ -66,16 +67,9 @@ export interface GameSettings {
 }
 
 /**
- * Prospect placeholder interface (defined in PR-13)
+ * Re-export Prospect type from draft system
  */
-export interface Prospect {
-  id: string;
-  firstName: string;
-  lastName: string;
-  position: string;
-  college: string;
-  // Additional fields to be defined in PR-13
-}
+export type Prospect = DraftProspect;
 
 /**
  * The master state for a save file
@@ -108,6 +102,21 @@ export interface GameState {
 
   // Settings
   gameSettings: GameSettings;
+
+  // News tracking (deprecated - use newsFeed instead)
+  newsReadStatus: Record<string, boolean>;
+
+  // News feed state (optional for backward compatibility)
+  newsFeed?: import('../../news/NewsFeedManager').NewsFeedState;
+
+  // Patience meter state (optional for backward compatibility)
+  patienceMeter?: import('../../career/PatienceMeterManager').PatienceMeterState;
+
+  // Tenure stats for career tracking
+  tenureStats?: import('../../career/FiringMechanics').TenureStats;
+
+  // Offseason state (optional for backward compatibility)
+  offseasonState?: import('../../offseason/OffSeasonPhaseManager').OffSeasonState;
 }
 
 /**
@@ -243,8 +252,11 @@ export function validateGameState(state: GameState): boolean {
     if (!validateDraftPick(pick)) return false;
   }
 
-  // Prospects validation (basic, full validation in PR-13)
+  // Prospects validation
   if (typeof state.prospects !== 'object' || state.prospects === null) return false;
+  for (const prospect of Object.values(state.prospects)) {
+    if (!validateProspect(prospect)) return false;
+  }
 
   // Career stats validation
   if (!validateCareerStats(state.careerStats)) return false;

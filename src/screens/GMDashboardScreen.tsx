@@ -9,6 +9,7 @@ import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '..
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
 import { OFFSEASON_PHASES } from '../core/models/league/League';
+import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 
 export type DashboardAction =
   | 'roster'
@@ -20,6 +21,7 @@ export type DashboardAction =
   | 'finances'
   | 'gamecast'
   | 'news'
+  | 'offseason'
   | 'advanceWeek'
   | 'settings'
   | 'saveGame'
@@ -38,6 +40,46 @@ interface MenuCardProps {
   onPress: () => void;
   disabled?: boolean;
   badge?: string;
+}
+
+/**
+ * Job security status colors
+ */
+function getJobSecurityColor(status: PatienceViewModel['status']): string {
+  switch (status) {
+    case 'secure':
+      return colors.success;
+    case 'stable':
+      return colors.info;
+    case 'warm seat':
+      return colors.warning;
+    case 'hot seat':
+      return '#FF6B00';
+    case 'danger':
+      return colors.error;
+    default:
+      return colors.textSecondary;
+  }
+}
+
+/**
+ * Job security status label
+ */
+function getJobSecurityLabel(status: PatienceViewModel['status']): string {
+  switch (status) {
+    case 'secure':
+      return 'JOB SECURE';
+    case 'stable':
+      return 'STABLE';
+    case 'warm seat':
+      return 'WARM SEAT';
+    case 'hot seat':
+      return 'HOT SEAT';
+    case 'danger':
+      return 'DANGER';
+    default:
+      return 'UNKNOWN';
+  }
 }
 
 function MenuCard({
@@ -123,6 +165,11 @@ export function GMDashboardScreen({
   const isDraft = calendar.offseasonPhase === 8; // NFL Draft is phase 8
   const isFreeAgency = calendar.offseasonPhase === 4 || calendar.offseasonPhase === 5; // Free Agency phases
 
+  // Get job security status
+  const patienceViewModel: PatienceViewModel | null = gameState.patienceMeter
+    ? createPatienceViewModel(gameState.patienceMeter)
+    : null;
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header with Team Info */}
@@ -173,6 +220,33 @@ export function GMDashboardScreen({
           </>
         )}
       </View>
+
+      {/* Job Security Status */}
+      {patienceViewModel && (
+        <View
+          style={[
+            styles.jobSecurityBar,
+            { borderLeftColor: getJobSecurityColor(patienceViewModel.status) },
+          ]}
+        >
+          <View style={styles.jobSecurityLeft}>
+            <Text
+              style={[
+                styles.jobSecurityStatus,
+                { color: getJobSecurityColor(patienceViewModel.status) },
+              ]}
+            >
+              {getJobSecurityLabel(patienceViewModel.status)}
+            </Text>
+            <Text style={styles.jobSecurityTrend}>{patienceViewModel.trendDescription}</Text>
+          </View>
+          {patienceViewModel.isAtRisk && (
+            <View style={styles.jobSecurityWarning}>
+              <Text style={styles.jobSecurityWarningText}>!</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Main Menu Grid */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.menuGrid}>
@@ -243,6 +317,17 @@ export function GMDashboardScreen({
 
         {/* Offseason Actions */}
         <Text style={styles.sectionTitle}>{isOffseason ? 'Offseason' : 'Player Acquisition'}</Text>
+
+        {isOffseason && (
+          <MenuCard
+            title="Offseason Tasks"
+            subtitle="Complete offseason activities"
+            icon="📋"
+            color={colors.warning}
+            onPress={() => onAction('offseason')}
+            badge="ACTIVE"
+          />
+        )}
 
         <MenuCard
           title="Draft Board"
@@ -396,6 +481,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  jobSecurityBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    borderLeftWidth: 4,
+  },
+  jobSecurityLeft: {
+    flex: 1,
+  },
+  jobSecurityStatus: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 1,
+  },
+  jobSecurityTrend: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
+  },
+  jobSecurityWarning: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  jobSecurityWarningText: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
   },
   statusItem: {
     flex: 1,

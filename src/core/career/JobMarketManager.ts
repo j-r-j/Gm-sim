@@ -140,7 +140,7 @@ export function generateJobOpening(
 
     situation,
     lastSeasonRecord: lastRecord,
-    playoffAppearancesLast5Years: Math.floor(Math.random() * 4), // Would come from history
+    playoffAppearancesLast5Years: 0, // Initialized to 0; tracked through season simulation
     championshipsLast10Years: team.championships > 0 ? 1 : 0,
     currentRosterTalent: calculateRosterTalent(team),
 
