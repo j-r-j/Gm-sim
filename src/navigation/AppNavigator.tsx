@@ -34,6 +34,7 @@ import {
   DepthChartScreenWrapper,
   OwnerRelationsScreenWrapper,
   ContractManagementScreenWrapper,
+  OTAsScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -93,6 +94,7 @@ export function AppNavigator(): React.JSX.Element {
 
       {/* Offseason */}
       <Stack.Screen name="Offseason" component={OffseasonScreenWrapper} />
+      <Stack.Screen name="OTAs" component={OTAsScreenWrapper} />
 
       {/* Career */}
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />

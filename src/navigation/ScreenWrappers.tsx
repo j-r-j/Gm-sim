@@ -41,10 +41,18 @@ import { CoachProfileScreen } from '../screens/CoachProfileScreen';
 import { DepthChartScreen } from '../screens/DepthChartScreen';
 import { OwnerRelationsScreen } from '../screens/OwnerRelationsScreen';
 import { ContractManagementScreen } from '../screens/ContractManagementScreen';
+import { OTAsScreen } from '../screens/OTAsScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PlayerContract } from '../core/contracts';
+import {
+  OTASummary,
+  generateOTAReport,
+  generateRookieIntegrationReport,
+  generatePositionBattlePreview,
+} from '../core/offseason/phases/OTAsPhase';
+import { Position } from '../core/models/player/Position';
 
 // Core imports
 import { GameState } from '../core/models/game/GameState';
@@ -1832,6 +1840,7 @@ export function OffseasonScreenWrapper({
       onCompleteTask={handleCompleteTask}
       onAdvancePhase={handleAdvanceOffseasonPhase}
       onBack={() => navigation.goBack()}
+      onViewOTAReports={() => navigation.navigate('OTAs')}
     />
   );
 }
@@ -2088,6 +2097,125 @@ export function FiredScreenWrapper({ navigation }: ScreenProps<'Fired'>): React.
           })
         );
       }}
+    />
+  );
+}
+
+// ============================================
+// OTAS SCREEN
+// ============================================
+
+export function OTAsScreenWrapper({ navigation }: ScreenProps<'OTAs'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading OTAs..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  // Generate OTA reports for user team players
+  const rosterPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter((p) => p !== undefined);
+
+  const otaReports = rosterPlayers.map((player) => {
+    // Determine player type
+    let playerType: 'rookie' | 'veteran' | 'free_agent' = 'veteran';
+    if (player.experience === 0) playerType = 'rookie';
+    else if (player.experience <= 2) playerType = 'free_agent';
+
+    // Calculate average skill
+    const skillEntries = Object.entries(player.skills);
+    const avgSkill =
+      skillEntries.length > 0
+        ? skillEntries.reduce(
+            (sum, [_, skill]) => sum + (skill.perceivedMin + skill.perceivedMax) / 2,
+            0
+          ) / skillEntries.length
+        : 50;
+
+    // Get work ethic from hidden traits (check if 'motor' is in positive traits)
+    const hasMotor = player.hiddenTraits?.positive?.includes('motor');
+    const isLazy = player.hiddenTraits?.negative?.includes('lazy');
+    const workEthic = hasMotor ? 80 : isLazy ? 40 : 60;
+
+    return generateOTAReport(
+      player.id,
+      `${player.firstName} ${player.lastName}`,
+      player.position,
+      playerType,
+      avgSkill,
+      workEthic
+    );
+  });
+
+  // Generate rookie reports
+  const rookiePlayers = rosterPlayers.filter((p) => p.experience === 0);
+  const rookieReports = rookiePlayers.map((player) => {
+    const skillEntries = Object.entries(player.skills);
+    const avgSkill =
+      skillEntries.length > 0
+        ? skillEntries.reduce(
+            (sum, [_, skill]) => sum + (skill.perceivedMin + skill.perceivedMax) / 2,
+            0
+          ) / skillEntries.length
+        : 50;
+    const athleticScore = (player.physical.speed + player.physical.agility) / 2;
+
+    return generateRookieIntegrationReport(
+      player.id,
+      `${player.firstName} ${player.lastName}`,
+      player.position,
+      null, // Draft round - could be enhanced
+      avgSkill,
+      athleticScore
+    );
+  });
+
+  // Generate position battle previews for key positions
+  const keyPositions = [Position.QB, Position.RB, Position.WR];
+  const positionBattles = keyPositions
+    .map((pos) => {
+      const positionPlayers = rosterPlayers
+        .filter((p) => p.position === pos)
+        .map((p) => {
+          const skillEntries = Object.entries(p.skills);
+          const rating =
+            skillEntries.length > 0
+              ? skillEntries.reduce(
+                  (sum, [_, skill]) => sum + (skill.perceivedMin + skill.perceivedMax) / 2,
+                  0
+                ) / skillEntries.length
+              : 50;
+          return { id: p.id, name: `${p.firstName} ${p.lastName}`, rating };
+        })
+        .sort((a, b) => b.rating - a.rating);
+
+      if (positionPlayers.length < 2) return null;
+
+      const [incumbent, ...challengers] = positionPlayers;
+      return generatePositionBattlePreview(pos, incumbent, challengers.slice(0, 3));
+    })
+    .filter((battle): battle is NonNullable<typeof battle> => battle !== null);
+
+  // Build summary
+  const summary: OTASummary = {
+    year: gameState.league.calendar.currentYear,
+    totalParticipants: otaReports.length,
+    holdouts: otaReports.filter((r) => r.attendance === 'holdout').length,
+    standouts: otaReports.filter((r) => r.impression === 'standout'),
+    concerns: otaReports.filter((r) => r.impression === 'concerning'),
+    rookieReports,
+    positionBattles,
+  };
+
+  return (
+    <OTAsScreen
+      gameState={gameState}
+      summary={summary}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
   );
 }

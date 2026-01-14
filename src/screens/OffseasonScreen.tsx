@@ -22,6 +22,10 @@ interface OffseasonScreenProps {
   onCompleteTask: (taskId: string) => void;
   onAdvancePhase: () => void;
   onBack: () => void;
+  onViewOTAReports?: () => void;
+  onViewTrainingCamp?: () => void;
+  onViewPreseason?: () => void;
+  onViewFinalCuts?: () => void;
 }
 
 function TaskCard({
@@ -80,6 +84,10 @@ export function OffseasonScreen({
   onCompleteTask,
   onAdvancePhase,
   onBack,
+  onViewOTAReports,
+  onViewTrainingCamp,
+  onViewPreseason,
+  onViewFinalCuts,
 }: OffseasonScreenProps): React.JSX.Element {
   const progress = useMemo(() => getProgress(offseasonState), [offseasonState]);
   const tasks = useMemo(() => getCurrentPhaseTasks(offseasonState), [offseasonState]);
@@ -114,6 +122,28 @@ export function OffseasonScreen({
           <Text style={styles.phaseDescription}>{phaseDescription}</Text>
           <Text style={styles.phaseDay}>Day {offseasonState.phaseDay}</Text>
         </View>
+
+        {/* Phase-specific Action Button */}
+        {offseasonState.currentPhase === 'otas' && onViewOTAReports && (
+          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewOTAReports}>
+            <Text style={styles.phaseActionButtonText}>View OTA Reports</Text>
+          </TouchableOpacity>
+        )}
+        {offseasonState.currentPhase === 'training_camp' && onViewTrainingCamp && (
+          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewTrainingCamp}>
+            <Text style={styles.phaseActionButtonText}>View Training Camp</Text>
+          </TouchableOpacity>
+        )}
+        {offseasonState.currentPhase === 'preseason' && onViewPreseason && (
+          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewPreseason}>
+            <Text style={styles.phaseActionButtonText}>View Preseason Games</Text>
+          </TouchableOpacity>
+        )}
+        {offseasonState.currentPhase === 'final_cuts' && onViewFinalCuts && (
+          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewFinalCuts}>
+            <Text style={styles.phaseActionButtonText}>Manage Roster Cuts</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Required Tasks */}
         {requiredTasks.length > 0 && (
@@ -266,6 +296,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+  },
+  phaseActionButton: {
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.md,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  phaseActionButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
   },
   taskSection: {
     padding: spacing.lg,
