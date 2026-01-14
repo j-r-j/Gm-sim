@@ -248,3 +248,36 @@ export {
   wouldCreateConflict,
   isValidPersonalityType,
 } from './PersonalityEffects';
+
+// Coach Revelation System
+export {
+  // Types
+  AttributeVisibility,
+  AttributeRevelation,
+  CoachRevelationState,
+  // Functions
+  calculateCoachRevelation,
+  getAttributeDisplayValue,
+  getQualitativeDescriptor,
+  getAttributeColor,
+  getAttributeDisplayName,
+  getAttributeDescription,
+} from './CoachRevelationSystem';
+
+// Coach Management Actions
+export {
+  // Types
+  CoachActionResult,
+  ExtensionOffer,
+  CoachActionValidation,
+  // Functions
+  canFireCoach,
+  canPromoteCoach,
+  canExtendCoach,
+  fireCoachAction,
+  promoteCoachAction,
+  extendCoachAction,
+  getExtensionRecommendation,
+  getExtensionEligibleCoaches,
+  getExpiringContractCoaches,
+} from './CoachManagementActions';

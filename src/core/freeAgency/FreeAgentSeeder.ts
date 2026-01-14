@@ -11,7 +11,7 @@ import {
   SPECIAL_TEAMS_POSITIONS,
 } from '../models/player/Position';
 import { generatePlayer } from '../generators/player/PlayerGenerator';
-import { generateUUID, randomInt } from '../generators/utils/RandomUtils';
+import { randomInt } from '../generators/utils/RandomUtils';
 import { Prospect } from '../draft/Prospect';
 import { GameState } from '../models/game/GameState';
 
@@ -197,10 +197,7 @@ function countByPosition(players: Player[]): Map<Position, number> {
 /**
  * Ensures minimum position coverage in free agent pool
  */
-function ensureFreeAgentPositionCoverage(
-  freeAgents: Player[],
-  year: number
-): Player[] {
+function ensureFreeAgentPositionCoverage(freeAgents: Player[], year: number): Player[] {
   const positionCounts = countByPosition(freeAgents);
   const additional: Player[] = [];
 
@@ -386,10 +383,7 @@ export function getFreeAgentPlayers(state: GameState): Player[] {
 /**
  * Gets free agents by position from game state
  */
-export function getFreeAgentPlayersByPosition(
-  state: GameState,
-  position: Position
-): Player[] {
+export function getFreeAgentPlayersByPosition(state: GameState, position: Position): Player[] {
   return getFreeAgentPlayers(state).filter((player) => player.position === position);
 }
 
@@ -420,11 +414,7 @@ export function finalizeUDFAPhaseAndRefreshPool(
   const currentFreeAgents = getFreeAgentPlayers(state);
 
   // Refresh the pool with UDFAs
-  const newFreeAgentPool = refreshFreeAgentPool(
-    currentFreeAgents,
-    unsignedUDFAs,
-    currentYear
-  );
+  const newFreeAgentPool = refreshFreeAgentPool(currentFreeAgents, unsignedUDFAs, currentYear);
 
   // Build new players record
   const updatedPlayers = { ...state.players };
