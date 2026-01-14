@@ -401,6 +401,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     prospects,
     careerStats,
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
+    newsReadStatus: {},
   };
 }
 

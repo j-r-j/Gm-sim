@@ -102,6 +102,9 @@ export interface GameState {
 
   // Settings
   gameSettings: GameSettings;
+
+  // News tracking
+  newsReadStatus: Record<string, boolean>;
 }
 
 /**

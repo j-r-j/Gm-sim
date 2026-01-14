@@ -119,6 +119,15 @@ export default function App() {
     setCurrentScreen('settings');
   }, []);
 
+  // Helper to save game state (used by various callbacks)
+  const saveGameState = useCallback(async (updatedState: GameState) => {
+    try {
+      await gameStorage.save(updatedState.saveSlot, updatedState);
+    } catch (error) {
+      console.error('Error auto-saving game:', error);
+    }
+  }, []);
+
   // Handle save game
   const saveGame = useCallback(async () => {
     if (!gameState) return;
@@ -313,12 +322,15 @@ export default function App() {
         <StatusBar style="light" />
         <SettingsScreen
           settings={currentSettings}
-          onUpdateSettings={(updates) => {
+          onUpdateSettings={async (updates) => {
             if (gameState) {
-              setGameState({
+              const updatedState: GameState = {
                 ...gameState,
                 gameSettings: { ...currentSettings, ...updates },
-              });
+              };
+              setGameState(updatedState);
+              // Persist settings to storage
+              await saveGameState(updatedState);
             }
           }}
           onBack={gameState ? goToDashboard : goToStart}
@@ -499,6 +511,7 @@ export default function App() {
   if (currentScreen === 'news') {
     const currentWeek = gameState.league.calendar.currentWeek;
     const currentYear = gameState.league.calendar.currentYear;
+    const readStatus = gameState.newsReadStatus || {};
 
     // Generate some placeholder news items based on game state
     const newsItems = [
@@ -511,7 +524,7 @@ export default function App() {
         week: currentWeek,
         year: currentYear,
         relatedTeamIds: [],
-        isRead: false,
+        isRead: readStatus['1'] || false,
         priority: 'normal' as const,
       },
       {
@@ -523,7 +536,7 @@ export default function App() {
         week: currentWeek,
         year: currentYear,
         relatedTeamIds: [],
-        isRead: false,
+        isRead: readStatus['2'] || false,
         priority: 'normal' as const,
       },
     ];
@@ -536,9 +549,17 @@ export default function App() {
           currentWeek={currentWeek}
           currentYear={currentYear}
           onBack={goToDashboard}
-          onMarkRead={(newsId) => {
-            // Could persist read state in game state
-            console.log('Marked as read:', newsId);
+          onMarkRead={async (newsId) => {
+            // Persist read state in game state
+            const updatedState: GameState = {
+              ...gameState,
+              newsReadStatus: {
+                ...readStatus,
+                [newsId]: true,
+              },
+            };
+            setGameState(updatedState);
+            await saveGameState(updatedState);
           }}
         />
       </>
@@ -589,27 +610,42 @@ export default function App() {
             date: new Date().toISOString().split('T')[0],
           }}
           onBack={goToDashboard}
-          onGameEnd={(result) => {
+          onGameEnd={async (result) => {
             // Update team record based on game result
             const won = result.homeScore > result.awayScore;
+            const lost = result.homeScore < result.awayScore;
+            const currentStreak = userTeam.currentRecord.streak;
+            // Update streak: positive = wins, negative = losses
+            const newStreak = won
+              ? (currentStreak > 0 ? currentStreak + 1 : 1)
+              : lost
+                ? (currentStreak < 0 ? currentStreak - 1 : -1)
+                : 0;
+
             const updatedTeam = {
               ...userTeam,
               currentRecord: {
                 ...userTeam.currentRecord,
                 wins: userTeam.currentRecord.wins + (won ? 1 : 0),
-                losses: userTeam.currentRecord.losses + (won ? 0 : 1),
+                losses: userTeam.currentRecord.losses + (lost ? 1 : 0),
+                ties: userTeam.currentRecord.ties + (!won && !lost ? 1 : 0),
                 pointsFor: userTeam.currentRecord.pointsFor + result.homeScore,
                 pointsAgainst: userTeam.currentRecord.pointsAgainst + result.awayScore,
+                streak: newStreak,
               },
             };
 
-            setGameState({
+            const updatedState: GameState = {
               ...gameState,
               teams: {
                 ...gameState.teams,
                 [userTeam.id]: updatedTeam,
               },
-            });
+            };
+
+            setGameState(updatedState);
+            // Persist game results to storage
+            await saveGameState(updatedState);
 
             goToDashboard();
           }}
@@ -635,11 +671,11 @@ export default function App() {
             setSelectedProspectId(id);
             setCurrentScreen('playerProfile');
           }}
-          onToggleFlag={(id) => {
+          onToggleFlag={async (id) => {
             // Toggle flag in game state
             const prospect = gameState.prospects[id];
             if (prospect) {
-              setGameState({
+              const updatedState: GameState = {
                 ...gameState,
                 prospects: {
                   ...gameState.prospects,
@@ -648,7 +684,10 @@ export default function App() {
                     flagged: !prospect.flagged,
                   },
                 },
-              });
+              };
+              setGameState(updatedState);
+              // Persist flag change to storage
+              await saveGameState(updatedState);
             }
           }}
           onBack={goToDashboard}
@@ -705,10 +744,10 @@ export default function App() {
               goToDashboard();
             }
           }}
-          onToggleFlag={() => {
+          onToggleFlag={async () => {
             // Toggle flag in game state
             if (realProspect) {
-              setGameState({
+              const updatedState: GameState = {
                 ...gameState,
                 prospects: {
                   ...gameState.prospects,
@@ -717,7 +756,10 @@ export default function App() {
                     flagged: !realProspect.flagged,
                   },
                 },
-              });
+              };
+              setGameState(updatedState);
+              // Persist flag change to storage
+              await saveGameState(updatedState);
             }
           }}
         />
