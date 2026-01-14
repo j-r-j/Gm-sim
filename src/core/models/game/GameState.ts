@@ -103,8 +103,11 @@ export interface GameState {
   // Settings
   gameSettings: GameSettings;
 
-  // News tracking
+  // News tracking (deprecated - use newsFeed instead)
   newsReadStatus: Record<string, boolean>;
+
+  // News feed state (optional for backward compatibility)
+  newsFeed?: import('../../news/NewsFeedManager').NewsFeedState;
 }
 
 /**

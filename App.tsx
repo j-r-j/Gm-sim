@@ -39,6 +39,15 @@ import { convertProspectsToDraftBoard, sortProspectsByRank } from './src/utils/p
 import { setupGame, GameConfig } from './src/core/game/GameSetup';
 import { simulateWeek, advanceWeek, WeekResults } from './src/core/season/WeekSimulator';
 import { Team } from './src/core/models/team/Team';
+import {
+  createNewsFeedState,
+  generateAndAddLeagueNews,
+  generateAndAddInjuryNews,
+  advanceNewsFeedWeek,
+  getAllNews,
+  NewsFeedState,
+} from './src/core/news/NewsFeedManager';
+import { LeagueNewsContext, InjuryNewsContext } from './src/core/news/NewsGenerators';
 
 // Navigation types
 type Screen =
@@ -295,6 +304,26 @@ export default function App() {
         }
       }
 
+      // Generate news from game results
+      let updatedNewsFeed = gameState.newsFeed || createNewsFeedState(calendar.currentYear, calendar.currentWeek);
+
+      // Generate game result news
+      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && schedule.regularSeason) {
+        const userTeam = updatedTeams[gameState.userTeamId];
+        if (userTeam) {
+          // Generate news for user team using correct context
+          const userGameNews: LeagueNewsContext = {
+            teamId: gameState.userTeamId,
+            teamName: `${userTeam.city} ${userTeam.nickname}`,
+            winStreak: userTeam.currentRecord.wins > userTeam.currentRecord.losses ? userTeam.currentRecord.wins : undefined,
+          };
+          updatedNewsFeed = generateAndAddLeagueNews(updatedNewsFeed, userGameNews);
+        }
+      }
+
+      // Advance news feed week
+      updatedNewsFeed = advanceNewsFeedWeek(updatedNewsFeed, calendar.currentYear, calendar.currentWeek + 1);
+
       // Advance week counter
       newWeek = calendar.currentWeek + 1;
 
@@ -335,6 +364,7 @@ export default function App() {
         },
         teams: updatedTeams,
         players: updatedPlayers,
+        newsFeed: updatedNewsFeed,
       };
 
       setGameState(updatedState);
@@ -995,33 +1025,67 @@ export default function App() {
     const currentYear = gameState.league.calendar.currentYear;
     const readStatus = gameState.newsReadStatus || {};
 
-    // Generate some placeholder news items based on game state
-    const newsItems = [
-      {
-        id: '1',
-        headline: 'Season Underway',
-        summary: `Week ${currentWeek} of the ${currentYear} season is here.`,
-        date: new Date().toISOString(),
-        category: 'league' as const,
-        week: currentWeek,
-        year: currentYear,
-        relatedTeamIds: [],
-        isRead: readStatus['1'] || false,
-        priority: 'normal' as const,
-      },
-      {
-        id: '2',
-        headline: 'Draft Class Revealed',
-        summary: `${Object.keys(gameState.prospects).length} prospects available for the upcoming draft.`,
-        date: new Date().toISOString(),
-        category: 'draft' as const,
-        week: currentWeek,
-        year: currentYear,
-        relatedTeamIds: [],
-        isRead: readStatus['2'] || false,
-        priority: 'normal' as const,
-      },
-    ];
+    // Map NewsFeedManager categories to NewsScreen categories
+    const mapCategory = (category: string): 'trade' | 'injury' | 'team' | 'league' | 'yourTeam' | 'draft' | 'freeAgency' => {
+      const mapping: Record<string, 'trade' | 'injury' | 'team' | 'league' | 'yourTeam' | 'draft' | 'freeAgency'> = {
+        'trade': 'trade',
+        'injury': 'injury',
+        'team': 'team',
+        'league': 'league',
+        'draft': 'draft',
+        'signing': 'freeAgency',
+        'performance': 'team',
+        'milestone': 'team',
+        'coaching': 'team',
+      };
+      return mapping[category] || 'league';
+    };
+
+    // Get news from newsFeed or fall back to placeholder
+    let newsItems: { id: string; headline: string; summary: string; date: string; category: 'trade' | 'injury' | 'team' | 'league' | 'yourTeam' | 'draft' | 'freeAgency'; week: number; year: number; relatedTeamIds: string[]; isRead: boolean; priority: 'breaking' | 'normal' | 'minor'; }[];
+    if (gameState.newsFeed && gameState.newsFeed.newsItems.length > 0) {
+      // Use real news from NewsFeedManager
+      newsItems = getAllNews(gameState.newsFeed).map(item => ({
+        id: item.id,
+        headline: item.headline,
+        summary: item.body,
+        date: typeof item.timestamp === 'number' ? new Date(item.timestamp).toISOString() : item.timestamp,
+        category: mapCategory(item.category),
+        week: item.week,
+        year: item.season,
+        relatedTeamIds: item.teamId ? [item.teamId] : [],
+        isRead: item.isRead || readStatus[item.id] || false,
+        priority: item.priority as 'breaking' | 'normal' | 'minor',
+      }));
+    } else {
+      // Fall back to placeholder news for backward compatibility
+      newsItems = [
+        {
+          id: '1',
+          headline: 'Season Underway',
+          summary: `Week ${currentWeek} of the ${currentYear} season is here.`,
+          date: new Date().toISOString(),
+          category: 'league' as const,
+          week: currentWeek,
+          year: currentYear,
+          relatedTeamIds: [],
+          isRead: readStatus['1'] || false,
+          priority: 'normal' as const,
+        },
+        {
+          id: '2',
+          headline: 'Draft Class Revealed',
+          summary: `${Object.keys(gameState.prospects).length} prospects available for the upcoming draft.`,
+          date: new Date().toISOString(),
+          category: 'draft' as const,
+          week: currentWeek,
+          year: currentYear,
+          relatedTeamIds: [],
+          isRead: readStatus['2'] || false,
+          priority: 'normal' as const,
+        },
+      ];
+    }
 
     return (
       <>
@@ -1032,7 +1096,7 @@ export default function App() {
           currentYear={currentYear}
           onBack={goToDashboard}
           onMarkRead={async (newsId) => {
-            // Persist read state in game state
+            // Persist read state
             const updatedState: GameState = {
               ...gameState,
               newsReadStatus: {

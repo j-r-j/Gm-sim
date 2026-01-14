@@ -31,6 +31,7 @@ import {
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';
+import { createNewsFeedState } from '../core/news/NewsFeedManager';
 
 const SALARY_CAP = 255000000; // $255 million
 
@@ -402,6 +403,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     careerStats,
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
     newsReadStatus: {},
+    newsFeed: createNewsFeedState(startYear, 1),
   };
 }
 
