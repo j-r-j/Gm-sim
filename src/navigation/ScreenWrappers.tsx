@@ -43,6 +43,7 @@ import { OwnerRelationsScreen } from '../screens/OwnerRelationsScreen';
 import { ContractManagementScreen } from '../screens/ContractManagementScreen';
 import { OTAsScreen } from '../screens/OTAsScreen';
 import { TrainingCampScreen } from '../screens/TrainingCampScreen';
+import { PreseasonScreen } from '../screens/PreseasonScreen';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -60,6 +61,12 @@ import {
   generateCampInjury,
   getTrainingCampSummary,
 } from '../core/offseason/phases/TrainingCampPhase';
+import {
+  PreseasonSummary,
+  simulatePreseasonGame,
+  createPreseasonEvaluation,
+  getPreseasonSummary,
+} from '../core/offseason/phases/PreseasonPhase';
 import { Position } from '../core/models/player/Position';
 
 // Core imports
@@ -1850,6 +1857,7 @@ export function OffseasonScreenWrapper({
       onBack={() => navigation.goBack()}
       onViewOTAReports={() => navigation.navigate('OTAs')}
       onViewTrainingCamp={() => navigation.navigate('TrainingCamp')}
+      onViewPreseason={() => navigation.navigate('Preseason')}
     />
   );
 }
@@ -2332,6 +2340,110 @@ export function TrainingCampScreenWrapper({
 
   return (
     <TrainingCampScreen
+      gameState={gameState}
+      summary={summary}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// PRESEASON SCREEN WRAPPER
+// ============================================
+
+export function PreseasonScreenWrapper({
+  navigation,
+}: ScreenProps<'Preseason'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Preseason..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  // Get roster players with their ratings
+  const rosterPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter((p) => p !== undefined);
+
+  // Calculate "overall rating" based on perceived skills
+  const playersWithRatings = rosterPlayers.map((player) => {
+    const skills = Object.values(player.skills);
+    const avgSkill =
+      skills.length > 0
+        ? skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) / skills.length
+        : 50;
+
+    // Determine if starter (top 2 at position based on depth chart or skill)
+    const positionPlayers = rosterPlayers.filter((p) => p.position === player.position);
+    const sortedBySkill = positionPlayers.sort((a, b) => {
+      const aAvg =
+        Object.values(a.skills).reduce((s, sk) => s + (sk.perceivedMin + sk.perceivedMax) / 2, 0) /
+        Math.max(Object.keys(a.skills).length, 1);
+      const bAvg =
+        Object.values(b.skills).reduce((s, sk) => s + (sk.perceivedMin + sk.perceivedMax) / 2, 0) /
+        Math.max(Object.keys(b.skills).length, 1);
+      return bAvg - aAvg;
+    });
+    const positionRank = sortedBySkill.findIndex((p) => p.id === player.id);
+    const isStarter = positionRank < 2;
+
+    return {
+      playerId: player.id,
+      playerName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      overallRating: Math.round(avgSkill),
+      isStarter,
+    };
+  });
+
+  // Get opponent team names (use 3 random other teams)
+  const otherTeams = Object.values(gameState.teams).filter((t) => t.id !== gameState.userTeamId);
+  const opponents = otherTeams.slice(0, 3).map((t) => `${t.city} ${t.nickname}`);
+
+  // Simulate 3 preseason games
+  const games = [
+    simulatePreseasonGame(1, opponents[0] || 'Team A', true, playersWithRatings),
+    simulatePreseasonGame(2, opponents[1] || 'Team B', false, playersWithRatings),
+    simulatePreseasonGame(3, opponents[2] || 'Team C', true, playersWithRatings),
+  ];
+
+  // Create evaluations by aggregating performances across games
+  const playerPerformanceMap = new Map<
+    string,
+    {
+      playerId: string;
+      playerName: string;
+      position: string;
+      performances: (typeof games)[0]['playerPerformances'];
+    }
+  >();
+
+  for (const game of games) {
+    for (const perf of game.playerPerformances) {
+      if (!playerPerformanceMap.has(perf.playerId)) {
+        playerPerformanceMap.set(perf.playerId, {
+          playerId: perf.playerId,
+          playerName: perf.playerName,
+          position: perf.position,
+          performances: [],
+        });
+      }
+      playerPerformanceMap.get(perf.playerId)!.performances.push(perf);
+    }
+  }
+
+  const evaluations = Array.from(playerPerformanceMap.values()).map((data) =>
+    createPreseasonEvaluation(data.playerId, data.playerName, data.position, data.performances)
+  );
+
+  // Build summary
+  const summary = getPreseasonSummary(games, evaluations);
+
+  return (
+    <PreseasonScreen
       gameState={gameState}
       summary={summary}
       onBack={() => navigation.goBack()}
