@@ -46,6 +46,7 @@ import {
   WeeklyDigestScreenWrapper,
   CoachingTreeScreenWrapper,
   JobMarketScreenWrapper,
+  InterviewScreenWrapper,
   CareerLegacyScreenWrapper,
   CombineScreenWrapper,
 } from './ScreenWrappers';
@@ -130,6 +131,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />
       <Stack.Screen name="Fired" component={FiredScreenWrapper} />
       <Stack.Screen name="JobMarket" component={JobMarketScreenWrapper} />
+      <Stack.Screen name="Interview" component={InterviewScreenWrapper} />
       <Stack.Screen name="CareerLegacy" component={CareerLegacyScreenWrapper} />
 
       {/* ==================

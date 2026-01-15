@@ -53,6 +53,7 @@ import { RumorMillScreen } from '../screens/RumorMillScreen';
 import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
 import { CoachingTreeScreen } from '../screens/CoachingTreeScreen';
 import { JobMarketScreen } from '../screens/JobMarketScreen';
+import { InterviewScreen } from '../screens/InterviewScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import { CombineProDayScreen } from '../screens/CombineProDayScreen';
 import {
@@ -68,7 +69,15 @@ import {
   calculateAllInterests,
   JobMarketState,
 } from '../core/career/JobMarketManager';
-import { createInterviewState, InterviewState } from '../core/career/InterviewSystem';
+import {
+  createInterviewState,
+  InterviewState,
+  InterviewRecord,
+  conductInterview,
+  acceptOffer,
+  declineOffer,
+  requestInterview,
+} from '../core/career/InterviewSystem';
 import { createCareerRecord } from '../core/career/CareerRecordTracker';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
 import { createOwnerViewModel } from '../core/models/owner';
@@ -3903,17 +3912,173 @@ export function JobMarketScreenWrapper({
       interviewState={interviewState}
       onBack={() => navigation.goBack()}
       onRequestInterview={(openingId) => {
-        Alert.alert(
-          'Interview Requested',
-          `You've requested an interview for position ${openingId}`
-        );
+        // Find the team ID from the opening
+        const opening = sampleOpenings.find((o) => o.id === openingId);
+        if (opening) {
+          // Navigate to Interview screen with team ID
+          navigation.navigate('Interview', { teamId: opening.teamId });
+        }
       }}
-      onAcceptOffer={(_interviewId) => {
-        Alert.alert('Offer Accepted', 'Congratulations on your new position!');
+      onAcceptOffer={(interviewId) => {
+        Alert.alert('Offer Accepted', 'Congratulations on your new position!', [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Dashboard'),
+          },
+        ]);
       }}
       onDeclineOffer={(_interviewId) => {
         Alert.alert('Offer Declined', 'You have declined the offer.');
       }}
+    />
+  );
+}
+
+// ============================================
+// INTERVIEW SCREEN
+// ============================================
+
+export function InterviewScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'Interview'>): React.JSX.Element {
+  const { gameState, setGameState } = useGame();
+  const { teamId } = route.params;
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Interview..." />;
+  }
+
+  // Find the team
+  const team = gameState.teams[teamId];
+  if (!team) {
+    return <LoadingFallback message="Team not found..." />;
+  }
+
+  // Find owner for the team
+  const ownerId = `owner-${team.abbreviation}`;
+  const owner = gameState.owners[ownerId];
+
+  // Get or create interview state from gameState
+  // For now, we'll create a mock interview for this team
+  const currentYear = gameState.league.calendar.currentYear;
+  const currentWeek = gameState.league.calendar.currentWeek;
+
+  // Create a scheduled interview for this team
+  const mockInterview: InterviewRecord = {
+    id: `interview-${teamId}-${Date.now()}`,
+    openingId: `opening-${teamId}-${currentYear}`,
+    teamId: teamId,
+    teamName: `${team.city} ${team.nickname}`,
+    status: 'scheduled',
+    requestedAt: currentWeek,
+    scheduledFor: currentWeek,
+    completedAt: null,
+    interviewScore: null,
+    offer: null,
+    ownerPreview: null,
+    playerAccepted: false,
+    rejectionReason: null,
+  };
+
+  const [interview, setInterview] = React.useState<InterviewRecord>(mockInterview);
+
+  // Handle conducting the interview
+  const handleConductInterview = () => {
+    if (!owner) return;
+
+    // Create interview state and conduct the interview
+    let interviewState = createInterviewState(currentYear, currentWeek);
+    interviewState = {
+      ...interviewState,
+      interviews: [interview],
+    };
+
+    // Conduct the interview - use reputation score based on team performance
+    const userTeam = gameState.teams[gameState.userTeamId];
+    const winPct = userTeam.currentRecord.wins / Math.max(1, userTeam.currentRecord.wins + userTeam.currentRecord.losses);
+    const reputationScore = 50 + (winPct - 0.5) * 40;
+
+    const newState = conductInterview(
+      interviewState,
+      interview.id,
+      owner,
+      reputationScore,
+      winPct
+    );
+
+    // Get the updated interview
+    const updatedInterview = newState.interviews.find((i) => i.id === interview.id);
+    if (updatedInterview) {
+      setInterview(updatedInterview);
+    }
+  };
+
+  // Handle accepting an offer
+  const handleAcceptOffer = () => {
+    Alert.alert(
+      'Accept Offer',
+      `Are you sure you want to accept the offer from ${team.city} ${team.nickname}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Accept',
+          onPress: () => {
+            Alert.alert(
+              'Congratulations!',
+              `You are now the General Manager of the ${team.city} ${team.nickname}!`,
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // Update user team to the new team
+                    if (setGameState) {
+                      setGameState({
+                        ...gameState,
+                        userTeamId: teamId,
+                      });
+                    }
+                    navigation.navigate('Dashboard');
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  // Handle declining an offer
+  const handleDeclineOffer = () => {
+    Alert.alert(
+      'Decline Offer',
+      'Are you sure you want to decline this offer?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Decline',
+          onPress: () => {
+            setInterview({
+              ...interview,
+              status: 'offer_declined',
+            });
+            Alert.alert('Offer Declined', 'You have declined the offer.');
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <InterviewScreen
+      interview={interview}
+      teamName={team.nickname}
+      teamCity={team.city}
+      onBack={() => navigation.goBack()}
+      onConductInterview={handleConductInterview}
+      onAcceptOffer={handleAcceptOffer}
+      onDeclineOffer={handleDeclineOffer}
     />
   );
 }

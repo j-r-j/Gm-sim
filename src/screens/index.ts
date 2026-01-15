@@ -14,3 +14,4 @@ export {
   type DraftBoardProspect,
 } from './DraftBoardScreen';
 export { PlayerProfileScreen, type PlayerProfileScreenProps } from './PlayerProfileScreen';
+export { InterviewScreen, type InterviewScreenProps } from './InterviewScreen';
