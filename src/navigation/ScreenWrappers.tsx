@@ -175,10 +175,7 @@ import { getCurrentPhaseTasks } from '../core/offseason/OffSeasonPhaseManager';
  * Helper to mark offseason tasks as complete based on screen visits and conditions.
  * Returns the updated gameState if a task was completed, or the original state if not.
  */
-function tryCompleteOffseasonTask(
-  gameState: GameState,
-  taskId: string
-): GameState | null {
+function tryCompleteOffseasonTask(gameState: GameState, taskId: string): GameState | null {
   const offseasonState = gameState.offseasonState;
   if (!offseasonState) return null;
 
@@ -213,10 +210,7 @@ function tryCompleteViewTask(
 
   // Find view tasks that target this screen and are not complete
   const viewTask = tasks.find(
-    (t) =>
-      t.actionType === 'view' &&
-      t.targetScreen === targetScreen &&
-      !t.isComplete
+    (t) => t.actionType === 'view' && t.targetScreen === targetScreen && !t.isComplete
   );
 
   if (!viewTask) return null;
@@ -1254,26 +1248,28 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
           const scout = gameState.scouts[staffId];
           if (scout) {
             const regionText = scout.attributes.regionKnowledge || 'General';
-            const evaluationText = scout.attributes.evaluation >= 80
-              ? 'Elite'
-              : scout.attributes.evaluation >= 60
-                ? 'Good'
-                : 'Average';
-            const speedText = scout.attributes.speed >= 80
-              ? 'Fast'
-              : scout.attributes.speed >= 60
-                ? 'Moderate'
-                : 'Thorough';
+            const evaluationText =
+              scout.attributes.evaluation >= 80
+                ? 'Elite'
+                : scout.attributes.evaluation >= 60
+                  ? 'Good'
+                  : 'Average';
+            const speedText =
+              scout.attributes.speed >= 80
+                ? 'Fast'
+                : scout.attributes.speed >= 60
+                  ? 'Moderate'
+                  : 'Thorough';
             const positionSpecialty = scout.attributes.positionSpecialty || 'General';
 
             Alert.alert(
               `${scout.firstName} ${scout.lastName}`,
               `SCOUTING PROFILE\n\n` +
-              `Region: ${regionText}\n` +
-              `Position Focus: ${positionSpecialty}\n` +
-              `Experience: ${scout.attributes.experience} years\n` +
-              `Evaluation Skill: ${evaluationText}\n` +
-              `Scouting Speed: ${speedText}`,
+                `Region: ${regionText}\n` +
+                `Position Focus: ${positionSpecialty}\n` +
+                `Experience: ${scout.attributes.experience} years\n` +
+                `Evaluation Skill: ${evaluationText}\n` +
+                `Scouting Speed: ${speedText}`,
               [
                 {
                   text: 'View Scouting Reports',
@@ -4099,16 +4095,12 @@ export function InterviewScreenWrapper({
 
     // Conduct the interview - use reputation score based on team performance
     const userTeam = gameState.teams[gameState.userTeamId];
-    const winPct = userTeam.currentRecord.wins / Math.max(1, userTeam.currentRecord.wins + userTeam.currentRecord.losses);
+    const winPct =
+      userTeam.currentRecord.wins /
+      Math.max(1, userTeam.currentRecord.wins + userTeam.currentRecord.losses);
     const reputationScore = 50 + (winPct - 0.5) * 40;
 
-    const newState = conductInterview(
-      interviewState,
-      interview.id,
-      owner,
-      reputationScore,
-      winPct
-    );
+    const newState = conductInterview(interviewState, interview.id, owner, reputationScore, winPct);
 
     // Get the updated interview
     const updatedInterview = newState.interviews.find((i) => i.id === interview.id);
@@ -4154,23 +4146,19 @@ export function InterviewScreenWrapper({
 
   // Handle declining an offer
   const handleDeclineOffer = () => {
-    Alert.alert(
-      'Decline Offer',
-      'Are you sure you want to decline this offer?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          onPress: () => {
-            setInterview({
-              ...interview,
-              status: 'offer_declined',
-            });
-            Alert.alert('Offer Declined', 'You have declined the offer.');
-          },
+    Alert.alert('Decline Offer', 'Are you sure you want to decline this offer?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Decline',
+        onPress: () => {
+          setInterview({
+            ...interview,
+            status: 'offer_declined',
+          });
+          Alert.alert('Offer Declined', 'You have declined the offer.');
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (

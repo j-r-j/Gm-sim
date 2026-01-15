@@ -394,9 +394,7 @@ export function GMDashboardScreen({
               {isOffseason ? 'Advance Phase' : 'Advance Week'}
             </Text>
             <Text style={styles.advanceButtonSubtext}>
-              {isOffseason
-                ? `Current: ${getOffseasonPhaseDisplay()}`
-                : 'Simulate to next week'}
+              {isOffseason ? `Current: ${getOffseasonPhaseDisplay()}` : 'Simulate to next week'}
             </Text>
           </TouchableOpacity>
         </View>

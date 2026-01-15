@@ -10,7 +10,15 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Text, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  SafeAreaView,
+  Text,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
 import {
   FieldVisualization,
   Scoreboard,
@@ -303,23 +311,32 @@ export function GamecastScreen({
       return;
     }
 
-    const { homeTeam, awayTeam, passingLeaders, rushingLeaders, teamComparison } = gameResult.boxScore;
+    const { homeTeam, awayTeam, passingLeaders, rushingLeaders, teamComparison } =
+      gameResult.boxScore;
 
     // Get team comparison stats
-    const totalYardsHome = teamComparison.find(c => c.category === 'Total Yards')?.home || 0;
-    const totalYardsAway = teamComparison.find(c => c.category === 'Total Yards')?.away || 0;
-    const turnoversHome = teamComparison.find(c => c.category === 'Turnovers')?.home || 0;
-    const turnoversAway = teamComparison.find(c => c.category === 'Turnovers')?.away || 0;
+    const totalYardsHome = teamComparison.find((c) => c.category === 'Total Yards')?.home || 0;
+    const totalYardsAway = teamComparison.find((c) => c.category === 'Total Yards')?.away || 0;
+    const turnoversHome = teamComparison.find((c) => c.category === 'Turnovers')?.home || 0;
+    const turnoversAway = teamComparison.find((c) => c.category === 'Turnovers')?.away || 0;
 
     // Format passing leaders - use statLine which contains formatted stats
-    const passingText = passingLeaders.length > 0
-      ? passingLeaders.slice(0, 2).map(p => `${p.playerName}: ${p.statLine}`).join('\n')
-      : 'No passing stats';
+    const passingText =
+      passingLeaders.length > 0
+        ? passingLeaders
+            .slice(0, 2)
+            .map((p) => `${p.playerName}: ${p.statLine}`)
+            .join('\n')
+        : 'No passing stats';
 
     // Format rushing leaders
-    const rushingText = rushingLeaders.length > 0
-      ? rushingLeaders.slice(0, 2).map(p => `${p.playerName}: ${p.statLine}`).join('\n')
-      : 'No rushing stats';
+    const rushingText =
+      rushingLeaders.length > 0
+        ? rushingLeaders
+            .slice(0, 2)
+            .map((p) => `${p.playerName}: ${p.statLine}`)
+            .join('\n')
+        : 'No rushing stats';
 
     const boxScoreText = `
 FINAL SCORE

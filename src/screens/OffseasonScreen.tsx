@@ -99,11 +99,7 @@ function TaskCard({
         )}
       </View>
       {!task.isComplete ? (
-        <TouchableOpacity
-          style={buttonStyle}
-          onPress={onAction}
-          disabled={isAutoTask}
-        >
+        <TouchableOpacity style={buttonStyle} onPress={onAction} disabled={isAutoTask}>
           <Text style={styles.completeButtonText}>{buttonText}</Text>
         </TouchableOpacity>
       ) : (

@@ -37,11 +37,7 @@ export interface InterviewScreenProps {
 /**
  * Owner Preview Component
  */
-function OwnerPreviewSection({
-  ownerPreview,
-}: {
-  ownerPreview: OwnerPreview;
-}): React.JSX.Element {
+function OwnerPreviewSection({ ownerPreview }: { ownerPreview: OwnerPreview }): React.JSX.Element {
   return (
     <View style={styles.ownerSection}>
       <Text style={styles.sectionTitle}>Meeting with Owner</Text>
@@ -126,9 +122,7 @@ function ContractOfferSection({
       <View style={styles.offerDetails}>
         <View style={styles.offerDetailRow}>
           <Text style={styles.offerDetailLabel}>Annual Salary</Text>
-          <Text style={styles.offerDetailValue}>
-            ${(offer.annualSalary / 1000000).toFixed(2)}M
-          </Text>
+          <Text style={styles.offerDetailValue}>${(offer.annualSalary / 1000000).toFixed(2)}M</Text>
         </View>
         <View style={styles.offerDetailRow}>
           <Text style={styles.offerDetailLabel}>Contract Length</Text>
@@ -136,16 +130,12 @@ function ContractOfferSection({
         </View>
         <View style={styles.offerDetailRow}>
           <Text style={styles.offerDetailLabel}>Total Value</Text>
-          <Text style={styles.offerDetailValue}>
-            ${(offer.totalValue / 1000000).toFixed(2)}M
-          </Text>
+          <Text style={styles.offerDetailValue}>${(offer.totalValue / 1000000).toFixed(2)}M</Text>
         </View>
         {offer.signingBonus > 0 && (
           <View style={styles.offerDetailRow}>
             <Text style={styles.offerDetailLabel}>Signing Bonus</Text>
-            <Text style={styles.offerDetailValue}>
-              ${(offer.signingBonus / 1000).toFixed(0)}K
-            </Text>
+            <Text style={styles.offerDetailValue}>${(offer.signingBonus / 1000).toFixed(0)}K</Text>
           </View>
         )}
         <View style={styles.offerDetailRow}>
@@ -275,8 +265,8 @@ export function InterviewScreen({
           <View style={styles.waitingSection}>
             <Text style={styles.waitingTitle}>Interview Waiting Room</Text>
             <Text style={styles.waitingText}>
-              You're about to meet with the {teamName} ownership and front office.
-              This is your chance to make a strong impression.
+              You're about to meet with the {teamName} ownership and front office. This is your
+              chance to make a strong impression.
             </Text>
             <Text style={styles.waitingHint}>
               Your reputation and career record will influence how the interview goes.

@@ -4,14 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import {
@@ -140,7 +133,9 @@ function CandidateCard({
           </View>
         </View>
         <Text style={styles.candidateRole}>
-          {candidate.currentTeam ? `${candidate.currentRole} - ${candidate.currentTeam}` : candidate.currentRole}
+          {candidate.currentTeam
+            ? `${candidate.currentRole} - ${candidate.currentTeam}`
+            : candidate.currentRole}
           {!candidate.currentTeam && ' (Available)'}
         </Text>
       </View>
@@ -170,7 +165,9 @@ function CandidateCard({
             <View style={styles.contractDetails}>
               <View style={styles.contractItem}>
                 <Text style={styles.contractLabel}>Salary</Text>
-                <Text style={styles.contractValue}>{formatSalary(candidate.expectedSalary)}/yr</Text>
+                <Text style={styles.contractValue}>
+                  {formatSalary(candidate.expectedSalary)}/yr
+                </Text>
               </View>
               <View style={styles.contractItem}>
                 <Text style={styles.contractLabel}>Length</Text>
@@ -262,9 +259,7 @@ export function CoachHiringScreen({
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.sectionHeader}>Available Candidates</Text>
-        <Text style={styles.sectionHint}>
-          Tap a candidate to see details and make an offer
-        </Text>
+        <Text style={styles.sectionHint}>Tap a candidate to see details and make an offer</Text>
 
         {sortedCandidates.map((candidate) => (
           <CandidateCard
