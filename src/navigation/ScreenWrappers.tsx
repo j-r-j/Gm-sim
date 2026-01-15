@@ -75,9 +75,6 @@ import {
   InterviewState,
   InterviewRecord,
   conductInterview,
-  acceptOffer,
-  declineOffer,
-  requestInterview,
 } from '../core/career/InterviewSystem';
 import { createCareerRecord } from '../core/career/CareerRecordTracker';
 import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
@@ -168,10 +165,7 @@ import {
   promoteCoachAction,
   getExtensionRecommendation,
 } from '../core/coaching/CoachManagementActions';
-import {
-  getCurrentPhaseTasks,
-  OffSeasonTask,
-} from '../core/offseason/OffSeasonPhaseManager';
+import { getCurrentPhaseTasks } from '../core/offseason/OffSeasonPhaseManager';
 
 // ============================================
 // OFFSEASON TASK COMPLETION HELPER
@@ -2466,7 +2460,7 @@ export function CoachHiringScreenWrapper({
   navigation,
   route,
 }: ScreenProps<'CoachHiring'>): React.JSX.Element {
-  const { gameState, setGameState } = useGame();
+  const { gameState } = useGame();
   const { vacancyRole } = route.params;
 
   if (!gameState) {
@@ -4028,7 +4022,7 @@ export function JobMarketScreenWrapper({
           navigation.navigate('Interview', { teamId: opening.teamId });
         }
       }}
-      onAcceptOffer={(interviewId) => {
+      onAcceptOffer={(_interviewId) => {
         Alert.alert('Offer Accepted', 'Congratulations on your new position!', [
           {
             text: 'OK',
