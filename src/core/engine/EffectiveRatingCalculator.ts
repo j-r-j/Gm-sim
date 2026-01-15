@@ -6,11 +6,17 @@
 
 import { Player } from '../models/player/Player';
 import { Coach } from '../models/staff/Coach';
-import { getSchemeModifier, OffensiveScheme, DefensiveScheme } from '../models/player/SchemeFit';
+import { OffensiveScheme, DefensiveScheme } from '../models/player/SchemeFit';
 import { getRoleFitModifier, RoleType } from '../models/player/RoleFit';
 import { getClutchModifier } from '../models/player/ItFactor';
 import { getInjuryPerformanceModifier } from '../models/player/InjuryStatus';
 import { hasTrait } from '../models/player/HiddenTraits';
+// Import sophisticated scheme fit and chemistry calculators from coaching module
+import {
+  calculateSchemeFitScore,
+  getSchemeFitModifier as getAdvancedSchemeFitModifier,
+} from '../coaching/SchemeFitCalculator';
+import { getChemistryModifier } from '../coaching/ChemistryCalculator';
 
 /**
  * Game stakes affecting performance
@@ -58,24 +64,26 @@ const STAKES_MULTIPLIERS: Record<GameStakes, number> = {
 };
 
 /**
- * Calculate scheme fit modifier (-10 to +8 range for effective rating)
- * Uses the existing scheme fit system and converts to rating points
+ * Calculate scheme fit modifier (-10 to +10 range for effective rating)
+ * Uses the sophisticated SchemeFitCalculator that considers:
+ * - Position-specific skill requirements for each scheme
+ * - Transition penalties for players new to a scheme
+ * - Weighted importance of different skills per scheme
  */
 export function calculateSchemeFitModifier(
   player: Player,
-  scheme: OffensiveScheme | DefensiveScheme
+  scheme: OffensiveScheme | DefensiveScheme,
+  yearsInScheme: number = 1
 ): number {
-  // getSchemeModifier returns a multiplier like 1.15, 1.07, 1.0, 0.93, 0.85
-  // We convert this to rating points: (-10 to +8)
-  const multiplier = getSchemeModifier(player.schemeFits, scheme);
+  // Use the sophisticated scheme fit calculator
+  const fitScore = calculateSchemeFitScore(player, scheme, yearsInScheme);
 
-  // Convert multiplier to rating points
-  // 1.15 -> +8, 1.07 -> +4, 1.0 -> 0, 0.93 -> -4, 0.85 -> -10
-  if (multiplier >= 1.15) return 8;
-  if (multiplier >= 1.07) return 4;
-  if (multiplier >= 1.0) return 0;
-  if (multiplier >= 0.93) return -5;
-  return -10;
+  // Get the fit level modifier (-0.1 to +0.1)
+  const fitModifier = getAdvancedSchemeFitModifier(fitScore.fitLevel);
+
+  // Convert to rating points (-10 to +10)
+  // The modifier is -0.1 to +0.1, so multiply by 100 to get -10 to +10
+  return Math.round(fitModifier * 100);
 }
 
 /**
@@ -99,20 +107,20 @@ export function calculateRoleFitModifier(player: Player, role: RoleType): number
 
 /**
  * Calculate coach chemistry modifier (-10 to +10 range)
+ * Uses the sophisticated ChemistryCalculator that considers:
+ * - Personality compatibility between coach and player
+ * - Scheme fit alignment
+ * - Time together building rapport
+ * - Coach's adaptability and style
  */
 export function calculateCoachChemistryModifier(player: Player, coach: Coach | null): number {
   if (!coach) return 0;
 
-  // Get chemistry from coach's playerChemistry record
-  const chemistry = coach.playerChemistry[player.id];
+  // Use the sophisticated chemistry modifier from ChemistryCalculator
+  const chemistryResult = getChemistryModifier(coach, player);
 
-  if (chemistry === undefined) {
-    // No established chemistry yet, use personality match
-    return 0;
-  }
-
-  // Chemistry is already -10 to +10 in the Coach model
-  return chemistry;
+  // The result value is already in -10 to +10 range
+  return chemistryResult.value;
 }
 
 /**
