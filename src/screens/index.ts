@@ -15,3 +15,4 @@ export {
 } from './DraftBoardScreen';
 export { PlayerProfileScreen, type PlayerProfileScreenProps } from './PlayerProfileScreen';
 export { InterviewScreen, type InterviewScreenProps } from './InterviewScreen';
+export { CoachHiringScreen, type CoachHiringScreenProps } from './CoachHiringScreen';

@@ -31,6 +31,7 @@ import {
   CareerSummaryScreenWrapper,
   FiredScreenWrapper,
   CoachProfileScreenWrapper,
+  CoachHiringScreenWrapper,
   DepthChartScreenWrapper,
   OwnerRelationsScreenWrapper,
   ContractManagementScreenWrapper,
@@ -96,6 +97,7 @@ export function AppNavigator(): React.JSX.Element {
       {/* Profile screens */}
       <Stack.Screen name="PlayerProfile" component={PlayerProfileScreenWrapper} />
       <Stack.Screen name="CoachProfile" component={CoachProfileScreenWrapper} />
+      <Stack.Screen name="CoachHiring" component={CoachHiringScreenWrapper} />
       <Stack.Screen name="CoachingTree" component={CoachingTreeScreenWrapper} />
 
       {/* Depth Chart */}

@@ -54,6 +54,7 @@ import { WeeklyDigestScreen } from '../screens/WeeklyDigestScreen';
 import { CoachingTreeScreen } from '../screens/CoachingTreeScreen';
 import { JobMarketScreen } from '../screens/JobMarketScreen';
 import { InterviewScreen } from '../screens/InterviewScreen';
+import { CoachHiringScreen } from '../screens/CoachHiringScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import { CombineProDayScreen } from '../screens/CombineProDayScreen';
 import {
@@ -2415,6 +2416,74 @@ function formatCurrencyShort(amount: number): string {
     return `${(amount / 1_000).toFixed(0)}K`;
   }
   return amount.toString();
+}
+
+// ============================================
+// COACH HIRING SCREEN
+// ============================================
+
+export function CoachHiringScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'CoachHiring'>): React.JSX.Element {
+  const { gameState, setGameState } = useGame();
+  const { vacancyRole } = route.params;
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  // Get team info
+  const team = gameState.teams[gameState.userTeamId];
+  const teamName = `${team.city} ${team.nickname}`;
+
+  // Default to headCoach if no role specified
+  const roleToFill = (vacancyRole || 'headCoach') as
+    | 'headCoach'
+    | 'offensiveCoordinator'
+    | 'defensiveCoordinator'
+    | 'specialTeamsCoordinator'
+    | 'qbCoach'
+    | 'rbCoach'
+    | 'wrCoach'
+    | 'teCoach'
+    | 'olCoach'
+    | 'dlCoach'
+    | 'lbCoach'
+    | 'dbCoach'
+    | 'stCoach';
+
+  return (
+    <CoachHiringScreen
+      vacancyRole={roleToFill}
+      teamName={teamName}
+      onBack={() => navigation.goBack()}
+      onHire={(candidate) => {
+        Alert.alert(
+          'Hire Coach',
+          `Are you sure you want to hire ${candidate.name} as your new ${roleToFill.replace(/([A-Z])/g, ' $1').trim()}?\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1000000).toFixed(1)}M/year`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Hire',
+              onPress: () => {
+                Alert.alert(
+                  'Coach Hired!',
+                  `${candidate.name} has been hired as your ${roleToFill.replace(/([A-Z])/g, ' $1').trim()}.`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
+              },
+            },
+          ]
+        );
+      }}
+    />
+  );
 }
 
 // ============================================
