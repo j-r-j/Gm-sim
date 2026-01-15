@@ -1086,10 +1086,21 @@ export function OwnerRelationsScreenWrapper({
       currentWeek={gameState.league.calendar.currentWeek}
       onBack={() => navigation.goBack()}
       onDemandPress={(demand) => {
-        // Future: Navigate to demand-specific screen
+        // Show demand details with action options
         Alert.alert(
           'Owner Demand',
-          `${demand.description}\n\nDeadline: Week ${demand.deadline}\n\nConsequence: ${demand.consequence}`
+          `${demand.description}\n\nDeadline: Week ${demand.deadline}\nIssued: Week ${demand.issuedWeek}\n\nConsequence if failed: ${demand.consequence}`,
+          [
+            {
+              text: 'View Roster',
+              onPress: () => navigation.navigate('Roster'),
+            },
+            {
+              text: 'View Finances',
+              onPress: () => navigation.navigate('Finances'),
+            },
+            { text: 'Close', style: 'cancel' },
+          ]
         );
       }}
     />
@@ -1245,12 +1256,41 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
         if (type === 'coach') {
           navigation.navigate('CoachProfile', { coachId: staffId });
         } else {
-          // Scout profile - to be implemented
+          // Show detailed scout profile with actions
           const scout = gameState.scouts[staffId];
           if (scout) {
+            const regionText = scout.attributes.regionKnowledge || 'General';
+            const evaluationText = scout.attributes.evaluation >= 80
+              ? 'Elite'
+              : scout.attributes.evaluation >= 60
+                ? 'Good'
+                : 'Average';
+            const speedText = scout.attributes.speed >= 80
+              ? 'Fast'
+              : scout.attributes.speed >= 60
+                ? 'Moderate'
+                : 'Thorough';
+            const positionSpecialty = scout.attributes.positionSpecialty || 'General';
+
             Alert.alert(
               `${scout.firstName} ${scout.lastName}`,
-              `Region: ${scout.attributes.regionKnowledge || 'General'}\nExperience: ${scout.attributes.experience}`
+              `SCOUTING PROFILE\n\n` +
+              `Region: ${regionText}\n` +
+              `Position Focus: ${positionSpecialty}\n` +
+              `Experience: ${scout.attributes.experience} years\n` +
+              `Evaluation Skill: ${evaluationText}\n` +
+              `Scouting Speed: ${speedText}`,
+              [
+                {
+                  text: 'View Scouting Reports',
+                  onPress: () => navigation.navigate('ScoutingReports'),
+                },
+                {
+                  text: 'View Big Board',
+                  onPress: () => navigation.navigate('BigBoard'),
+                },
+                { text: 'Close', style: 'cancel' },
+              ]
             );
           }
         }
