@@ -42,6 +42,7 @@ export interface SpecialTeamsPersonnel {
  * Coaching staff for game
  */
 export interface GameCoachingStaff {
+  headCoach?: Coach; // Optional - may have game management tendencies
   offensiveCoordinator: Coach;
   defensiveCoordinator: Coach;
   positionCoaches: Map<string, Coach>;

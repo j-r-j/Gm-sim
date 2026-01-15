@@ -8,8 +8,8 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } fr
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
-import { OFFSEASON_PHASES } from '../core/models/league/League';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
+import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 
 export type DashboardAction =
   | 'roster'
@@ -165,8 +165,20 @@ export function GMDashboardScreen({
   const { calendar } = gameState.league;
   const phase = calendar.currentPhase;
   const isOffseason = phase === 'offseason';
-  const isDraft = calendar.offseasonPhase === 8; // NFL Draft is phase 8
-  const isFreeAgency = calendar.offseasonPhase === 4 || calendar.offseasonPhase === 5; // Free Agency phases
+
+  // Use unified offseasonState for phase detection
+  const offseasonPhase: OffSeasonPhaseType | null = gameState.offseasonState?.currentPhase ?? null;
+  const isDraft = offseasonPhase === 'draft';
+  const isFreeAgency = offseasonPhase === 'free_agency';
+  const isCombine = offseasonPhase === 'combine';
+
+  // Get display name for current offseason phase
+  const getOffseasonPhaseDisplay = (): string => {
+    if (offseasonPhase) {
+      return PHASE_NAMES[offseasonPhase];
+    }
+    return 'Offseason';
+  };
 
   // Get job security status
   const patienceViewModel: PatienceViewModel | null = gameState.patienceMeter
@@ -359,7 +371,7 @@ export function GMDashboardScreen({
           icon="🎓"
           color={colors.secondary}
           onPress={() => onAction('draft')}
-          badge={isDraft ? 'ACTIVE' : undefined}
+          badge={isDraft ? 'DRAFT' : isCombine ? 'SCOUTING' : undefined}
         />
 
         <MenuCard
@@ -382,9 +394,7 @@ export function GMDashboardScreen({
               {isOffseason ? 'Advance Phase' : 'Advance Week'}
             </Text>
             <Text style={styles.advanceButtonSubtext}>
-              {isOffseason
-                ? `Current: ${calendar.offseasonPhase ? OFFSEASON_PHASES[calendar.offseasonPhase] : 'Offseason'}`
-                : 'Simulate to next week'}
+              {isOffseason ? `Current: ${getOffseasonPhaseDisplay()}` : 'Simulate to next week'}
             </Text>
           </TouchableOpacity>
         </View>

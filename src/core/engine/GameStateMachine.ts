@@ -6,15 +6,15 @@
 
 import { TeamGameState } from './TeamGameState';
 import { PlayResult, resolvePlay, resolveSpecialTeamsPlay } from './PlayResolver';
-import {
-  PlayCallContext,
-  selectOffensivePlay,
-  selectDefensivePlay,
-  shouldAttemptFieldGoal,
-  shouldPunt,
-} from './PlayCaller';
+import { PlayCallContext, shouldAttemptFieldGoal, shouldPunt } from './PlayCaller';
 import { WeatherCondition, GameStakes } from './EffectiveRatingCalculator';
 import { DriveResult } from './PlayDescriptionGenerator';
+// Import sophisticated play calling that uses coordinator tendencies and scheme adjustments
+import {
+  selectOffensivePlayWithTendencies,
+  selectDefensivePlayWithTendencies,
+  PlayCallingDecisionContext,
+} from '../coaching/PlayCallingIntegration';
 
 /**
  * Game clock state
@@ -364,20 +364,37 @@ export class GameStateMachine {
       distance: 2,
     };
 
-    // Select plays
-    const offensivePlay = selectOffensivePlay(offensiveTeam.offensiveTendencies, context);
-    const defensivePlay = selectDefensivePlay(
-      defensiveTeam.defensiveTendencies,
-      context,
-      offensivePlay.formation
+    // Create play calling decision context with coaching info for offense
+    const offensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: offensiveTeam.coaches.offensiveCoordinator,
+      defensiveCoordinator: null,
+      headCoach: offensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession === 'home',
+    };
+
+    // Create play calling decision context with coaching info for defense
+    const defensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: null,
+      defensiveCoordinator: defensiveTeam.coaches.defensiveCoordinator,
+      headCoach: defensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession !== 'home',
+    };
+
+    // Select plays using sophisticated tendency-based play calling
+    const offensiveResult = selectOffensivePlayWithTendencies(offensivePlayCallingContext);
+    const defensiveResult = selectDefensivePlayWithTendencies(
+      defensivePlayCallingContext,
+      offensiveResult.playCall.formation
     );
 
     const result = resolvePlay(
       offensiveTeam,
       defensiveTeam,
       {
-        offensive: offensivePlay,
-        defensive: defensivePlay,
+        offensive: offensiveResult.playCall,
+        defensive: defensiveResult.playCall,
       },
       context
     );
@@ -432,19 +449,36 @@ export class GameStateMachine {
       }
     }
 
-    // Select plays
-    const offensivePlay = selectOffensivePlay(offensiveTeam.offensiveTendencies, context);
-    const defensivePlay = selectDefensivePlay(
-      defensiveTeam.defensiveTendencies,
-      context,
-      offensivePlay.formation
+    // Create play calling decision context with coaching info for offense
+    const offensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: offensiveTeam.coaches.offensiveCoordinator,
+      defensiveCoordinator: null,
+      headCoach: offensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession === 'home',
+    };
+
+    // Create play calling decision context with coaching info for defense
+    const defensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: null,
+      defensiveCoordinator: defensiveTeam.coaches.defensiveCoordinator,
+      headCoach: defensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession !== 'home',
+    };
+
+    // Select plays using sophisticated tendency-based play calling
+    const offensiveResult = selectOffensivePlayWithTendencies(offensivePlayCallingContext);
+    const defensiveResult = selectDefensivePlayWithTendencies(
+      defensivePlayCallingContext,
+      offensiveResult.playCall.formation
     );
 
     // Resolve the play
     const result = resolvePlay(
       offensiveTeam,
       defensiveTeam,
-      { offensive: offensivePlay, defensive: defensivePlay },
+      { offensive: offensiveResult.playCall, defensive: defensiveResult.playCall },
       context
     );
 

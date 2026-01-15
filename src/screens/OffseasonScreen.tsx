@@ -9,6 +9,7 @@ import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '..
 import {
   OffSeasonState,
   OffSeasonTask,
+  TaskTargetScreen,
   PHASE_NAMES,
   PHASE_DESCRIPTIONS,
   getCurrentPhaseTasks,
@@ -19,22 +20,66 @@ import {
 interface OffseasonScreenProps {
   offseasonState: OffSeasonState;
   year: number;
+  rosterSize?: number; // For validation display
+  onTaskAction: (taskId: string, targetScreen: TaskTargetScreen) => void;
   onCompleteTask: (taskId: string) => void;
   onAdvancePhase: () => void;
   onBack: () => void;
-  onViewOTAReports?: () => void;
-  onViewTrainingCamp?: () => void;
-  onViewPreseason?: () => void;
-  onViewFinalCuts?: () => void;
+}
+
+/**
+ * Get button text based on task action type
+ */
+function getTaskButtonText(task: OffSeasonTask): string {
+  if (task.isComplete) return 'Done';
+
+  switch (task.actionType) {
+    case 'view':
+      return 'View';
+    case 'navigate':
+      return 'Go';
+    case 'validate':
+      return 'Check';
+    case 'auto':
+      return 'Auto';
+    default:
+      return 'Do';
+  }
+}
+
+/**
+ * Get button color based on task action type
+ */
+function getTaskButtonStyle(task: OffSeasonTask): object {
+  if (task.isComplete) return styles.checkmark;
+
+  switch (task.actionType) {
+    case 'view':
+      return styles.viewButton;
+    case 'navigate':
+      return styles.navigateButton;
+    case 'validate':
+      return styles.validateButton;
+    case 'auto':
+      return styles.autoButton;
+    default:
+      return styles.completeButton;
+  }
 }
 
 function TaskCard({
   task,
-  onComplete,
+  onAction,
+  validationInfo,
 }: {
   task: OffSeasonTask;
-  onComplete: () => void;
+  onAction: () => void;
+  validationInfo?: string;
 }): React.JSX.Element {
+  const isAutoTask = task.actionType === 'auto';
+  const buttonText = getTaskButtonText(task);
+  const buttonStyle = getTaskButtonStyle(task);
+
   return (
     <View style={[styles.taskCard, task.isComplete && styles.taskCardComplete]}>
       <View style={styles.taskContent}>
@@ -49,10 +94,13 @@ function TaskCard({
           )}
         </View>
         <Text style={styles.taskDescription}>{task.description}</Text>
+        {validationInfo && !task.isComplete && (
+          <Text style={styles.validationInfo}>{validationInfo}</Text>
+        )}
       </View>
       {!task.isComplete ? (
-        <TouchableOpacity style={styles.completeButton} onPress={onComplete}>
-          <Text style={styles.completeButtonText}>Do</Text>
+        <TouchableOpacity style={buttonStyle} onPress={onAction} disabled={isAutoTask}>
+          <Text style={styles.completeButtonText}>{buttonText}</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.checkmark}>
@@ -81,13 +129,11 @@ function ProgressBar({ progress }: { progress: OffSeasonProgress }): React.JSX.E
 export function OffseasonScreen({
   offseasonState,
   year,
+  rosterSize,
+  onTaskAction,
   onCompleteTask,
   onAdvancePhase,
   onBack,
-  onViewOTAReports,
-  onViewTrainingCamp,
-  onViewPreseason,
-  onViewFinalCuts,
 }: OffseasonScreenProps): React.JSX.Element {
   const progress = useMemo(() => getProgress(offseasonState), [offseasonState]);
   const tasks = useMemo(() => getCurrentPhaseTasks(offseasonState), [offseasonState]);
@@ -97,6 +143,44 @@ export function OffseasonScreen({
 
   const phaseName = PHASE_NAMES[offseasonState.currentPhase];
   const phaseDescription = PHASE_DESCRIPTIONS[offseasonState.currentPhase];
+
+  /**
+   * Handle task action based on task type
+   */
+  const handleTaskAction = (task: OffSeasonTask) => {
+    // Auto tasks complete themselves - nothing to do
+    if (task.actionType === 'auto') {
+      onCompleteTask(task.id);
+      return;
+    }
+
+    // For tasks with target screens, navigate there
+    if (task.targetScreen) {
+      onTaskAction(task.id, task.targetScreen);
+    } else {
+      // Fallback to simple completion
+      onCompleteTask(task.id);
+    }
+  };
+
+  /**
+   * Get validation info for validate-type tasks
+   */
+  const getValidationInfo = (task: OffSeasonTask): string | undefined => {
+    if (task.actionType !== 'validate') return undefined;
+
+    switch (task.completionCondition) {
+      case 'rosterSize<=53':
+        if (rosterSize !== undefined) {
+          return rosterSize > 53
+            ? `Current roster: ${rosterSize}/53 (need to cut ${rosterSize - 53})`
+            : `Roster at ${rosterSize}/53 - Ready!`;
+        }
+        return undefined;
+      default:
+        return undefined;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -123,34 +207,17 @@ export function OffseasonScreen({
           <Text style={styles.phaseDay}>Day {offseasonState.phaseDay}</Text>
         </View>
 
-        {/* Phase-specific Action Button */}
-        {offseasonState.currentPhase === 'otas' && onViewOTAReports && (
-          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewOTAReports}>
-            <Text style={styles.phaseActionButtonText}>View OTA Reports</Text>
-          </TouchableOpacity>
-        )}
-        {offseasonState.currentPhase === 'training_camp' && onViewTrainingCamp && (
-          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewTrainingCamp}>
-            <Text style={styles.phaseActionButtonText}>View Training Camp</Text>
-          </TouchableOpacity>
-        )}
-        {offseasonState.currentPhase === 'preseason' && onViewPreseason && (
-          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewPreseason}>
-            <Text style={styles.phaseActionButtonText}>View Preseason Games</Text>
-          </TouchableOpacity>
-        )}
-        {offseasonState.currentPhase === 'final_cuts' && onViewFinalCuts && (
-          <TouchableOpacity style={styles.phaseActionButton} onPress={onViewFinalCuts}>
-            <Text style={styles.phaseActionButtonText}>Manage Roster Cuts</Text>
-          </TouchableOpacity>
-        )}
-
         {/* Required Tasks */}
         {requiredTasks.length > 0 && (
           <View style={styles.taskSection}>
             <Text style={styles.sectionTitle}>Required Tasks</Text>
             {requiredTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onComplete={() => onCompleteTask(task.id)} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onAction={() => handleTaskAction(task)}
+                validationInfo={getValidationInfo(task)}
+              />
             ))}
           </View>
         )}
@@ -160,7 +227,12 @@ export function OffseasonScreen({
           <View style={styles.taskSection}>
             <Text style={styles.sectionTitle}>Optional Tasks</Text>
             {optionalTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onComplete={() => onCompleteTask(task.id)} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onAction={() => handleTaskAction(task)}
+                validationInfo={getValidationInfo(task)}
+              />
             ))}
           </View>
         )}
@@ -373,6 +445,34 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     marginLeft: spacing.md,
   },
+  viewButton: {
+    backgroundColor: colors.info,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginLeft: spacing.md,
+  },
+  navigateButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginLeft: spacing.md,
+  },
+  validateButton: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginLeft: spacing.md,
+  },
+  autoButton: {
+    backgroundColor: colors.textLight,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginLeft: spacing.md,
+  },
   completeButtonText: {
     color: colors.textOnPrimary,
     fontWeight: fontWeight.bold,
@@ -389,6 +489,12 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
     fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
+  },
+  validationInfo: {
+    fontSize: fontSize.xs,
+    color: colors.warning,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
   advanceSection: {
     padding: spacing.lg,

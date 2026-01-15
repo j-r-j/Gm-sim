@@ -93,6 +93,43 @@ export const PHASE_DESCRIPTIONS: Record<OffSeasonPhaseType, string> = {
 };
 
 /**
+ * Task action types
+ * - navigate: Opens a screen where the user must take action
+ * - view: Opens a screen for viewing only, auto-completes on visit
+ * - validate: Requires a game state condition to be met
+ * - auto: Completes automatically when phase is entered
+ */
+export type TaskActionType = 'navigate' | 'view' | 'validate' | 'auto';
+
+/**
+ * Screen names that tasks can navigate to
+ */
+export type TaskTargetScreen =
+  | 'DraftBoard'
+  | 'DraftRoom'
+  | 'FreeAgency'
+  | 'Staff'
+  | 'Finances'
+  | 'ContractManagement'
+  | 'Roster'
+  | 'FinalCuts'
+  | 'OTAs'
+  | 'TrainingCamp'
+  | 'Preseason'
+  | 'SeasonRecap'
+  | 'OwnerRelations';
+
+/**
+ * Completion conditions for validate tasks
+ */
+export type TaskCompletionCondition =
+  | 'visited'
+  | 'draftComplete'
+  | 'rosterSize<=53'
+  | 'hasSigned'
+  | 'optional';
+
+/**
  * Task definition
  */
 export interface OffSeasonTask {
@@ -101,6 +138,10 @@ export interface OffSeasonTask {
   description: string;
   isRequired: boolean;
   isComplete: boolean;
+  // Action metadata
+  actionType: TaskActionType;
+  targetScreen?: TaskTargetScreen;
+  completionCondition: TaskCompletionCondition;
 }
 
 /**
@@ -242,6 +283,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: "Review your team's season performance",
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'SeasonRecap',
+        completionCondition: 'visited',
       },
       {
         id: 'view_awards',
@@ -249,6 +293,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'See league awards and team honors',
         isRequired: false,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'SeasonRecap',
+        completionCondition: 'optional',
       },
       {
         id: 'view_draft_order',
@@ -256,6 +303,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Check your draft position',
         isRequired: false,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'DraftBoard',
+        completionCondition: 'optional',
       },
     ],
     coaching_decisions: [
@@ -265,6 +315,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Evaluate your coaching staff performance',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'Staff',
+        completionCondition: 'visited',
       },
       {
         id: 'make_changes',
@@ -272,6 +325,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Fire or hire coaching staff',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'Staff',
+        completionCondition: 'optional',
       },
     ],
     contract_management: [
@@ -281,6 +337,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Analyze your salary cap space',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'Finances',
+        completionCondition: 'visited',
       },
       {
         id: 'franchise_tag',
@@ -288,6 +347,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Use franchise or transition tag on a player',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'ContractManagement',
+        completionCondition: 'optional',
       },
       {
         id: 'cut_players',
@@ -295,6 +357,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Cut players to create cap space',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'ContractManagement',
+        completionCondition: 'optional',
       },
       {
         id: 'restructure',
@@ -302,6 +367,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Restructure existing contracts',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'ContractManagement',
+        completionCondition: 'optional',
       },
     ],
     combine: [
@@ -311,6 +379,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Scout the top draft prospects',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'DraftBoard',
+        completionCondition: 'visited',
       },
       {
         id: 'attend_combine',
@@ -318,6 +389,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Watch combine drills and interviews',
         isRequired: false,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'DraftBoard',
+        completionCondition: 'optional',
       },
       {
         id: 'pro_days',
@@ -325,6 +399,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Visit college pro days',
         isRequired: false,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'DraftBoard',
+        completionCondition: 'optional',
       },
     ],
     free_agency: [
@@ -334,6 +411,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Evaluate available free agents',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'FreeAgency',
+        completionCondition: 'visited',
       },
       {
         id: 'make_offers',
@@ -341,6 +421,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Submit contract offers to free agents',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'FreeAgency',
+        completionCondition: 'optional',
       },
       {
         id: 'sign_players',
@@ -348,6 +431,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Complete free agent signings',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'FreeAgency',
+        completionCondition: 'hasSigned',
       },
     ],
     draft: [
@@ -357,6 +443,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Select players in the NFL Draft',
         isRequired: true,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'DraftRoom',
+        completionCondition: 'draftComplete',
       },
       {
         id: 'trade_picks',
@@ -364,6 +453,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Trade up or down in the draft',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'DraftRoom',
+        completionCondition: 'optional',
       },
     ],
     udfa: [
@@ -373,6 +465,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Evaluate undrafted free agents',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'FreeAgency',
+        completionCondition: 'visited',
       },
       {
         id: 'sign_udfa',
@@ -380,6 +475,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Sign undrafted free agents',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'FreeAgency',
+        completionCondition: 'optional',
       },
     ],
     otas: [
@@ -389,6 +487,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Read reports on player progress',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'OTAs',
+        completionCondition: 'visited',
       },
       {
         id: 'adjust_depth',
@@ -396,6 +497,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Update depth chart based on OTA performance',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'Roster',
+        completionCondition: 'optional',
       },
     ],
     training_camp: [
@@ -405,6 +509,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Track position competition results',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'TrainingCamp',
+        completionCondition: 'visited',
       },
       {
         id: 'manage_injuries',
@@ -412,6 +519,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Handle training camp injuries',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'Roster',
+        completionCondition: 'optional',
       },
       {
         id: 'development_check',
@@ -419,6 +529,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Review player development updates',
         isRequired: false,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'TrainingCamp',
+        completionCondition: 'optional',
       },
     ],
     preseason: [
@@ -428,6 +541,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Play 3 preseason games',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'Preseason',
+        completionCondition: 'visited',
       },
       {
         id: 'evaluate_players',
@@ -435,6 +551,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Review preseason performances',
         isRequired: false,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'Preseason',
+        completionCondition: 'optional',
       },
     ],
     final_cuts: [
@@ -444,6 +563,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Reduce roster to 53 players',
         isRequired: true,
         isComplete: false,
+        actionType: 'validate',
+        targetScreen: 'FinalCuts',
+        completionCondition: 'rosterSize<=53',
       },
       {
         id: 'form_practice_squad',
@@ -451,6 +573,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Sign players to practice squad',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'FinalCuts',
+        completionCondition: 'optional',
       },
       {
         id: 'claim_waivers',
@@ -458,6 +583,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Claim players from waivers',
         isRequired: false,
         isComplete: false,
+        actionType: 'navigate',
+        targetScreen: 'FinalCuts',
+        completionCondition: 'optional',
       },
     ],
     season_start: [
@@ -467,6 +595,9 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Understand owner expectations for the season',
         isRequired: true,
         isComplete: false,
+        actionType: 'view',
+        targetScreen: 'OwnerRelations',
+        completionCondition: 'visited',
       },
       {
         id: 'media_projections',
@@ -474,6 +605,8 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'See media predictions for your team',
         isRequired: false,
         isComplete: false,
+        actionType: 'auto',
+        completionCondition: 'optional',
       },
       {
         id: 'set_goals',
@@ -481,6 +614,8 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         description: 'Define personal goals for the season',
         isRequired: false,
         isComplete: false,
+        actionType: 'auto',
+        completionCondition: 'optional',
       },
     ],
   };

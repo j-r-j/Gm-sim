@@ -31,6 +31,7 @@ import {
   CareerSummaryScreenWrapper,
   FiredScreenWrapper,
   CoachProfileScreenWrapper,
+  CoachHiringScreenWrapper,
   DepthChartScreenWrapper,
   OwnerRelationsScreenWrapper,
   ContractManagementScreenWrapper,
@@ -46,6 +47,7 @@ import {
   WeeklyDigestScreenWrapper,
   CoachingTreeScreenWrapper,
   JobMarketScreenWrapper,
+  InterviewScreenWrapper,
   CareerLegacyScreenWrapper,
   CombineScreenWrapper,
 } from './ScreenWrappers';
@@ -95,6 +97,7 @@ export function AppNavigator(): React.JSX.Element {
       {/* Profile screens */}
       <Stack.Screen name="PlayerProfile" component={PlayerProfileScreenWrapper} />
       <Stack.Screen name="CoachProfile" component={CoachProfileScreenWrapper} />
+      <Stack.Screen name="CoachHiring" component={CoachHiringScreenWrapper} />
       <Stack.Screen name="CoachingTree" component={CoachingTreeScreenWrapper} />
 
       {/* Depth Chart */}
@@ -130,6 +133,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="CareerSummary" component={CareerSummaryScreenWrapper} />
       <Stack.Screen name="Fired" component={FiredScreenWrapper} />
       <Stack.Screen name="JobMarket" component={JobMarketScreenWrapper} />
+      <Stack.Screen name="Interview" component={InterviewScreenWrapper} />
       <Stack.Screen name="CareerLegacy" component={CareerLegacyScreenWrapper} />
 
       {/* ==================
