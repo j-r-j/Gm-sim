@@ -16,6 +16,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   TextInput,
+  Keyboard,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Position } from '../core/models/player/Position';
@@ -382,6 +383,8 @@ export function DraftBoardScreen({
         keyExtractor={(item) => item.id}
         renderItem={renderProspect}
         contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No prospects match your filters</Text>
