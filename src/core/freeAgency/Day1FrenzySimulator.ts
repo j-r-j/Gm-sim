@@ -260,8 +260,7 @@ export function recordFrenzySigning(
   marketValue: number,
   wasBiddingWar: boolean
 ): Day1FrenzyState {
-  const offerTotal =
-    offer.totalValue ?? (offer.bonusPerYear + offer.salaryPerYear) * offer.years;
+  const offerTotal = offer.totalValue ?? (offer.bonusPerYear + offer.salaryPerYear) * offer.years;
   const event: FrenzySigningEvent = {
     timestamp: Date.now(),
     playerId: freeAgent.playerId,
