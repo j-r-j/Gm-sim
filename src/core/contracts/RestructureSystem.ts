@@ -65,7 +65,9 @@ export function getMaxRestructureAmount(
   }
 
   // Can only restructure base salary above veteran minimum
-  const restructurableAmount = Math.max(0, currentYearData.baseSalary - veteranMinimum);
+  // baseSalary is deprecated, fall back to salary (the new property)
+  const baseSalary = currentYearData.baseSalary ?? currentYearData.salary;
+  const restructurableAmount = Math.max(0, baseSalary - veteranMinimum);
   return restructurableAmount;
 }
 
@@ -219,28 +221,36 @@ export function restructureContract(
       newBreakdown.push(yearData);
     } else if (yearData.year === currentYear) {
       // Current year: reduce base salary, add proration
+      const currentBaseSalary = yearData.baseSalary ?? yearData.salary;
+      const currentProration = yearData.prorationedBonus ?? yearData.bonus;
       newBreakdown.push({
         ...yearData,
-        baseSalary: yearData.baseSalary - amountToConvert,
-        prorationedBonus: yearData.prorationedBonus + proratedAmounts[yearIndex],
+        baseSalary: currentBaseSalary - amountToConvert,
+        salary: currentBaseSalary - amountToConvert,
+        prorationedBonus: currentProration + proratedAmounts[yearIndex],
+        bonus: currentProration + proratedAmounts[yearIndex],
         capHit: yearData.capHit - amountToConvert + proratedAmounts[yearIndex],
       });
       yearIndex++;
     } else if (!yearData.isVoidYear) {
       // Future years: add proration
       const additionalProration = proratedAmounts[yearIndex] || 0;
+      const currentProration = yearData.prorationedBonus ?? yearData.bonus;
       newBreakdown.push({
         ...yearData,
-        prorationedBonus: yearData.prorationedBonus + additionalProration,
+        prorationedBonus: currentProration + additionalProration,
+        bonus: currentProration + additionalProration,
         capHit: yearData.capHit + additionalProration,
       });
       yearIndex++;
     } else {
       // Existing void year: add proration
       const additionalProration = proratedAmounts[yearIndex] || 0;
+      const currentProration = yearData.prorationedBonus ?? yearData.bonus;
       newBreakdown.push({
         ...yearData,
-        prorationedBonus: yearData.prorationedBonus + additionalProration,
+        prorationedBonus: currentProration + additionalProration,
+        bonus: currentProration + additionalProration,
         capHit: yearData.capHit + additionalProration,
       });
       yearIndex++;
@@ -254,6 +264,12 @@ export function restructureContract(
     const proratedForVoidYear = proratedAmounts[contract.yearsRemaining + i] || 0;
     newBreakdown.push({
       year: voidYear,
+      // New required properties
+      bonus: proratedForVoidYear,
+      salary: 0,
+      capHit: proratedForVoidYear,
+      isVoidYear: true,
+      // Backward compat properties
       baseSalary: 0,
       prorationedBonus: proratedForVoidYear,
       rosterBonus: 0,
@@ -261,10 +277,8 @@ export function restructureContract(
       optionBonus: 0,
       incentivesLTBE: 0,
       incentivesNLTBE: 0,
-      capHit: proratedForVoidYear,
       isGuaranteed: false,
       isGuaranteedForInjury: false,
-      isVoidYear: true,
     });
   }
 
@@ -327,7 +341,10 @@ export function executePayCut(
     };
   }
 
-  if (newSalary >= currentYearData.baseSalary) {
+  // Use baseSalary or fall back to salary (new property)
+  const currentBaseSalary = currentYearData.baseSalary ?? currentYearData.salary;
+
+  if (newSalary >= currentBaseSalary) {
     return {
       success: false,
       newContract: null,
@@ -336,18 +353,22 @@ export function executePayCut(
     };
   }
 
-  const payCutAmount = currentYearData.baseSalary - newSalary;
+  const payCutAmount = currentBaseSalary - newSalary;
 
   // Apply pay cut to current and future years proportionally
-  const reductionRatio = newSalary / currentYearData.baseSalary;
+  const reductionRatio = newSalary / currentBaseSalary;
 
   const newBreakdown = contract.yearlyBreakdown.map((yearData) => {
     if (yearData.year >= currentYear && !yearData.isVoidYear) {
-      const newBaseSalary = Math.round(yearData.baseSalary * reductionRatio);
+      const yearBaseSalary = yearData.baseSalary ?? yearData.salary;
+      const yearProration = yearData.prorationedBonus ?? yearData.bonus;
+      const yearRosterBonus = yearData.rosterBonus ?? 0;
+      const newBaseSalary = Math.round(yearBaseSalary * reductionRatio);
       return {
         ...yearData,
         baseSalary: newBaseSalary,
-        capHit: newBaseSalary + yearData.prorationedBonus + yearData.rosterBonus,
+        salary: newBaseSalary,
+        capHit: newBaseSalary + yearProration + yearRosterBonus,
         isGuaranteed: false, // Pay cuts typically void guarantees
       };
     }
@@ -356,7 +377,7 @@ export function executePayCut(
 
   const newTotalValue = newBreakdown
     .filter((y) => !y.isVoidYear)
-    .reduce((sum, y) => sum + y.baseSalary + y.prorationedBonus, 0);
+    .reduce((sum, y) => sum + (y.baseSalary ?? y.salary) + (y.prorationedBonus ?? y.bonus), 0);
 
   const newContract: PlayerContract = {
     ...contract,

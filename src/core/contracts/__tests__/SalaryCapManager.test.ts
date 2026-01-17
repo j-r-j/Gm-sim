@@ -31,14 +31,18 @@ describe('SalaryCapManager', () => {
     years: number,
     signedYear: number = 2024
   ) => {
+    const guaranteedMoney = totalValue * 0.5;
     const offer: ContractOffer = {
       years,
+      bonusPerYear: Math.round(guaranteedMoney / years),
+      salaryPerYear: Math.round((totalValue - guaranteedMoney) / years),
+      noTradeClause: false,
+      // Backward-compat properties
       totalValue,
-      guaranteedMoney: totalValue * 0.5,
+      guaranteedMoney,
       signingBonus: totalValue * 0.25,
       firstYearSalary: totalValue / years,
       annualEscalation: 0.03,
-      noTradeClause: false,
       voidYears: 0,
     };
 
@@ -183,8 +187,8 @@ describe('SalaryCapManager', () => {
     });
 
     it('should detect when team is over the cap', () => {
-      let state = createSalaryCapState('team-1', 2024, 50000); // Small cap
-      const contract = createTestContract('player-1', 200000, 4); // Huge contract
+      let state = createSalaryCapState('team-1', 2024, 40000); // Small cap
+      const contract = createTestContract('player-1', 200000, 4); // Huge contract (50000/yr cap hit)
       state = addContract(state, contract);
 
       const status = getCapStatus(state);

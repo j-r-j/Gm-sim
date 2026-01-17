@@ -440,36 +440,23 @@ export function createContractFromOfferSheet(
 export function createPoisonPillOffer(
   baseAAV: number,
   years: number,
-  type: 'front_loaded' | 'back_loaded'
+  _type: 'front_loaded' | 'back_loaded'
 ): ContractOffer {
   const totalValue = baseAAV * years;
 
-  let firstYearSalary: number;
-  let escalation: number;
-
-  if (type === 'front_loaded') {
-    // Heavy cap hit in early years
-    firstYearSalary = Math.round(baseAAV * 1.5);
-    escalation = -0.1; // Decreasing
-  } else {
-    // Heavy cap hit in later years (poison pill for matching team)
-    firstYearSalary = Math.round(baseAAV * 0.6);
-    escalation = 0.15; // Steep escalation
-  }
-
-  // Heavy guarantees
-  const guaranteedMoney = Math.round(totalValue * 0.65);
-  const signingBonus = Math.round(totalValue * 0.25);
+  // Heavy guarantees (65% of total)
+  const guaranteePct = 0.65;
+  const bonusPerYear = Math.round(baseAAV * guaranteePct);
+  const salaryPerYear = baseAAV - bonusPerYear;
 
   return {
     years,
-    totalValue,
-    guaranteedMoney,
-    signingBonus,
-    firstYearSalary,
-    annualEscalation: escalation,
+    bonusPerYear, // Guaranteed per year
+    salaryPerYear, // Non-guaranteed per year
     noTradeClause: false,
-    voidYears: 0,
+    // Backward compat properties
+    totalValue,
+    guaranteedMoney: bonusPerYear * years,
   };
 }
 
@@ -492,7 +479,7 @@ export function analyzeOfferSheetMatch(
   teamCapSpace: number
 ): MatchAnalysis {
   const offer = offerSheet.offer;
-  const year1CapHit = Math.round(offer.totalValue / offer.years);
+  const year1CapHit = offer.bonusPerYear + offer.salaryPerYear;
 
   // Estimate replacement cost
   const replacementAAV = Math.round(year1CapHit * 0.7);
@@ -532,11 +519,13 @@ export function analyzeOfferSheetMatch(
     reasoning = 'Better to take compensation and find replacement';
   }
 
+  const offerTotal = (offer.bonusPerYear + offer.salaryPerYear) * offer.years;
+
   return {
     shouldMatch,
-    totalCost: offer.totalValue,
+    totalCost: offerTotal,
     capImpactYear1: year1CapHit,
-    guaranteedExposure: offer.guaranteedMoney,
+    guaranteedExposure: offer.bonusPerYear * offer.years,
     alternativeCost,
     reasoning,
   };

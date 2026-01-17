@@ -513,12 +513,15 @@ describe('Tier 2 Features Integration', () => {
         originalTeamId: 'team-1',
         offer: {
           years: 4,
+          bonusPerYear: Math.round(12000000 / 4),
+          salaryPerYear: Math.round((20000000 - 12000000) / 4),
+          noTradeClause: false,
+          // Backward-compat properties
           totalValue: 20000000,
           guaranteedMoney: 12000000,
           signingBonus: 5000000,
           firstYearSalary: 4000000,
           annualEscalation: 0.05,
-          noTradeClause: false,
           voidYears: 0,
         },
         submittedDate: Date.now(),

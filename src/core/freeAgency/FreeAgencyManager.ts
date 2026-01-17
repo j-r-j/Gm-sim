@@ -362,6 +362,7 @@ export function submitOffer(
   const newFreeAgents = new Map(state.freeAgents);
   newFreeAgents.set(freeAgentId, updatedFreeAgent);
 
+  const offerAAV = offer.bonusPerYear + offer.salaryPerYear;
   const event: FreeAgencyEvent = {
     id: `event-${Date.now()}`,
     type: 'offer',
@@ -370,7 +371,7 @@ export function submitOffer(
     playerName: freeAgent.playerName,
     teamId,
     description: `${freeAgent.playerName} receives contract offer`,
-    details: { offerId: faOffer.id, aav: Math.round(offer.totalValue / offer.years) },
+    details: { offerId: faOffer.id, aav: offerAAV },
   };
 
   return {
@@ -437,7 +438,7 @@ export function acceptOffer(state: FreeAgencyState, offerId: string): FreeAgency
   const teamBudget = state.teamBudgets.get(offer.teamId);
   let newTeamBudgets = state.teamBudgets;
   if (teamBudget) {
-    const contractAAV = Math.round(offer.offer.totalValue / offer.offer.years);
+    const contractAAV = offer.offer.bonusPerYear + offer.offer.salaryPerYear;
     const newBudget: TeamFABudget = {
       ...teamBudget,
       spent: teamBudget.spent + contractAAV,

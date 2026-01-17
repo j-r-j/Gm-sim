@@ -1165,6 +1165,12 @@ export function ContractManagementScreenWrapper({
         yearlyBreakdown: [
           {
             year: 1,
+            // New required properties
+            bonus: Math.round(Math.random() * 2000),
+            salary: Math.round(Math.random() * 10000 + 500),
+            capHit: Math.round(Math.random() * 12000 + 500),
+            isVoidYear: false,
+            // Backward compat properties
             baseSalary: Math.round(Math.random() * 10000 + 500),
             prorationedBonus: Math.round(Math.random() * 2000),
             rosterBonus: 0,
@@ -1172,10 +1178,8 @@ export function ContractManagementScreenWrapper({
             optionBonus: 0,
             incentivesLTBE: 0,
             incentivesNLTBE: 0,
-            capHit: Math.round(Math.random() * 12000 + 500),
             isGuaranteed: Math.random() > 0.5,
             isGuaranteedForInjury: Math.random() > 0.7,
-            isVoidYear: false,
           },
         ],
         voidYears: 0,

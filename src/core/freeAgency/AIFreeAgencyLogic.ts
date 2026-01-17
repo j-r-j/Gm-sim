@@ -445,15 +445,18 @@ export function evaluateFreeAgent(
   const totalValue = offerAAV * years;
   const guaranteedMoney = Math.round(totalValue * (profile.riskTolerance * 0.4 + 0.2));
 
+  // Convert to new bonus/salary model
+  const bonusPerYear = Math.round(guaranteedMoney / years);
+  const salaryPerYear = offerAAV - bonusPerYear;
+
   const offer: ContractOffer = {
     years,
+    bonusPerYear, // Guaranteed money per year
+    salaryPerYear, // Non-guaranteed money per year
+    noTradeClause: marketValue.tier === 'elite' && profile.strategy === 'contend',
+    // Backward compat - computed values
     totalValue,
     guaranteedMoney,
-    signingBonus: Math.round(guaranteedMoney * 0.3),
-    firstYearSalary: offerAAV,
-    annualEscalation: 0.03,
-    noTradeClause: marketValue.tier === 'elite' && profile.strategy === 'contend',
-    voidYears: 0,
   };
 
   // Determine priority
@@ -501,7 +504,7 @@ export function generateDailyTargets(
     if (!decision.shouldMakeOffer || !decision.offer) continue;
 
     const offer = decision.offer;
-    const offerAAV = offer.totalValue / offer.years;
+    const offerAAV = offer.totalValue ?? (offer.bonusPerYear + offer.salaryPerYear) * offer.years;
 
     const willingness =
       decision.priority === 'high' ? 0.9 : decision.priority === 'medium' ? 0.6 : 0.3;
@@ -546,7 +549,8 @@ export function adjustOfferForCompetition(
 
   // Calculate escalation based on competition
   const escalation = Math.min(0.2, competingOfferCount * 0.05);
-  const newAAV = Math.round((baseOffer.totalValue / baseOffer.years) * (1 + escalation));
+  const currentAAV = baseOffer.bonusPerYear + baseOffer.salaryPerYear;
+  const newAAV = Math.round(currentAAV * (1 + escalation));
 
   // Check budget
   if (newAAV > budget.remaining) {
@@ -558,11 +562,17 @@ export function adjustOfferForCompetition(
     return null; // Too risky
   }
 
+  // Calculate new bonus and salary split
+  const currentGuaranteePct = baseOffer.bonusPerYear / currentAAV;
+  const newBonusPerYear = Math.round(newAAV * currentGuaranteePct * (1 + escalation * 0.5));
+  const newSalaryPerYear = newAAV - newBonusPerYear;
+
   return {
     ...baseOffer,
+    bonusPerYear: newBonusPerYear,
+    salaryPerYear: newSalaryPerYear,
     totalValue: newAAV * baseOffer.years,
-    guaranteedMoney: Math.round(baseOffer.guaranteedMoney * (1 + escalation * 0.5)),
-    firstYearSalary: newAAV,
+    guaranteedMoney: newBonusPerYear * baseOffer.years,
   };
 }
 

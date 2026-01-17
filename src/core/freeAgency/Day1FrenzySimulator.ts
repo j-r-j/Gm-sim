@@ -260,16 +260,17 @@ export function recordFrenzySigning(
   marketValue: number,
   wasBiddingWar: boolean
 ): Day1FrenzyState {
+  const offerTotal = offer.totalValue ?? (offer.bonusPerYear + offer.salaryPerYear) * offer.years;
   const event: FrenzySigningEvent = {
     timestamp: Date.now(),
     playerId: freeAgent.playerId,
     playerName: freeAgent.playerName,
     position: freeAgent.position,
     teamId,
-    contractValue: offer.totalValue,
+    contractValue: offerTotal,
     contractYears: offer.years,
     wasBiddingWar,
-    marketPercentage: (offer.totalValue / offer.years / marketValue) * 100,
+    marketPercentage: (offerTotal / offer.years / marketValue) * 100,
   };
 
   // Track team activity
@@ -298,12 +299,16 @@ export function generateEscalatedBid(
 ): ContractOffer {
   const multiplier = 1 + escalationRate;
 
+  const newBonusPerYear = Math.round(currentBid.bonusPerYear * multiplier);
+  const newSalaryPerYear = Math.round(currentBid.salaryPerYear * multiplier);
+
   return {
     ...currentBid,
-    totalValue: Math.round(currentBid.totalValue * multiplier),
-    guaranteedMoney: Math.round(currentBid.guaranteedMoney * multiplier),
-    signingBonus: Math.round(currentBid.signingBonus * multiplier),
-    firstYearSalary: Math.round(currentBid.firstYearSalary * multiplier),
+    bonusPerYear: newBonusPerYear,
+    salaryPerYear: newSalaryPerYear,
+    // Update backward compat properties
+    totalValue: (newBonusPerYear + newSalaryPerYear) * currentBid.years,
+    guaranteedMoney: newBonusPerYear * currentBid.years,
   };
 }
 
@@ -316,7 +321,8 @@ export function willContinueBidding(
   escalatedBid: ContractOffer,
   freeAgent: FreeAgent
 ): boolean {
-  const escalatedAAV = escalatedBid.totalValue / escalatedBid.years;
+  const escalatedAAV = escalatedBid.bonusPerYear + escalatedBid.salaryPerYear;
+  const currentAAV = currentBid.bonusPerYear + currentBid.salaryPerYear;
 
   // Check if team can afford
   if (escalatedAAV > teamBudget.remaining) {
@@ -330,7 +336,7 @@ export function willContinueBidding(
   }
 
   // Check if the escalation is too steep
-  const escalationPct = (escalatedBid.totalValue - currentBid.totalValue) / currentBid.totalValue;
+  const escalationPct = (escalatedAAV - currentAAV) / currentAAV;
   if (escalationPct > 0.15) {
     return Math.random() > 0.4;
   }
@@ -381,15 +387,18 @@ export function simulateTeamBid(
   // Cap at remaining budget
   const cappedAAV = Math.min(adjustedAAV, teamBudget.remaining);
 
+  // Calculate bonus/salary split (50% guaranteed)
+  const bonusPerYear = Math.round(cappedAAV * 0.5);
+  const salaryPerYear = cappedAAV - bonusPerYear;
+
   return {
     years: marketValue.projectedYears,
-    totalValue: cappedAAV * marketValue.projectedYears,
-    guaranteedMoney: Math.round(cappedAAV * marketValue.projectedYears * 0.5),
-    signingBonus: Math.round(cappedAAV * marketValue.projectedYears * 0.2),
-    firstYearSalary: cappedAAV,
-    annualEscalation: 0.03,
+    bonusPerYear, // Guaranteed per year
+    salaryPerYear, // Non-guaranteed per year
     noTradeClause: marketValue.tier === 'elite',
-    voidYears: 0,
+    // Backward compat properties
+    totalValue: cappedAAV * marketValue.projectedYears,
+    guaranteedMoney: bonusPerYear * marketValue.projectedYears,
   };
 }
 
