@@ -32,6 +32,13 @@ import { createNewsFeedState } from '../core/news/NewsFeedManager';
 import { createPatienceMeterState } from '../core/career/PatienceMeterManager';
 import { createDefaultTenureStats } from '../core/career/FiringMechanics';
 import { seedInitialFreeAgentPool } from '../core/freeAgency/FreeAgentSeeder';
+import { PlayerContract } from '../core/contracts/Contract';
+import {
+  generateRosterContracts,
+  calculateTotalCapUsage,
+  calculateFutureCommitments,
+} from '../core/contracts/ContractGenerator';
+import { DEFAULT_SALARY_CAP } from '../core/models/team/TeamFinances';
 
 const SALARY_CAP = 255000000; // $255 million
 
@@ -274,25 +281,56 @@ export function createNewGame(options: NewGameOptions): GameState {
     gmId: gmName,
   };
 
-  // Create players for all teams
+  // Create players and contracts for all teams
   const players: Record<string, Player> = {};
+  const contracts: Record<string, PlayerContract> = {};
+
   for (const teamId of teamIds) {
     const roster = generateRoster(teamId);
     const playerIds: string[] = [];
 
-    for (const player of roster) {
+    // Generate contracts for the roster
+    const { contracts: teamContracts, updatedPlayers } = generateRosterContracts(
+      roster,
+      teamId,
+      startYear
+    );
+
+    // Add contracts to the contracts collection
+    for (const [contractId, contract] of Object.entries(teamContracts)) {
+      contracts[contractId] = contract;
+    }
+
+    // Add players with their contract IDs
+    for (const player of updatedPlayers) {
       players[player.id] = player;
       playerIds.push(player.id);
     }
 
-    // Assign roster to team
+    // Calculate cap usage from contracts
+    const teamContractsOnly = Object.fromEntries(
+      Object.entries(teamContracts).filter(([, c]) => c.teamId === teamId)
+    );
+    const capUsage = calculateTotalCapUsage(teamContractsOnly, startYear);
+    const futureCommitments = calculateFutureCommitments(teamContractsOnly, startYear);
+
+    // Assign roster to team and update finances
     teams[teamId] = {
       ...teams[teamId],
       rosterPlayerIds: playerIds,
+      finances: {
+        ...teams[teamId].finances,
+        currentCapUsage: capUsage,
+        capSpace: DEFAULT_SALARY_CAP - capUsage,
+        nextYearCommitted: futureCommitments.nextYear,
+        twoYearsOutCommitted: futureCommitments.twoYearsOut,
+        threeYearsOutCommitted: futureCommitments.threeYearsOut,
+      },
     };
   }
 
   // Seed initial free agent pool (approximately 250 free agents)
+  // Free agents don't have contracts (they will sign when joining a team)
   const freeAgents = seedInitialFreeAgentPool(startYear);
   for (const freeAgent of freeAgents) {
     players[freeAgent.id] = freeAgent;
@@ -417,6 +455,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     owners,
     draftPicks,
     prospects,
+    contracts,
     careerStats,
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
     newsReadStatus: {},

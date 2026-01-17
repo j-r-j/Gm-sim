@@ -155,3 +155,18 @@ export {
   calculateRecommendedOffer,
   getExtensionSummary,
 } from './ExtensionSystem';
+
+// ============================================
+// Contract Generator
+// ============================================
+export {
+  // Functions
+  determineSkillTierFromPlayer,
+  calculateContractValue,
+  generatePlayerContract,
+  generateRosterContracts,
+  calculateTotalCapUsage,
+  calculateFutureCommitments,
+  getTeamContracts,
+  validateTeamCapUsage,
+} from './ContractGenerator';

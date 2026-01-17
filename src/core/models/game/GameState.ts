@@ -11,6 +11,7 @@ import { Scout, validateScout } from '../staff/Scout';
 import { Owner, validateOwner } from '../owner/Owner';
 import { DraftPick, validateDraftPick } from '../league/DraftPick';
 import { Prospect as DraftProspect, validateProspect } from '../../draft/Prospect';
+import { PlayerContract, validatePlayerContract } from '../../contracts/Contract';
 
 /**
  * Save slot options (3 slots supported)
@@ -96,6 +97,9 @@ export interface GameState {
 
   // Prospects (pre-draft players)
   prospects: Record<string, Prospect>;
+
+  // Player contracts
+  contracts: Record<string, PlayerContract>;
 
   // Career stats
   careerStats: CareerStats;
@@ -261,6 +265,12 @@ export function validateGameState(state: GameState): boolean {
     if (!validateProspect(prospect)) return false;
   }
 
+  // Contracts validation
+  if (typeof state.contracts !== 'object' || state.contracts === null) return false;
+  for (const contract of Object.values(state.contracts)) {
+    if (!validatePlayerContract(contract)) return false;
+  }
+
   // Career stats validation
   if (!validateCareerStats(state.careerStats)) return false;
 
@@ -297,6 +307,7 @@ export function createGameStateSkeleton(
     owners: {},
     draftPicks: {},
     prospects: {},
+    contracts: {},
     careerStats: createDefaultCareerStats(),
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
   };
