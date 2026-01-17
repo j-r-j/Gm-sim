@@ -440,7 +440,7 @@ export function createContractFromOfferSheet(
 export function createPoisonPillOffer(
   baseAAV: number,
   years: number,
-  type: 'front_loaded' | 'back_loaded'
+  _type: 'front_loaded' | 'back_loaded'
 ): ContractOffer {
   const totalValue = baseAAV * years;
 

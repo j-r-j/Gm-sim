@@ -8,7 +8,6 @@ import {
   createMinimumContract,
   ContractOffer,
   getCapHitForYear,
-  getCurrentCapHit,
   calculateDeadMoney,
   calculateCapSavings,
   calculatePostJune1DeadMoney,
