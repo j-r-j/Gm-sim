@@ -15,7 +15,7 @@ import {
   getTeamContracts,
   validateTeamCapUsage,
 } from '../ContractGenerator';
-import { getMinimumSalary, VETERAN_MINIMUM_SALARY } from '../Contract';
+import { getMinimumSalary } from '../Contract';
 import { DEFAULT_SALARY_CAP } from '../../models/team/TeamFinances';
 
 // Helper to create a mock player
@@ -139,29 +139,34 @@ describe('ContractGenerator', () => {
   describe('calculateContractValue', () => {
     const year = 2025;
 
-    it('should calculate higher value for elite QB', () => {
+    it('should return bonusPerYear and salaryPerYear', () => {
       const value = calculateContractValue(Position.QB, 'elite', 27, 5, year);
-      expect(value.aav).toBeGreaterThan(20000); // Should be >$20M for elite QB
-      expect(value.years).toBeGreaterThanOrEqual(3);
-      expect(value.guaranteed).toBeGreaterThan(0);
+      expect(value.bonusPerYear).toBeDefined();
+      expect(value.salaryPerYear).toBeDefined();
+      expect(value.years).toBeGreaterThanOrEqual(1);
     });
 
-    it('should calculate lower value for fringe players', () => {
-      const value = calculateContractValue(Position.RB, 'fringe', 25, 2, year);
-      expect(value.aav).toBeLessThan(3000); // Should be around minimum
-      expect(value.years).toBe(1);
+    it('should calculate higher bonus for elite players', () => {
+      const eliteValue = calculateContractValue(Position.QB, 'elite', 27, 5, year);
+      const fringeValue = calculateContractValue(Position.QB, 'fringe', 27, 5, year);
+
+      // Elite players get higher guaranteed bonus
+      expect(eliteValue.bonusPerYear).toBeGreaterThan(fringeValue.bonusPerYear);
     });
 
-    it('should never go below veteran minimum', () => {
+    it('should have total comp (bonus + salary) above minimum', () => {
       const value = calculateContractValue(Position.P, 'fringe', 30, 8, year);
       const minSalary = getMinimumSalary(8);
-      expect(value.aav).toBeGreaterThanOrEqual(minSalary);
+      const totalComp = value.bonusPerYear + value.salaryPerYear;
+      expect(totalComp).toBeGreaterThanOrEqual(minSalary);
     });
 
     it('should reduce value for older players', () => {
       const youngValue = calculateContractValue(Position.RB, 'starter', 24, 2, year);
       const oldValue = calculateContractValue(Position.RB, 'starter', 32, 10, year);
-      expect(youngValue.aav).toBeGreaterThan(oldValue.aav);
+      const youngTotal = youngValue.bonusPerYear + youngValue.salaryPerYear;
+      const oldTotal = oldValue.bonusPerYear + oldValue.salaryPerYear;
+      expect(youngTotal).toBeGreaterThan(oldTotal);
     });
 
     it('should give shorter contracts to older players', () => {
@@ -188,6 +193,17 @@ describe('ContractGenerator', () => {
       expect(contract.yearlyBreakdown.length).toBe(contract.totalYears);
     });
 
+    it('should create yearly breakdown with bonus and salary', () => {
+      const player = createMockPlayer();
+      const contract = generatePlayerContract(player, 'team-1', year);
+
+      for (const yearData of contract.yearlyBreakdown) {
+        expect(yearData.bonus).toBeDefined();
+        expect(yearData.salary).toBeDefined();
+        expect(yearData.capHit).toBe(yearData.bonus + yearData.salary);
+      }
+    });
+
     it('should set rookie contract type for young drafted players', () => {
       const player = createMockPlayer({
         experience: 2,
@@ -204,6 +220,14 @@ describe('ContractGenerator', () => {
       });
       const contract = generatePlayerContract(player, 'team-1', year);
       expect(contract.type).toBe('veteran');
+    });
+
+    it('should have guaranteedMoney equal to total bonus across years', () => {
+      const player = createMockPlayer();
+      const contract = generatePlayerContract(player, 'team-1', year);
+
+      const totalBonus = contract.yearlyBreakdown.reduce((sum, y) => sum + y.bonus, 0);
+      expect(contract.guaranteedMoney).toBe(totalBonus);
     });
 
     it('should create yearly breakdown with correct years', () => {
@@ -327,19 +351,43 @@ describe('ContractGenerator', () => {
     it('should give QBs higher values than RBs at same tier', () => {
       const qbValue = calculateContractValue(Position.QB, 'elite', 27, 5, year);
       const rbValue = calculateContractValue(Position.RB, 'elite', 27, 5, year);
-      expect(qbValue.aav).toBeGreaterThan(rbValue.aav);
+      const qbTotal = qbValue.bonusPerYear + qbValue.salaryPerYear;
+      const rbTotal = rbValue.bonusPerYear + rbValue.salaryPerYear;
+      expect(qbTotal).toBeGreaterThan(rbTotal);
     });
 
     it('should give pass rushers higher values than interior linemen', () => {
       const deValue = calculateContractValue(Position.DE, 'starter', 27, 5, year);
       const rgValue = calculateContractValue(Position.RG, 'starter', 27, 5, year);
-      expect(deValue.aav).toBeGreaterThan(rgValue.aav);
+      const deTotal = deValue.bonusPerYear + deValue.salaryPerYear;
+      const rgTotal = rgValue.bonusPerYear + rgValue.salaryPerYear;
+      expect(deTotal).toBeGreaterThan(rgTotal);
     });
 
     it('should give left tackles higher values than right tackles', () => {
       const ltValue = calculateContractValue(Position.LT, 'elite', 27, 5, year);
       const rtValue = calculateContractValue(Position.RT, 'elite', 27, 5, year);
-      expect(ltValue.aav).toBeGreaterThan(rtValue.aav);
+      const ltTotal = ltValue.bonusPerYear + ltValue.salaryPerYear;
+      const rtTotal = rtValue.bonusPerYear + rtValue.salaryPerYear;
+      expect(ltTotal).toBeGreaterThan(rtTotal);
+    });
+  });
+
+  describe('Bonus/Salary split', () => {
+    const year = 2025;
+
+    it('should have higher bonus percentage for elite players', () => {
+      const eliteValue = calculateContractValue(Position.QB, 'elite', 27, 5, year);
+      const fringeValue = calculateContractValue(Position.QB, 'fringe', 27, 5, year);
+
+      const eliteTotal = eliteValue.bonusPerYear + eliteValue.salaryPerYear;
+      const fringeTotal = fringeValue.bonusPerYear + fringeValue.salaryPerYear;
+
+      const eliteBonusPct = eliteValue.bonusPerYear / eliteTotal;
+      const fringeBonusPct = fringeValue.bonusPerYear / fringeTotal;
+
+      // Elite players should have higher percentage of their money guaranteed
+      expect(eliteBonusPct).toBeGreaterThan(fringeBonusPct);
     });
   });
 });

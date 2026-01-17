@@ -11,7 +11,6 @@ import {
   ContractType,
   createPlayerContract,
   getMinimumSalary,
-  VETERAN_MINIMUM_SALARY,
 } from './Contract';
 import { getFranchiseTagValue } from './FranchiseTagSystem';
 
@@ -154,6 +153,7 @@ export function determineSkillTierFromPlayer(player: Player): string {
 
 /**
  * Calculates the contract value for a player
+ * Returns bonus (guaranteed) and salary (non-guaranteed) per year
  */
 export function calculateContractValue(
   position: Position,
@@ -161,7 +161,7 @@ export function calculateContractValue(
   age: number,
   experience: number,
   year: number
-): { aav: number; totalValue: number; years: number; guaranteed: number; signingBonus: number } {
+): { bonusPerYear: number; salaryPerYear: number; years: number } {
   // Get franchise tag value as baseline for position
   const franchiseValue = getFranchiseTagValue(position, 1, year);
   const positionMultiplier = POSITION_VALUE_MULTIPLIERS[position] || 0.6;
@@ -170,7 +170,6 @@ export function calculateContractValue(
   const tierRange = SKILL_TIER_VALUE_RANGES[skillTier] || SKILL_TIER_VALUE_RANGES.fringe;
 
   // Calculate base AAV within tier range
-  // Use a random factor within the range (deterministic based on inputs for consistency)
   const tierMidpoint = (tierRange.min + tierRange.max) / 2;
   const baseAAV = Math.round(franchiseValue * positionMultiplier * tierMidpoint);
 
@@ -204,9 +203,8 @@ export function calculateContractValue(
 
   // Calculate contract structure
   const years = getContractYears(skillTier, age, position);
-  const totalValue = finalAAV * years;
 
-  // Guaranteed money based on tier (as percentage of total)
+  // Guaranteed percentage based on tier (portion of AAV that is bonus)
   const guaranteePercentages: Record<string, number> = {
     elite: 0.60,
     starter: 0.45,
@@ -214,18 +212,15 @@ export function calculateContractValue(
     fringe: 0.20,
   };
   const guaranteePct = guaranteePercentages[skillTier] || 0.2;
-  const guaranteed = Math.round(totalValue * guaranteePct);
 
-  // Signing bonus (typically 40-60% of guaranteed for larger deals)
-  const signingBonusPct = skillTier === 'elite' ? 0.5 : skillTier === 'starter' ? 0.4 : 0.25;
-  const signingBonus = Math.round(guaranteed * signingBonusPct);
+  // Split AAV into bonus (guaranteed) and salary (non-guaranteed)
+  const bonusPerYear = Math.round(finalAAV * guaranteePct);
+  const salaryPerYear = finalAAV - bonusPerYear;
 
   return {
-    aav: finalAAV,
-    totalValue,
+    bonusPerYear,
+    salaryPerYear,
     years,
-    guaranteed,
-    signingBonus,
   };
 }
 
@@ -255,13 +250,9 @@ export function generatePlayerContract(
 
   const offer: ContractOffer = {
     years: contractValue.years,
-    totalValue: contractValue.totalValue,
-    guaranteedMoney: contractValue.guaranteed,
-    signingBonus: contractValue.signingBonus,
-    firstYearSalary: contractValue.aav,
-    annualEscalation: skillTier === 'elite' ? 0.05 : skillTier === 'starter' ? 0.03 : 0.0,
+    bonusPerYear: contractValue.bonusPerYear,
+    salaryPerYear: contractValue.salaryPerYear,
     noTradeClause: skillTier === 'elite' && contractValue.years >= 4,
-    voidYears: 0,
   };
 
   const playerName = `${player.firstName} ${player.lastName}`;
