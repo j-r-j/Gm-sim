@@ -16,6 +16,7 @@ export type DashboardAction =
   | 'depthChart'
   | 'schedule'
   | 'standings'
+  | 'stats'
   | 'draft'
   | 'freeAgency'
   | 'staff'
@@ -341,6 +342,14 @@ export function GMDashboardScreen({
           icon="🏆"
           color={colors.warning}
           onPress={() => onAction('standings')}
+        />
+
+        <MenuCard
+          title="Stats"
+          subtitle="League leaders & team stats"
+          icon="📈"
+          color={colors.accent}
+          onPress={() => onAction('stats')}
         />
 
         <MenuCard
