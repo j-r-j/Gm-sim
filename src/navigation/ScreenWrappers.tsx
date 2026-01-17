@@ -1257,49 +1257,15 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    qbCoach: 'Quarterbacks Coach',
-    rbCoach: 'Running Backs Coach',
-    wrCoach: 'Wide Receivers Coach',
-    teCoach: 'Tight Ends Coach',
-    olCoach: 'Offensive Line Coach',
-    dlCoach: 'Defensive Line Coach',
-    lbCoach: 'Linebackers Coach',
-    dbCoach: 'Defensive Backs Coach',
-    stCoach: 'Special Teams Coach',
   };
 
   const rolePriorities: Record<CoachRole, 'critical' | 'important' | 'normal'> = {
     headCoach: 'critical',
     offensiveCoordinator: 'important',
     defensiveCoordinator: 'important',
-    specialTeamsCoordinator: 'normal',
-    qbCoach: 'normal',
-    rbCoach: 'normal',
-    wrCoach: 'normal',
-    teCoach: 'normal',
-    olCoach: 'normal',
-    dlCoach: 'normal',
-    lbCoach: 'normal',
-    dbCoach: 'normal',
-    stCoach: 'normal',
   };
 
-  const allRoles: CoachRole[] = [
-    'headCoach',
-    'offensiveCoordinator',
-    'defensiveCoordinator',
-    'specialTeamsCoordinator',
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-    'stCoach',
-  ];
+  const allRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   const vacancies = allRoles
     .filter((role) => {
@@ -3440,6 +3406,9 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
       needsMoreScouting: confidenceScore < 60,
       isLocked: false,
       userNotes: prospect.userNotes || '',
+      latestScoutId: '',
+      latestScoutName: 'Head Scout',
+      latestReportSummary: `OVR ${overallMin}-${overallMax} | Rd ${projectedRound}`,
     };
   });
 

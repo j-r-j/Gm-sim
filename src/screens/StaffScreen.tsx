@@ -72,23 +72,23 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
  * Scout card component
  */
 function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
+  // Get badge text based on role
+  const badgeText = scout.role === 'headScout' ? 'HS' : scout.role === 'offensiveScout' ? 'OS' : 'DS';
+
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
         <View style={styles.avatarContainer}>
           <Avatar id={scout.id} size="sm" context="coach" accentColor={colors.accent} />
           <View style={[styles.roleBadge, { backgroundColor: colors.accent }]}>
-            <Text style={styles.roleText}>SC</Text>
+            <Text style={styles.roleText}>{badgeText}</Text>
           </View>
         </View>
         <View style={styles.nameContainer}>
           <Text style={styles.staffName}>
             {scout.firstName} {scout.lastName}
           </Text>
-          <Text style={styles.staffRole}>
-            {scout.attributes.regionKnowledge || 'General'} Region •{' '}
-            {scout.attributes.positionSpecialty || 'All'} Specialist
-          </Text>
+          <Text style={styles.staffRole}>{formatScoutRole(scout.role)}</Text>
         </View>
       </View>
       <View style={styles.ratingContainer}>
@@ -136,15 +136,18 @@ function formatRole(role: string): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    quarterbacksCoach: 'Quarterbacks Coach',
-    runningBacksCoach: 'Running Backs Coach',
-    wideReceiversCoach: 'Wide Receivers Coach',
-    tightEndsCoach: 'Tight Ends Coach',
-    offensiveLineCoach: 'Offensive Line Coach',
-    defensiveLineCoach: 'Defensive Line Coach',
-    linebackersCoach: 'Linebackers Coach',
-    secondaryCoach: 'Secondary Coach',
+  };
+  return roleMap[role] || role;
+}
+
+/**
+ * Format scout role for display
+ */
+function formatScoutRole(role: string): string {
+  const roleMap: Record<string, string> = {
+    headScout: 'Head Scout',
+    offensiveScout: 'Offensive Scout',
+    defensiveScout: 'Defensive Scout',
   };
   return roleMap[role] || role;
 }

@@ -279,7 +279,7 @@ export function DraftBoardScreen({
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>{draftYear} Draft Board</Text>
+        <Text style={styles.headerTitle}>{draftYear} Big Board</Text>
         <View style={styles.headerSpacer} />
       </View>
 

@@ -26,7 +26,6 @@ import { generateDraftClass } from '../core/draft/DraftClassGenerator';
 import { Prospect } from '../core/draft/Prospect';
 import { generateSeasonSchedule, PreviousYearStandings } from '../core/season/ScheduleGenerator';
 import { CoachRole } from '../core/models/staff/StaffSalary';
-import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
 import { createCoachContract } from '../core/models/staff/CoachContract';
 import { createNewsFeedState } from '../core/news/NewsFeedManager';
 import { createPatienceMeterState } from '../core/career/PatienceMeterManager';
@@ -120,25 +119,12 @@ function createOwnerForTeam(teamId: string): Owner {
 }
 
 /**
- * Creates coaches for a team
+ * Creates coaches for a team (Head Coach, OC, DC)
  */
 function createCoachesForTeam(teamId: string): Coach[] {
   const coaches: Coach[] = [];
 
-  const coachRoles: CoachRole[] = [
-    'headCoach',
-    'offensiveCoordinator',
-    'defensiveCoordinator',
-    'specialTeamsCoordinator',
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-  ];
+  const coachRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   for (const role of coachRoles) {
     const { firstName, lastName } = generateFullName();
@@ -158,7 +144,7 @@ function createCoachesForTeam(teamId: string): Coach[] {
       coachId: coachId,
       teamId: teamId,
       yearsTotal,
-      salaryPerYear: 500000 + randomInt(0, 5000000),
+      salaryPerYear: role === 'headCoach' ? 8000000 + randomInt(0, 10000000) : 2000000 + randomInt(0, 4000000),
       guaranteedMoney: randomInt(500000, 3000000),
       startYear: 2025,
     });
@@ -170,66 +156,49 @@ function createCoachesForTeam(teamId: string): Coach[] {
 }
 
 /**
- * Creates scouts for a team
+ * Creates scouts for a team (Head Scout, Offensive Scout, Defensive Scout)
  */
 function createScoutsForTeam(teamId: string): Scout[] {
   const scouts: Scout[] = [];
 
-  // Director of Player Personnel
-  const directorName = generateFullName();
-  const director = createDefaultScout(
+  // Head Scout
+  const headName = generateFullName();
+  const headScout = createDefaultScout(
     generateUUID(),
-    directorName.firstName,
-    directorName.lastName,
-    'scoutingDirector'
+    headName.firstName,
+    headName.lastName,
+    'headScout'
   );
-  director.teamId = teamId;
-  director.isAvailable = false;
-  director.contract = createScoutContract(500000 + randomInt(0, 300000), 3);
-  scouts.push(director);
+  headScout.teamId = teamId;
+  headScout.isAvailable = false;
+  headScout.contract = createScoutContract(1000000 + randomInt(0, 2000000), 3);
+  scouts.push(headScout);
 
-  // National Scout
-  const nationalName = generateFullName();
-  const national = createDefaultScout(
+  // Offensive Scout
+  const offensiveName = generateFullName();
+  const offensiveScout = createDefaultScout(
     generateUUID(),
-    nationalName.firstName,
-    nationalName.lastName,
-    'nationalScout'
+    offensiveName.firstName,
+    offensiveName.lastName,
+    'offensiveScout'
   );
-  national.teamId = teamId;
-  national.isAvailable = false;
-  national.contract = createScoutContract(200000 + randomInt(0, 150000), 3);
-  scouts.push(national);
+  offensiveScout.teamId = teamId;
+  offensiveScout.isAvailable = false;
+  offensiveScout.contract = createScoutContract(500000 + randomInt(0, 700000), 3);
+  scouts.push(offensiveScout);
 
-  // 4 Regional Scouts
-  const regions: ScoutRegion[] = ['northeast', 'southeast', 'midwest', 'west'];
-  for (const region of regions) {
-    const name = generateFullName();
-    const regionalScout = createDefaultScout(
-      generateUUID(),
-      name.firstName,
-      name.lastName,
-      'regionalScout'
-    );
-    regionalScout.teamId = teamId;
-    regionalScout.region = region;
-    regionalScout.isAvailable = false;
-    regionalScout.contract = createScoutContract(100000 + randomInt(0, 100000), 2);
-    scouts.push(regionalScout);
-  }
-
-  // Pro Scout
-  const proName = generateFullName();
-  const proScout = createDefaultScout(
+  // Defensive Scout
+  const defensiveName = generateFullName();
+  const defensiveScout = createDefaultScout(
     generateUUID(),
-    proName.firstName,
-    proName.lastName,
-    'proScout'
+    defensiveName.firstName,
+    defensiveName.lastName,
+    'defensiveScout'
   );
-  proScout.teamId = teamId;
-  proScout.isAvailable = false;
-  proScout.contract = createScoutContract(150000 + randomInt(0, 100000), 2);
-  scouts.push(proScout);
+  defensiveScout.teamId = teamId;
+  defensiveScout.isAvailable = false;
+  defensiveScout.contract = createScoutContract(500000 + randomInt(0, 700000), 3);
+  scouts.push(defensiveScout);
 
   return scouts;
 }

@@ -31,16 +31,6 @@ function getRoleDisplayName(role: CoachRole): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    qbCoach: 'Quarterbacks Coach',
-    rbCoach: 'Running Backs Coach',
-    wrCoach: 'Wide Receivers Coach',
-    teCoach: 'Tight Ends Coach',
-    olCoach: 'Offensive Line Coach',
-    dlCoach: 'Defensive Line Coach',
-    lbCoach: 'Linebackers Coach',
-    dbCoach: 'Defensive Backs Coach',
-    stCoach: 'Special Teams Coach',
   };
   return displayNames[role];
 }
@@ -50,23 +40,13 @@ function getRoleDisplayName(role: CoachRole): string {
  */
 function mapRoleToCandidateRole(
   role: CoachRole
-): 'head_coach' | 'offensive_coordinator' | 'defensive_coordinator' | 'special_teams' {
+): 'head_coach' | 'offensive_coordinator' | 'defensive_coordinator' {
   switch (role) {
     case 'headCoach':
       return 'head_coach';
     case 'offensiveCoordinator':
       return 'offensive_coordinator';
     case 'defensiveCoordinator':
-      return 'defensive_coordinator';
-    case 'specialTeamsCoordinator':
-    case 'stCoach':
-      return 'special_teams';
-    default:
-      // For position coaches, use offensive coordinator type for offensive positions
-      if (['qbCoach', 'rbCoach', 'wrCoach', 'teCoach', 'olCoach'].includes(role)) {
-        return 'offensive_coordinator';
-      }
-      // Defensive position coaches
       return 'defensive_coordinator';
   }
 }

@@ -94,6 +94,8 @@ const COACH_ROLE_POSITIONS: Record<CoachRole, Position[]> = {
     Position.C,
     Position.RG,
     Position.RT,
+    Position.K,
+    Position.P,
   ],
   defensiveCoordinator: [
     Position.DE,
@@ -104,16 +106,6 @@ const COACH_ROLE_POSITIONS: Record<CoachRole, Position[]> = {
     Position.FS,
     Position.SS,
   ],
-  specialTeamsCoordinator: [Position.K, Position.P],
-  qbCoach: [Position.QB],
-  rbCoach: [Position.RB],
-  wrCoach: [Position.WR],
-  teCoach: [Position.TE],
-  olCoach: [Position.LT, Position.LG, Position.C, Position.RG, Position.RT],
-  dlCoach: [Position.DE, Position.DT],
-  lbCoach: [Position.OLB, Position.ILB],
-  dbCoach: [Position.CB, Position.FS, Position.SS],
-  stCoach: [Position.K, Position.P],
 };
 
 /**
@@ -231,34 +223,24 @@ export function calculateDevelopmentImpact(
  */
 function getImpactAreas(role: CoachRole, position: Position): string[] {
   const skillsByRole: Partial<Record<CoachRole, Record<string, string[]>>> = {
-    qbCoach: {
+    offensiveCoordinator: {
       QB: ['accuracy', 'decisionMaking', 'pocketPresence', 'presnap'],
-    },
-    rbCoach: {
       RB: ['vision', 'cutAbility', 'passProtection'],
-    },
-    wrCoach: {
       WR: ['routeRunning', 'catching', 'separation'],
-    },
-    teCoach: {
       TE: ['blocking', 'routeRunning', 'catching'],
-    },
-    olCoach: {
       LT: ['passBlock', 'footwork', 'awareness'],
       LG: ['runBlock', 'passBlock', 'pullAbility'],
       C: ['awareness', 'runBlock', 'passBlock'],
       RG: ['runBlock', 'passBlock', 'pullAbility'],
       RT: ['passBlock', 'footwork', 'awareness'],
+      K: ['accuracy', 'power', 'clutch'],
+      P: ['hangTime', 'accuracy', 'placement'],
     },
-    dlCoach: {
+    defensiveCoordinator: {
       DE: ['passRush', 'pursuit', 'finesse'],
       DT: ['runDefense', 'power', 'awareness'],
-    },
-    lbCoach: {
       OLB: ['blitzing', 'coverage', 'tackling'],
       ILB: ['tackling', 'zoneCoverage', 'awareness'],
-    },
-    dbCoach: {
       CB: ['manCoverage', 'zoneCoverage', 'press'],
       FS: ['zoneCoverage', 'closing', 'awareness'],
       SS: ['tackling', 'zoneCoverage', 'closing'],

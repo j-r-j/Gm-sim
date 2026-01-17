@@ -130,6 +130,10 @@ function ProspectRow({
           )}
         </View>
         <Text style={styles.prospectPosition}>{prospect.position}</Text>
+        <Text style={styles.scoutInfo}>Scout: {prospect.latestScoutName}</Text>
+        {prospect.latestReportSummary && (
+          <Text style={styles.reportSummary}>{prospect.latestReportSummary}</Text>
+        )}
       </View>
 
       <View style={styles.gradesColumn}>
@@ -569,6 +573,16 @@ const styles = StyleSheet.create({
   prospectPosition: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+  },
+  scoutInfo: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    marginTop: 2,
+  },
+  reportSummary: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   gradesColumn: {
     width: 70,

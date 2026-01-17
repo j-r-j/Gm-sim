@@ -118,7 +118,7 @@ export {
   validateCoach,
   getCoachFullName,
   isCoordinator,
-  isPositionCoach,
+  isHeadCoach,
   getCareerWinningPercentage,
 } from './Coach';
 

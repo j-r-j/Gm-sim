@@ -134,7 +134,7 @@ export function createDefaultScout(
     lastName,
     role,
     teamId: null,
-    region: role === 'regionalScout' ? 'northeast' : null,
+    region: null,
     attributes: createDefaultScoutAttributes(),
     trackRecord: createEmptyTrackRecord(id),
     contract: null,
@@ -151,11 +151,6 @@ export function createDefaultScout(
 export function validateScout(scout: Scout): boolean {
   // Must have ID and name
   if (!scout.id || !scout.firstName || !scout.lastName) {
-    return false;
-  }
-
-  // Regional scouts must have a region
-  if (scout.role === 'regionalScout' && !scout.region) {
     return false;
   }
 
