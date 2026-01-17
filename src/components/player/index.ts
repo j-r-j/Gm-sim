@@ -11,3 +11,4 @@ export {
   type PhysicalAttributesDisplayProps,
 } from './PhysicalAttributesDisplay';
 export { CollegeStatsDisplay, type CollegeStatsDisplayProps } from './CollegeStatsDisplay';
+export { PlayerDetailCard, type PlayerDetailCardProps } from './PlayerDetailCard';
