@@ -66,7 +66,7 @@ function buildPlayerTeamMap(gameState: GameState): Map<string, string> {
 /** Get all players with their team associations */
 function getPlayersWithTeams(gameState: GameState): PlayerWithTeam[] {
   const playerTeamMap = buildPlayerTeamMap(gameState);
-  return Object.values(gameState.players).map(player => ({
+  return Object.values(gameState.players).map((player) => ({
     ...player,
     teamId: playerTeamMap.get(player.id) || null,
   }));
@@ -114,7 +114,8 @@ const PASSING_CATEGORIES: StatCategory[] = [
     id: 'completionPct',
     label: 'Comp %',
     positions: [Position.QB],
-    getValue: (s) => s.passing.attempts > 0 ? (s.passing.completions / s.passing.attempts) * 100 : 0,
+    getValue: (s) =>
+      s.passing.attempts > 0 ? (s.passing.completions / s.passing.attempts) * 100 : 0,
     format: (v) => v.toFixed(1) + '%',
     minQualifier: (s) => s.passing.attempts >= 100,
   },
@@ -257,9 +258,10 @@ const KICKING_CATEGORIES: StatCategory[] = [
     id: 'fgPct',
     label: 'FG %',
     positions: [Position.K],
-    getValue: (s) => s.kicking.fieldGoalAttempts > 0
-      ? (s.kicking.fieldGoalsMade / s.kicking.fieldGoalAttempts) * 100
-      : 0,
+    getValue: (s) =>
+      s.kicking.fieldGoalAttempts > 0
+        ? (s.kicking.fieldGoalsMade / s.kicking.fieldGoalAttempts) * 100
+        : 0,
     format: (v) => v.toFixed(1) + '%',
     minQualifier: (s) => s.kicking.fieldGoalAttempts >= 5,
   },
@@ -296,7 +298,9 @@ function getPlayerSeasonStats(gameState: GameState, playerId: string): PlayerSea
   const pos = player.position;
 
   if (pos === Position.QB) {
-    stats.passing.attempts = Math.floor(30 * stats.gamesPlayed + Math.random() * 10 * stats.gamesPlayed);
+    stats.passing.attempts = Math.floor(
+      30 * stats.gamesPlayed + Math.random() * 10 * stats.gamesPlayed
+    );
     stats.passing.completions = Math.floor(stats.passing.attempts * (0.58 + Math.random() * 0.12));
     stats.passing.yards = Math.floor(stats.passing.completions * (9 + Math.random() * 5));
     stats.passing.touchdowns = Math.floor(stats.passing.yards / 250 + Math.random() * 5);
@@ -306,28 +310,41 @@ function getPlayerSeasonStats(gameState: GameState, playerId: string): PlayerSea
     stats.rushing.yards = Math.floor(stats.rushing.attempts * (3 + Math.random() * 4));
     stats.rushing.touchdowns = Math.floor(Math.random() * 4);
   } else if (pos === Position.RB) {
-    stats.rushing.attempts = Math.floor(12 * stats.gamesPlayed + Math.random() * 8 * stats.gamesPlayed);
+    stats.rushing.attempts = Math.floor(
+      12 * stats.gamesPlayed + Math.random() * 8 * stats.gamesPlayed
+    );
     stats.rushing.yards = Math.floor(stats.rushing.attempts * (3.5 + Math.random() * 2));
     stats.rushing.touchdowns = Math.floor(stats.rushing.yards / 150 + Math.random() * 3);
-    stats.rushing.yardsPerCarry = stats.rushing.attempts > 0 ? stats.rushing.yards / stats.rushing.attempts : 0;
-    stats.receiving.targets = Math.floor(3 * stats.gamesPlayed + Math.random() * 3 * stats.gamesPlayed);
+    stats.rushing.yardsPerCarry =
+      stats.rushing.attempts > 0 ? stats.rushing.yards / stats.rushing.attempts : 0;
+    stats.receiving.targets = Math.floor(
+      3 * stats.gamesPlayed + Math.random() * 3 * stats.gamesPlayed
+    );
     stats.receiving.receptions = Math.floor(stats.receiving.targets * (0.65 + Math.random() * 0.2));
     stats.receiving.yards = Math.floor(stats.receiving.receptions * (7 + Math.random() * 4));
     stats.receiving.touchdowns = Math.floor(Math.random() * 4);
   } else if (pos === Position.WR) {
-    stats.receiving.targets = Math.floor(6 * stats.gamesPlayed + Math.random() * 5 * stats.gamesPlayed);
+    stats.receiving.targets = Math.floor(
+      6 * stats.gamesPlayed + Math.random() * 5 * stats.gamesPlayed
+    );
     stats.receiving.receptions = Math.floor(stats.receiving.targets * (0.55 + Math.random() * 0.2));
     stats.receiving.yards = Math.floor(stats.receiving.receptions * (10 + Math.random() * 6));
     stats.receiving.touchdowns = Math.floor(stats.receiving.yards / 180 + Math.random() * 3);
-    stats.receiving.yardsPerReception = stats.receiving.receptions > 0 ? stats.receiving.yards / stats.receiving.receptions : 0;
+    stats.receiving.yardsPerReception =
+      stats.receiving.receptions > 0 ? stats.receiving.yards / stats.receiving.receptions : 0;
   } else if (pos === Position.TE) {
-    stats.receiving.targets = Math.floor(4 * stats.gamesPlayed + Math.random() * 3 * stats.gamesPlayed);
+    stats.receiving.targets = Math.floor(
+      4 * stats.gamesPlayed + Math.random() * 3 * stats.gamesPlayed
+    );
     stats.receiving.receptions = Math.floor(stats.receiving.targets * (0.6 + Math.random() * 0.2));
     stats.receiving.yards = Math.floor(stats.receiving.receptions * (9 + Math.random() * 4));
     stats.receiving.touchdowns = Math.floor(stats.receiving.yards / 200 + Math.random() * 3);
-    stats.receiving.yardsPerReception = stats.receiving.receptions > 0 ? stats.receiving.yards / stats.receiving.receptions : 0;
+    stats.receiving.yardsPerReception =
+      stats.receiving.receptions > 0 ? stats.receiving.yards / stats.receiving.receptions : 0;
   } else if (DEFENSIVE_POSITIONS.includes(pos)) {
-    stats.defensive.tackles = Math.floor(3 * stats.gamesPlayed + Math.random() * 5 * stats.gamesPlayed);
+    stats.defensive.tackles = Math.floor(
+      3 * stats.gamesPlayed + Math.random() * 5 * stats.gamesPlayed
+    );
     stats.defensive.tacklesForLoss = Math.floor(stats.defensive.tackles * 0.1);
     if ([Position.DE, Position.DT, Position.OLB].includes(pos)) {
       stats.defensive.sacks = Math.floor(Math.random() * stats.gamesPlayed * 0.8);
@@ -338,23 +355,37 @@ function getPlayerSeasonStats(gameState: GameState, playerId: string): PlayerSea
     }
     stats.defensive.forcedFumbles = Math.floor(Math.random() * 3);
   } else if (pos === Position.K) {
-    stats.kicking.fieldGoalAttempts = Math.floor(1.5 * stats.gamesPlayed + Math.random() * stats.gamesPlayed);
-    stats.kicking.fieldGoalsMade = Math.floor(stats.kicking.fieldGoalAttempts * (0.75 + Math.random() * 0.15));
+    stats.kicking.fieldGoalAttempts = Math.floor(
+      1.5 * stats.gamesPlayed + Math.random() * stats.gamesPlayed
+    );
+    stats.kicking.fieldGoalsMade = Math.floor(
+      stats.kicking.fieldGoalAttempts * (0.75 + Math.random() * 0.15)
+    );
     stats.kicking.longestFieldGoal = Math.floor(35 + Math.random() * 25);
-    stats.kicking.extraPointAttempts = Math.floor(2 * stats.gamesPlayed + Math.random() * stats.gamesPlayed);
-    stats.kicking.extraPointsMade = Math.floor(stats.kicking.extraPointAttempts * (0.95 + Math.random() * 0.05));
+    stats.kicking.extraPointAttempts = Math.floor(
+      2 * stats.gamesPlayed + Math.random() * stats.gamesPlayed
+    );
+    stats.kicking.extraPointsMade = Math.floor(
+      stats.kicking.extraPointAttempts * (0.95 + Math.random() * 0.05)
+    );
   }
 
   return stats;
 }
 
-function calculatePasserRating(passing: { attempts: number; completions: number; yards: number; touchdowns: number; interceptions: number }): number {
+function calculatePasserRating(passing: {
+  attempts: number;
+  completions: number;
+  yards: number;
+  touchdowns: number;
+  interceptions: number;
+}): number {
   if (passing.attempts === 0) return 0;
 
-  const a = Math.min(Math.max(((passing.completions / passing.attempts) - 0.3) * 5, 0), 2.375);
-  const b = Math.min(Math.max(((passing.yards / passing.attempts) - 3) * 0.25, 0), 2.375);
+  const a = Math.min(Math.max((passing.completions / passing.attempts - 0.3) * 5, 0), 2.375);
+  const b = Math.min(Math.max((passing.yards / passing.attempts - 3) * 0.25, 0), 2.375);
   const c = Math.min(Math.max((passing.touchdowns / passing.attempts) * 20, 0), 2.375);
-  const d = Math.min(Math.max(2.375 - ((passing.interceptions / passing.attempts) * 25), 0), 2.375);
+  const d = Math.min(Math.max(2.375 - (passing.interceptions / passing.attempts) * 25, 0), 2.375);
 
   return ((a + b + c + d) / 6) * 100;
 }
@@ -403,9 +434,7 @@ function TabButton({ label, isActive, onPress }: TabButtonProps): React.JSX.Elem
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
-        {label}
-      </Text>
+      <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -423,9 +452,7 @@ function FilterChip({ label, isActive, onPress }: FilterChipProps): React.JSX.El
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-        {label}
-      </Text>
+      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -449,7 +476,7 @@ function LeaderCard({
   value,
   statLabel,
   isUserTeam,
-  onPress
+  onPress,
 }: LeaderCardProps): React.JSX.Element {
   return (
     <TouchableOpacity
@@ -458,13 +485,15 @@ function LeaderCard({
       activeOpacity={0.7}
     >
       <View style={styles.leaderRank}>
-        <Text style={[styles.leaderRankText, rank <= 3 && styles.leaderRankTop]}>
-          {rank}
-        </Text>
+        <Text style={[styles.leaderRankText, rank <= 3 && styles.leaderRankTop]}>{rank}</Text>
       </View>
       <View style={styles.leaderInfo}>
-        <Text style={styles.leaderName} numberOfLines={1}>{playerName}</Text>
-        <Text style={styles.leaderTeam}>{teamAbbr} - {position}</Text>
+        <Text style={styles.leaderName} numberOfLines={1}>
+          {playerName}
+        </Text>
+        <Text style={styles.leaderTeam}>
+          {teamAbbr} - {position}
+        </Text>
       </View>
       <View style={styles.leaderStat}>
         <Text style={styles.leaderStatValue}>{value}</Text>
@@ -482,13 +511,21 @@ interface TeamStatsRowProps {
   statType: 'offense' | 'defense';
 }
 
-function TeamStatsRow({ rank, team, stats, isUserTeam, statType }: TeamStatsRowProps): React.JSX.Element {
+function TeamStatsRow({
+  rank,
+  team,
+  stats,
+  isUserTeam,
+  statType,
+}: TeamStatsRowProps): React.JSX.Element {
   return (
     <View style={[styles.teamRow, isUserTeam && styles.teamRowHighlight]}>
       <Text style={styles.teamRank}>{rank}</Text>
       <View style={styles.teamInfo}>
         <Text style={styles.teamAbbr}>{team.abbreviation}</Text>
-        <Text style={styles.teamName} numberOfLines={1}>{team.nickname}</Text>
+        <Text style={styles.teamName} numberOfLines={1}>
+          {team.nickname}
+        </Text>
       </View>
       {statType === 'offense' ? (
         <>
@@ -528,16 +565,24 @@ function LeagueLeadersView({
   selectedTeamId,
   onPlayerSelect,
 }: LeagueLeadersViewProps): React.JSX.Element {
-  const [selectedCategory, setSelectedCategory] = useState<'passing' | 'rushing' | 'receiving' | 'defense' | 'kicking'>('passing');
+  const [selectedCategory, setSelectedCategory] = useState<
+    'passing' | 'rushing' | 'receiving' | 'defense' | 'kicking'
+  >('passing');
 
   const categories = useMemo(() => {
     switch (selectedCategory) {
-      case 'passing': return PASSING_CATEGORIES;
-      case 'rushing': return RUSHING_CATEGORIES;
-      case 'receiving': return RECEIVING_CATEGORIES;
-      case 'defense': return DEFENSIVE_CATEGORIES;
-      case 'kicking': return KICKING_CATEGORIES;
-      default: return PASSING_CATEGORIES;
+      case 'passing':
+        return PASSING_CATEGORIES;
+      case 'rushing':
+        return RUSHING_CATEGORIES;
+      case 'receiving':
+        return RECEIVING_CATEGORIES;
+      case 'defense':
+        return DEFENSIVE_CATEGORIES;
+      case 'kicking':
+        return KICKING_CATEGORIES;
+      default:
+        return PASSING_CATEGORIES;
     }
   }, [selectedCategory]);
 
@@ -553,41 +598,50 @@ function LeagueLeadersView({
     let players = getPlayersWithTeams(gameState);
 
     // Filter by position for the category
-    players = players.filter(p => selectedStatCategory.positions.includes(p.position));
+    players = players.filter((p) => selectedStatCategory.positions.includes(p.position));
 
     // Apply scope filter
     if (filterScope === 'team' && selectedTeamId) {
-      players = players.filter(p => p.teamId === selectedTeamId);
+      players = players.filter((p) => p.teamId === selectedTeamId);
     } else if (filterScope === 'division' && selectedConference && selectedDivision) {
       const divisionTeamIds = Object.values(gameState.teams)
-        .filter(t => t.conference === selectedConference && t.division === selectedDivision)
-        .map(t => t.id);
-      players = players.filter(p => p.teamId && divisionTeamIds.includes(p.teamId));
+        .filter((t) => t.conference === selectedConference && t.division === selectedDivision)
+        .map((t) => t.id);
+      players = players.filter((p) => p.teamId && divisionTeamIds.includes(p.teamId));
     } else if (filterScope === 'conference' && selectedConference) {
       const confTeamIds = Object.values(gameState.teams)
-        .filter(t => t.conference === selectedConference)
-        .map(t => t.id);
-      players = players.filter(p => p.teamId && confTeamIds.includes(p.teamId));
+        .filter((t) => t.conference === selectedConference)
+        .map((t) => t.id);
+      players = players.filter((p) => p.teamId && confTeamIds.includes(p.teamId));
     }
 
     return players;
-  }, [gameState, filterScope, selectedConference, selectedDivision, selectedTeamId, selectedStatCategory]);
+  }, [
+    gameState,
+    filterScope,
+    selectedConference,
+    selectedDivision,
+    selectedTeamId,
+    selectedStatCategory,
+  ]);
 
   // Get sorted leaders
   const leaders = useMemo(() => {
-    const playerStats = filteredPlayers.map(player => ({
+    const playerStats = filteredPlayers.map((player) => ({
       player,
       stats: getPlayerSeasonStats(gameState, player.id),
     }));
 
     // Apply qualifier filter if exists
     const qualified = selectedStatCategory.minQualifier
-      ? playerStats.filter(ps => selectedStatCategory.minQualifier!(ps.stats))
+      ? playerStats.filter((ps) => selectedStatCategory.minQualifier!(ps.stats))
       : playerStats;
 
     // Sort by stat value
     return qualified
-      .sort((a, b) => selectedStatCategory.getValue(b.stats) - selectedStatCategory.getValue(a.stats))
+      .sort(
+        (a, b) => selectedStatCategory.getValue(b.stats) - selectedStatCategory.getValue(a.stats)
+      )
       .slice(0, 25);
   }, [filteredPlayers, gameState, selectedStatCategory]);
 
@@ -600,7 +654,7 @@ function LeagueLeadersView({
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryScrollContent}
       >
-        {(['passing', 'rushing', 'receiving', 'defense', 'kicking'] as const).map(cat => (
+        {(['passing', 'rushing', 'receiving', 'defense', 'kicking'] as const).map((cat) => (
           <FilterChip
             key={cat}
             label={cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -617,7 +671,7 @@ function LeagueLeadersView({
         style={styles.statTypeScroll}
         contentContainerStyle={styles.statTypeScrollContent}
       >
-        {categories.map(cat => (
+        {categories.map((cat) => (
           <FilterChip
             key={cat.id}
             label={cat.label}
@@ -677,9 +731,11 @@ function TeamStatsView({
     let teams = Object.values(gameState.teams);
 
     if (filterScope === 'division' && selectedConference && selectedDivision) {
-      teams = teams.filter(t => t.conference === selectedConference && t.division === selectedDivision);
+      teams = teams.filter(
+        (t) => t.conference === selectedConference && t.division === selectedDivision
+      );
     } else if (filterScope === 'conference' && selectedConference) {
-      teams = teams.filter(t => t.conference === selectedConference);
+      teams = teams.filter((t) => t.conference === selectedConference);
     }
 
     return teams;
@@ -687,7 +743,7 @@ function TeamStatsView({
 
   // Get sorted teams with stats
   const rankedTeams = useMemo(() => {
-    const teamsWithStats = filteredTeams.map(team => ({
+    const teamsWithStats = filteredTeams.map((team) => ({
       team,
       stats: getTeamSeasonStats(gameState, team.id),
     }));
@@ -696,7 +752,9 @@ function TeamStatsView({
     if (statType === 'offense') {
       return teamsWithStats.sort((a, b) => b.stats.pointsPerGame - a.stats.pointsPerGame);
     } else {
-      return teamsWithStats.sort((a, b) => a.stats.pointsAllowedPerGame - b.stats.pointsAllowedPerGame);
+      return teamsWithStats.sort(
+        (a, b) => a.stats.pointsAllowedPerGame - b.stats.pointsAllowedPerGame
+      );
     }
   }, [filteredTeams, gameState, statType]);
 
@@ -802,53 +860,60 @@ function PlayerStatsView({
     if (selectedPosition !== 'ALL') {
       if (selectedPosition === Position.LT) {
         // All OL positions
-        players = players.filter(p =>
+        players = players.filter((p) =>
           [Position.LT, Position.LG, Position.C, Position.RG, Position.RT].includes(p.position)
         );
       } else if (selectedPosition === Position.DE) {
         // All DL positions
-        players = players.filter(p => [Position.DE, Position.DT].includes(p.position));
+        players = players.filter((p) => [Position.DE, Position.DT].includes(p.position));
       } else if (selectedPosition === Position.ILB) {
         // All LB positions
-        players = players.filter(p => [Position.ILB, Position.OLB].includes(p.position));
+        players = players.filter((p) => [Position.ILB, Position.OLB].includes(p.position));
       } else if (selectedPosition === Position.CB) {
         // All DB positions
-        players = players.filter(p => [Position.CB, Position.FS, Position.SS].includes(p.position));
+        players = players.filter((p) =>
+          [Position.CB, Position.FS, Position.SS].includes(p.position)
+        );
       } else {
-        players = players.filter(p => p.position === selectedPosition);
+        players = players.filter((p) => p.position === selectedPosition);
       }
     }
 
     // Apply scope filter
     if (filterScope === 'team' && selectedTeamId) {
-      players = players.filter(p => p.teamId === selectedTeamId);
+      players = players.filter((p) => p.teamId === selectedTeamId);
     } else if (filterScope === 'division' && selectedConference && selectedDivision) {
       const divisionTeamIds = Object.values(gameState.teams)
-        .filter(t => t.conference === selectedConference && t.division === selectedDivision)
-        .map(t => t.id);
-      players = players.filter(p => p.teamId && divisionTeamIds.includes(p.teamId));
+        .filter((t) => t.conference === selectedConference && t.division === selectedDivision)
+        .map((t) => t.id);
+      players = players.filter((p) => p.teamId && divisionTeamIds.includes(p.teamId));
     } else if (filterScope === 'conference' && selectedConference) {
       const confTeamIds = Object.values(gameState.teams)
-        .filter(t => t.conference === selectedConference)
-        .map(t => t.id);
-      players = players.filter(p => p.teamId && confTeamIds.includes(p.teamId));
+        .filter((t) => t.conference === selectedConference)
+        .map((t) => t.id);
+      players = players.filter((p) => p.teamId && confTeamIds.includes(p.teamId));
     }
 
     return players;
-  }, [gameState, filterScope, selectedConference, selectedDivision, selectedTeamId, selectedPosition]);
+  }, [
+    gameState,
+    filterScope,
+    selectedConference,
+    selectedDivision,
+    selectedTeamId,
+    selectedPosition,
+  ]);
 
   // Sort players
   const sortedPlayers = useMemo(() => {
-    const playersWithStats = filteredPlayers.map(player => ({
+    const playersWithStats = filteredPlayers.map((player) => ({
       player,
       stats: getPlayerSeasonStats(gameState, player.id),
     }));
 
     switch (sortBy) {
       case 'name':
-        return playersWithStats.sort((a, b) =>
-          a.player.lastName.localeCompare(b.player.lastName)
-        );
+        return playersWithStats.sort((a, b) => a.player.lastName.localeCompare(b.player.lastName));
       case 'team':
         return playersWithStats.sort((a, b) => {
           const teamA = a.player.teamId ? gameState.teams[a.player.teamId]?.abbreviation || '' : '';
@@ -891,7 +956,7 @@ function PlayerStatsView({
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryScrollContent}
       >
-        {positionGroups.map(pg => (
+        {positionGroups.map((pg) => (
           <FilterChip
             key={pg.value}
             label={pg.label}
@@ -904,7 +969,7 @@ function PlayerStatsView({
       {/* Sort options */}
       <View style={styles.sortContainer}>
         <Text style={styles.sortLabel}>Sort by:</Text>
-        {(['games', 'name', 'team'] as const).map(sort => (
+        {(['games', 'name', 'team'] as const).map((sort) => (
           <TouchableOpacity
             key={sort}
             style={[styles.sortOption, sortBy === sort && styles.sortOptionActive]}
@@ -927,7 +992,7 @@ function PlayerStatsView({
             <TouchableOpacity
               style={[
                 styles.playerRow,
-                item.player.teamId === gameState.userTeamId && styles.playerRowHighlight
+                item.player.teamId === gameState.userTeamId && styles.playerRowHighlight,
               ]}
               onPress={() => onPlayerSelect?.(item.player.id)}
               activeOpacity={0.7}
@@ -937,12 +1002,11 @@ function PlayerStatsView({
                   {item.player.firstName} {item.player.lastName}
                 </Text>
                 <Text style={styles.playerMeta}>
-                  {team?.abbreviation || 'FA'} - {item.player.position} - {item.stats.gamesPlayed} GP
+                  {team?.abbreviation || 'FA'} - {item.player.position} - {item.stats.gamesPlayed}{' '}
+                  GP
                 </Text>
               </View>
-              <Text style={styles.playerStats}>
-                {getPositionStats(item.player, item.stats)}
-              </Text>
+              <Text style={styles.playerStats}>{getPositionStats(item.player, item.stats)}</Text>
             </TouchableOpacity>
           );
         }}
@@ -961,7 +1025,11 @@ function PlayerStatsView({
 // Main Component
 // ============================================================================
 
-export function StatsScreen({ gameState, onBack, onPlayerSelect }: StatsScreenProps): React.JSX.Element {
+export function StatsScreen({
+  gameState,
+  onBack,
+  onPlayerSelect,
+}: StatsScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<StatsTab>('leaders');
   const [filterScope, setFilterScope] = useState<FilterScope>('league');
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
@@ -1058,7 +1126,7 @@ export function StatsScreen({ gameState, onBack, onPlayerSelect }: StatsScreenPr
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScrollContent}
           >
-            {conferences.map(conf => (
+            {conferences.map((conf) => (
               <FilterChip
                 key={conf}
                 label={conf}
@@ -1074,7 +1142,7 @@ export function StatsScreen({ gameState, onBack, onPlayerSelect }: StatsScreenPr
             {filterScope === 'division' && selectedConference && (
               <>
                 <View style={styles.filterDivider} />
-                {divisions.map(div => (
+                {divisions.map((div) => (
                   <FilterChip
                     key={div}
                     label={div}
