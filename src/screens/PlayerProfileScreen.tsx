@@ -20,6 +20,7 @@ import {
   ALL_NEGATIVE_TRAITS,
 } from '../core/models/player/HiddenTraits';
 import { SkillRangeDisplay, TraitBadges, PhysicalAttributesDisplay } from '../components/player';
+import { Avatar } from '../components/avatar';
 
 /**
  * Props for PlayerProfileScreen
@@ -138,7 +139,7 @@ function InfoRow({ label, value }: { label: string; value: string }): React.JSX.
  * PlayerProfileScreen Component
  */
 export function PlayerProfileScreen({
-  playerId: _playerId,
+  playerId,
   firstName,
   lastName,
   position,
@@ -184,6 +185,13 @@ export function PlayerProfileScreen({
           </TouchableOpacity>
         )}
         <View style={styles.headerCenter}>
+          <Avatar
+            id={playerId}
+            size="lg"
+            age={age}
+            context={isProspect ? 'prospect' : 'player'}
+            accentColor={colors.secondary}
+          />
           <Text style={styles.playerName}>{fullName}</Text>
           <View style={styles.positionBadge}>
             <Text style={styles.positionText}>{position}</Text>
@@ -388,6 +396,7 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
+    marginTop: spacing.sm,
   },
   positionBadge: {
     backgroundColor: colors.secondary,

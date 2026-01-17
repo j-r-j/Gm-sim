@@ -21,6 +21,7 @@ import {
   DEFENSIVE_POSITIONS,
   SPECIAL_TEAMS_POSITIONS,
 } from '../core/models/player/Position';
+import { Avatar } from '../components/avatar';
 
 /**
  * Cut preview info passed to the screen
@@ -115,8 +116,11 @@ function PlayerCard({
       activeOpacity={0.7}
     >
       <View style={styles.playerInfo}>
-        <View style={styles.positionBadge}>
-          <Text style={styles.positionText}>{player.position}</Text>
+        <View style={styles.avatarContainer}>
+          <Avatar id={player.id} size="sm" age={player.age} context="player" />
+          <View style={styles.positionBadge}>
+            <Text style={styles.positionText}>{player.position}</Text>
+          </View>
         </View>
         <View style={styles.nameContainer}>
           <Text style={styles.playerName}>
@@ -652,17 +656,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: spacing.sm,
+  },
   positionBadge: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    minWidth: 22,
+    height: 16,
     borderRadius: borderRadius.sm,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    paddingHorizontal: spacing.xxs,
   },
   positionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.primary,
   },

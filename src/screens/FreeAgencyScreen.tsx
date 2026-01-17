@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Position } from '../core/models/player/Position';
+import { Avatar } from '../components/avatar';
 
 /**
  * Free agent for display
@@ -90,8 +91,11 @@ function FreeAgentCard({
   return (
     <TouchableOpacity style={styles.agentCard} onPress={onPress}>
       <View style={styles.agentHeader}>
-        <View style={styles.positionBadge}>
-          <Text style={styles.positionText}>{agent.position}</Text>
+        <View style={styles.avatarContainer}>
+          <Avatar id={agent.id} size="sm" age={agent.age} context="player" />
+          <View style={styles.positionBadge}>
+            <Text style={styles.positionText}>{agent.position}</Text>
+          </View>
         </View>
         <View style={styles.agentInfo}>
           <Text style={styles.agentName}>
@@ -516,17 +520,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: spacing.md,
+  },
   positionBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    minWidth: 22,
+    height: 16,
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    paddingHorizontal: spacing.xxs,
   },
   positionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.textOnPrimary,
   },

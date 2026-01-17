@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
+import { Avatar } from '../components/avatar';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 
 /**
@@ -46,8 +47,11 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
-        <View style={[styles.roleBadge, { backgroundColor: colors.primary }]}>
-          <Text style={styles.roleText}>{coach.role.slice(0, 2).toUpperCase()}</Text>
+        <View style={styles.avatarContainer}>
+          <Avatar id={coach.id} size="sm" age={coach.attributes.age} context="coach" />
+          <View style={[styles.roleBadge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.roleText}>{coach.role.slice(0, 2).toUpperCase()}</Text>
+          </View>
         </View>
         <View style={styles.nameContainer}>
           <Text style={styles.staffName}>
@@ -71,8 +75,11 @@ function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
-        <View style={[styles.roleBadge, { backgroundColor: colors.accent }]}>
-          <Text style={styles.roleText}>SC</Text>
+        <View style={styles.avatarContainer}>
+          <Avatar id={scout.id} size="sm" context="coach" accentColor={colors.accent} />
+          <View style={[styles.roleBadge, { backgroundColor: colors.accent }]}>
+            <Text style={styles.roleText}>SC</Text>
+          </View>
         </View>
         <View style={styles.nameContainer}>
           <Text style={styles.staffName}>
@@ -328,16 +335,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: spacing.sm,
+  },
   roleBadge: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    minWidth: 22,
+    height: 16,
     borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    paddingHorizontal: spacing.xxs,
   },
   roleText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.background,
   },
