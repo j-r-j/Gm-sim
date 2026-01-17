@@ -8,6 +8,16 @@ import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
+import { CoachRole } from '../core/models/staff/StaffSalary';
+
+/**
+ * Vacancy info for display
+ */
+export interface VacancyDisplay {
+  role: CoachRole;
+  displayName: string;
+  priority: 'critical' | 'important' | 'normal';
+}
 
 /**
  * Props for StaffScreen
@@ -17,10 +27,14 @@ export interface StaffScreenProps {
   coaches: Coach[];
   /** Team's scouts */
   scouts: Scout[];
+  /** Vacant coaching positions */
+  vacancies?: VacancyDisplay[];
   /** Callback to go back */
   onBack: () => void;
   /** Callback when staff member is selected */
   onSelectStaff?: (staffId: string, type: 'coach' | 'scout') => void;
+  /** Callback when user wants to hire for a vacant position */
+  onHireCoach?: (role: CoachRole) => void;
 }
 
 type StaffTab = 'coaches' | 'scouts';
@@ -79,6 +93,35 @@ function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
 }
 
 /**
+ * Vacancy card component
+ */
+function VacancyCard({ vacancy, onHire }: { vacancy: VacancyDisplay; onHire?: () => void }) {
+  const priorityColor =
+    vacancy.priority === 'critical'
+      ? colors.error
+      : vacancy.priority === 'important'
+        ? colors.warning
+        : colors.textSecondary;
+
+  return (
+    <View style={[styles.staffCard, styles.vacancyCard, { borderColor: priorityColor }]}>
+      <View style={styles.staffInfo}>
+        <View style={[styles.roleBadge, styles.vacancyBadge, { borderColor: priorityColor }]}>
+          <Text style={[styles.vacancyBadgeText, { color: priorityColor }]}>?</Text>
+        </View>
+        <View style={styles.nameContainer}>
+          <Text style={[styles.vacancyTitle, { color: priorityColor }]}>VACANT</Text>
+          <Text style={styles.staffRole}>{vacancy.displayName}</Text>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.hireButton} onPress={onHire} activeOpacity={0.7}>
+        <Text style={styles.hireButtonText}>Hire</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/**
  * Format coach role for display
  */
 function formatRole(role: string): string {
@@ -99,7 +142,14 @@ function formatRole(role: string): string {
   return roleMap[role] || role;
 }
 
-export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScreenProps) {
+export function StaffScreen({
+  coaches,
+  scouts,
+  vacancies = [],
+  onBack,
+  onSelectStaff,
+  onHireCoach,
+}: StaffScreenProps) {
   const [activeTab, setActiveTab] = useState<StaffTab>('coaches');
 
   // Sort coaches by role importance
@@ -119,6 +169,12 @@ export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScr
       return a.lastName.localeCompare(b.lastName);
     });
   }, [coaches]);
+
+  // Sort vacancies by priority
+  const sortedVacancies = useMemo(() => {
+    const priorityOrder = { critical: 0, important: 1, normal: 2 };
+    return [...vacancies].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  }, [vacancies]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -161,10 +217,27 @@ export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScr
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            sortedVacancies.length > 0 ? (
+              <View style={styles.vacanciesSection}>
+                <Text style={styles.vacanciesHeader}>Vacant Positions</Text>
+                {sortedVacancies.map((vacancy) => (
+                  <VacancyCard
+                    key={vacancy.role}
+                    vacancy={vacancy}
+                    onHire={() => onHireCoach?.(vacancy.role)}
+                  />
+                ))}
+                <Text style={styles.filledHeader}>Filled Positions</Text>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No coaches on staff</Text>
-            </View>
+            sortedVacancies.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No coaches on staff</Text>
+              </View>
+            ) : null
           }
         />
       ) : (
@@ -299,6 +372,55 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
+  },
+  // Vacancy styles
+  vacanciesSection: {
+    marginBottom: spacing.md,
+  },
+  vacanciesHeader: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.warning,
+    marginBottom: spacing.sm,
+  },
+  filledHeader: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  vacancyCard: {
+    borderWidth: 2,
+    borderColor: colors.warning,
+    borderStyle: 'dashed',
+    backgroundColor: colors.warning + '10',
+  },
+  vacancyBadge: {
+    backgroundColor: colors.warning + '30',
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  vacancyBadgeText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.warning,
+  },
+  vacancyTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.warning,
+  },
+  hireButton: {
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  hireButtonText: {
+    color: colors.background,
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
   },
 });
 

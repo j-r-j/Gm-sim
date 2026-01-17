@@ -167,6 +167,12 @@ import {
   getExtensionRecommendation,
 } from '../core/coaching/CoachManagementActions';
 import { getCurrentPhaseTasks } from '../core/offseason/OffSeasonPhaseManager';
+import {
+  createCoachFromCandidate,
+  CoachCandidate,
+} from '../core/offseason/phases/CoachingDecisionsPhase';
+import { CoachRole } from '../core/models/staff/StaffSalary';
+import { getCoachHierarchyKey } from '../core/models/staff/StaffHierarchy';
 
 // ============================================
 // OFFSEASON TASK COMPLETION HELPER
@@ -1231,6 +1237,9 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
     return <LoadingFallback message="Loading staff..." />;
   }
 
+  const team = gameState.teams[gameState.userTeamId];
+  const hierarchy = team.staffHierarchy;
+
   const teamCoaches = Object.values(gameState.coaches).filter(
     (coach) => coach.teamId === gameState.userTeamId
   );
@@ -1239,11 +1248,75 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
     (scout) => scout.teamId === gameState.userTeamId
   );
 
+  // Calculate vacancies from staff hierarchy
+  const roleDisplayNames: Record<CoachRole, string> = {
+    headCoach: 'Head Coach',
+    offensiveCoordinator: 'Offensive Coordinator',
+    defensiveCoordinator: 'Defensive Coordinator',
+    specialTeamsCoordinator: 'Special Teams Coordinator',
+    qbCoach: 'Quarterbacks Coach',
+    rbCoach: 'Running Backs Coach',
+    wrCoach: 'Wide Receivers Coach',
+    teCoach: 'Tight Ends Coach',
+    olCoach: 'Offensive Line Coach',
+    dlCoach: 'Defensive Line Coach',
+    lbCoach: 'Linebackers Coach',
+    dbCoach: 'Defensive Backs Coach',
+    stCoach: 'Special Teams Coach',
+  };
+
+  const rolePriorities: Record<CoachRole, 'critical' | 'important' | 'normal'> = {
+    headCoach: 'critical',
+    offensiveCoordinator: 'important',
+    defensiveCoordinator: 'important',
+    specialTeamsCoordinator: 'normal',
+    qbCoach: 'normal',
+    rbCoach: 'normal',
+    wrCoach: 'normal',
+    teCoach: 'normal',
+    olCoach: 'normal',
+    dlCoach: 'normal',
+    lbCoach: 'normal',
+    dbCoach: 'normal',
+    stCoach: 'normal',
+  };
+
+  const allRoles: CoachRole[] = [
+    'headCoach',
+    'offensiveCoordinator',
+    'defensiveCoordinator',
+    'specialTeamsCoordinator',
+    'qbCoach',
+    'rbCoach',
+    'wrCoach',
+    'teCoach',
+    'olCoach',
+    'dlCoach',
+    'lbCoach',
+    'dbCoach',
+    'stCoach',
+  ];
+
+  const vacancies = allRoles
+    .filter((role) => {
+      const key = getCoachHierarchyKey(role);
+      return hierarchy[key] === null;
+    })
+    .map((role) => ({
+      role,
+      displayName: roleDisplayNames[role],
+      priority: rolePriorities[role],
+    }));
+
   return (
     <StaffScreen
       coaches={teamCoaches}
       scouts={teamScouts}
+      vacancies={vacancies}
       onBack={() => navigation.goBack()}
+      onHireCoach={(role) => {
+        navigation.navigate('CoachHiring', { vacancyRole: role });
+      }}
       onSelectStaff={(staffId, type) => {
         if (type === 'coach') {
           navigation.navigate('CoachProfile', { coachId: staffId });
@@ -2378,13 +2451,31 @@ export function CoachProfileScreenWrapper({
             text: 'Release',
             style: 'destructive',
             onPress: () => {
+              const firedRole = coach.role;
               const result = fireCoachAction(gameState, coachId, teamId);
 
               if (result.success) {
                 setGameState(result.gameState);
                 saveGameState(result.gameState);
-                Alert.alert('Coach Released', result.message);
-                navigation.goBack();
+
+                // Offer to hire a replacement
+                Alert.alert(
+                  'Coach Released',
+                  `${result.message}\n\nWould you like to hire a replacement?`,
+                  [
+                    {
+                      text: 'Hire Replacement',
+                      onPress: () => {
+                        navigation.replace('CoachHiring', { vacancyRole: firedRole });
+                      },
+                    },
+                    {
+                      text: 'Later',
+                      style: 'cancel',
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
               } else {
                 Alert.alert('Release Failed', result.message);
               }
@@ -2460,7 +2551,7 @@ export function CoachHiringScreenWrapper({
   navigation,
   route,
 }: ScreenProps<'CoachHiring'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
   const { vacancyRole } = route.params;
 
   if (!gameState) {
@@ -2472,20 +2563,70 @@ export function CoachHiringScreenWrapper({
   const teamName = `${team.city} ${team.nickname}`;
 
   // Default to headCoach if no role specified
-  const roleToFill = (vacancyRole || 'headCoach') as
-    | 'headCoach'
-    | 'offensiveCoordinator'
-    | 'defensiveCoordinator'
-    | 'specialTeamsCoordinator'
-    | 'qbCoach'
-    | 'rbCoach'
-    | 'wrCoach'
-    | 'teCoach'
-    | 'olCoach'
-    | 'dlCoach'
-    | 'lbCoach'
-    | 'dbCoach'
-    | 'stCoach';
+  const roleToFill = (vacancyRole || 'headCoach') as CoachRole;
+
+  // Format role for display
+  const formatRole = (role: string) => {
+    return role.replace(/([A-Z])/g, ' $1').trim();
+  };
+
+  // Handle hiring a coach
+  const handleHireCoach = (candidate: CoachCandidate) => {
+    // Create the full coach entity from the candidate
+    const newCoach = createCoachFromCandidate(
+      candidate,
+      roleToFill,
+      gameState.userTeamId,
+      gameState.league.calendar.currentYear
+    );
+
+    // Get the hierarchy key for this role
+    const hierarchyKey = getCoachHierarchyKey(roleToFill);
+
+    // Update the team's staff hierarchy
+    const updatedTeam = {
+      ...team,
+      staffHierarchy: {
+        ...team.staffHierarchy,
+        [hierarchyKey]: newCoach.id,
+      },
+    };
+
+    // Update the coaches map
+    const updatedCoaches = {
+      ...gameState.coaches,
+      [newCoach.id]: newCoach,
+    };
+
+    // Update the teams map
+    const updatedTeams = {
+      ...gameState.teams,
+      [gameState.userTeamId]: updatedTeam,
+    };
+
+    // Create the updated game state
+    const updatedGameState: GameState = {
+      ...gameState,
+      coaches: updatedCoaches,
+      teams: updatedTeams,
+    };
+
+    // Save the updated state
+    setGameState(updatedGameState);
+    saveGameState(updatedGameState);
+
+    // Show success and navigate back
+    Alert.alert(
+      'Coach Hired!',
+      `${candidate.name} has been hired as your ${formatRole(roleToFill)}.\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1000).toFixed(1)}M/year`,
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]
+    );
+  };
 
   return (
     <CoachHiringScreen
@@ -2495,23 +2636,12 @@ export function CoachHiringScreenWrapper({
       onHire={(candidate) => {
         Alert.alert(
           'Hire Coach',
-          `Are you sure you want to hire ${candidate.name} as your new ${roleToFill.replace(/([A-Z])/g, ' $1').trim()}?\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1000000).toFixed(1)}M/year`,
+          `Are you sure you want to hire ${candidate.name} as your new ${formatRole(roleToFill)}?\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1000).toFixed(1)}M/year`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Hire',
-              onPress: () => {
-                Alert.alert(
-                  'Coach Hired!',
-                  `${candidate.name} has been hired as your ${roleToFill.replace(/([A-Z])/g, ' $1').trim()}.`,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => navigation.goBack(),
-                    },
-                  ]
-                );
-              },
+              onPress: () => handleHireCoach(candidate),
             },
           ]
         );
