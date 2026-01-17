@@ -542,19 +542,25 @@ export class GameStateMachine {
 
   /**
    * Calculate how much time a play takes off the clock
+   * NFL plays typically take 25-40 seconds including huddle and play clock
    */
   private calculateClockTime(result: PlayResult): number {
-    // Base time per play
-    let time = 5 + Math.floor(Math.random() * 10); // 5-15 seconds
+    // Base time per play: 25-40 seconds (realistic NFL timing)
+    let time = 25 + Math.floor(Math.random() * 16); // 25-40 seconds
 
-    // Incomplete passes stop the clock
+    // Incomplete passes stop the clock (only count the play itself, ~5-8 seconds)
     if (result.outcome === 'incomplete') {
-      time = 5;
+      time = 5 + Math.floor(Math.random() * 4); // 5-8 seconds
     }
 
-    // Out of bounds stops clock (simulate some plays)
+    // Out of bounds stops clock (play time only, ~6-10 seconds)
     if (result.yardsGained > 10 && Math.random() < 0.3) {
-      time = Math.min(time, 7);
+      time = 6 + Math.floor(Math.random() * 5); // 6-10 seconds
+    }
+
+    // Touchdowns and turnovers have variable time
+    if (result.outcome === 'touchdown' || result.outcome === 'interception' || result.outcome === 'fumble') {
+      time = 8 + Math.floor(Math.random() * 8); // 8-15 seconds
     }
 
     return time;
