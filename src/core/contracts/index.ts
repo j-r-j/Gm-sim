@@ -33,6 +33,13 @@ export {
   validatePlayerContract,
   getMinimumSalary,
   createMinimumContract,
+  // Backward compatibility helpers
+  calculatePostJune1DeadMoney,
+  getOfferTotalValue,
+  getOfferGuaranteedMoney,
+  createContractOffer,
+  // Types
+  PostJune1DeadMoney,
 } from './Contract';
 
 // ============================================

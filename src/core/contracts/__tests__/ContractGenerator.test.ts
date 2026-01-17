@@ -30,61 +30,60 @@ function createMockPlayer(overrides: Partial<Player> = {}): Player {
     physical: {
       height: 75,
       weight: 225,
-      speed: 80,
+      armLength: 32,
+      handSize: 10,
+      wingspan: 78,
+      speed: 4.6,
       acceleration: 78,
       agility: 75,
       strength: 70,
-      jumping: 72,
-      stamina: 85,
-      toughness: 80,
+      verticalJump: 32,
     },
     skills: {
-      true: {
-        throwPower: 85,
-        throwAccuracyShort: 88,
-        throwAccuracyMid: 85,
-        throwAccuracyDeep: 80,
-        throwOnTheRun: 82,
-        playAction: 78,
-        breakSack: 75,
-      },
-      perceived: {
-        throwPower: { min: 82, max: 88 },
-        throwAccuracyShort: { min: 85, max: 91 },
-        throwAccuracyMid: { min: 82, max: 88 },
-        throwAccuracyDeep: { min: 77, max: 83 },
-        throwOnTheRun: { min: 79, max: 85 },
-        playAction: { min: 75, max: 81 },
-        breakSack: { min: 72, max: 78 },
-      },
+      armStrength: { trueValue: 85, perceivedMin: 82, perceivedMax: 88, maturityAge: 26 },
+      accuracy: { trueValue: 88, perceivedMin: 85, perceivedMax: 91, maturityAge: 27 },
+      decisionMaking: { trueValue: 85, perceivedMin: 82, perceivedMax: 88, maturityAge: 28 },
+      pocketPresence: { trueValue: 80, perceivedMin: 77, perceivedMax: 83, maturityAge: 27 },
+      playAction: { trueValue: 78, perceivedMin: 75, perceivedMax: 81, maturityAge: 26 },
+      mobility: { trueValue: 75, perceivedMin: 72, perceivedMax: 78, maturityAge: 25 },
+      leadership: { trueValue: 82, perceivedMin: 79, perceivedMax: 85, maturityAge: 28 },
+      presnap: { trueValue: 80, perceivedMin: 77, perceivedMax: 83, maturityAge: 27 },
     },
     hiddenTraits: {
-      clutchPerformer: true,
-      injuryProne: false,
-      quickLearner: false,
-      lockerRoomLeader: true,
-      hotHead: false,
-      workEthic: 'high',
-      footballIQ: 85,
+      positive: ['clutch', 'leader'],
+      negative: [],
+      revealedToUser: [],
     },
     itFactor: {
       value: 80,
-      revealed: false,
     },
     consistency: {
       tier: 'steady',
-      varianceModifier: 0.9,
+      currentStreak: 'neutral',
+      streakGamesRemaining: 0,
     },
     schemeFits: {
-      westCoast: 85,
-      airRaid: 80,
-      proStyle: 82,
-      spread: 78,
+      offensive: {
+        westCoast: 'good',
+        airRaid: 'good',
+        spreadOption: 'neutral',
+        powerRun: 'neutral',
+        zoneRun: 'neutral',
+        playAction: 'good',
+      },
+      defensive: {
+        fourThreeUnder: 'neutral',
+        threeFour: 'neutral',
+        coverThree: 'neutral',
+        coverTwo: 'neutral',
+        manPress: 'neutral',
+        blitzHeavy: 'neutral',
+      },
     },
     roleFit: {
       ceiling: 'highEndStarter',
-      currentLevel: 'solidStarter',
-      development: 'steady',
+      currentRole: 'solidStarter',
+      roleEffectiveness: 75,
     },
     contractId: null,
     injuryStatus: createHealthyStatus(),
@@ -104,8 +103,8 @@ describe('ContractGenerator', () => {
       const player = createMockPlayer({
         roleFit: {
           ceiling: 'franchiseCornerstone',
-          currentLevel: 'highEndStarter',
-          development: 'steady',
+          currentRole: 'highEndStarter',
+          roleEffectiveness: 75,
         },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('elite');
@@ -113,7 +112,7 @@ describe('ContractGenerator', () => {
 
     it('should return elite for high-end starter players', () => {
       const player = createMockPlayer({
-        roleFit: { ceiling: 'highEndStarter', currentLevel: 'solidStarter', development: 'steady' },
+        roleFit: { ceiling: 'highEndStarter', currentRole: 'solidStarter', roleEffectiveness: 75 },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('elite');
     });
@@ -122,8 +121,8 @@ describe('ContractGenerator', () => {
       const player = createMockPlayer({
         roleFit: {
           ceiling: 'solidStarter',
-          currentLevel: 'qualityRotational',
-          development: 'steady',
+          currentRole: 'qualityRotational',
+          roleEffectiveness: 75,
         },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('starter');
@@ -131,14 +130,14 @@ describe('ContractGenerator', () => {
 
     it('should return backup for quality rotational players', () => {
       const player = createMockPlayer({
-        roleFit: { ceiling: 'qualityRotational', currentLevel: 'depth', development: 'steady' },
+        roleFit: { ceiling: 'qualityRotational', currentRole: 'depth', roleEffectiveness: 75 },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('backup');
     });
 
     it('should return fringe for depth players', () => {
       const player = createMockPlayer({
-        roleFit: { ceiling: 'depth', currentLevel: 'depth', development: 'steady' },
+        roleFit: { ceiling: 'depth', currentRole: 'depth', roleEffectiveness: 75 },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('fringe');
     });
@@ -303,8 +302,8 @@ describe('ContractGenerator', () => {
       const player = createMockPlayer({
         roleFit: {
           ceiling: 'franchiseCornerstone',
-          currentLevel: 'highEndStarter',
-          development: 'steady',
+          currentRole: 'highEndStarter',
+          roleEffectiveness: 75,
         },
       });
 

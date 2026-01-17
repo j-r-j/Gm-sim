@@ -346,12 +346,22 @@ function OfferSheetCard({
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Contract:</Text>
           <Text style={styles.infoValue}>
-            {offerSheet.offer.years}yr / {formatSalary(offerSheet.offer.totalValue)}
+            {offerSheet.offer.years}yr /{' '}
+            {formatSalary(
+              offerSheet.offer.totalValue ??
+                (offerSheet.offer.bonusPerYear + offerSheet.offer.salaryPerYear) *
+                  offerSheet.offer.years
+            )}
           </Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Guaranteed:</Text>
-          <Text style={styles.infoValue}>{formatSalary(offerSheet.offer.guaranteedMoney)}</Text>
+          <Text style={styles.infoValue}>
+            {formatSalary(
+              offerSheet.offer.guaranteedMoney ??
+                offerSheet.offer.bonusPerYear * offerSheet.offer.years
+            )}
+          </Text>
         </View>
         {offerSheet.status === 'pending' && (
           <View style={styles.deadlineRow}>

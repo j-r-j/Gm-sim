@@ -16,14 +16,19 @@ import { createPlayerContract, ContractOffer, getCapHitForYear } from '../Contra
 
 describe('RestructureSystem', () => {
   const createTestContract = (baseSalary: number = 20000, years: number = 4) => {
+    const totalValue = baseSalary * years;
+    const guaranteedMoney = baseSalary * years * 0.5;
     const offer: ContractOffer = {
       years,
-      totalValue: baseSalary * years,
-      guaranteedMoney: baseSalary * years * 0.5,
+      bonusPerYear: Math.round(guaranteedMoney / years),
+      salaryPerYear: Math.round((totalValue - guaranteedMoney) / years),
+      noTradeClause: false,
+      // Backward-compat properties
+      totalValue,
+      guaranteedMoney,
       signingBonus: baseSalary * years * 0.2,
       firstYearSalary: baseSalary,
       annualEscalation: 0.05,
-      noTradeClause: false,
       voidYears: 0,
     };
 
@@ -32,13 +37,15 @@ describe('RestructureSystem', () => {
 
   describe('getMaxRestructureAmount', () => {
     it('should return restructurable salary above veteran minimum', () => {
-      const contract = createTestContract(20000); // $20M base salary
+      const contract = createTestContract(20000); // Creates contract with salaryPerYear ~10000
+      // In new model, salaryPerYear is the non-guaranteed portion (50% of total = 10000)
 
       const maxRestructure = getMaxRestructureAmount(contract, 2024);
 
-      // Should be base salary minus vet minimum (~$1.2M)
-      expect(maxRestructure).toBeLessThan(20000);
-      expect(maxRestructure).toBeGreaterThan(15000);
+      // Should be salary minus vet minimum (~$1.2M)
+      // salaryPerYear is 10000, vet min is ~1215, so max is ~8785
+      expect(maxRestructure).toBeLessThan(10000);
+      expect(maxRestructure).toBeGreaterThan(7000);
     });
 
     it('should return 0 for void years', () => {
@@ -89,7 +96,7 @@ describe('RestructureSystem', () => {
     it('should calculate current year savings', () => {
       const contract = createTestContract(20000);
 
-      const preview = previewRestructure(contract, 2024, 10000);
+      const preview = previewRestructure(contract, 2024, 5000);
 
       expect(preview.capSavings).toBeGreaterThan(0);
       expect(preview.newCapHit).toBeLessThan(preview.originalCapHit);
@@ -98,7 +105,7 @@ describe('RestructureSystem', () => {
     it('should show future year impact', () => {
       const contract = createTestContract(20000);
 
-      const preview = previewRestructure(contract, 2024, 10000);
+      const preview = previewRestructure(contract, 2024, 5000);
 
       expect(preview.futureImpact.length).toBeGreaterThan(0);
       expect(preview.futureImpact[0].additionalCapHit).toBeGreaterThan(0);
@@ -107,7 +114,7 @@ describe('RestructureSystem', () => {
     it('should provide recommendation', () => {
       const contract = createTestContract(20000);
 
-      const preview = previewRestructure(contract, 2024, 10000);
+      const preview = previewRestructure(contract, 2024, 5000);
 
       expect(preview.recommendation).toBeDefined();
       expect(preview.recommendation.length).toBeGreaterThan(0);
@@ -119,7 +126,7 @@ describe('RestructureSystem', () => {
       const contract = createTestContract(20000);
       const originalCapHit = getCapHitForYear(contract, 2024);
 
-      const result = restructureContract(contract, 2024, 10000);
+      const result = restructureContract(contract, 2024, 5000);
 
       expect(result.success).toBe(true);
       expect(result.newContract).not.toBeNull();
@@ -154,7 +161,7 @@ describe('RestructureSystem', () => {
     it('should add void years when specified', () => {
       const contract = createTestContract(20000);
 
-      const result = restructureContract(contract, 2024, 10000, 2);
+      const result = restructureContract(contract, 2024, 5000, 2);
 
       expect(result.success).toBe(true);
       expect(result.newContract!.voidYears).toBe(2);
@@ -164,7 +171,7 @@ describe('RestructureSystem', () => {
     it('should add note about restructure', () => {
       const contract = createTestContract(20000);
 
-      const result = restructureContract(contract, 2024, 10000);
+      const result = restructureContract(contract, 2024, 5000);
 
       expect(result.newContract!.notes.some((n) => n.includes('Restructured'))).toBe(true);
     });
@@ -174,11 +181,13 @@ describe('RestructureSystem', () => {
     it('should reduce salary for current and future years', () => {
       const contract = createTestContract(20000);
       const originalCapHit = getCapHitForYear(contract, 2024);
+      // In new model, salaryPerYear is 10000 (non-guaranteed portion)
+      // So we cut from 10000 to 7500
 
-      const result = executePayCut(contract, 2024, 15000);
+      const result = executePayCut(contract, 2024, 7500);
 
       expect(result.success).toBe(true);
-      expect(result.details!.payCutAmount).toBe(5000);
+      expect(result.details!.payCutAmount).toBe(2500);
 
       const newCapHit = getCapHitForYear(result.newContract!, 2024);
       expect(newCapHit).toBeLessThan(originalCapHit);
@@ -186,8 +195,9 @@ describe('RestructureSystem', () => {
 
     it('should fail if new salary is higher', () => {
       const contract = createTestContract(20000);
+      // salaryPerYear is 10000, so 15000 would be higher
 
-      const result = executePayCut(contract, 2024, 25000);
+      const result = executePayCut(contract, 2024, 15000);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('less than');
@@ -195,8 +205,9 @@ describe('RestructureSystem', () => {
 
     it('should void guarantees on pay cut', () => {
       const contract = createTestContract(20000);
+      // salaryPerYear is 10000, cut to 5000
 
-      const result = executePayCut(contract, 2024, 10000);
+      const result = executePayCut(contract, 2024, 5000);
 
       // Future years should no longer be guaranteed
       const futureYears = result.newContract!.yearlyBreakdown.filter(
@@ -242,7 +253,7 @@ describe('RestructureSystem', () => {
     it('should project year-by-year impact', () => {
       const contract = createTestContract(20000);
 
-      const impact = projectRestructureImpact(contract, 2024, 10000);
+      const impact = projectRestructureImpact(contract, 2024, 5000);
 
       expect(impact.yearByYear.length).toBeGreaterThan(0);
       expect(impact.yearByYear[0].year).toBe(2024);
@@ -251,7 +262,7 @@ describe('RestructureSystem', () => {
     it('should calculate total savings and costs', () => {
       const contract = createTestContract(20000);
 
-      const impact = projectRestructureImpact(contract, 2024, 10000);
+      const impact = projectRestructureImpact(contract, 2024, 5000);
 
       expect(impact.totalSavings).toBeGreaterThan(0);
       expect(impact.totalAdditionalCost).toBeGreaterThan(0);
@@ -260,10 +271,10 @@ describe('RestructureSystem', () => {
     it('should calculate dead money risk', () => {
       const contract = createTestContract(20000);
 
-      const impact = projectRestructureImpact(contract, 2024, 10000);
+      const impact = projectRestructureImpact(contract, 2024, 5000);
 
       // Dead money risk equals amount converted
-      expect(impact.deadMoneyRisk).toBe(10000);
+      expect(impact.deadMoneyRisk).toBe(5000);
     });
   });
 });

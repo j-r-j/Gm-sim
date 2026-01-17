@@ -22,6 +22,12 @@ export type ContractType = 'rookie' | 'veteran' | 'extension' | 'franchise_tag' 
  * - bonus = guaranteed money for this year
  * - salary = non-guaranteed money for this year
  * - capHit = bonus + salary
+ *
+ * Backward-compatible properties:
+ * - baseSalary: alias for salary
+ * - prorationedBonus: alias for bonus
+ * - rosterBonus: always 0 (not used in simplified model)
+ * - isGuaranteed: whether this year is guaranteed (always true for bonus portion)
  */
 export interface ContractYear {
   /** Season year */
@@ -34,6 +40,24 @@ export interface ContractYear {
   capHit: number;
   /** Is this a void year? */
   isVoidYear: boolean;
+  /** @deprecated Use salary instead - alias for backward compatibility */
+  baseSalary?: number;
+  /** @deprecated Use bonus instead - alias for backward compatibility */
+  prorationedBonus?: number;
+  /** @deprecated Not used in simplified model */
+  rosterBonus?: number;
+  /** Whether this year is guaranteed */
+  isGuaranteed?: boolean;
+  /** @deprecated Not used in simplified model */
+  workoutBonus?: number;
+  /** @deprecated Not used in simplified model */
+  optionBonus?: number;
+  /** @deprecated Not used in simplified model */
+  incentivesLTBE?: number;
+  /** @deprecated Not used in simplified model */
+  incentivesNLTBE?: number;
+  /** @deprecated Not used in simplified model */
+  isGuaranteedForInjury?: boolean;
 }
 
 /**
@@ -88,6 +112,13 @@ export interface PlayerContract {
  * - bonus = guaranteed money per year
  * - salary = non-guaranteed money per year
  * - total compensation per year = bonus + salary
+ *
+ * Backward-compatible properties (optional):
+ * - totalValue: computed as (bonusPerYear + salaryPerYear) * years
+ * - guaranteedMoney: computed as bonusPerYear * years
+ * - signingBonus: alias for bonusPerYear (for first year)
+ * - firstYearSalary: alias for salaryPerYear
+ * - voidYears: always 0 (not used in simplified model)
  */
 export interface ContractOffer {
   /** Total years offered */
@@ -98,6 +129,18 @@ export interface ContractOffer {
   salaryPerYear: number;
   /** Include no-trade clause? */
   noTradeClause: boolean;
+  /** @deprecated Use (bonusPerYear + salaryPerYear) * years instead */
+  totalValue?: number;
+  /** @deprecated Use bonusPerYear * years instead */
+  guaranteedMoney?: number;
+  /** @deprecated Use bonusPerYear instead */
+  signingBonus?: number;
+  /** @deprecated Use salaryPerYear instead */
+  firstYearSalary?: number;
+  /** @deprecated Not used in simplified model */
+  voidYears?: number;
+  /** @deprecated Not used in simplified model */
+  annualEscalation?: number;
 }
 
 /**
@@ -126,10 +169,63 @@ export function calculateYearlyBreakdown(offer: ContractOffer, signedYear: numbe
       salary,
       capHit,
       isVoidYear: false,
+      // Backward-compatible properties
+      baseSalary: salary,
+      prorationedBonus: bonus,
+      rosterBonus: 0,
+      isGuaranteed: bonus > 0,
     });
   }
 
   return breakdown;
+}
+
+/**
+ * Helper to get total value from a contract offer
+ * @deprecated Use (bonusPerYear + salaryPerYear) * years directly
+ */
+export function getOfferTotalValue(offer: ContractOffer): number {
+  return (offer.bonusPerYear + offer.salaryPerYear) * offer.years;
+}
+
+/**
+ * Helper to get guaranteed money from a contract offer
+ * @deprecated Use bonusPerYear * years directly
+ */
+export function getOfferGuaranteedMoney(offer: ContractOffer): number {
+  return offer.bonusPerYear * offer.years;
+}
+
+/**
+ * Post-June 1 dead money result
+ */
+export interface PostJune1DeadMoney {
+  year1DeadMoney: number;
+  year2DeadMoney: number;
+}
+
+/**
+ * Calculates dead money for post-June 1 designation
+ * Post-June 1 cuts spread the dead money over 2 years:
+ * - Year 1: Current year's bonus only
+ * - Year 2: Remaining years' bonus accelerated
+ */
+export function calculatePostJune1DeadMoney(
+  contract: PlayerContract,
+  currentYear: number
+): PostJune1DeadMoney {
+  const currentYearData = contract.yearlyBreakdown.find((y) => y.year === currentYear);
+  const futureYearData = contract.yearlyBreakdown.filter(
+    (y) => y.year > currentYear && !y.isVoidYear
+  );
+
+  // Year 1: just current year's bonus
+  const year1DeadMoney = currentYearData?.bonus ?? 0;
+
+  // Year 2: remaining years' bonus accelerated
+  const year2DeadMoney = futureYearData.reduce((sum, y) => sum + y.bonus, 0);
+
+  return { year1DeadMoney, year2DeadMoney };
 }
 
 /**
@@ -404,4 +500,30 @@ export function createMinimumContract(
   };
 
   return createPlayerContract(playerId, playerName, teamId, position, offer, signedYear, 'veteran');
+}
+
+/**
+ * Creates a ContractOffer from old-style parameters (for backward compatibility)
+ * Converts totalValue/guaranteedMoney style to bonusPerYear/salaryPerYear style
+ */
+export function createContractOffer(params: {
+  years: number;
+  totalValue: number;
+  guaranteedMoney: number;
+  noTradeClause?: boolean;
+}): ContractOffer {
+  const { years, totalValue, guaranteedMoney, noTradeClause = false } = params;
+  const aav = Math.round(totalValue / years);
+  const bonusPerYear = Math.round(guaranteedMoney / years);
+  const salaryPerYear = aav - bonusPerYear;
+
+  return {
+    years,
+    bonusPerYear,
+    salaryPerYear,
+    noTradeClause,
+    // Include backward compat properties
+    totalValue,
+    guaranteedMoney,
+  };
 }
