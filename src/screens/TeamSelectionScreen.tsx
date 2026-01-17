@@ -208,7 +208,10 @@ export function TeamSelectionScreen({
                 {([0, 1, 2] as SaveSlot[]).map((slot) => (
                   <TouchableOpacity
                     key={slot}
-                    style={[styles.saveSlotButton, saveSlot === slot && styles.saveSlotButtonActive]}
+                    style={[
+                      styles.saveSlotButton,
+                      saveSlot === slot && styles.saveSlotButtonActive,
+                    ]}
                     onPress={() => setSaveSlot(slot)}
                   >
                     <Text
