@@ -14,6 +14,8 @@ import {
   Modal,
   TextInput,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Position } from '../core/models/player/Position';
@@ -156,83 +158,87 @@ function OfferModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            Contract Offer for {agent.firstName} {agent.lastName}
-          </Text>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                Contract Offer for {agent.firstName} {agent.lastName}
+              </Text>
 
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>Estimated Value:</Text>
-            <Text style={styles.modalValue}>{formatMoney(agent.estimatedValue)}/yr</Text>
-          </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Estimated Value:</Text>
+                <Text style={styles.modalValue}>{formatMoney(agent.estimatedValue)}/yr</Text>
+              </View>
 
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>Your Cap Space:</Text>
-            <Text style={styles.modalValue}>{formatMoney(capSpace)}</Text>
-          </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Your Cap Space:</Text>
+                <Text style={styles.modalValue}>{formatMoney(capSpace)}</Text>
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Years (1-5)</Text>
-            <View style={styles.yearsContainer}>
-              {[1, 2, 3, 4, 5].map((y) => (
-                <TouchableOpacity
-                  key={y}
-                  style={[styles.yearButton, years === String(y) && styles.yearButtonActive]}
-                  onPress={() => setYears(String(y))}
-                >
-                  <Text
-                    style={[
-                      styles.yearButtonText,
-                      years === String(y) && styles.yearButtonTextActive,
-                    ]}
-                  >
-                    {y}
-                  </Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Years (1-5)</Text>
+                <View style={styles.yearsContainer}>
+                  {[1, 2, 3, 4, 5].map((y) => (
+                    <TouchableOpacity
+                      key={y}
+                      style={[styles.yearButton, years === String(y) && styles.yearButtonActive]}
+                      onPress={() => setYears(String(y))}
+                    >
+                      <Text
+                        style={[
+                          styles.yearButtonText,
+                          years === String(y) && styles.yearButtonTextActive,
+                        ]}
+                      >
+                        {y}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Annual Salary ($M)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={salary}
+                  onChangeText={setSalary}
+                  placeholder={`e.g., ${(agent.estimatedValue / 1000000).toFixed(1)}`}
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Guaranteed ($M)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={guaranteed}
+                  onChangeText={setGuaranteed}
+                  placeholder="e.g., 10"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Contract Value:</Text>
+                <Text style={styles.totalValue}>{formatMoney(totalValue)}</Text>
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                  <Text style={styles.submitButtonText}>Submit Offer</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Annual Salary ($M)</Text>
-            <TextInput
-              style={styles.textInput}
-              value={salary}
-              onChangeText={setSalary}
-              placeholder={`e.g., ${(agent.estimatedValue / 1000000).toFixed(1)}`}
-              keyboardType="decimal-pad"
-              placeholderTextColor={colors.textLight}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Guaranteed ($M)</Text>
-            <TextInput
-              style={styles.textInput}
-              value={guaranteed}
-              onChangeText={setGuaranteed}
-              placeholder="e.g., 10"
-              keyboardType="decimal-pad"
-              placeholderTextColor={colors.textLight}
-            />
-          </View>
-
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Contract Value:</Text>
-            <Text style={styles.totalValue}>{formatMoney(totalValue)}</Text>
-          </View>
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>Submit Offer</Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }

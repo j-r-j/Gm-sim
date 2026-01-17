@@ -12,6 +12,8 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import {
@@ -170,58 +172,68 @@ export function TeamSelectionScreen({
       </View>
 
       {/* Teams List */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}
+      >
         {viewMode === 'conference' ? renderConferenceView() : renderAllTeamsView()}
       </ScrollView>
 
       {/* Bottom Panel - GM Name & Confirm */}
       {selectedTeam && (
-        <View style={styles.bottomPanel}>
-          <View style={styles.selectedTeamBanner}>
-            <Text style={styles.selectedTeamLabel}>Selected Team</Text>
-            <Text style={styles.selectedTeamName}>{getFullTeamName(selectedTeam)}</Text>
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Your Name</Text>
-            <TextInput
-              style={styles.textInput}
-              value={gmName}
-              onChangeText={setGmName}
-              placeholder="Enter your GM name"
-              placeholderTextColor={colors.textLight}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.saveSlotSection}>
-            <Text style={styles.inputLabel}>Save Slot</Text>
-            <View style={styles.saveSlotButtons}>
-              {([0, 1, 2] as SaveSlot[]).map((slot) => (
-                <TouchableOpacity
-                  key={slot}
-                  style={[styles.saveSlotButton, saveSlot === slot && styles.saveSlotButtonActive]}
-                  onPress={() => setSaveSlot(slot)}
-                >
-                  <Text
-                    style={[styles.saveSlotText, saveSlot === slot && styles.saveSlotTextActive]}
-                  >
-                    {slot + 1}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.bottomPanel}>
+            <View style={styles.selectedTeamBanner}>
+              <Text style={styles.selectedTeamLabel}>Selected Team</Text>
+              <Text style={styles.selectedTeamName}>{getFullTeamName(selectedTeam)}</Text>
             </View>
-          </View>
 
-          <TouchableOpacity
-            style={[styles.confirmButton, !gmName.trim() && styles.confirmButtonDisabled]}
-            onPress={handleConfirm}
-            disabled={!gmName.trim()}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.confirmButtonText}>Start Career</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>Your Name</Text>
+              <TextInput
+                style={styles.textInput}
+                value={gmName}
+                onChangeText={setGmName}
+                placeholder="Enter your GM name"
+                placeholderTextColor={colors.textLight}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.saveSlotSection}>
+              <Text style={styles.inputLabel}>Save Slot</Text>
+              <View style={styles.saveSlotButtons}>
+                {([0, 1, 2] as SaveSlot[]).map((slot) => (
+                  <TouchableOpacity
+                    key={slot}
+                    style={[
+                      styles.saveSlotButton,
+                      saveSlot === slot && styles.saveSlotButtonActive,
+                    ]}
+                    onPress={() => setSaveSlot(slot)}
+                  >
+                    <Text
+                      style={[styles.saveSlotText, saveSlot === slot && styles.saveSlotTextActive]}
+                    >
+                      {slot + 1}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.confirmButton, !gmName.trim() && styles.confirmButtonDisabled]}
+              onPress={handleConfirm}
+              disabled={!gmName.trim()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmButtonText}>Start Career</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
       )}
     </SafeAreaView>
   );
