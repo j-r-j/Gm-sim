@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import {
   DraftTier,
@@ -116,6 +117,8 @@ function ProspectRow({
           <Text style={styles.userRankLabel}>User: #{prospect.userRank}</Text>
         )}
       </View>
+
+      <Avatar id={prospect.prospectId} size="xs" context="prospect" />
 
       <View style={styles.prospectInfo}>
         <View style={styles.nameRow}>
@@ -530,6 +533,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: spacing.sm,
   },
   rankColumn: {
     width: 50,

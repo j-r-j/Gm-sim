@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { Avatar } from '../components/avatar';
 import {
   FinalCutsSummary,
   CutEvaluationPlayer,
@@ -133,7 +134,8 @@ function RosterPlayerCard({
     <View style={styles.playerCard}>
       <TouchableOpacity style={styles.playerInfo} onPress={onPress}>
         <View style={styles.playerHeader}>
-          <View>
+          <Avatar id={player.playerId} size="sm" age={player.age} context="player" />
+          <View style={styles.playerHeaderInfo}>
             <Text style={styles.playerName}>{player.playerName}</Text>
             <Text style={styles.playerPosition}>
               {player.position} • {player.age} yrs • Yr {player.experience + 1}
@@ -238,8 +240,9 @@ function PracticeSquadCard({
 }): React.JSX.Element {
   return (
     <View style={styles.psCard}>
+      <Avatar id={player.playerId} size="sm" age={player.age} context="player" />
       <TouchableOpacity style={styles.psPlayerInfo} onPress={onPress}>
-        <View>
+        <View style={styles.psPlayerDetails}>
           <Text style={styles.playerName}>{player.playerName}</Text>
           <Text style={styles.playerPosition}>
             {player.position} • {player.age} yrs
@@ -619,9 +622,12 @@ const styles = StyleSheet.create({
   },
   playerHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  playerHeaderInfo: {
+    flex: 1,
   },
   playerName: {
     fontSize: fontSize.md,
@@ -744,12 +750,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.sm,
   },
   psPlayerInfo: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  psPlayerDetails: {
+    flex: 1,
   },
   psStats: {
     alignItems: 'center',

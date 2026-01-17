@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { CoachRole } from '../core/models/staff/StaffSalary';
+import { Avatar } from '../components/avatar';
 import {
   CoachCandidate,
   generateCoachCandidates,
@@ -116,28 +117,31 @@ function CandidateCard({
     >
       {/* Header */}
       <View style={styles.candidateHeader}>
-        <View style={styles.candidateNameRow}>
-          <Text style={styles.candidateName}>{candidate.name}</Text>
-          <View
-            style={[
-              styles.interestBadge,
-              { backgroundColor: getInterestColor(candidate.interestLevel) + '20' },
-            ]}
-          >
-            <Text
-              style={[styles.interestText, { color: getInterestColor(candidate.interestLevel) }]}
+        <Avatar id={candidate.candidateId} size="md" age={candidate.age} context="coach" />
+        <View style={styles.candidateInfo}>
+          <View style={styles.candidateNameRow}>
+            <Text style={styles.candidateName}>{candidate.name}</Text>
+            <View
+              style={[
+                styles.interestBadge,
+                { backgroundColor: getInterestColor(candidate.interestLevel) + '20' },
+              ]}
             >
-              {candidate.interestLevel.charAt(0).toUpperCase() + candidate.interestLevel.slice(1)}{' '}
-              Interest
-            </Text>
+              <Text
+                style={[styles.interestText, { color: getInterestColor(candidate.interestLevel) }]}
+              >
+                {candidate.interestLevel.charAt(0).toUpperCase() + candidate.interestLevel.slice(1)}{' '}
+                Interest
+              </Text>
+            </View>
           </View>
+          <Text style={styles.candidateRole}>
+            {candidate.currentTeam
+              ? `${candidate.currentRole} - ${candidate.currentTeam}`
+              : candidate.currentRole}
+            {!candidate.currentTeam && ' (Available)'}
+          </Text>
         </View>
-        <Text style={styles.candidateRole}>
-          {candidate.currentTeam
-            ? `${candidate.currentRole} - ${candidate.currentTeam}`
-            : candidate.currentRole}
-          {!candidate.currentTeam && ' (Available)'}
-        </Text>
       </View>
 
       {/* Basic Info */}
@@ -352,7 +356,13 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   candidateHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  candidateInfo: {
+    flex: 1,
   },
   candidateNameRow: {
     flexDirection: 'row',
