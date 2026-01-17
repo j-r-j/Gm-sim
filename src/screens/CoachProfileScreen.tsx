@@ -205,12 +205,7 @@ export function CoachProfileScreen({
         {/* Basic Info Section */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Avatar
-              id={coach.id}
-              size="xl"
-              age={coach.attributes.age}
-              context="coach"
-            />
+            <Avatar id={coach.id} size="xl" age={coach.attributes.age} context="coach" />
           </View>
 
           <Text style={styles.coachName}>{getCoachFullName(coach)}</Text>

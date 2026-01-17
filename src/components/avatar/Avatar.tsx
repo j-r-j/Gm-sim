@@ -324,7 +324,11 @@ function FacialHair({
   const beardSize =
     'beardSize' in facialHairStyle ? (facialHairStyle.beardSize as string) : 'small';
   const beardHeight =
-    beardSize === 'large' ? faceSize * 0.35 : beardSize === 'medium' ? faceSize * 0.25 : faceSize * 0.15;
+    beardSize === 'large'
+      ? faceSize * 0.35
+      : beardSize === 'medium'
+        ? faceSize * 0.25
+        : faceSize * 0.15;
 
   return (
     <View style={styles.facialHairContainer} pointerEvents="none">

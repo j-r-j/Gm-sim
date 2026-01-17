@@ -190,7 +190,7 @@ export function generateFaceFeaturesWithAge(seed: string, age: number): FaceFeat
   }
 
   // Older people more likely to be bald
-  if (age >= 45 && seededRandom(hash, 11, 100) < (age - 35)) {
+  if (age >= 45 && seededRandom(hash, 11, 100) < age - 35) {
     adjustedFeatures.hairStyle = 5; // Bald
   }
 
