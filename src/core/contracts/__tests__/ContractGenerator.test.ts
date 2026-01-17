@@ -102,7 +102,11 @@ describe('ContractGenerator', () => {
   describe('determineSkillTierFromPlayer', () => {
     it('should return elite for franchise cornerstone players', () => {
       const player = createMockPlayer({
-        roleFit: { ceiling: 'franchiseCornerstone', currentLevel: 'highEndStarter', development: 'steady' },
+        roleFit: {
+          ceiling: 'franchiseCornerstone',
+          currentLevel: 'highEndStarter',
+          development: 'steady',
+        },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('elite');
     });
@@ -116,7 +120,11 @@ describe('ContractGenerator', () => {
 
     it('should return starter for solid starter players', () => {
       const player = createMockPlayer({
-        roleFit: { ceiling: 'solidStarter', currentLevel: 'qualityRotational', development: 'steady' },
+        roleFit: {
+          ceiling: 'solidStarter',
+          currentLevel: 'qualityRotational',
+          development: 'steady',
+        },
       });
       expect(determineSkillTierFromPlayer(player)).toBe('starter');
     });
@@ -293,7 +301,11 @@ describe('ContractGenerator', () => {
   describe('calculateFutureCommitments', () => {
     it('should calculate future year commitments', () => {
       const player = createMockPlayer({
-        roleFit: { ceiling: 'franchiseCornerstone', currentLevel: 'highEndStarter', development: 'steady' },
+        roleFit: {
+          ceiling: 'franchiseCornerstone',
+          currentLevel: 'highEndStarter',
+          development: 'steady',
+        },
       });
 
       const { contracts } = generateRosterContracts([player], 'team-1', 2025);

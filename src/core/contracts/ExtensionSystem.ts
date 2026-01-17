@@ -270,7 +270,7 @@ export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): Neg
   const guaranteedScore = Math.min(1, offerGuaranteed / demands.preferredGuaranteed);
 
   // Weighted closeness - guaranteed money weighted highest
-  const closeness = aavScore * 0.35 + yearsScore * 0.15 + guaranteedScore * 0.50;
+  const closeness = aavScore * 0.35 + yearsScore * 0.15 + guaranteedScore * 0.5;
 
   // Check minimum thresholds
   const meetsMinimumAAV = offerAAV >= demands.minimumAAV;
@@ -279,7 +279,8 @@ export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): Neg
 
   if (!meetsMinimumAAV || !meetsMinimumYears || !meetsMinimumGuaranteed) {
     // Generate counter-offer with new model
-    const preferredGuaranteePct = demands.preferredGuaranteed / (demands.preferredAAV * demands.preferredYears);
+    const preferredGuaranteePct =
+      demands.preferredGuaranteed / (demands.preferredAAV * demands.preferredYears);
     const counterBonusPerYear = Math.round(demands.preferredAAV * preferredGuaranteePct);
     const counterSalaryPerYear = demands.preferredAAV - counterBonusPerYear;
 
@@ -311,7 +312,7 @@ export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): Neg
   // Above minimums - check if close enough to accept
   const acceptanceThreshold =
     demands.flexibilityLevel === 'flexible'
-      ? 0.80
+      ? 0.8
       : demands.flexibilityLevel === 'moderate'
         ? 0.88
         : 0.95;
@@ -327,7 +328,8 @@ export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): Neg
   }
 
   // Close but needs adjustment - split the difference
-  const preferredGuaranteePct = demands.preferredGuaranteed / (demands.preferredAAV * demands.preferredYears);
+  const preferredGuaranteePct =
+    demands.preferredGuaranteed / (demands.preferredAAV * demands.preferredYears);
   const counterBonusPerYear = Math.round(
     (offer.bonusPerYear + demands.preferredAAV * preferredGuaranteePct) / 2
   );
@@ -470,14 +472,14 @@ export function calculateRecommendedOffer(
 ): ContractOffer {
   // Calculate guarantee percentage based on market tier
   const guaranteePcts: Record<MarketTier, number> = {
-    elite: 0.60,
-    premium: 0.50,
+    elite: 0.6,
+    premium: 0.5,
     starter: 0.45,
     quality: 0.35,
     depth: 0.25,
-    minimum: 0.20,
+    minimum: 0.2,
   };
-  const guaranteePct = guaranteePcts[valuation.marketTier] || 0.40;
+  const guaranteePct = guaranteePcts[valuation.marketTier] || 0.4;
 
   const bonusPerYear = Math.round(valuation.estimatedAAV * guaranteePct);
   const salaryPerYear = valuation.estimatedAAV - bonusPerYear;

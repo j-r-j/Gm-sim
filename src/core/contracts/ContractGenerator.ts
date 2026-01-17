@@ -27,13 +27,13 @@ const POSITION_VALUE_MULTIPLIERS: Record<Position, number> = {
   [Position.OLB]: 0.75,
   [Position.FS]: 0.72,
   [Position.SS]: 0.72,
-  [Position.TE]: 0.70,
+  [Position.TE]: 0.7,
   [Position.ILB]: 0.68,
   [Position.RB]: 0.65,
   [Position.LG]: 0.62,
   [Position.RG]: 0.62,
-  [Position.C]: 0.60,
-  [Position.RT]: 0.80,
+  [Position.C]: 0.6,
+  [Position.RT]: 0.8,
   [Position.K]: 0.35,
   [Position.P]: 0.32,
 };
@@ -43,7 +43,7 @@ const POSITION_VALUE_MULTIPLIERS: Record<Position, number> = {
  */
 const SKILL_TIER_VALUE_RANGES: Record<string, { min: number; max: number }> = {
   elite: { min: 0.85, max: 1.1 },
-  starter: { min: 0.45, max: 0.70 },
+  starter: { min: 0.45, max: 0.7 },
   backup: { min: 0.15, max: 0.35 },
   fringe: { min: 0.05, max: 0.15 },
 };
@@ -206,10 +206,10 @@ export function calculateContractValue(
 
   // Guaranteed percentage based on tier (portion of AAV that is bonus)
   const guaranteePercentages: Record<string, number> = {
-    elite: 0.60,
+    elite: 0.6,
     starter: 0.45,
-    backup: 0.30,
-    fringe: 0.20,
+    backup: 0.3,
+    fringe: 0.2,
   };
   const guaranteePct = guaranteePercentages[skillTier] || 0.2;
 

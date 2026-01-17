@@ -17,7 +17,12 @@ import { getFranchiseTagValue } from './FranchiseTagSystem';
 /**
  * Player's interest level in an offer
  */
-export type InterestLevel = 'very_interested' | 'interested' | 'lukewarm' | 'not_interested' | 'insulted';
+export type InterestLevel =
+  | 'very_interested'
+  | 'interested'
+  | 'lukewarm'
+  | 'not_interested'
+  | 'insulted';
 
 /**
  * Offer evaluation result
@@ -70,7 +75,7 @@ export interface PlayerExpectations {
 const EVALUATION_WEIGHTS = {
   bonus: 0.55, // Guaranteed money is most important
   salary: 0.25, // Non-guaranteed matters but less
-  years: 0.20, // Contract length affects total value
+  years: 0.2, // Contract length affects total value
 };
 
 /**
@@ -143,11 +148,11 @@ export function calculatePlayerExpectations(
 
   if (overallRating >= 90) {
     tierMultiplier = 0.95;
-    guaranteePct = 0.60;
+    guaranteePct = 0.6;
     flexibility = 'rigid'; // Elite players are demanding
   } else if (overallRating >= 80) {
     tierMultiplier = 0.75;
-    guaranteePct = 0.50;
+    guaranteePct = 0.5;
     flexibility = 'moderate';
   } else if (overallRating >= 70) {
     tierMultiplier = 0.55;
@@ -166,8 +171,8 @@ export function calculatePlayerExpectations(
   // Age adjustments
   let ageMultiplier = 1.0;
   if (age > peakAge + 3) {
-    ageMultiplier = 0.70;
-    guaranteePct += 0.10; // Older players want MORE guarantees
+    ageMultiplier = 0.7;
+    guaranteePct += 0.1; // Older players want MORE guarantees
   } else if (age > peakAge + 1) {
     ageMultiplier = 0.85;
     guaranteePct += 0.05;
@@ -195,7 +200,7 @@ export function calculatePlayerExpectations(
 
   // Minimums (player will reject offers below this)
   const minimumBonusPerYear = Math.round(expectedBonusPerYear * 0.75);
-  const minimumTotalPerYear = Math.round(baseAAV * 0.80);
+  const minimumTotalPerYear = Math.round(baseAAV * 0.8);
 
   return {
     expectedBonusPerYear,
@@ -220,7 +225,10 @@ export function evaluateContractOffer(
 
   // Score each component (0-100 scale, 100 = meets/exceeds expectations)
   const bonusScore = Math.min(100, (offer.bonusPerYear / expectations.expectedBonusPerYear) * 100);
-  const salaryScore = Math.min(100, (offer.salaryPerYear / expectations.expectedSalaryPerYear) * 100);
+  const salaryScore = Math.min(
+    100,
+    (offer.salaryPerYear / expectations.expectedSalaryPerYear) * 100
+  );
   const yearsScore = Math.min(100, (offer.years / expectations.expectedYears) * 100);
 
   // Weighted total score
@@ -249,8 +257,11 @@ export function evaluateContractOffer(
   } else {
     // Above minimum - use total score with flexibility adjustment
     const flexibilityBonus =
-      expectations.flexibility === 'flexible' ? 15 :
-      expectations.flexibility === 'moderate' ? 5 : 0;
+      expectations.flexibility === 'flexible'
+        ? 15
+        : expectations.flexibility === 'moderate'
+          ? 5
+          : 0;
 
     acceptanceLikelihood = Math.min(100, totalScore + flexibilityBonus);
   }
@@ -278,7 +289,8 @@ export function evaluateContractOffer(
 
   // Adjust response based on what's lacking
   if (meetsTotalMin && !meetsBonusMin) {
-    responseHint = 'Player wants more guaranteed money (bonus). The salary is okay but they need security.';
+    responseHint =
+      'Player wants more guaranteed money (bonus). The salary is okay but they need security.';
   } else if (!meetsTotalMin && bonusScore > salaryScore) {
     responseHint = 'Overall value is too low. Increase both bonus and salary.';
   }
@@ -304,7 +316,8 @@ export function evaluateContractOffer(
 export function getPlayerPrioritiesDescription(expectations: PlayerExpectations): string[] {
   const priorities: string[] = [];
 
-  const guaranteePct = expectations.expectedBonusPerYear /
+  const guaranteePct =
+    expectations.expectedBonusPerYear /
     (expectations.expectedBonusPerYear + expectations.expectedSalaryPerYear);
 
   if (guaranteePct >= 0.55) {
@@ -339,7 +352,9 @@ export function suggestOfferImprovements(
     const neededBonus = expectations.expectedBonusPerYear;
     const increaseNeeded = neededBonus - offer.bonusPerYear;
     if (increaseNeeded > 0) {
-      suggestions.push(`Increase guaranteed bonus by ~$${(increaseNeeded / 1000).toFixed(1)}M/year`);
+      suggestions.push(
+        `Increase guaranteed bonus by ~$${(increaseNeeded / 1000).toFixed(1)}M/year`
+      );
     }
   }
 
