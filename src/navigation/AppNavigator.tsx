@@ -50,6 +50,7 @@ import {
   InterviewScreenWrapper,
   CareerLegacyScreenWrapper,
   CombineScreenWrapper,
+  StatsScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -82,6 +83,7 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="Finances" component={FinancesScreenWrapper} />
       <Stack.Screen name="Schedule" component={ScheduleScreenWrapper} />
       <Stack.Screen name="Standings" component={StandingsScreenWrapper} />
+      <Stack.Screen name="Stats" component={StatsScreenWrapper} />
       <Stack.Screen name="News" component={NewsScreenWrapper} />
       <Stack.Screen name="Gamecast" component={GamecastScreenWrapper} />
       <Stack.Screen name="PlayoffBracket" component={PlayoffBracketScreenWrapper} />

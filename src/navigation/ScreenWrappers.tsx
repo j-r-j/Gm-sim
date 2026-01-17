@@ -57,6 +57,7 @@ import { InterviewScreen } from '../screens/InterviewScreen';
 import { CoachHiringScreen } from '../screens/CoachHiringScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import { CombineProDayScreen } from '../screens/CombineProDayScreen';
+import { StatsScreen } from '../screens/StatsScreen';
 import {
   CombineResults,
   CombineGrade,
@@ -859,6 +860,9 @@ export function DashboardScreenWrapper({
           } else {
             navigation.navigate('Standings');
           }
+          break;
+        case 'stats':
+          navigation.navigate('Stats');
           break;
         case 'freeAgency':
           navigation.navigate('FreeAgency');
@@ -4386,6 +4390,26 @@ export function CombineScreenWrapper({ navigation }: ScreenProps<'Combine'>): Re
       proDaySummary={proDaySummary}
       onBack={() => navigation.goBack()}
       onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+    />
+  );
+}
+
+// ============================================
+// STATS SCREEN
+// ============================================
+
+export function StatsScreenWrapper({ navigation }: ScreenProps<'Stats'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading stats..." />;
+  }
+
+  return (
+    <StatsScreen
+      gameState={gameState}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
   );
 }

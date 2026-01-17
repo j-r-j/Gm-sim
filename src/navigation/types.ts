@@ -98,6 +98,9 @@ export type RootStackParamList = {
     teamId: string;
   };
   CareerLegacy: undefined;
+
+  // Stats
+  Stats: undefined;
 };
 
 /**
@@ -188,4 +191,7 @@ export const Routes = {
   JobMarket: 'JobMarket',
   Interview: 'Interview',
   CareerLegacy: 'CareerLegacy',
+
+  // Stats
+  Stats: 'Stats',
 } as const;
