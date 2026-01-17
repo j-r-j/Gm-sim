@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
 import { Position } from '../../core/models/player/Position';
 import { TechnicalSkills, SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
+import { Avatar } from '../avatar';
 
 export interface PlayerCardProps {
   /** Player ID */
@@ -210,9 +211,18 @@ export function PlayerCard({
         </View>
       )}
 
-      {/* Position badge */}
-      <View style={[styles.positionBadge, { backgroundColor: positionColor }]}>
-        <Text style={styles.positionText}>{position}</Text>
+      {/* Avatar with position badge */}
+      <View style={styles.avatarContainer}>
+        <Avatar
+          id={id}
+          size="sm"
+          age={age}
+          context={collegeName ? 'prospect' : 'player'}
+          accentColor={positionColor}
+        />
+        <View style={[styles.positionBadge, { backgroundColor: positionColor }]}>
+          <Text style={styles.positionText}>{position}</Text>
+        </View>
       </View>
 
       {/* Player info */}
@@ -297,17 +307,24 @@ const styles = StyleSheet.create({
   flagIcon: {
     fontSize: fontSize.sm,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: spacing.md,
+  },
   positionBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    minWidth: 22,
+    height: 16,
+    borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    paddingHorizontal: spacing.xxs,
   },
   positionText: {
     color: colors.textOnPrimary,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
   },
   infoContainer: {

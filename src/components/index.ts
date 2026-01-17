@@ -3,6 +3,19 @@
  * Export all UI components
  */
 
+// Avatar components
+export {
+  Avatar,
+  generateFaceFeatures,
+  generateFaceFeaturesWithAge,
+  SKIN_TONES,
+  HAIR_COLORS,
+  type AvatarProps,
+  type AvatarSize,
+  type AvatarContext,
+  type FaceFeatures,
+} from './avatar';
+
 // Gamecast components
 export {
   FieldVisualization,

@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { Avatar } from '../components/avatar';
 import { Player } from '../core/models/player/Player';
 import {
   PlayerContract,
@@ -174,6 +175,7 @@ function ContractItem({
   return (
     <TouchableOpacity style={styles.contractItem} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.contractHeader}>
+        <Avatar id={contract.playerId} size="sm" context="player" />
         <View style={styles.contractPlayerInfo}>
           <Text style={styles.contractPlayerName}>{contract.playerName}</Text>
           <Text style={styles.contractPosition}>{contract.position}</Text>
@@ -598,9 +600,9 @@ const styles = StyleSheet.create({
   },
   contractHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   contractPlayerInfo: {
     flex: 1,

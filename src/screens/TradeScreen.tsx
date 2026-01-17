@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Player } from '../core/models/player/Player';
+import { Avatar } from '../components/avatar';
 import { Team } from '../core/models/team/Team';
 import { DraftPick } from '../core/models/league/DraftPick';
 
@@ -126,12 +127,17 @@ function AssetCard({ asset, onRemove }: { asset: TradeAsset; onRemove: () => voi
       <View style={styles.assetInfo}>
         {asset.type === 'player' ? (
           <>
-            <Text style={styles.assetPosition}>{asset.position}</Text>
-            <Text style={styles.assetName}>{asset.playerName}</Text>
+            <Avatar id={asset.playerId} size="xs" context="player" />
+            <View style={styles.assetTextInfo}>
+              <Text style={styles.assetName}>{asset.playerName}</Text>
+              <Text style={styles.assetPosition}>{asset.position}</Text>
+            </View>
           </>
         ) : (
           <>
-            <Text style={styles.assetPosition}>Rd {asset.round}</Text>
+            <View style={styles.pickBadge}>
+              <Text style={styles.pickBadgeText}>Rd {asset.round}</Text>
+            </View>
             <Text style={styles.assetName}>{asset.year} Pick</Text>
           </>
         )}
@@ -439,6 +445,7 @@ export function TradeScreen({
                     }
                   }}
                 >
+                  <Avatar id={player.id} size="xs" age={player.age} context="player" />
                   <Text style={styles.assetListPosition}>{player.position}</Text>
                   <Text style={styles.assetListName}>
                     {player.firstName} {player.lastName}
@@ -581,18 +588,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: spacing.sm,
+  },
+  assetTextInfo: {
+    flex: 1,
   },
   assetPosition: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.primary,
-    marginRight: spacing.sm,
-    width: 40,
   },
   assetName: {
     fontSize: fontSize.md,
     color: colors.text,
-    flex: 1,
+  },
+  pickBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
   },
   removeButton: {
     width: 28,
@@ -701,12 +722,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   assetListPosition: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.primary,
-    width: 50,
+    width: 40,
   },
   assetListName: {
     fontSize: fontSize.md,

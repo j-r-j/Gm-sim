@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Player } from '../core/models/player/Player';
+import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import {
   DepthChart,
@@ -80,12 +81,12 @@ function PlayerDepthCard({
       onPress={onPress}
     >
       <View style={styles.playerCardHeader}>
-        <Text style={styles.playerName}>{player.lastName}</Text>
+        <Avatar id={player.id} size="xs" age={player.age} context="player" />
         <View style={[styles.ratingBadge, { backgroundColor: getRatingColor(rating) }]}>
           <Text style={styles.ratingText}>{rating}</Text>
         </View>
       </View>
-      <Text style={styles.playerFirstName}>{player.firstName}</Text>
+      <Text style={styles.playerName}>{player.lastName}</Text>
       <Text style={styles.depthLabel}>{getDepthLabel(depth)}</Text>
     </TouchableOpacity>
   );
@@ -447,12 +448,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.xxs,
   },
   playerName: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.text,
-    flex: 1,
   },
   ratingBadge: {
     paddingHorizontal: spacing.xs,
@@ -463,10 +464,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.background,
-  },
-  playerFirstName: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
   },
   depthLabel: {
     fontSize: fontSize.xs,

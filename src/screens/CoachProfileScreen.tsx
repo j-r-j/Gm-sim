@@ -12,6 +12,7 @@ import { CoachAttributesDisplay } from '../components/coach/CoachAttributesDispl
 import { CoachContractInfo } from '../components/coach/CoachContractInfo';
 import { CoachTreeCard } from '../components/coach/CoachTreeCard';
 import { calculateCoachRevelation } from '../core/coaching/CoachRevelationSystem';
+import { Avatar } from '../components/avatar';
 
 /**
  * Props for CoachProfileScreen
@@ -204,12 +205,7 @@ export function CoachProfileScreen({
         {/* Basic Info Section */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {coach.firstName[0]}
-                {coach.lastName[0]}
-              </Text>
-            </View>
+            <Avatar id={coach.id} size="xl" age={coach.attributes.age} context="coach" />
           </View>
 
           <Text style={styles.coachName}>{getCoachFullName(coach)}</Text>
@@ -311,19 +307,6 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginBottom: spacing.md,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
   },
   coachName: {
     fontSize: fontSize.xxl,

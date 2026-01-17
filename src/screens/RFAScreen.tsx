@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import {
   TenderLevel,
@@ -155,6 +156,7 @@ function EligibleRFACard({
   return (
     <View style={styles.card}>
       <TouchableOpacity style={styles.cardHeader} onPress={onPress}>
+        <Avatar id={player.playerId} size="sm" age={player.age} context="player" />
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{player.playerName}</Text>
           <Text style={styles.playerDetails}>
@@ -685,11 +687,11 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     padding: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: spacing.sm,
   },
   playerInfo: {
     flex: 1,
