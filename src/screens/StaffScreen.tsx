@@ -95,13 +95,7 @@ function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
 /**
  * Vacancy card component
  */
-function VacancyCard({
-  vacancy,
-  onHire,
-}: {
-  vacancy: VacancyDisplay;
-  onHire?: () => void;
-}) {
+function VacancyCard({ vacancy, onHire }: { vacancy: VacancyDisplay; onHire?: () => void }) {
   const priorityColor =
     vacancy.priority === 'critical'
       ? colors.error
@@ -110,13 +104,13 @@ function VacancyCard({
         : colors.textSecondary;
 
   return (
-    <View style={[styles.staffCard, styles.vacancyCard]}>
+    <View style={[styles.staffCard, styles.vacancyCard, { borderColor: priorityColor }]}>
       <View style={styles.staffInfo}>
-        <View style={[styles.roleBadge, styles.vacancyBadge]}>
-          <Text style={styles.vacancyBadgeText}>?</Text>
+        <View style={[styles.roleBadge, styles.vacancyBadge, { borderColor: priorityColor }]}>
+          <Text style={[styles.vacancyBadgeText, { color: priorityColor }]}>?</Text>
         </View>
         <View style={styles.nameContainer}>
-          <Text style={styles.vacancyTitle}>VACANT</Text>
+          <Text style={[styles.vacancyTitle, { color: priorityColor }]}>VACANT</Text>
           <Text style={styles.staffRole}>{vacancy.displayName}</Text>
         </View>
       </View>
@@ -179,9 +173,7 @@ export function StaffScreen({
   // Sort vacancies by priority
   const sortedVacancies = useMemo(() => {
     const priorityOrder = { critical: 0, important: 1, normal: 2 };
-    return [...vacancies].sort(
-      (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
-    );
+    return [...vacancies].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
   }, [vacancies]);
 
   return (

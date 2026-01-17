@@ -465,12 +465,7 @@ function mapCandidateSchemeToScheme(
     'olCoach',
   ];
 
-  const defensiveRoles: CoachRole[] = [
-    'defensiveCoordinator',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-  ];
+  const defensiveRoles: CoachRole[] = ['defensiveCoordinator', 'dlCoach', 'lbCoach', 'dbCoach'];
 
   if (offensiveRoles.includes(role)) {
     return offensiveSchemeMap[scheme] || 'westCoast';
