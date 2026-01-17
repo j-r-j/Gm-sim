@@ -256,39 +256,45 @@ export function generatePlayerDemands(
 
 /**
  * Evaluates an offer against player demands
+ * Uses simplified bonus/salary model where bonus is weighted higher
  */
 export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): NegotiationResult {
-  // Calculate how close each component is to demands
-  const aavScore = Math.min(1, offer.totalValue / offer.years / demands.preferredAAV);
-  const yearsScore = Math.min(1, offer.years / demands.preferredYears);
-  const guaranteedScore = Math.min(1, offer.guaranteedMoney / demands.preferredGuaranteed);
+  // Calculate offer AAV and guaranteed from new model
+  const offerAAV = offer.bonusPerYear + offer.salaryPerYear;
+  const offerGuaranteed = offer.bonusPerYear * offer.years;
 
-  // Weighted closeness
-  const closeness = aavScore * 0.5 + yearsScore * 0.2 + guaranteedScore * 0.3;
+  // Calculate how close each component is to demands
+  // Weight guaranteed (bonus) higher than total - players care more about guarantees
+  const aavScore = Math.min(1, offerAAV / demands.preferredAAV);
+  const yearsScore = Math.min(1, offer.years / demands.preferredYears);
+  const guaranteedScore = Math.min(1, offerGuaranteed / demands.preferredGuaranteed);
+
+  // Weighted closeness - guaranteed money weighted highest
+  const closeness = aavScore * 0.35 + yearsScore * 0.15 + guaranteedScore * 0.50;
 
   // Check minimum thresholds
-  const meetsMinimumAAV = offer.totalValue / offer.years >= demands.minimumAAV;
+  const meetsMinimumAAV = offerAAV >= demands.minimumAAV;
   const meetsMinimumYears = offer.years >= demands.minimumYears;
-  const meetsMinimumGuaranteed = offer.guaranteedMoney >= demands.minimumGuaranteed;
+  const meetsMinimumGuaranteed = offerGuaranteed >= demands.minimumGuaranteed;
 
   if (!meetsMinimumAAV || !meetsMinimumYears || !meetsMinimumGuaranteed) {
-    // Generate counter-offer
+    // Generate counter-offer with new model
+    const preferredGuaranteePct = demands.preferredGuaranteed / (demands.preferredAAV * demands.preferredYears);
+    const counterBonusPerYear = Math.round(demands.preferredAAV * preferredGuaranteePct);
+    const counterSalaryPerYear = demands.preferredAAV - counterBonusPerYear;
+
     const counterOffer: ContractOffer = {
       years: demands.preferredYears,
-      totalValue: demands.preferredAAV * demands.preferredYears,
-      guaranteedMoney: demands.preferredGuaranteed,
-      signingBonus: Math.round(demands.preferredGuaranteed * 0.3),
-      firstYearSalary: demands.preferredAAV,
-      annualEscalation: 0.03,
+      bonusPerYear: counterBonusPerYear,
+      salaryPerYear: counterSalaryPerYear,
       noTradeClause: demands.noTradeClause,
-      voidYears: 0,
     };
 
     let response: string;
-    if (!meetsMinimumAAV) {
+    if (!meetsMinimumGuaranteed) {
+      response = 'We need more guaranteed money (bonus) to provide security.';
+    } else if (!meetsMinimumAAV) {
       response = 'The offer is well below market value. We need significantly more.';
-    } else if (!meetsMinimumGuaranteed) {
-      response = 'We need more guaranteed money to provide security.';
     } else {
       response = "The contract length doesn't meet our requirements.";
     }
@@ -305,9 +311,9 @@ export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): Neg
   // Above minimums - check if close enough to accept
   const acceptanceThreshold =
     demands.flexibilityLevel === 'flexible'
-      ? 0.85
+      ? 0.80
       : demands.flexibilityLevel === 'moderate'
-        ? 0.9
+        ? 0.88
         : 0.95;
 
   if (closeness >= acceptanceThreshold) {
@@ -320,36 +326,39 @@ export function evaluateOffer(offer: ContractOffer, demands: PlayerDemands): Neg
     };
   }
 
-  // Close but needs adjustment
+  // Close but needs adjustment - split the difference
+  const preferredGuaranteePct = demands.preferredGuaranteed / (demands.preferredAAV * demands.preferredYears);
+  const counterBonusPerYear = Math.round(
+    (offer.bonusPerYear + demands.preferredAAV * preferredGuaranteePct) / 2
+  );
+  const counterSalaryPerYear = Math.round(
+    (offer.salaryPerYear + demands.preferredAAV * (1 - preferredGuaranteePct)) / 2
+  );
+
   const counterOffer: ContractOffer = {
     years: Math.round((offer.years + demands.preferredYears) / 2),
-    totalValue: Math.round((offer.totalValue + demands.preferredAAV * demands.preferredYears) / 2),
-    guaranteedMoney: Math.round((offer.guaranteedMoney + demands.preferredGuaranteed) / 2),
-    signingBonus: Math.round((offer.signingBonus + demands.preferredGuaranteed * 0.3) / 2),
-    firstYearSalary: Math.round((offer.firstYearSalary + demands.preferredAAV) / 2),
-    annualEscalation: offer.annualEscalation,
+    bonusPerYear: counterBonusPerYear,
+    salaryPerYear: counterSalaryPerYear,
     noTradeClause: demands.noTradeClause || offer.noTradeClause,
-    voidYears: offer.voidYears,
   };
 
   return {
     accepted: false,
     counterOffer,
-    playerResponse: "We're close, but need some adjustments to the terms.",
+    playerResponse: "We're close, but need more guaranteed money.",
     negotiationRound: 1,
     closeness,
   };
 }
 
 /**
- * Extends an existing contract
+ * Extends an existing contract using bonus/salary model
  */
 export function extendContract(
   existingContract: PlayerContract,
   newYears: number,
-  newMoney: number,
-  newGuaranteed: number,
-  signingBonus: number,
+  bonusPerYear: number,
+  salaryPerYear: number,
   currentYear: number
 ): ExtensionResult {
   if (existingContract.status !== 'active') {
@@ -372,7 +381,6 @@ export function extendContract(
     };
   }
 
-  // Build new yearly breakdown
   // Keep remaining years from current contract
   const remainingYears = existingContract.yearlyBreakdown.filter(
     (y) => y.year >= currentYear && !y.isVoidYear
@@ -380,49 +388,28 @@ export function extendContract(
 
   // Create new extension years
   const extensionStartYear = existingContract.signedYear + existingContract.totalYears;
-  const aavForNewYears = newMoney / newYears;
-  const proratedBonus = signingBonus / (remainingYears.length + newYears);
 
-  // Add proration to remaining years
-  const updatedRemainingYears = remainingYears.map((y) => ({
-    ...y,
-    prorationedBonus: y.prorationedBonus + proratedBonus,
-    capHit: y.capHit + proratedBonus,
-  }));
-
-  // Create new years
   const newExtensionYears: ContractYear[] = [];
-  let currentSalary = aavForNewYears;
-  const escalation = 0.03; // 3% annual escalation
-
   for (let i = 0; i < newYears; i++) {
     const year = extensionStartYear + i;
-    const baseSalary = Math.round(currentSalary);
-
     newExtensionYears.push({
       year,
-      baseSalary,
-      prorationedBonus: Math.round(proratedBonus),
-      rosterBonus: 0,
-      workoutBonus: 0,
-      optionBonus: 0,
-      incentivesLTBE: 0,
-      incentivesNLTBE: 0,
-      capHit: baseSalary + Math.round(proratedBonus),
-      isGuaranteed: i < 2, // First 2 years guaranteed
-      isGuaranteedForInjury: i < 3,
+      bonus: bonusPerYear,
+      salary: salaryPerYear,
+      capHit: bonusPerYear + salaryPerYear,
       isVoidYear: false,
     });
-
-    currentSalary *= 1 + escalation;
   }
 
   // Combine all years
   const pastYears = existingContract.yearlyBreakdown.filter((y) => y.year < currentYear);
-  const allYears = [...pastYears, ...updatedRemainingYears, ...newExtensionYears];
+  const allYears = [...pastYears, ...remainingYears, ...newExtensionYears];
+
+  const newMoney = (bonusPerYear + salaryPerYear) * newYears;
+  const newGuaranteed = bonusPerYear * newYears;
 
   const totalYears = existingContract.yearsRemaining + newYears;
-  const totalValue = existingContract.totalValue + newMoney + signingBonus;
+  const totalValue = existingContract.totalValue + newMoney;
   const totalGuaranteed = existingContract.guaranteedMoney + newGuaranteed;
 
   const newContract: PlayerContract = {
@@ -432,7 +419,7 @@ export function extendContract(
     yearsRemaining: totalYears,
     totalValue,
     guaranteedMoney: totalGuaranteed,
-    signingBonus: existingContract.signingBonus + signingBonus,
+    signingBonus: 0, // Not used in simplified model
     averageAnnualValue: Math.round(totalValue / totalYears),
     yearlyBreakdown: allYears,
     type: 'extension',
@@ -447,7 +434,7 @@ export function extendContract(
     success: true,
     newContract,
     yearsAdded: newYears,
-    newMoneyAdded: newMoney + signingBonus,
+    newMoneyAdded: newMoney,
     error: null,
   };
 }
@@ -474,26 +461,32 @@ export function getExtensionEligible(
 }
 
 /**
- * Calculates recommended extension offer
+ * Calculates recommended extension offer using bonus/salary model
  */
 export function calculateRecommendedOffer(
   valuation: PlayerValuation,
-  existingContract: PlayerContract,
+  _existingContract: PlayerContract,
   targetYears: number = 3
 ): ContractOffer {
-  const totalNewMoney = valuation.estimatedAAV * targetYears;
-  const signingBonus = Math.round(totalNewMoney * 0.25);
-  const guaranteedMoney = Math.round(totalNewMoney * 0.5);
+  // Calculate guarantee percentage based on market tier
+  const guaranteePcts: Record<MarketTier, number> = {
+    elite: 0.60,
+    premium: 0.50,
+    starter: 0.45,
+    quality: 0.35,
+    depth: 0.25,
+    minimum: 0.20,
+  };
+  const guaranteePct = guaranteePcts[valuation.marketTier] || 0.40;
+
+  const bonusPerYear = Math.round(valuation.estimatedAAV * guaranteePct);
+  const salaryPerYear = valuation.estimatedAAV - bonusPerYear;
 
   return {
     years: targetYears,
-    totalValue: totalNewMoney,
-    guaranteedMoney,
-    signingBonus,
-    firstYearSalary: valuation.estimatedAAV,
-    annualEscalation: 0.03,
+    bonusPerYear,
+    salaryPerYear,
     noTradeClause: valuation.marketTier === 'elite',
-    voidYears: 0,
   };
 }
 
@@ -509,6 +502,8 @@ export function getExtensionSummary(
   proposedNewYears: number;
   newTotalYears: number;
   newAAV: string;
+  bonusPerYear: string;
+  salaryPerYear: string;
   capImpactDescription: string;
 } {
   const formatMoney = (value: number): string => {
@@ -526,25 +521,21 @@ export function getExtensionSummary(
     )
     .reduce((sum, y) => sum + y.capHit, 0);
 
+  const offerAAV = proposedOffer.bonusPerYear + proposedOffer.salaryPerYear;
   const newTotalYears = existingContract.yearsRemaining + proposedOffer.years;
-  const newTotalValue = existingContract.totalValue + proposedOffer.totalValue;
+  const newTotalValue = existingContract.totalValue + offerAAV * proposedOffer.years;
   const newAAV = newTotalValue / newTotalYears;
 
-  let capImpactDescription: string;
-  if (proposedOffer.signingBonus > 0) {
-    const proratedPerYear =
-      proposedOffer.signingBonus / (existingContract.yearsRemaining + proposedOffer.years);
-    capImpactDescription = `Signing bonus prorated at ${formatMoney(proratedPerYear)}/year`;
-  } else {
-    capImpactDescription = 'No signing bonus - straightforward cap charges';
-  }
+  const capImpactDescription = `${formatMoney(proposedOffer.bonusPerYear)}/yr guaranteed, ${formatMoney(proposedOffer.salaryPerYear)}/yr non-guaranteed`;
 
   return {
     currentContractRemaining: formatMoney(currentRemaining),
-    proposedNewMoney: formatMoney(proposedOffer.totalValue),
+    proposedNewMoney: formatMoney(offerAAV * proposedOffer.years),
     proposedNewYears: proposedOffer.years,
     newTotalYears,
     newAAV: formatMoney(newAAV),
+    bonusPerYear: formatMoney(proposedOffer.bonusPerYear),
+    salaryPerYear: formatMoney(proposedOffer.salaryPerYear),
     capImpactDescription,
   };
 }

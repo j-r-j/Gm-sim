@@ -169,3 +169,20 @@ export {
   getTeamContracts,
   validateTeamCapUsage,
 } from './ContractGenerator';
+
+// ============================================
+// Offer Evaluation System
+// ============================================
+export {
+  // Types
+  InterestLevel,
+  OfferEvaluation,
+  PlayerExpectations,
+  // Functions
+  calculatePlayerExpectations,
+  evaluateContractOffer,
+  getPlayerPrioritiesDescription,
+  suggestOfferImprovements,
+  formatMoney,
+  getOfferSummary,
+} from './OfferEvaluation';
