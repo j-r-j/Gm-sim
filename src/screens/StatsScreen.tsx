@@ -279,115 +279,13 @@ const KICKING_CATEGORIES: StatCategory[] = [
 // ============================================================================
 
 /**
- * Get mock season stats for a player (since real stats may not exist yet)
- * In a real implementation, this would pull from gameState.seasonStats
+ * Get season stats for a player
+ * Returns empty stats if no games have been played yet
+ * TODO: Pull from gameState.seasonStats when season stats persistence is implemented
  */
-function getPlayerSeasonStats(gameState: GameState, playerId: string): PlayerSeasonStats {
-  // Check if we have actual season stats stored
-  // For now, generate reasonable mock data based on position
-  const player = gameState.players[playerId];
-  if (!player) {
-    return createEmptyPlayerSeasonStats(playerId);
-  }
-
-  const stats = createEmptyPlayerSeasonStats(playerId);
-  stats.gamesPlayed = Math.floor(Math.random() * 17) + 1;
-  stats.gamesStarted = Math.floor(stats.gamesPlayed * 0.8);
-
-  // Generate position-appropriate stats
-  const pos = player.position;
-
-  if (pos === Position.QB) {
-    stats.passing.attempts = Math.floor(
-      30 * stats.gamesPlayed + Math.random() * 10 * stats.gamesPlayed
-    );
-    stats.passing.completions = Math.floor(stats.passing.attempts * (0.58 + Math.random() * 0.12));
-    stats.passing.yards = Math.floor(stats.passing.completions * (9 + Math.random() * 5));
-    stats.passing.touchdowns = Math.floor(stats.passing.yards / 250 + Math.random() * 5);
-    stats.passing.interceptions = Math.floor(Math.random() * stats.gamesPlayed * 0.8);
-    stats.passing.rating = calculatePasserRating(stats.passing);
-    stats.rushing.attempts = Math.floor(Math.random() * 5 * stats.gamesPlayed);
-    stats.rushing.yards = Math.floor(stats.rushing.attempts * (3 + Math.random() * 4));
-    stats.rushing.touchdowns = Math.floor(Math.random() * 4);
-  } else if (pos === Position.RB) {
-    stats.rushing.attempts = Math.floor(
-      12 * stats.gamesPlayed + Math.random() * 8 * stats.gamesPlayed
-    );
-    stats.rushing.yards = Math.floor(stats.rushing.attempts * (3.5 + Math.random() * 2));
-    stats.rushing.touchdowns = Math.floor(stats.rushing.yards / 150 + Math.random() * 3);
-    stats.rushing.yardsPerCarry =
-      stats.rushing.attempts > 0 ? stats.rushing.yards / stats.rushing.attempts : 0;
-    stats.receiving.targets = Math.floor(
-      3 * stats.gamesPlayed + Math.random() * 3 * stats.gamesPlayed
-    );
-    stats.receiving.receptions = Math.floor(stats.receiving.targets * (0.65 + Math.random() * 0.2));
-    stats.receiving.yards = Math.floor(stats.receiving.receptions * (7 + Math.random() * 4));
-    stats.receiving.touchdowns = Math.floor(Math.random() * 4);
-  } else if (pos === Position.WR) {
-    stats.receiving.targets = Math.floor(
-      6 * stats.gamesPlayed + Math.random() * 5 * stats.gamesPlayed
-    );
-    stats.receiving.receptions = Math.floor(stats.receiving.targets * (0.55 + Math.random() * 0.2));
-    stats.receiving.yards = Math.floor(stats.receiving.receptions * (10 + Math.random() * 6));
-    stats.receiving.touchdowns = Math.floor(stats.receiving.yards / 180 + Math.random() * 3);
-    stats.receiving.yardsPerReception =
-      stats.receiving.receptions > 0 ? stats.receiving.yards / stats.receiving.receptions : 0;
-  } else if (pos === Position.TE) {
-    stats.receiving.targets = Math.floor(
-      4 * stats.gamesPlayed + Math.random() * 3 * stats.gamesPlayed
-    );
-    stats.receiving.receptions = Math.floor(stats.receiving.targets * (0.6 + Math.random() * 0.2));
-    stats.receiving.yards = Math.floor(stats.receiving.receptions * (9 + Math.random() * 4));
-    stats.receiving.touchdowns = Math.floor(stats.receiving.yards / 200 + Math.random() * 3);
-    stats.receiving.yardsPerReception =
-      stats.receiving.receptions > 0 ? stats.receiving.yards / stats.receiving.receptions : 0;
-  } else if (DEFENSIVE_POSITIONS.includes(pos)) {
-    stats.defensive.tackles = Math.floor(
-      3 * stats.gamesPlayed + Math.random() * 5 * stats.gamesPlayed
-    );
-    stats.defensive.tacklesForLoss = Math.floor(stats.defensive.tackles * 0.1);
-    if ([Position.DE, Position.DT, Position.OLB].includes(pos)) {
-      stats.defensive.sacks = Math.floor(Math.random() * stats.gamesPlayed * 0.8);
-    }
-    if ([Position.CB, Position.FS, Position.SS, Position.ILB].includes(pos)) {
-      stats.defensive.interceptions = Math.floor(Math.random() * 6);
-      stats.defensive.passesDefended = Math.floor(stats.gamesPlayed * 0.5 + Math.random() * 10);
-    }
-    stats.defensive.forcedFumbles = Math.floor(Math.random() * 3);
-  } else if (pos === Position.K) {
-    stats.kicking.fieldGoalAttempts = Math.floor(
-      1.5 * stats.gamesPlayed + Math.random() * stats.gamesPlayed
-    );
-    stats.kicking.fieldGoalsMade = Math.floor(
-      stats.kicking.fieldGoalAttempts * (0.75 + Math.random() * 0.15)
-    );
-    stats.kicking.longestFieldGoal = Math.floor(35 + Math.random() * 25);
-    stats.kicking.extraPointAttempts = Math.floor(
-      2 * stats.gamesPlayed + Math.random() * stats.gamesPlayed
-    );
-    stats.kicking.extraPointsMade = Math.floor(
-      stats.kicking.extraPointAttempts * (0.95 + Math.random() * 0.05)
-    );
-  }
-
-  return stats;
-}
-
-function calculatePasserRating(passing: {
-  attempts: number;
-  completions: number;
-  yards: number;
-  touchdowns: number;
-  interceptions: number;
-}): number {
-  if (passing.attempts === 0) return 0;
-
-  const a = Math.min(Math.max((passing.completions / passing.attempts - 0.3) * 5, 0), 2.375);
-  const b = Math.min(Math.max((passing.yards / passing.attempts - 3) * 0.25, 0), 2.375);
-  const c = Math.min(Math.max((passing.touchdowns / passing.attempts) * 20, 0), 2.375);
-  const d = Math.min(Math.max(2.375 - (passing.interceptions / passing.attempts) * 25, 0), 2.375);
-
-  return ((a + b + c + d) / 6) * 100;
+function getPlayerSeasonStats(_gameState: GameState, playerId: string): PlayerSeasonStats {
+  // Return empty stats - stats will be populated as games are played
+  return createEmptyPlayerSeasonStats(playerId);
 }
 
 function getTeamSeasonStats(gameState: GameState, teamId: string): TeamSeasonStats {
@@ -401,17 +299,12 @@ function getTeamSeasonStats(gameState: GameState, teamId: string): TeamSeasonSta
   stats.pointsFor = team.currentRecord.pointsFor;
   stats.pointsAgainst = team.currentRecord.pointsAgainst;
 
-  // Generate reasonable mock data for yards
-  stats.totalYards = Math.floor(300 * gamesPlayed + Math.random() * 100 * gamesPlayed);
-  stats.yardsAllowed = Math.floor(280 * gamesPlayed + Math.random() * 120 * gamesPlayed);
-  stats.turnoversForced = Math.floor(1.2 * gamesPlayed + Math.random() * gamesPlayed);
-  stats.turnoversCommitted = Math.floor(1 * gamesPlayed + Math.random() * gamesPlayed);
+  // TODO: Pull actual yardage stats from gameState.seasonStats when implemented
+  // For now, leave yardage and turnover stats at 0 until games are played
 
   if (gamesPlayed > 0) {
     stats.pointsPerGame = Math.round((stats.pointsFor / gamesPlayed) * 10) / 10;
-    stats.yardsPerGame = Math.round((stats.totalYards / gamesPlayed) * 10) / 10;
     stats.pointsAllowedPerGame = Math.round((stats.pointsAgainst / gamesPlayed) * 10) / 10;
-    stats.yardsAllowedPerGame = Math.round((stats.yardsAllowed / gamesPlayed) * 10) / 10;
   }
 
   return stats;
