@@ -9,6 +9,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../styles';
 import { Position } from '../../core/models/player/Position';
+import { Avatar } from '../avatar';
 
 export interface ProspectListItemProps {
   /** Prospect's unique ID */
@@ -68,7 +69,7 @@ function getRoundColor(round: number | null): string {
  * ProspectListItem Component
  */
 export function ProspectListItem({
-  id: _id,
+  id,
   name,
   position,
   collegeName,
@@ -92,6 +93,9 @@ export function ProspectListItem({
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
+      {/* Avatar */}
+      <Avatar id={id} size="xs" context="prospect" accentColor={colors.info} />
+
       {/* Rank Column */}
       <View style={styles.rankColumn}>
         {overallRank !== null && <Text style={styles.overallRank}>#{overallRank}</Text>}
@@ -171,6 +175,7 @@ const styles = StyleSheet.create({
   rankColumn: {
     width: 50,
     alignItems: 'center',
+    marginLeft: spacing.sm,
   },
   overallRank: {
     fontSize: fontSize.md,
