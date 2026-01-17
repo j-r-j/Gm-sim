@@ -559,7 +559,11 @@ export class GameStateMachine {
     }
 
     // Touchdowns and turnovers have variable time
-    if (result.outcome === 'touchdown' || result.outcome === 'interception' || result.outcome === 'fumble') {
+    if (
+      result.outcome === 'touchdown' ||
+      result.outcome === 'interception' ||
+      result.outcome === 'fumble'
+    ) {
       time = 8 + Math.floor(Math.random() * 8); // 8-15 seconds
     }
 
