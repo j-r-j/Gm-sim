@@ -67,7 +67,7 @@ describe('WeekSimulator', () => {
   describe('getUserTeamGame', () => {
     it('should return user team game for non-bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
 
       // Find a non-bye week
       let testWeek = 1;
@@ -83,7 +83,7 @@ describe('WeekSimulator', () => {
 
     it('should return null during bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
 
       if (byeWeek) {
         const game = getUserTeamGame(schedule, byeWeek, userTeamId);
@@ -95,7 +95,7 @@ describe('WeekSimulator', () => {
   describe('isUserOnBye', () => {
     it('should return true during bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
 
       if (byeWeek) {
         expect(isUserOnBye(schedule, byeWeek, userTeamId)).toBe(true);
@@ -104,7 +104,7 @@ describe('WeekSimulator', () => {
 
     it('should return false during non-bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
 
       const nonByeWeek = byeWeek === 1 ? 2 : 1;
       expect(isUserOnBye(schedule, nonByeWeek, userTeamId)).toBe(false);

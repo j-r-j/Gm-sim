@@ -509,7 +509,7 @@ describe('Week Advancement Integration Tests', () => {
 
       // Find a week where user has a game
       let testWeek = 1;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
       if (byeWeek === 1) testWeek = 2;
 
       const game = getUserTeamGame(schedule, testWeek, userTeamId);
@@ -521,7 +521,7 @@ describe('Week Advancement Integration Tests', () => {
 
     it('should return null during bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
 
       if (byeWeek) {
         const game = getUserTeamGame(schedule, byeWeek, userTeamId);
@@ -533,7 +533,7 @@ describe('Week Advancement Integration Tests', () => {
   describe('isUserOnBye function', () => {
     it('should return true during bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
 
       if (byeWeek) {
         expect(isUserOnBye(schedule, byeWeek, userTeamId)).toBe(true);
@@ -542,7 +542,7 @@ describe('Week Advancement Integration Tests', () => {
 
     it('should return false during non-bye week', () => {
       const userTeamId = teams[0].id;
-      const byeWeek = schedule.byeWeeks.get(userTeamId);
+      const byeWeek = schedule.byeWeeks[userTeamId];
       const nonByeWeek = byeWeek === 1 ? 2 : 1;
 
       expect(isUserOnBye(schedule, nonByeWeek, userTeamId)).toBe(false);
@@ -709,14 +709,14 @@ describe('Week Advancement Integration Tests', () => {
     });
 
     it('should assign bye weeks to all teams', () => {
-      const teamsWithBye = new Set(schedule.byeWeeks.keys());
+      const teamsWithBye = new Set(Object.keys(schedule.byeWeeks));
 
       // All 32 teams should have a bye week
       expect(teamsWithBye.size).toBe(32);
     });
 
     it('should have bye weeks within valid range (weeks 5-14)', () => {
-      for (const byeWeek of schedule.byeWeeks.values()) {
+      for (const byeWeek of Object.values(schedule.byeWeeks)) {
         expect(byeWeek).toBeGreaterThanOrEqual(5);
         expect(byeWeek).toBeLessThanOrEqual(14);
       }

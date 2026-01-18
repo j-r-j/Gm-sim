@@ -82,11 +82,16 @@ export function assignByeWeeks(teams: Team[]): Map<string, number> {
  *
  * @param teamId - The team to check
  * @param week - The week number (1-18)
- * @param byeWeeks - Map of team bye weeks
+ * @param byeWeeks - Object mapping team IDs to bye weeks
  * @returns True if team is on bye
  */
-export function isOnBye(teamId: string, week: number, byeWeeks: Map<string, number>): boolean {
-  const byeWeek = byeWeeks.get(teamId);
+export function isOnBye(
+  teamId: string,
+  week: number,
+  byeWeeks: Record<string, number> | Map<string, number>
+): boolean {
+  // Support both Map (from assignByeWeeks) and plain object (from JSON deserialization)
+  const byeWeek = byeWeeks instanceof Map ? byeWeeks.get(teamId) : byeWeeks[teamId];
   return byeWeek === week;
 }
 
@@ -94,13 +99,19 @@ export function isOnBye(teamId: string, week: number, byeWeeks: Map<string, numb
  * Gets all teams on bye for a specific week
  *
  * @param week - The week number
- * @param byeWeeks - Map of team bye weeks
+ * @param byeWeeks - Object mapping team IDs to bye weeks
  * @returns Array of team IDs on bye
  */
-export function getTeamsOnBye(week: number, byeWeeks: Map<string, number>): string[] {
+export function getTeamsOnBye(
+  week: number,
+  byeWeeks: Record<string, number> | Map<string, number>
+): string[] {
   const teamsOnBye: string[] = [];
 
-  for (const [teamId, byeWeek] of byeWeeks) {
+  const entries =
+    byeWeeks instanceof Map ? Array.from(byeWeeks.entries()) : Object.entries(byeWeeks);
+
+  for (const [teamId, byeWeek] of entries) {
     if (byeWeek === week) {
       teamsOnBye.push(teamId);
     }
@@ -112,17 +123,21 @@ export function getTeamsOnBye(week: number, byeWeeks: Map<string, number>): stri
 /**
  * Gets the number of teams on bye for each week
  *
- * @param byeWeeks - Map of team bye weeks
+ * @param byeWeeks - Object mapping team IDs to bye weeks
  * @returns Map of week number to count of teams on bye
  */
-export function getByeWeekDistribution(byeWeeks: Map<string, number>): Map<number, number> {
+export function getByeWeekDistribution(
+  byeWeeks: Record<string, number> | Map<string, number>
+): Map<number, number> {
   const distribution = new Map<number, number>();
 
   for (let week = BYE_WEEK_START; week <= BYE_WEEK_END; week++) {
     distribution.set(week, 0);
   }
 
-  for (const byeWeek of byeWeeks.values()) {
+  const values = byeWeeks instanceof Map ? Array.from(byeWeeks.values()) : Object.values(byeWeeks);
+
+  for (const byeWeek of values) {
     const current = distribution.get(byeWeek) || 0;
     distribution.set(byeWeek, current + 1);
   }
@@ -133,18 +148,26 @@ export function getByeWeekDistribution(byeWeeks: Map<string, number>): Map<numbe
 /**
  * Validates bye week assignment
  *
- * @param byeWeeks - Map of team bye weeks
+ * @param byeWeeks - Object mapping team IDs to bye weeks
  * @param teams - Array of all teams
  * @returns True if valid
  */
-export function validateByeWeeks(byeWeeks: Map<string, number>, teams: Team[]): boolean {
+export function validateByeWeeks(
+  byeWeeks: Record<string, number> | Map<string, number>,
+  teams: Team[]
+): boolean {
+  const size = byeWeeks instanceof Map ? byeWeeks.size : Object.keys(byeWeeks).length;
+  const values = byeWeeks instanceof Map ? Array.from(byeWeeks.values()) : Object.values(byeWeeks);
+  const getByeWeek = (teamId: string) =>
+    byeWeeks instanceof Map ? byeWeeks.get(teamId) : byeWeeks[teamId];
+
   // Every team should have a bye
-  if (byeWeeks.size !== teams.length) {
+  if (size !== teams.length) {
     return false;
   }
 
   // All byes should be in valid range
-  for (const byeWeek of byeWeeks.values()) {
+  for (const byeWeek of values) {
     if (byeWeek < BYE_WEEK_START || byeWeek > BYE_WEEK_END) {
       return false;
     }
@@ -155,7 +178,7 @@ export function validateByeWeeks(byeWeeks: Map<string, number>, teams: Team[]): 
 
   for (const team of teams) {
     const key = `${team.conference}-${team.division}`;
-    const byeWeek = byeWeeks.get(team.id);
+    const byeWeek = getByeWeek(team.id);
 
     if (byeWeek === undefined) return false;
 
@@ -179,13 +202,13 @@ export function validateByeWeeks(byeWeeks: Map<string, number>, teams: Team[]): 
  *
  * @param week - The week number
  * @param teams - Array of all teams
- * @param byeWeeks - Map of team bye weeks
+ * @param byeWeeks - Object mapping team IDs to bye weeks
  * @returns Array of teams available to play
  */
 export function getAvailableTeams(
   week: number,
   teams: Team[],
-  byeWeeks: Map<string, number>
+  byeWeeks: Record<string, number> | Map<string, number>
 ): Team[] {
   return teams.filter((team) => !isOnBye(team.id, week, byeWeeks));
 }
@@ -194,9 +217,12 @@ export function getAvailableTeams(
  * Gets the bye week for a specific team
  *
  * @param teamId - The team ID
- * @param byeWeeks - Map of team bye weeks
+ * @param byeWeeks - Object mapping team IDs to bye weeks
  * @returns The bye week number, or undefined if not found
  */
-export function getTeamByeWeek(teamId: string, byeWeeks: Map<string, number>): number | undefined {
-  return byeWeeks.get(teamId);
+export function getTeamByeWeek(
+  teamId: string,
+  byeWeeks: Record<string, number> | Map<string, number>
+): number | undefined {
+  return byeWeeks instanceof Map ? byeWeeks.get(teamId) : byeWeeks[teamId];
 }

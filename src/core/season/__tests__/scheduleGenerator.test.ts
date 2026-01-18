@@ -131,10 +131,10 @@ describe('ScheduleGenerator', () => {
     });
 
     it('should assign bye weeks to all teams', () => {
-      expect(schedule.byeWeeks.size).toBe(32);
+      expect(Object.keys(schedule.byeWeeks).length).toBe(32);
 
       for (const team of teams) {
-        const byeWeek = schedule.byeWeeks.get(team.id);
+        const byeWeek = schedule.byeWeeks[team.id];
         expect(byeWeek).toBeDefined();
         expect(byeWeek).toBeGreaterThanOrEqual(5);
         expect(byeWeek).toBeLessThanOrEqual(14);
@@ -143,8 +143,8 @@ describe('ScheduleGenerator', () => {
 
     it('should not schedule teams during their bye week', () => {
       for (const game of schedule.regularSeason) {
-        const homeByeWeek = schedule.byeWeeks.get(game.homeTeamId);
-        const awayByeWeek = schedule.byeWeeks.get(game.awayTeamId);
+        const homeByeWeek = schedule.byeWeeks[game.homeTeamId];
+        const awayByeWeek = schedule.byeWeeks[game.awayTeamId];
 
         expect(game.week).not.toBe(homeByeWeek);
         expect(game.week).not.toBe(awayByeWeek);
