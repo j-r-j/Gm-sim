@@ -19,7 +19,9 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Position } from '../core/models/player/Position';
+import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
+import { PlayerDetailCard } from '../components/player/PlayerDetailCard';
 
 /**
  * Free agent for display
@@ -50,6 +52,8 @@ export interface ContractOffer {
 export interface FreeAgencyScreenProps {
   /** Available free agents */
   freeAgents: FreeAgent[];
+  /** Full player data for detailed view (keyed by player ID) */
+  freeAgentPlayers?: Record<string, Player>;
   /** Current cap space */
   capSpace: number;
   /** User's team name */
@@ -89,31 +93,34 @@ function FreeAgentCard({
   onMakeOffer: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.agentCard} onPress={onPress}>
-      <View style={styles.agentHeader}>
-        <View style={styles.avatarContainer}>
-          <Avatar id={agent.id} size="sm" age={agent.age} context="player" />
-          <View style={styles.positionBadge}>
-            <Text style={styles.positionText}>{agent.position}</Text>
+    <View style={styles.agentCard}>
+      <TouchableOpacity style={styles.agentTappableArea} onPress={onPress}>
+        <View style={styles.agentHeader}>
+          <View style={styles.avatarContainer}>
+            <Avatar id={agent.id} size="sm" age={agent.age} context="player" />
+            <View style={styles.positionBadge}>
+              <Text style={styles.positionText}>{agent.position}</Text>
+            </View>
+          </View>
+          <View style={styles.agentInfo}>
+            <Text style={styles.agentName}>
+              {agent.firstName} {agent.lastName}
+            </Text>
+            <Text style={styles.agentDetails}>
+              Age {agent.age} • {agent.experience} yrs exp
+            </Text>
+          </View>
+          <View style={styles.valueContainer}>
+            <Text style={styles.valueLabel}>Est. Value</Text>
+            <Text style={styles.valueAmount}>{formatMoney(agent.estimatedValue)}</Text>
+            <Text style={styles.tapHint}>Tap for details</Text>
           </View>
         </View>
-        <View style={styles.agentInfo}>
-          <Text style={styles.agentName}>
-            {agent.firstName} {agent.lastName}
-          </Text>
-          <Text style={styles.agentDetails}>
-            Age {agent.age} • {agent.experience} yrs exp
-          </Text>
-        </View>
-        <View style={styles.valueContainer}>
-          <Text style={styles.valueLabel}>Est. Value</Text>
-          <Text style={styles.valueAmount}>{formatMoney(agent.estimatedValue)}</Text>
-        </View>
-      </View>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.offerButton} onPress={onMakeOffer}>
         <Text style={styles.offerButtonText}>Make Offer</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -252,6 +259,7 @@ function OfferModal({
  */
 export function FreeAgencyScreen({
   freeAgents,
+  freeAgentPlayers,
   capSpace,
   teamName,
   onMakeOffer,
@@ -261,6 +269,7 @@ export function FreeAgencyScreen({
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [selectedAgent, setSelectedAgent] = useState<FreeAgent | null>(null);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showPlayerCard, setShowPlayerCard] = useState(false);
 
   // Filter and sort agents
   const filteredAgents = useMemo(() => {
@@ -383,8 +392,8 @@ export function FreeAgencyScreen({
           <FreeAgentCard
             agent={item}
             onPress={() => {
-              // Could navigate to player profile
               setSelectedAgent(item);
+              setShowPlayerCard(true);
             }}
             onMakeOffer={() => {
               setSelectedAgent(item);
@@ -410,6 +419,18 @@ export function FreeAgencyScreen({
           setSelectedAgent(null);
         }}
       />
+
+      {/* Player Detail Card Modal */}
+      {showPlayerCard && selectedAgent && freeAgentPlayers?.[selectedAgent.id] && (
+        <PlayerDetailCard
+          player={freeAgentPlayers[selectedAgent.id]}
+          isModal={true}
+          onClose={() => {
+            setShowPlayerCard(false);
+            setSelectedAgent(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -515,10 +536,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.sm,
   },
+  agentTappableArea: {
+    marginBottom: spacing.sm,
+  },
   agentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
   },
   avatarContainer: {
     position: 'relative',
@@ -565,6 +588,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.secondary,
+  },
+  tapHint: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    marginTop: spacing.xxs,
   },
   offerButton: {
     backgroundColor: colors.secondary,
