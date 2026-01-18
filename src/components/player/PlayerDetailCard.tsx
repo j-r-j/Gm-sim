@@ -171,12 +171,10 @@ function getAverageSkillRating(player: Player): number {
 function CircularProgressBar({
   value,
   label,
-  color,
   invertColor = false,
 }: {
   value: number;
   label: string;
-  color: string;
   invertColor?: boolean;
 }): React.JSX.Element {
   const displayColor = invertColor
@@ -249,13 +247,8 @@ function ProfileTab({
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Quick Status Row */}
       <View style={styles.quickStatusRow}>
-        <CircularProgressBar value={player.morale} label="Morale" color={colors.success} />
-        <CircularProgressBar
-          value={player.fatigue}
-          label="Fatigue"
-          color={colors.info}
-          invertColor
-        />
+        <CircularProgressBar value={player.morale} label="Morale" />
+        <CircularProgressBar value={player.fatigue} label="Fatigue" invertColor />
       </View>
 
       {/* Injury Alert */}
