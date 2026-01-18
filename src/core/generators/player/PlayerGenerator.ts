@@ -77,8 +77,8 @@ export function generatePlayer(options: PlayerGenerationOptions = {}): Player {
   const skillTier = options.skillTier ?? 'random';
   const skills = generateSkillsForPosition(position, age, skillTier);
 
-  // Generate hidden traits
-  const hiddenTraits = generateHiddenTraits(position);
+  // Generate hidden traits (veterans have some traits already revealed)
+  const hiddenTraits = generateHiddenTraits(position, experience);
 
   // Generate "It" factor
   const itFactor =

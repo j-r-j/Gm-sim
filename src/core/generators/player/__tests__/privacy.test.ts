@@ -69,47 +69,73 @@ describe('Privacy Tests - Hidden Values Not Exposed', () => {
   describe('hidden traits are not exposed before revealed', () => {
     it('should not expose unrevealed traits in view model', () => {
       for (let i = 0; i < 10; i++) {
-        const player = generatePlayer();
+        // Use rookies to test that unrevealed traits are hidden
+        const player = generatePlayer({ forDraft: true });
         const viewModel = createPlayerViewModel(player);
         const serialized = JSON.stringify(viewModel);
 
-        // Player has actual traits
-        const hasPositiveTraits = player.hiddenTraits.positive.length > 0;
-        const hasNegativeTraits = player.hiddenTraits.negative.length > 0;
+        // Rookies have no revealed traits, so knownTraits should be empty
+        expect(viewModel.knownTraits).toEqual([]);
 
-        // If player has traits, they should not appear in view model
-        // unless they are in revealedToUser (which is empty for new players)
-        if (hasPositiveTraits) {
-          for (const trait of player.hiddenTraits.positive) {
-            // All traits should be hidden since revealedToUser starts empty
-            expect(viewModel.knownTraits).not.toContain(trait);
-          }
-        }
-
-        if (hasNegativeTraits) {
-          for (const trait of player.hiddenTraits.negative) {
-            expect(viewModel.knownTraits).not.toContain(trait);
-          }
-        }
-
-        // View model should not contain positive/negative arrays
+        // View model should not contain positive/negative arrays (internal trait lists)
         expect(serialized).not.toContain('"positive"');
         expect(serialized).not.toContain('"negative"');
       }
     });
 
-    it('should start with empty revealed traits', () => {
+    it('should only expose revealed traits in view model for veterans', () => {
       for (let i = 0; i < 20; i++) {
-        const player = generatePlayer();
+        const player = generatePlayer({ ageRange: { min: 30, max: 35 } });
+        const viewModel = createPlayerViewModel(player);
+        const serialized = JSON.stringify(viewModel);
+
+        const allTraits = [...player.hiddenTraits.positive, ...player.hiddenTraits.negative];
+        const revealedSet = new Set(player.hiddenTraits.revealedToUser);
+
+        // knownTraits should match exactly what's in revealedToUser
+        expect(viewModel.knownTraits.length).toBe(player.hiddenTraits.revealedToUser.length);
+
+        for (const known of viewModel.knownTraits) {
+          expect(revealedSet.has(known)).toBe(true);
+        }
+
+        // Unrevealed traits should NOT appear in knownTraits
+        for (const trait of allTraits) {
+          if (!revealedSet.has(trait)) {
+            expect(viewModel.knownTraits).not.toContain(trait);
+          }
+        }
+
+        // View model should not contain positive/negative arrays (internal trait lists)
+        expect(serialized).not.toContain('"positive"');
+        expect(serialized).not.toContain('"negative"');
+      }
+    });
+
+    it('should start with empty revealed traits for rookies', () => {
+      for (let i = 0; i < 20; i++) {
+        const player = generatePlayer({ forDraft: true });
         expect(player.hiddenTraits.revealedToUser).toEqual([]);
       }
     });
 
-    it('should have empty knownTraits in view model for new players', () => {
+    it('should have empty knownTraits in view model for rookies', () => {
       for (let i = 0; i < 20; i++) {
-        const player = generatePlayer();
+        const player = generatePlayer({ forDraft: true });
         const viewModel = createPlayerViewModel(player);
         expect(viewModel.knownTraits).toEqual([]);
+      }
+    });
+
+    it('should only reveal traits the player actually has for veterans', () => {
+      for (let i = 0; i < 20; i++) {
+        const player = generatePlayer({ ageRange: { min: 30, max: 35 } });
+        const allTraits = [...player.hiddenTraits.positive, ...player.hiddenTraits.negative];
+
+        // Any revealed traits must be traits the player actually has
+        for (const revealed of player.hiddenTraits.revealedToUser) {
+          expect(allTraits).toContain(revealed);
+        }
       }
     });
   });
