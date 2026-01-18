@@ -385,6 +385,47 @@ export function processPhaseAction(
       changes.push(`Stored ${action.awards.length} awards`);
       break;
     }
+
+    case 'store_coach_evaluations': {
+      newOffseasonData = mergeOffseasonData(newOffseasonData, {
+        coachEvaluations: action.evaluations,
+      });
+      changes.push(`Stored ${action.evaluations.length} coach evaluations`);
+      break;
+    }
+
+    case 'store_rookie_integration_reports': {
+      newOffseasonData = mergeOffseasonData(newOffseasonData, {
+        rookieIntegrationReports: action.reports,
+      });
+      changes.push(`Stored ${action.reports.length} rookie integration reports`);
+      break;
+    }
+
+    case 'store_season_recap': {
+      newOffseasonData = mergeOffseasonData(newOffseasonData, {
+        seasonRecap: action.recap,
+      });
+      changes.push('Stored season recap');
+      break;
+    }
+
+    case 'mark_draft_complete': {
+      newOffseasonData = mergeOffseasonData(newOffseasonData, {
+        draftComplete: true,
+        tradesExecuted: action.tradesExecuted,
+      });
+      changes.push('Draft marked as complete');
+      break;
+    }
+
+    case 'mark_combine_complete': {
+      newOffseasonData = mergeOffseasonData(newOffseasonData, {
+        combineComplete: true,
+      });
+      changes.push('Combine marked as complete');
+      break;
+    }
   }
 
   newOffseasonData = mergeOffseasonData(newOffseasonData, {
@@ -481,10 +522,92 @@ export function getOffseasonProgress(gameState: GameState): number {
   const offseasonState = gameState.offseasonState;
   if (!offseasonState) return 0;
 
-  const currentIndex = PHASE_ORDER.indexOf(offseasonState.currentPhase);
   const completedPhases = offseasonState.completedPhases.length;
 
   return Math.round((completedPhases / PHASE_ORDER.length) * 100);
+}
+
+/**
+ * Completes the offseason and transitions to the regular season
+ */
+export function completeOffseason(gameState: GameState): PhaseProcessResult {
+  const offseasonState = gameState.offseasonState;
+  const offseasonData = gameState.offseasonData || createEmptyOffseasonData();
+
+  if (!offseasonState) {
+    return {
+      gameState,
+      offseasonState: createOffSeasonState(gameState.league.calendar.currentYear),
+      offseasonData,
+      success: false,
+      errors: ['No offseason state found'],
+      changes: [],
+    };
+  }
+
+  const changes: string[] = [];
+
+  // Mark offseason as complete
+  const completedOffseasonState: OffSeasonState = {
+    ...offseasonState,
+    isComplete: true,
+    completedPhases: [...PHASE_ORDER],
+  };
+
+  // Update league calendar to regular season
+  const newYear = gameState.league.calendar.currentYear + 1;
+  const updatedLeague = {
+    ...gameState.league,
+    calendar: {
+      ...gameState.league.calendar,
+      currentPhase: 'regularSeason' as const,
+      currentWeek: 1,
+      currentYear: newYear,
+    },
+  };
+
+  changes.push(`Offseason complete, starting ${newYear} regular season`);
+
+  const updatedGameState: GameState = {
+    ...gameState,
+    league: updatedLeague,
+    offseasonState: completedOffseasonState,
+    offseasonData,
+  };
+
+  return {
+    gameState: updatedGameState,
+    offseasonState: completedOffseasonState,
+    offseasonData,
+    success: true,
+    errors: [],
+    changes,
+  };
+}
+
+/**
+ * Gets a summary of offseason actions for the user
+ */
+export function getOffseasonSummary(gameState: GameState): {
+  phase: string;
+  progress: number;
+  draftPicks: number;
+  signings: number;
+  coachingChanges: number;
+  contractDecisions: number;
+} {
+  const offseasonState = gameState.offseasonState;
+  const offseasonData = gameState.offseasonData;
+
+  return {
+    phase: offseasonState ? PHASE_NAMES[offseasonState.currentPhase] : 'Not started',
+    progress: getOffseasonProgress(gameState),
+    draftPicks: offseasonData?.draftSelections?.length ?? 0,
+    signings: (offseasonData?.freeAgentSignings?.length ?? 0) +
+              (offseasonData?.udfaSignings?.length ?? 0),
+    coachingChanges: offseasonData?.coachingChanges?.length ?? 0,
+    contractDecisions: offseasonData?.contractDecisions?.length ?? 0,
+  };
 }
 
 /**
@@ -517,6 +640,7 @@ import type {
   OwnerExpectations,
   MediaProjection,
   SeasonGoal,
+  CoachEvaluationResult,
 } from './OffseasonPersistentData';
 import type {
   PositionBattle,
@@ -527,8 +651,9 @@ import type {
   PreseasonGame,
   PreseasonEvaluation,
 } from './phases/PreseasonPhase';
-import type { OTAReport } from './phases/OTAsPhase';
+import type { OTAReport, RookieIntegrationReport } from './phases/OTAsPhase';
 import type { CombineResults } from '../draft/CombineSimulator';
+import type { SeasonRecap } from './OffSeasonPhaseManager';
 
 export type PhaseAction =
   | { type: 'complete_task'; taskId: string }
@@ -548,4 +673,9 @@ export type PhaseAction =
   | { type: 'store_ota_reports'; reports: OTAReport[] }
   | { type: 'store_owner_expectations'; expectations: OwnerExpectations; projections: MediaProjection[]; goals: SeasonGoal[] }
   | { type: 'store_combine_results'; results: Record<string, CombineResults> }
-  | { type: 'store_awards'; awards: AwardWinner[] };
+  | { type: 'store_awards'; awards: AwardWinner[] }
+  | { type: 'store_coach_evaluations'; evaluations: CoachEvaluationResult[] }
+  | { type: 'store_rookie_integration_reports'; reports: RookieIntegrationReport[] }
+  | { type: 'store_season_recap'; recap: SeasonRecap }
+  | { type: 'mark_draft_complete'; tradesExecuted: number }
+  | { type: 'mark_combine_complete' };

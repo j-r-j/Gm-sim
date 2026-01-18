@@ -15,6 +15,8 @@ export {
   isOffseasonComplete,
   getCurrentPhase,
   getOffseasonProgress,
+  completeOffseason,
+  getOffseasonSummary,
 
   // Types
   type PhaseProcessResult,
