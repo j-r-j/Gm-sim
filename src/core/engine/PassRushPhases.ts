@@ -355,7 +355,7 @@ export function getOverallPassRushResult(
   qbMobility: number,
   isBlitz: boolean
 ): PhaseResult {
-  const isPlayAction = playType.includes('action');
+  const isPlayAction = playType === 'play_action_short' || playType === 'play_action_deep';
   const isScreen = playType === 'pass_screen';
   const phase = determinePassRushPhase(playType, isPlayAction, isScreen);
 

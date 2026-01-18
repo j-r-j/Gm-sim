@@ -9,6 +9,20 @@ import { PlayType } from './OutcomeTables';
 import { DefensivePlayCall } from './PlayCaller';
 
 /**
+ * Helper functions for PlayType checking
+ */
+const RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep', 'qb_sneak'];
+const PASS_PLAY_TYPES: PlayType[] = ['pass_short', 'pass_medium', 'pass_deep', 'pass_screen', 'play_action_short', 'play_action_deep'];
+
+function isRunPlayType(playType: PlayType): boolean {
+  return RUN_PLAY_TYPES.indexOf(playType) !== -1;
+}
+
+function isPassPlayType(playType: PlayType): boolean {
+  return PASS_PLAY_TYPES.indexOf(playType) !== -1;
+}
+
+/**
  * Presnap read result
  */
 export interface PresnapReadResult {
@@ -131,11 +145,11 @@ function determineAudible(
     return { shouldAudible: false, newPlay: null, reason: 'QB football IQ too low to audible' };
   }
 
-  const isRunPlay = originalPlay.startsWith('run') || originalPlay === 'qb_sneak';
-  const isPassPlay = originalPlay.includes('pass') || originalPlay.includes('action');
+  const isRun = isRunPlayType(originalPlay);
+  const isPass = isPassPlayType(originalPlay);
 
   // Light box (5-6 defenders) - audible to run
-  if (boxCount <= 6 && isPassPlay && qbAttributes.footballIQ >= 80) {
+  if (boxCount <= 6 && isPass && qbAttributes.footballIQ >= 80) {
     if (Math.random() < 0.6) {
       return {
         shouldAudible: true,
@@ -146,7 +160,7 @@ function determineAudible(
   }
 
   // Heavy box (8-9 defenders) - audible to pass
-  if (boxCount >= 8 && isRunPlay && qbAttributes.footballIQ >= 80) {
+  if (boxCount >= 8 && isRun && qbAttributes.footballIQ >= 80) {
     if (Math.random() < 0.6) {
       return {
         shouldAudible: true,

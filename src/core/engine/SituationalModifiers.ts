@@ -5,7 +5,7 @@
  */
 
 import { Player } from '../models/player/Player';
-import { hasTrait } from '../models/player/HiddenTraits';
+import { hasTrait, Trait } from '../models/player/HiddenTraits';
 import { GameStakes } from './EffectiveRatingCalculator';
 
 /**
@@ -323,9 +323,12 @@ export function calculatePlayerSituationalModifier(
   let totalModifier = modifier.baseModifier;
 
   // Apply trait modifiers
-  for (const [trait, value] of Object.entries(modifier.traitModifiers)) {
-    if (hasTrait(player.hiddenTraits, trait)) {
-      totalModifier += value;
+  const traitMods = modifier.traitModifiers;
+  for (const trait in traitMods) {
+    if (Object.prototype.hasOwnProperty.call(traitMods, trait)) {
+      if (hasTrait(player.hiddenTraits, trait as Trait)) {
+        totalModifier += traitMods[trait];
+      }
     }
   }
 
@@ -385,12 +388,12 @@ export function getTeamSituationalModifier(context: SituationContext): number {
  */
 export function isClutchSituation(context: SituationContext): boolean {
   const situation = determineSituation(context);
-  return [
-    'fourthQuarterComeback',
-    'overtimePossession',
-    'fourthDown',
-    'twoMinuteDrill',
-  ].includes(situation);
+  return (
+    situation === 'fourthQuarterComeback' ||
+    situation === 'overtimePossession' ||
+    situation === 'fourthDown' ||
+    situation === 'twoMinuteDrill'
+  );
 }
 
 /**

@@ -7,6 +7,14 @@
 import { PlayType } from './OutcomeTables';
 
 /**
+ * Helper to check if play is a run play
+ */
+const RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep', 'qb_sneak'];
+function isRunPlayType(playType: PlayType): boolean {
+  return RUN_PLAY_TYPES.indexOf(playType) !== -1;
+}
+
+/**
  * Offensive personnel packages (# RB, # TE, # WR)
  * e.g., "11" = 1 RB, 1 TE, 3 WR (implied)
  */
@@ -324,7 +332,7 @@ export function selectOffensivePersonnel(
 ): OffensivePersonnelPackage {
   // Goal line
   if (fieldPosition >= 98) {
-    if (playType.startsWith('run') || playType === 'qb_sneak') {
+    if (isRunPlayType(playType)) {
       return '23'; // Jumbo
     }
     return '13'; // Heavy with passing option
@@ -332,7 +340,7 @@ export function selectOffensivePersonnel(
 
   // Short yardage
   if (distance <= 1 && down >= 3) {
-    if (playType.startsWith('run') || playType === 'qb_sneak') {
+    if (isRunPlayType(playType)) {
       return '22';
     }
     return '12';
@@ -347,7 +355,7 @@ export function selectOffensivePersonnel(
     return Math.random() < 0.5 ? '11' : '20';
   }
 
-  if (playType.startsWith('run')) {
+  if (isRunPlayType(playType)) {
     const roll = Math.random();
     if (roll < 0.4) return '11';
     if (roll < 0.7) return '12';

@@ -11,8 +11,32 @@
  * - Non-linear Fatigue Curves
  */
 
-import { PlayType, PlayOutcome, generateOutcomeTable, rollOutcome } from './OutcomeTables';
+import { PlayType, PlayOutcome, generateOutcomeTable, rollOutcome, SecondaryEffect } from './OutcomeTables';
 import { PlayCallContext, OffensivePlayCall, DefensivePlayCall } from './PlayCaller';
+
+/**
+ * Helper functions for PlayType checking
+ */
+const RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep', 'qb_sneak'];
+const PASS_PLAY_TYPES: PlayType[] = ['pass_short', 'pass_medium', 'pass_deep', 'pass_screen', 'play_action_short', 'play_action_deep'];
+const PLAY_ACTION_TYPES: PlayType[] = ['play_action_short', 'play_action_deep'];
+const DEEP_PASS_TYPES: PlayType[] = ['pass_deep', 'play_action_deep'];
+
+function isRunPlay(playType: PlayType): boolean {
+  return RUN_PLAY_TYPES.indexOf(playType) !== -1;
+}
+
+function isPassPlay(playType: PlayType): boolean {
+  return PASS_PLAY_TYPES.indexOf(playType) !== -1;
+}
+
+function isPlayAction(playType: PlayType): boolean {
+  return PLAY_ACTION_TYPES.indexOf(playType) !== -1;
+}
+
+function isDeepPass(playType: PlayType): boolean {
+  return DEEP_PASS_TYPES.indexOf(playType) !== -1;
+}
 import {
   TeamGameState,
   getPlayerWeeklyVariance,
@@ -172,49 +196,51 @@ function selectPenalty(team: 'offense' | 'defense'): { type: string; yards: numb
  */
 function getRelevantSkill(player: Player, playType: PlayType, isOffense: boolean): string {
   const position = player.position;
+  const isRun = isRunPlay(playType);
+  const isPass = isPassPlay(playType);
 
   if (isOffense) {
     if (position === 'QB') {
-      if (playType.includes('pass') || playType.includes('action')) {
+      if (isPass) {
         return 'accuracy';
       }
       return 'mobility';
     }
     if (position === 'RB') {
-      if (playType.startsWith('run')) {
+      if (isRun) {
         return 'vision';
       }
       return 'catching';
     }
     if (position === 'WR') {
-      if (playType === 'pass_deep' || playType === 'play_action_deep') {
+      if (isDeepPass(playType)) {
         return 'tracking';
       }
       return 'routeRunning';
     }
     if (position === 'TE') {
-      if (playType.startsWith('run')) {
+      if (isRun) {
         return 'blocking';
       }
       return 'catching';
     }
-    if (['LT', 'LG', 'C', 'RG', 'RT'].includes(position)) {
-      if (playType.startsWith('run')) {
+    if (position === 'LT' || position === 'LG' || position === 'C' || position === 'RG' || position === 'RT') {
+      if (isRun) {
         return 'runBlock';
       }
       return 'passBlock';
     }
   } else {
-    if (['DE', 'DT'].includes(position)) {
-      if (playType.startsWith('run')) {
+    if (position === 'DE' || position === 'DT') {
+      if (isRun) {
         return 'runDefense';
       }
       return 'passRush';
     }
-    if (['OLB', 'ILB'].includes(position)) {
+    if (position === 'OLB' || position === 'ILB') {
       return 'tackling';
     }
-    if (['CB', 'FS', 'SS'].includes(position)) {
+    if (position === 'CB' || position === 'FS' || position === 'SS') {
       return 'manCoverage';
     }
   }
@@ -315,11 +341,11 @@ export function resolveEnhancedPlay(
     context.distance,
     context.fieldPosition
   );
-  const isRunPlay = playType.startsWith('run') || playType === 'qb_sneak';
+  const isRun = isRunPlay(playType);
   const personnelMismatch = calculatePersonnelMismatch(
     offensePersonnel,
     defensePersonnel,
-    isRunPlay
+    isRun
   );
 
   // 2. SCHEME MATCHUP EFFECTS
@@ -339,7 +365,7 @@ export function resolveEnhancedPlay(
 
   // 4. PRESNAP READ (for pass plays)
   let presnapResult: PresnapReadResult | undefined;
-  if (playType.includes('pass') || playType.includes('action')) {
+  if (isPassPlay(playType)) {
     presnapResult = executePresnapRead(
       offensiveTeam.offense.qb,
       playType,
@@ -357,7 +383,7 @@ export function resolveEnhancedPlay(
   // 5. PLAY-ACTION EFFECTIVENESS
   let playActionBonus = 0;
   let paEffectiveness: PlayActionEffectiveness | undefined;
-  if (playType.includes('action')) {
+  if (isPlayAction(playType)) {
     const runStats = enhancedState.offenseRunTracker.getStats();
     paEffectiveness = calculatePlayActionEffectiveness(runStats);
     playActionBonus = getPlayActionModifier(
@@ -368,7 +394,7 @@ export function resolveEnhancedPlay(
 
   // 6. PASS RUSH PHASES (for pass plays)
   let passRushResult: PhaseResult | undefined;
-  if (playType.includes('pass') || playType.includes('action')) {
+  if (isPassPlay(playType)) {
     const qbMobility = offensiveTeam.offense.qb.skills.mobility?.trueValue || 50;
     passRushResult = getOverallPassRushResult(
       compositeRatings.offense.passProtection,
@@ -405,11 +431,11 @@ export function resolveEnhancedPlay(
   );
 
   // 8. CALCULATE MATCHUP ADVANTAGE
-  const isPassPlay = playType.includes('pass') || playType.includes('action');
+  const isPass = isPassPlay(playType);
   let matchupAdvantage = getMatchupAdvantage(
     compositeRatings.offense,
     compositeRatings.defense,
-    isPassPlay
+    isPass
   );
 
   // Apply all modifiers to matchup advantage
@@ -467,8 +493,8 @@ export function resolveEnhancedPlay(
   }
 
   // 12. PROCESS INJURIES
-  const hadBigHit = roll.secondaryEffects.includes('big_hit');
-  const shouldCheckInjury = roll.secondaryEffects.includes('injury_check');
+  const hadBigHit = roll.secondaryEffects.indexOf('big_hit' as SecondaryEffect) !== -1;
+  const shouldCheckInjury = roll.secondaryEffects.indexOf('injury_check' as SecondaryEffect) !== -1;
 
   let injuryInfo = {
     injured: false,
@@ -535,14 +561,14 @@ export function resolveEnhancedPlay(
   }
 
   // Track RB touches
-  if (isRunPlay && offensiveTeam.offense.rb[0]) {
+  if (isRun && offensiveTeam.offense.rb[0]) {
     const rbId = offensiveTeam.offense.rb[0].id;
     const currentTouches = enhancedState.touchCounts.get(rbId) || 0;
     enhancedState.touchCounts.set(rbId, currentTouches + 1);
   }
 
   // Update run game tracker
-  if (isRunPlay) {
+  if (isRun) {
     enhancedState.offenseRunTracker.recordRun(roll.yards, context.distance);
   }
 
@@ -605,7 +631,7 @@ export function resolveEnhancedPlay(
     } else {
       yardsGained = penalty.yards;
       newFieldPosition = Math.min(99, context.fieldPosition + penalty.yards);
-      if (['Pass Interference', 'Defensive Holding', 'Roughing the Passer'].includes(penalty.type)) {
+      if (penalty.type === 'Pass Interference' || penalty.type === 'Defensive Holding' || penalty.type === 'Roughing the Passer') {
         newDown = 1;
         newDistance = 10;
         firstDown = true;
@@ -682,9 +708,13 @@ function getPrimaryPlayers(
   defensivePlayers: PlayerWithEffective[],
   playType: PlayType
 ): { offensive: string; defensive: string | null } {
-  if (playType.startsWith('run') || playType === 'qb_sneak' || playType === 'qb_scramble') {
-    const rb = offensivePlayers.find((p) => p.player.position === 'RB');
-    const qb = offensivePlayers.find((p) => p.player.position === 'QB');
+  if (isRunPlay(playType) || playType === 'qb_scramble') {
+    let rb: PlayerWithEffective | undefined;
+    let qb: PlayerWithEffective | undefined;
+    for (const p of offensivePlayers) {
+      if (p.player.position === 'RB') rb = p;
+      if (p.player.position === 'QB') qb = p;
+    }
     const tackler = defensivePlayers.length > 0 ? defensivePlayers[0] : null;
 
     return {
@@ -696,11 +726,23 @@ function getPrimaryPlayers(
     };
   }
 
-  const qb = offensivePlayers.find((p) => p.player.position === 'QB');
-  const receiver = offensivePlayers.find((p) => ['WR', 'TE', 'RB'].includes(p.player.position));
-  const defender = defensivePlayers.find((p) =>
-    ['CB', 'FS', 'SS', 'OLB', 'ILB'].includes(p.player.position)
-  );
+  let qb: PlayerWithEffective | undefined;
+  let receiver: PlayerWithEffective | undefined;
+  for (const p of offensivePlayers) {
+    if (p.player.position === 'QB') qb = p;
+    if (p.player.position === 'WR' || p.player.position === 'TE' || p.player.position === 'RB') {
+      if (!receiver) receiver = p;
+    }
+  }
+
+  let defender: PlayerWithEffective | undefined;
+  for (const p of defensivePlayers) {
+    const pos = p.player.position;
+    if (pos === 'CB' || pos === 'FS' || pos === 'SS' || pos === 'OLB' || pos === 'ILB') {
+      defender = p;
+      break;
+    }
+  }
 
   return {
     offensive: qb?.player.id || offensivePlayers[0]?.player.id || '',

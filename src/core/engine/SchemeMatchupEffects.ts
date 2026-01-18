@@ -315,8 +315,12 @@ export function getSchemeMatchupEffects(
   offense: OffensiveScheme,
   defense: DefensiveScheme
 ): SchemeMatchupEffect {
-  const matchup = SCHEME_MATCHUPS.find((m) => m.offense === offense && m.defense === defense);
-  return matchup || { ...DEFAULT_MATCHUP, offense, defense };
+  for (const m of SCHEME_MATCHUPS) {
+    if (m.offense === offense && m.defense === defense) {
+      return m;
+    }
+  }
+  return { ...DEFAULT_MATCHUP, offense, defense };
 }
 
 /**
