@@ -130,8 +130,9 @@ export function determinePassRushPhase(
 
 /**
  * Calculate phase-adjusted matchup
+ * Reserved for future detailed phase-by-phase matchup resolution
  */
-function calculatePhaseMatchup(
+function _calculatePhaseMatchup(
   olPlayers: OLPlayer[],
   rushers: RusherPlayer[],
   phase: PassRushPhase

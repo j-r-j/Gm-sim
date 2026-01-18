@@ -11,7 +11,7 @@
  * - Non-linear Fatigue Curves
  */
 
-import { PlayType, PlayOutcome, generateOutcomeTable, rollOutcome, SecondaryEffect } from './OutcomeTables';
+import { PlayType, generateOutcomeTable, rollOutcome, SecondaryEffect } from './OutcomeTables';
 import { PlayCallContext, OffensivePlayCall, DefensivePlayCall } from './PlayCaller';
 
 /**
@@ -53,7 +53,7 @@ import {
   WeatherCondition,
 } from './EffectiveRatingCalculator';
 import { PlayerWithEffective } from './MatchupResolver';
-import { checkForInjury, createNoInjuryResult } from './InjuryProcessor';
+import { checkForInjury } from './InjuryProcessor';
 import {
   calculateFatigueIncrease,
   determinePlayIntensity,
@@ -68,7 +68,6 @@ import { PenaltyDetails, PlayResult } from './PlayResolver';
 import {
   calculateTeamCompositeRatings,
   getMatchupAdvantage,
-  TeamCompositeRatings,
 } from './TeamCompositeRatings';
 import {
   selectOffensivePersonnel,
@@ -80,7 +79,6 @@ import {
 import {
   getSchemeMatchupEffects,
   getPlayTypeEffects,
-  applySchemeEffects,
 } from './SchemeMatchupEffects';
 import {
   RunGameTracker,

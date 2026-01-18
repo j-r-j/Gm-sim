@@ -201,7 +201,8 @@ export function calculatePersonnelMismatch(
   isRunPlay: boolean
 ): PersonnelMismatch {
   const offense = OFFENSIVE_PERSONNEL[offensePackage];
-  const defense = DEFENSIVE_PERSONNEL[defensePackage];
+  // Defense personnel info available for future detailed matchup calculations
+  const _defense = DEFENSIVE_PERSONNEL[defensePackage];
 
   // Heavy offense vs light defense = run advantage
   if (offense.runTendency >= 60 && defensePackage === 'dime') {
