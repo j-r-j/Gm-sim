@@ -188,20 +188,6 @@ export function getScoutingVacancies(state: ScoutingDepartmentState): ScoutingVa
 }
 
 /**
- * Helper to get region display name
- */
-function getRegionDisplayNameForVacancy(region: ScoutRegion): string {
-  const displayNames: Record<ScoutRegion, string> = {
-    northeast: 'Northeast',
-    southeast: 'Southeast',
-    midwest: 'Midwest',
-    west: 'West Coast',
-    southwest: 'Southwest',
-  };
-  return displayNames[region];
-}
-
-/**
  * Hires a scout to the department
  */
 export function hireScout(

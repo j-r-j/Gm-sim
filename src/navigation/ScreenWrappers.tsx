@@ -3520,7 +3520,6 @@ export function ProspectDetailScreenWrapper({
   }
 
   // Get user team's scouts
-  const userTeam = gameState.teams[gameState.userTeamId];
   const teamScouts = Object.values(gameState.scouts || {}).filter(
     (scout) => scout.teamId === gameState.userTeamId
   );

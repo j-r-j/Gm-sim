@@ -16,7 +16,7 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import { Scout } from '../core/models/staff/Scout';
-import { ScoutReport, formatSkillRange } from '../core/scouting/ScoutReportGenerator';
+import { ScoutReport } from '../core/scouting/ScoutReportGenerator';
 import { FocusScoutingProgress } from '../core/scouting/FocusPlayerSystem';
 import { DraftTier } from '../core/scouting/DraftBoardManager';
 import { ScoutingStatusCard } from '../components/scouting/ScoutingStatusCard';
@@ -399,7 +399,6 @@ export function ProspectDetailScreen({
 }: ProspectDetailScreenProps): React.JSX.Element {
   const [showAssignModal, setShowAssignModal] = useState(false);
 
-  const hasFocusReport = reports.some((r) => r.reportType === 'focus');
   const sortedReports = [...reports].sort((a, b) => b.generatedAt - a.generatedAt);
 
   // Get aggregated stats
