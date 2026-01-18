@@ -64,7 +64,8 @@ export interface PreviousYearStandings {
 export interface SeasonSchedule {
   year: number;
   regularSeason: ScheduledGame[];
-  byeWeeks: Map<string, number>;
+  /** Bye weeks stored as plain object (teamId -> week) for JSON serialization compatibility */
+  byeWeeks: Record<string, number>;
   playoffs: PlayoffSchedule | null;
 }
 
@@ -288,7 +289,7 @@ function assignTimeSlot(week: number, isDivisional: boolean): TimeSlot {
  */
 function distributeGamesAcrossWeeks(
   games: ScheduledGame[],
-  byeWeeks: Map<string, number>
+  byeWeeks: Record<string, number>
 ): ScheduledGame[] {
   const teamWeeklyGames = new Map<string, Set<number>>();
 
@@ -299,7 +300,7 @@ function distributeGamesAcrossWeeks(
     allTeamIds.add(game.awayTeamId);
   }
   for (const teamId of allTeamIds) {
-    const byeWeek = byeWeeks.get(teamId);
+    const byeWeek = byeWeeks[teamId];
     const unavailable = new Set<number>();
     if (byeWeek) unavailable.add(byeWeek);
     teamWeeklyGames.set(teamId, unavailable);
@@ -422,7 +423,9 @@ export function generateSeasonSchedule(
   previousYearStandings: PreviousYearStandings,
   year: number
 ): SeasonSchedule {
-  const byeWeeks = assignByeWeeks(teams);
+  const byeWeeksMap = assignByeWeeks(teams);
+  // Convert Map to plain object for JSON serialization compatibility
+  const byeWeeks: Record<string, number> = Object.fromEntries(byeWeeksMap);
   const allGames: ScheduledGame[] = [];
   const processedPairs = new Set<string>();
   let gameIndex = 0;

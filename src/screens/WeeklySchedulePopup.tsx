@@ -2,6 +2,13 @@
  * WeeklySchedulePopup
  * Shows all games for the current week when advancing.
  * User can play/sim their game, then watch live results for other games.
+ *
+ * Premium UX features inspired by Madden, Football Manager, and NBA 2K:
+ * - Animated score counters that count up dramatically
+ * - Context-based game badges (UPSET, BLOWOUT, THRILLER, OT)
+ * - Haptic feedback on score reveals
+ * - Animated progress indicator with contextual messages
+ * - Momentum-based color shifts for wins/losses
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -13,7 +20,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Easing,
+  Platform,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { BoxScoreModal } from '../components/BoxScoreModal';
 import { BoxScore } from '../core/game/BoxScoreGenerator';
@@ -108,9 +118,268 @@ function getPlayoffRoundName(week: number): string {
 }
 
 /**
+ * Get game context badge based on score differential and game type
+ */
+type GameBadge = 'UPSET' | 'BLOWOUT' | 'THRILLER' | 'SHUTOUT' | null;
+
+function getGameBadge(game: SimulatedGame): GameBadge {
+  const scoreDiff = Math.abs(game.homeScore - game.awayScore);
+  const totalScore = game.homeScore + game.awayScore;
+
+  // Shutout (one team scored 0)
+  if (game.homeScore === 0 || game.awayScore === 0) {
+    return 'SHUTOUT';
+  }
+
+  // Blowout (21+ point difference)
+  if (scoreDiff >= 21) {
+    return 'BLOWOUT';
+  }
+
+  // Thriller (3 or fewer points difference and high scoring)
+  if (scoreDiff <= 3 && totalScore >= 40) {
+    return 'THRILLER';
+  }
+
+  // Upset detection would require knowing records/rankings
+  // For now, we can mark close games between division rivals as potential upsets
+  if (scoreDiff <= 7 && game.isDivisional) {
+    return 'UPSET';
+  }
+
+  return null;
+}
+
+/**
+ * Get badge styling based on type
+ */
+function getBadgeStyle(badge: GameBadge): { bg: string; text: string } {
+  switch (badge) {
+    case 'UPSET':
+      return { bg: '#f6ad55', text: '#744210' }; // Orange
+    case 'BLOWOUT':
+      return { bg: '#fc8181', text: '#742a2a' }; // Red
+    case 'THRILLER':
+      return { bg: '#68d391', text: '#22543d' }; // Green
+    case 'SHUTOUT':
+      return { bg: '#b794f4', text: '#44337a' }; // Purple
+    default:
+      return { bg: colors.border, text: colors.textSecondary };
+  }
+}
+
+/**
+ * Trigger haptic feedback (mobile only)
+ */
+async function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'success' = 'medium') {
+  try {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      switch (type) {
+        case 'light':
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          break;
+        case 'medium':
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          break;
+        case 'heavy':
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          break;
+        case 'success':
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          break;
+      }
+    }
+  } catch {
+    // Haptics not available, ignore
+  }
+}
+
+/**
  * Phase indicator for game simulation
  */
 type SimPhase = 'initial' | 'user_playing' | 'simulating_others' | 'complete';
+
+/**
+ * Animated score component that counts up
+ */
+function AnimatedScore({
+  value,
+  isWinner,
+  isAnimating,
+  delay = 0,
+}: {
+  value: number;
+  isWinner: boolean;
+  isAnimating: boolean;
+  delay?: number;
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const flashAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isAnimating) {
+      // Reset values
+      animatedValue.setValue(0);
+      setDisplayValue(0);
+
+      // Start animation after delay
+      const timeout = setTimeout(() => {
+        // Count up animation
+        Animated.timing(animatedValue, {
+          toValue: value,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }).start();
+
+        // Scale pop animation
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.3,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Flash animation for winner
+        if (isWinner) {
+          Animated.sequence([
+            Animated.timing(flashAnim, {
+              toValue: 1,
+              duration: 150,
+              useNativeDriver: false,
+            }),
+            Animated.timing(flashAnim, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: false,
+            }),
+          ]).start();
+        }
+      }, delay);
+
+      // Listen to animated value changes
+      const listener = animatedValue.addListener(({ value: v }) => {
+        setDisplayValue(Math.round(v));
+      });
+
+      return () => {
+        clearTimeout(timeout);
+        animatedValue.removeListener(listener);
+      };
+    } else {
+      setDisplayValue(value);
+    }
+  }, [isAnimating, value, delay, animatedValue, scaleAnim, flashAnim, isWinner]);
+
+  const backgroundColor = flashAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', isWinner ? 'rgba(56, 161, 105, 0.3)' : 'transparent'],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.scoreContainer,
+        {
+          transform: [{ scale: scaleAnim }],
+          backgroundColor,
+        },
+      ]}
+    >
+      <Text style={[styles.score, isWinner && styles.winnerText]}>{displayValue}</Text>
+    </Animated.View>
+  );
+}
+
+/**
+ * Animated progress dots
+ */
+function LoadingDots() {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animate = () => {
+      Animated.loop(
+        Animated.stagger(200, [
+          Animated.sequence([
+            Animated.timing(dot1, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot1, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(dot2, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot2, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.timing(dot3, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot3, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      ).start();
+    };
+    animate();
+  }, [dot1, dot2, dot3]);
+
+  return (
+    <View style={styles.dotsContainer}>
+      {[dot1, dot2, dot3].map((dot, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.dot,
+            {
+              transform: [
+                {
+                  translateY: dot.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -8],
+                  }),
+                },
+              ],
+              opacity: dot.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.4, 1],
+              }),
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
 
 /**
  * Single game card for the schedule
@@ -120,74 +389,134 @@ function GameCard({
   isSimulated,
   isAnimating,
   onPress,
+  userTeamId,
 }: {
   game: WeeklyGame | SimulatedGame;
   isSimulated: boolean;
   isAnimating: boolean;
   onPress: () => void;
+  userTeamId: string;
 }): React.JSX.Element {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(isSimulated ? 0 : 20)).current;
+  const opacityAnim = useRef(new Animated.Value(isSimulated ? 1 : 0)).current;
 
   useEffect(() => {
     if (isAnimating) {
-      // Animate the score reveal
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.02,
-          duration: 150,
+      // Slide in and fade animation
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.out(Easing.back(1.5)),
           useNativeDriver: true,
         }),
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        // Scale pop
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.03,
+            duration: 200,
             useNativeDriver: true,
           }),
           Animated.timing(scaleAnim, {
             toValue: 1,
-            duration: 150,
+            duration: 200,
             useNativeDriver: true,
           }),
         ]),
       ]).start();
+
+      // Trigger haptic on score reveal
+      triggerHaptic('medium');
     } else if (isSimulated) {
-      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      opacityAnim.setValue(1);
     }
-  }, [isAnimating, isSimulated, fadeAnim, scaleAnim]);
+  }, [isAnimating, isSimulated, slideAnim, opacityAnim, scaleAnim]);
 
   const simulatedGame = game as SimulatedGame;
   const hasScore = isSimulated && simulatedGame.homeScore !== undefined;
   const homeWon = hasScore && simulatedGame.homeScore > simulatedGame.awayScore;
   const awayWon = hasScore && simulatedGame.awayScore > simulatedGame.homeScore;
 
+  // Check if user's team won/lost for this game
+  const isUserHome = game.homeTeam.id === userTeamId;
+  const isUserAway = game.awayTeam.id === userTeamId;
+  const userWon = (isUserHome && homeWon) || (isUserAway && awayWon);
+  const userLost = (isUserHome && awayWon) || (isUserAway && homeWon);
+
+  // Get game badge for completed games
+  const badge = hasScore ? getGameBadge(simulatedGame) : null;
+  const badgeStyle = badge ? getBadgeStyle(badge) : null;
+
+  // Dynamic border color based on user's game result
+  const getBorderStyle = () => {
+    if (game.isUserGame && isSimulated) {
+      if (userWon) return styles.userWonCard;
+      if (userLost) return styles.userLostCard;
+    }
+    if (game.isUserGame) return styles.userGameCard;
+    if (isSimulated) return styles.completedGameCard;
+    return {};
+  };
+
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} disabled={!isSimulated}>
       <Animated.View
         style={[
           styles.gameCard,
-          game.isUserGame && styles.userGameCard,
-          isSimulated && styles.completedGameCard,
-          { transform: [{ scale: scaleAnim }] },
+          getBorderStyle(),
+          {
+            transform: [{ scale: scaleAnim }, { translateX: slideAnim }],
+            opacity: isSimulated ? 1 : opacityAnim,
+          },
         ]}
       >
         {game.isUserGame && (
-          <View style={styles.yourGameBanner}>
-            <Text style={styles.yourGameText}>YOUR GAME</Text>
+          <View
+            style={[
+              styles.yourGameBanner,
+              userWon && styles.yourGameBannerWin,
+              userLost && styles.yourGameBannerLoss,
+            ]}
+          >
+            <Text style={styles.yourGameText}>
+              {isSimulated
+                ? userWon
+                  ? 'VICTORY!'
+                  : userLost
+                    ? 'DEFEAT'
+                    : 'YOUR GAME'
+                : 'YOUR GAME'}
+            </Text>
           </View>
         )}
 
         <View style={styles.gameContent}>
-          {/* Time slot / Status */}
+          {/* Time slot / Status / Badge */}
           <View style={styles.gameStatus}>
-            {isSimulated ? (
-              <Text style={styles.finalText}>FINAL</Text>
-            ) : (
-              <Text style={styles.timeSlotText}>
-                {TIME_SLOT_NAMES[game.timeSlot] || game.timeSlot}
-              </Text>
-            )}
-            {game.isDivisional && <Text style={styles.divBadge}>DIV</Text>}
+            <View style={styles.statusLeft}>
+              {isSimulated ? (
+                <Text style={styles.finalText}>FINAL</Text>
+              ) : (
+                <Text style={styles.timeSlotText}>
+                  {TIME_SLOT_NAMES[game.timeSlot] || game.timeSlot}
+                </Text>
+              )}
+            </View>
+            <View style={styles.badgesContainer}>
+              {badge && badgeStyle && (
+                <View style={[styles.gameBadge, { backgroundColor: badgeStyle.bg }]}>
+                  <Text style={[styles.gameBadgeText, { color: badgeStyle.text }]}>{badge}</Text>
+                </View>
+              )}
+              {game.isDivisional && <Text style={styles.divBadge}>DIV</Text>}
+            </View>
           </View>
 
           {/* Matchup */}
@@ -202,11 +531,12 @@ function GameCard({
               </Text>
               <Text style={styles.record}>({game.awayTeam.record})</Text>
               {hasScore && (
-                <Animated.Text
-                  style={[styles.score, awayWon && styles.winnerText, { opacity: fadeAnim }]}
-                >
-                  {simulatedGame.awayScore}
-                </Animated.Text>
+                <AnimatedScore
+                  value={simulatedGame.awayScore}
+                  isWinner={awayWon}
+                  isAnimating={isAnimating}
+                  delay={0}
+                />
               )}
             </View>
 
@@ -222,11 +552,12 @@ function GameCard({
               </Text>
               <Text style={styles.record}>({game.homeTeam.record})</Text>
               {hasScore && (
-                <Animated.Text
-                  style={[styles.score, homeWon && styles.winnerText, { opacity: fadeAnim }]}
-                >
-                  {simulatedGame.homeScore}
-                </Animated.Text>
+                <AnimatedScore
+                  value={simulatedGame.homeScore}
+                  isWinner={homeWon}
+                  isAnimating={isAnimating}
+                  delay={100}
+                />
               )}
             </View>
           </View>
@@ -239,10 +570,38 @@ function GameCard({
   );
 }
 
+/**
+ * Animated progress bar
+ */
+function AnimatedProgressBar({ progress }: { progress: number }) {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: progress,
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progress, widthAnim]);
+
+  const width = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
+  return (
+    <View style={styles.progressBar}>
+      <Animated.View style={[styles.progressFill, { width }]} />
+    </View>
+  );
+}
+
 export function WeeklySchedulePopup({
   week,
   phase,
   games,
+  userTeamId,
   isUserOnBye,
   onPlayGame,
   onSimUserGame,
@@ -255,6 +614,8 @@ export function WeeklySchedulePopup({
   const [animatingGameId, setAnimatingGameId] = useState<string | null>(null);
   const [selectedBoxScore, setSelectedBoxScore] = useState<BoxScore | null>(null);
   const [showBoxScore, setShowBoxScore] = useState(false);
+  const [currentSimGame, setCurrentSimGame] = useState(0);
+  const [totalSimGames, setTotalSimGames] = useState(0);
 
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
   const userGame = games.find((g) => g.isUserGame);
@@ -262,6 +623,7 @@ export function WeeklySchedulePopup({
   const completedCount = simulatedGames.size;
   const totalCount = games.length;
   const allComplete = completedCount === totalCount;
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   // Handle playing user's game (navigates to gamecast)
   const handlePlayGame = useCallback(() => {
@@ -272,6 +634,8 @@ export function WeeklySchedulePopup({
   // Handle simming user's game
   const handleSimUserGame = useCallback(async () => {
     setSimPhase('user_playing');
+    triggerHaptic('light');
+
     const result = await onSimUserGame();
     if (result && userGame) {
       const simGame: SimulatedGame = {
@@ -284,34 +648,61 @@ export function WeeklySchedulePopup({
       };
       setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
       setAnimatingGameId(userGame.gameId);
-      setTimeout(() => setAnimatingGameId(null), 500);
+
+      // Check if user won for celebration haptic
+      const isUserHome = userGame.homeTeam.id === userTeamId;
+      const userWon = isUserHome
+        ? result.homeScore > result.awayScore
+        : result.awayScore > result.homeScore;
+
+      if (userWon) {
+        triggerHaptic('success');
+      } else {
+        triggerHaptic('heavy');
+      }
+
+      setTimeout(() => setAnimatingGameId(null), 800);
     }
     // Auto-proceed to simulating other games
     simulateOtherGames();
-  }, [onSimUserGame, userGame]);
+  }, [onSimUserGame, userGame, userTeamId]);
 
   // Simulate other games with animation
   const simulateOtherGames = useCallback(async () => {
     setSimPhase('simulating_others');
+    triggerHaptic('light');
 
     const results = await onSimOtherGames();
+    setTotalSimGames(results.length);
 
-    // Animate each game result one by one
+    // Animate each game result one by one with dramatic pacing
     for (let i = 0; i < results.length; i++) {
       const game = results[i];
+      setCurrentSimGame(i + 1);
+
       await new Promise<void>((resolve) => {
+        // Variable delay based on game type for drama
+        const isCloserGame =
+          game.homeScore !== undefined &&
+          game.awayScore !== undefined &&
+          Math.abs(game.homeScore - game.awayScore) <= 7;
+        const delay = isCloserGame ? 500 : 350; // Longer pause for close games
+
         setTimeout(() => {
           setAnimatingGameId(game.gameId);
           setSimulatedGames((prev) => new Map(prev).set(game.gameId, game));
+          triggerHaptic('light');
+
           setTimeout(() => {
             setAnimatingGameId(null);
             resolve();
-          }, 400);
-        }, 300);
+          }, 600); // Animation duration
+        }, delay);
       });
     }
 
     setSimPhase('complete');
+    triggerHaptic('success');
   }, [onSimOtherGames]);
 
   // Handle user returning from gamecast with result
@@ -328,7 +719,7 @@ export function WeeklySchedulePopup({
         };
         setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
         setAnimatingGameId(userGame.gameId);
-        setTimeout(() => setAnimatingGameId(null), 500);
+        setTimeout(() => setAnimatingGameId(null), 800);
 
         // Auto-proceed to simulating other games
         simulateOtherGames();
@@ -352,6 +743,7 @@ export function WeeklySchedulePopup({
     (gameId: string) => {
       const game = simulatedGames.get(gameId);
       if (game?.boxScore) {
+        triggerHaptic('light');
         setSelectedBoxScore(game.boxScore);
         setShowBoxScore(true);
       }
@@ -361,6 +753,7 @@ export function WeeklySchedulePopup({
 
   // Handle completing the week
   const handleComplete = useCallback(() => {
+    triggerHaptic('medium');
     const allResults = Array.from(simulatedGames.values());
     onComplete(allResults);
   }, [simulatedGames, onComplete]);
@@ -378,8 +771,17 @@ export function WeeklySchedulePopup({
         isSimulated={isSimulated}
         isAnimating={isAnimating}
         onPress={() => handleGamePress(game.gameId)}
+        userTeamId={userTeamId}
       />
     );
+  };
+
+  // Get simulation status message
+  const getSimStatusMessage = () => {
+    if (simPhase === 'simulating_others' && totalSimGames > 0) {
+      return `Simulating game ${currentSimGame} of ${totalSimGames}...`;
+    }
+    return 'Simulating games...';
   };
 
   return (
@@ -400,11 +802,7 @@ export function WeeklySchedulePopup({
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View
-            style={[styles.progressFill, { width: `${(completedCount / totalCount) * 100}%` }]}
-          />
-        </View>
+        <AnimatedProgressBar progress={progress} />
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -461,7 +859,18 @@ export function WeeklySchedulePopup({
             <Text style={styles.sectionTitle}>Around the League</Text>
             {simPhase === 'simulating_others' && (
               <View style={styles.simulatingBanner}>
-                <Text style={styles.simulatingText}>Simulating games...</Text>
+                <View style={styles.simulatingContent}>
+                  <LoadingDots />
+                  <Text style={styles.simulatingText}>{getSimStatusMessage()}</Text>
+                </View>
+                <View style={styles.miniProgressBar}>
+                  <View
+                    style={[
+                      styles.miniProgressFill,
+                      { width: `${(currentSimGame / Math.max(totalSimGames, 1)) * 100}%` },
+                    ]}
+                  />
+                </View>
               </View>
             )}
             {otherGames.map(renderGame)}
@@ -573,6 +982,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.secondary,
   },
+  userWonCard: {
+    borderWidth: 3,
+    borderColor: colors.success,
+  },
+  userLostCard: {
+    borderWidth: 2,
+    borderColor: colors.error,
+  },
   completedGameCard: {
     borderWidth: 1,
     borderColor: colors.success,
@@ -581,6 +998,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
+  },
+  yourGameBannerWin: {
+    backgroundColor: colors.success,
+  },
+  yourGameBannerLoss: {
+    backgroundColor: colors.error,
   },
   yourGameText: {
     color: colors.textOnPrimary,
@@ -597,6 +1020,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   timeSlotText: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
@@ -605,6 +1037,15 @@ const styles = StyleSheet.create({
   finalText: {
     fontSize: fontSize.xs,
     color: colors.success,
+    fontWeight: fontWeight.bold,
+  },
+  gameBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  gameBadgeText: {
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
   },
   divBadge: {
@@ -641,11 +1082,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginRight: spacing.md,
   },
+  scoreContainer: {
+    minWidth: 36,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   score: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.text,
-    minWidth: 30,
     textAlign: 'right',
   },
   winnerText: {
@@ -718,11 +1166,40 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
   },
+  simulatingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
   simulatingText: {
     color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
+  },
+  miniProgressBar: {
+    height: 3,
+    backgroundColor: 'rgba(26, 54, 93, 0.2)',
+    borderRadius: 2,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  miniProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
+    height: 20,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
   },
   actionBar: {
     padding: spacing.md,

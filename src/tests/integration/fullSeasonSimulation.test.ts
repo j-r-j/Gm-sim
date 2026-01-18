@@ -196,9 +196,10 @@ describe('Full Season Simulation Integration Tests', () => {
     it('should track bye weeks', () => {
       const schedule = manager.getSchedule();
 
-      // Bye weeks should be defined
+      // Bye weeks should be defined as a plain object (for JSON serialization compatibility)
       expect(schedule.byeWeeks).toBeDefined();
-      expect(schedule.byeWeeks instanceof Map).toBe(true);
+      expect(typeof schedule.byeWeeks).toBe('object');
+      expect(Object.keys(schedule.byeWeeks).length).toBeGreaterThan(0);
     });
   });
 });
