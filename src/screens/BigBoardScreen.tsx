@@ -280,6 +280,7 @@ export function BigBoardScreen({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterContainer}
+          contentContainerStyle={styles.filterContentContainer}
         >
           {POSITIONS.map((pos) => (
             <TouchableOpacity
@@ -305,6 +306,7 @@ export function BigBoardScreen({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterContainer}
+          contentContainerStyle={styles.filterContentContainer}
         >
           {TIERS.map((tier) => (
             <TouchableOpacity
@@ -469,6 +471,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  filterContentContainer: {
+    alignItems: 'center',
   },
   filterChip: {
     paddingHorizontal: spacing.md,
