@@ -421,7 +421,13 @@ export function applySchemeEffects<T extends OutcomeTableEntryLike>(
   if (isPassPlay) {
     // Completion effects
     if (effects.completion) {
-      const completionOutcomes = ['touchdown', 'big_gain', 'good_gain', 'moderate_gain', 'short_gain'];
+      const completionOutcomes = [
+        'touchdown',
+        'big_gain',
+        'good_gain',
+        'moderate_gain',
+        'short_gain',
+      ];
       const multiplier = 1 + effects.completion / 100;
       for (const outcome of completionOutcomes) {
         modifyEntry(outcome, multiplier);

@@ -17,8 +17,21 @@ import { PlayCallContext, OffensivePlayCall, DefensivePlayCall } from './PlayCal
 /**
  * Helper functions for PlayType checking
  */
-const RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep', 'qb_sneak'];
-const PASS_PLAY_TYPES: PlayType[] = ['pass_short', 'pass_medium', 'pass_deep', 'pass_screen', 'play_action_short', 'play_action_deep'];
+const RUN_PLAY_TYPES: PlayType[] = [
+  'run_inside',
+  'run_outside',
+  'run_draw',
+  'run_sweep',
+  'qb_sneak',
+];
+const PASS_PLAY_TYPES: PlayType[] = [
+  'pass_short',
+  'pass_medium',
+  'pass_deep',
+  'pass_screen',
+  'play_action_short',
+  'play_action_deep',
+];
 const PLAY_ACTION_TYPES: PlayType[] = ['play_action_short', 'play_action_deep'];
 const DEEP_PASS_TYPES: PlayType[] = ['pass_deep', 'play_action_deep'];
 
@@ -65,10 +78,7 @@ import { RoleType } from '../models/player/RoleFit';
 import { PenaltyDetails, PlayResult } from './PlayResolver';
 
 // New system imports
-import {
-  calculateTeamCompositeRatings,
-  getMatchupAdvantage,
-} from './TeamCompositeRatings';
+import { calculateTeamCompositeRatings, getMatchupAdvantage } from './TeamCompositeRatings';
 import {
   selectOffensivePersonnel,
   selectDefensivePersonnel,
@@ -87,24 +97,15 @@ import {
   getPlayActionModifier,
   PlayActionEffectiveness,
 } from './PlayActionEffectiveness';
-import {
-  getOverallPassRushResult,
-  PhaseResult,
-} from './PassRushPhases';
-import {
-  executePresnapRead,
-  PresnapReadResult,
-} from './PresnapReads';
+import { getOverallPassRushResult, PhaseResult } from './PassRushPhases';
+import { executePresnapRead, PresnapReadResult } from './PresnapReads';
 import {
   determineSituation,
   getSituationalModifier,
   calculatePlayerSituationalModifier,
   SituationContext,
 } from './SituationalModifiers';
-import {
-  calculateFatigueEffectiveness,
-  getFatigueInjuryRiskMultiplier,
-} from './FatigueCurves';
+import { calculateFatigueEffectiveness, getFatigueInjuryRiskMultiplier } from './FatigueCurves';
 
 /**
  * Enhanced play result with additional data
@@ -223,7 +224,13 @@ function getRelevantSkill(player: Player, playType: PlayType, isOffense: boolean
       }
       return 'catching';
     }
-    if (position === 'LT' || position === 'LG' || position === 'C' || position === 'RG' || position === 'RT') {
+    if (
+      position === 'LT' ||
+      position === 'LG' ||
+      position === 'C' ||
+      position === 'RG' ||
+      position === 'RT'
+    ) {
       if (isRun) {
         return 'runBlock';
       }
@@ -341,11 +348,7 @@ export function resolveEnhancedPlay(
     context.fieldPosition
   );
   const isRun = isRunPlay(playType);
-  const personnelMismatch = calculatePersonnelMismatch(
-    offensePersonnel,
-    defensePersonnel,
-    isRun
-  );
+  const personnelMismatch = calculatePersonnelMismatch(offensePersonnel, defensePersonnel, isRun);
 
   // 2. SCHEME MATCHUP EFFECTS
   const schemeMatchup = getSchemeMatchupEffects(
@@ -385,10 +388,7 @@ export function resolveEnhancedPlay(
   if (isPlayAction(playType)) {
     const runStats = enhancedState.offenseRunTracker.getStats();
     paEffectiveness = calculatePlayActionEffectiveness(runStats);
-    playActionBonus = getPlayActionModifier(
-      paEffectiveness,
-      playType === 'play_action_deep'
-    );
+    playActionBonus = getPlayActionModifier(paEffectiveness, playType === 'play_action_deep');
   }
 
   // 6. PASS RUSH PHASES (for pass plays)
@@ -487,10 +487,7 @@ export function resolveEnhancedPlay(
   if (passRushResult?.canScramble && roll.outcome === 'sack') {
     // QB escapes sack - convert to scramble
     const qbMobility = offensiveTeam.offense.qb.skills.mobility?.trueValue || 50;
-    const scrambleYards = Math.max(
-      -5,
-      Math.floor((qbMobility - 50) / 10 + Math.random() * 8 - 2)
-    );
+    const scrambleYards = Math.max(-5, Math.floor((qbMobility - 50) / 10 + Math.random() * 8 - 2));
     roll.outcome = scrambleYards >= 0 ? 'short_gain' : 'loss';
     roll.yards = scrambleYards;
   }
@@ -634,7 +631,11 @@ export function resolveEnhancedPlay(
     } else {
       yardsGained = penalty.yards;
       newFieldPosition = Math.min(99, context.fieldPosition + penalty.yards);
-      if (penalty.type === 'Pass Interference' || penalty.type === 'Defensive Holding' || penalty.type === 'Roughing the Passer') {
+      if (
+        penalty.type === 'Pass Interference' ||
+        penalty.type === 'Defensive Holding' ||
+        penalty.type === 'Roughing the Passer'
+      ) {
         newDown = 1;
         newDistance = 10;
         firstDown = true;

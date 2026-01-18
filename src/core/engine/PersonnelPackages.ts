@@ -9,7 +9,13 @@ import { PlayType } from './OutcomeTables';
 /**
  * Helper to check if play is a run play
  */
-const RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep', 'qb_sneak'];
+const RUN_PLAY_TYPES: PlayType[] = [
+  'run_inside',
+  'run_outside',
+  'run_draw',
+  'run_sweep',
+  'qb_sneak',
+];
 function isRunPlayType(playType: PlayType): boolean {
   return RUN_PLAY_TYPES.indexOf(playType) !== -1;
 }
@@ -204,9 +210,7 @@ export function calculatePersonnelMismatch(
   const defense = DEFENSIVE_PERSONNEL[defensePackage];
 
   // Get defense modifier based on play type
-  const defenseModifier = isRunPlay
-    ? defense.runDefenseModifier
-    : defense.passDefenseModifier;
+  const defenseModifier = isRunPlay ? defense.runDefenseModifier : defense.passDefenseModifier;
 
   // Heavy offense vs light defense = run advantage
   if (offense.runTendency >= 60 && defensePackage === 'dime') {
@@ -396,9 +400,10 @@ export function selectOffensivePersonnel(
 /**
  * Get run/pass tendency adjustment based on personnel
  */
-export function getPersonnelTendencyAdjustment(
-  offensePackage: OffensivePersonnelPackage
-): { runAdjustment: number; passAdjustment: number } {
+export function getPersonnelTendencyAdjustment(offensePackage: OffensivePersonnelPackage): {
+  runAdjustment: number;
+  passAdjustment: number;
+} {
   const info = OFFENSIVE_PERSONNEL[offensePackage];
 
   // How much the personnel signals run vs pass

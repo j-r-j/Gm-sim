@@ -237,7 +237,7 @@ export function shouldUsePlayAction(
   if (down === 3 && distance > 10 && runStats.ypc < 4.0) {
     return {
       recommended: false,
-      reason: 'Obvious passing down, defense won\'t bite on fake',
+      reason: "Obvious passing down, defense won't bite on fake",
     };
   }
 

@@ -407,9 +407,11 @@ export function isPressureSituation(context: SituationContext): boolean {
 /**
  * Get situational play calling adjustment
  */
-export function getSituationalPlayCallingAdjustment(
-  context: SituationContext
-): { runAdjustment: number; passAdjustment: number; aggressiveness: number } {
+export function getSituationalPlayCallingAdjustment(context: SituationContext): {
+  runAdjustment: number;
+  passAdjustment: number;
+  aggressiveness: number;
+} {
   const situation = determineSituation(context);
 
   switch (situation) {

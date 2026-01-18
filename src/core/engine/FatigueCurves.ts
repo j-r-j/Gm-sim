@@ -66,8 +66,8 @@ const FATIGUE_CURVES: Record<FatigueCurveType, FatigueCurveParams> = {
     degradationThreshold: 35, // WRs can handle high snap counts
     sharpDeclineThreshold: 50,
     degradationMultiplier: 0.97,
-    sharpDeclineMultiplier: 0.90,
-    minimumEffectiveness: 0.80,
+    sharpDeclineMultiplier: 0.9,
+    minimumEffectiveness: 0.8,
     optimalSnapShare: 85,
     needsRotation: false,
   },
@@ -85,7 +85,7 @@ const FATIGUE_CURVES: Record<FatigueCurveType, FatigueCurveParams> = {
     sharpDeclineThreshold: 35,
     degradationMultiplier: 0.92,
     sharpDeclineMultiplier: 0.78,
-    minimumEffectiveness: 0.60,
+    minimumEffectiveness: 0.6,
     optimalSnapShare: 65, // Optimal snap share
     needsRotation: true,
   },
@@ -179,8 +179,7 @@ export function calculateFatigueEffectiveness(
     const degradationProgress =
       (usage - curve.degradationThreshold) /
       (curve.sharpDeclineThreshold - curve.degradationThreshold);
-    effectiveness =
-      1.0 - degradationProgress * (1.0 - curve.degradationMultiplier);
+    effectiveness = 1.0 - degradationProgress * (1.0 - curve.degradationMultiplier);
   } else {
     // Sharp decline zone
     const sharpProgress =
@@ -217,7 +216,7 @@ function getAgeFatigueModifier(age: number): number {
   if (age <= 28) return 1.0; // Prime
   if (age <= 30) return 0.98;
   if (age <= 32) return 0.95;
-  if (age <= 34) return 0.90;
+  if (age <= 34) return 0.9;
   return 0.85; // 35+ significant decline
 }
 

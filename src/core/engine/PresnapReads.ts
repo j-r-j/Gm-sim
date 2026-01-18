@@ -11,8 +11,21 @@ import { DefensivePlayCall } from './PlayCaller';
 /**
  * Helper functions for PlayType checking
  */
-const RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep', 'qb_sneak'];
-const PASS_PLAY_TYPES: PlayType[] = ['pass_short', 'pass_medium', 'pass_deep', 'pass_screen', 'play_action_short', 'play_action_deep'];
+const RUN_PLAY_TYPES: PlayType[] = [
+  'run_inside',
+  'run_outside',
+  'run_draw',
+  'run_sweep',
+  'qb_sneak',
+];
+const PASS_PLAY_TYPES: PlayType[] = [
+  'pass_short',
+  'pass_medium',
+  'pass_deep',
+  'pass_screen',
+  'play_action_short',
+  'play_action_deep',
+];
 
 function isRunPlayType(playType: PlayType): boolean {
   return RUN_PLAY_TYPES.indexOf(playType) !== -1;
@@ -202,10 +215,7 @@ function determineAudible(
 /**
  * Calculate box count from defensive alignment
  */
-export function estimateBoxCount(
-  defensiveCall: DefensivePlayCall,
-  fieldPosition: number
-): number {
+export function estimateBoxCount(defensiveCall: DefensivePlayCall, fieldPosition: number): number {
   // Base box count
   let boxCount = 6;
 
@@ -255,19 +265,10 @@ export function executePresnapRead(
   );
 
   // Check protection change
-  const changedProtection = shouldChangeProtection(
-    qbAttributes,
-    identifiedBlitz,
-    weakLinkPosition
-  );
+  const changedProtection = shouldChangeProtection(qbAttributes, identifiedBlitz, weakLinkPosition);
 
   // Check audible
-  const audibleResult = determineAudible(
-    qbAttributes,
-    originalPlay,
-    defensiveCall,
-    boxCount
-  );
+  const audibleResult = determineAudible(qbAttributes, originalPlay, defensiveCall, boxCount);
 
   // Calculate effectiveness modifier
   let effectivenessModifier = 0;

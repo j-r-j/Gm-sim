@@ -321,9 +321,7 @@ export function resolvePassRushPhase(
 /**
  * Determine scramble direction based on where pressure is coming from
  */
-function determineScrambleDirection(
-  pressurePosition: string
-): 'left' | 'right' | 'middle' {
+function determineScrambleDirection(pressurePosition: string): 'left' | 'right' | 'middle' {
   // QB escapes away from pressure
   if (pressurePosition === 'LT' || pressurePosition === 'LG') {
     return 'right'; // Pressure from left, escape right

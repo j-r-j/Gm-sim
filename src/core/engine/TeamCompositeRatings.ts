@@ -6,7 +6,11 @@
 
 import { Player } from '../models/player/Player';
 import { TeamGameState } from './TeamGameState';
-import { calculateEffectiveRating, WeatherCondition, GameStakes } from './EffectiveRatingCalculator';
+import {
+  calculateEffectiveRating,
+  WeatherCondition,
+  GameStakes,
+} from './EffectiveRatingCalculator';
 import { getPositionCoach, getPlayerWeeklyVariance } from './TeamGameState';
 import { RoleType } from '../models/player/RoleFit';
 
@@ -183,14 +187,7 @@ export function calculatePassProtectionRating(params: CompositeRatingParams): Un
     const position = positions[i];
     const weight = PASS_PROTECTION_WEIGHTS[position];
 
-    const rating = getPlayerEffectiveRating(
-      player,
-      'passBlock',
-      teamState,
-      weather,
-      stakes,
-      true
-    );
+    const rating = getPlayerEffectiveRating(player, 'passBlock', teamState, weather, stakes, true);
 
     ratings.push({ position, rating, weight });
     weightedSum += rating * weight;
@@ -262,14 +259,7 @@ export function calculateRunBlockingRating(params: CompositeRatingParams): UnitR
     const position = positions[i];
     const weight = weights[position];
 
-    const rating = getPlayerEffectiveRating(
-      player,
-      'runBlock',
-      teamState,
-      weather,
-      stakes,
-      true
-    );
+    const rating = getPlayerEffectiveRating(player, 'runBlock', teamState, weather, stakes, true);
 
     weightedSum += rating * weight;
     totalWeight += weight;
@@ -799,7 +789,8 @@ export function getMatchupAdvantage(
     // Run play: OL run blocking vs DL/LB run stopping, RB vs defense
     const blockingVsStopping =
       offenseRatings.runBlocking.effective - defenseRatings.runStopping.effective;
-    const rushingVsDefense = offenseRatings.rushing.effective - defenseRatings.runStopping.effective;
+    const rushingVsDefense =
+      offenseRatings.rushing.effective - defenseRatings.runStopping.effective;
 
     // Weight: 50% blocking, 50% rushing
     return blockingVsStopping * 0.5 + rushingVsDefense * 0.5;
