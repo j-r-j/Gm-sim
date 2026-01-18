@@ -67,6 +67,7 @@ import {
   DivisionStandingEntry,
   PlayoffImplication,
 } from '../screens/WeekSummaryScreen';
+import { WeeklySchedulePopup, WeeklyGame, SimulatedGame } from '../screens/WeeklySchedulePopup';
 import {
   CombineResults,
   CombineGrade,
@@ -425,17 +426,26 @@ export function DashboardScreenWrapper({
   const handleAdvanceWeek = useCallback(async () => {
     if (!gameState) return;
 
+    const { calendar, schedule } = gameState.league;
+
+    if (!schedule) {
+      Alert.alert('Error', 'No schedule available');
+      return;
+    }
+
+    // For regular season and playoffs, navigate to WeeklySchedule to show games popup
+    if (
+      (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') &&
+      schedule.regularSeason
+    ) {
+      navigation.navigate('WeeklySchedule');
+      return;
+    }
+
+    // For other phases (offseason, preseason), use the original direct advance logic
     setIsLoading(true);
 
     try {
-      const { calendar, schedule } = gameState.league;
-
-      if (!schedule) {
-        Alert.alert('Error', 'No schedule available');
-        setIsLoading(false);
-        return;
-      }
-
       let newWeek = calendar.currentWeek;
       let newPhase = calendar.currentPhase;
       let newYear = calendar.currentYear;
@@ -445,7 +455,7 @@ export function DashboardScreenWrapper({
       const updatedSchedule = { ...schedule };
       let updatedPlayers = { ...gameState.players };
 
-      // Simulate games if in regular season or playoffs
+      // Original simulation logic (kept for non-regular-season phases)
       if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && schedule.regularSeason) {
         const weekResults = simulateWeek(
           calendar.currentWeek,
@@ -5460,6 +5470,299 @@ export function WeekSummaryScreenWrapper({
       onAdvanceWeek={handleAdvanceWeek}
       onViewStandings={() => navigation.navigate('Standings')}
       onViewBracket={phase === 'playoffs' ? () => navigation.navigate('PlayoffBracket') : undefined}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// WEEKLY SCHEDULE POPUP SCREEN
+// ============================================
+
+export function WeeklyScheduleScreenWrapper({
+  navigation,
+}: ScreenProps<'WeeklySchedule'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading weekly schedule..." />;
+  }
+
+  const { calendar, schedule } = gameState.league;
+  const week = calendar.currentWeek;
+  const phase = calendar.currentPhase;
+  const userTeamId = gameState.userTeamId;
+
+  // Check if user is on bye
+  const byeWeek = schedule?.byeWeeks?.get?.(userTeamId);
+  const isUserOnBye = byeWeek === week;
+
+  // Get all games for current week
+  const weeklyGames: WeeklyGame[] = [];
+  const regularSeasonGames = schedule?.regularSeason || [];
+
+  for (const game of regularSeasonGames) {
+    if (game.week !== week) continue;
+
+    const homeTeam = gameState.teams[game.homeTeamId];
+    const awayTeam = gameState.teams[game.awayTeamId];
+
+    if (!homeTeam || !awayTeam) continue;
+
+    const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
+
+    weeklyGames.push({
+      gameId: game.gameId,
+      homeTeam: {
+        id: game.homeTeamId,
+        city: homeTeam.city,
+        nickname: homeTeam.nickname,
+        abbr: homeTeam.abbreviation,
+        record: `${homeTeam.currentRecord.wins}-${homeTeam.currentRecord.losses}`,
+      },
+      awayTeam: {
+        id: game.awayTeamId,
+        city: awayTeam.city,
+        nickname: awayTeam.nickname,
+        abbr: awayTeam.abbreviation,
+        record: `${awayTeam.currentRecord.wins}-${awayTeam.currentRecord.losses}`,
+      },
+      isUserGame,
+      timeSlot: game.timeSlot || 'early_sunday',
+      isDivisional: game.isDivisional,
+    });
+  }
+
+  // Sort: user game first, then by time slot
+  const timeSlotOrder = ['thursday', 'early_sunday', 'late_sunday', 'sunday_night', 'monday_night'];
+  weeklyGames.sort((a, b) => {
+    if (a.isUserGame && !b.isUserGame) return -1;
+    if (!a.isUserGame && b.isUserGame) return 1;
+    return timeSlotOrder.indexOf(a.timeSlot) - timeSlotOrder.indexOf(b.timeSlot);
+  });
+
+  // Handle playing user's game (navigate to Gamecast)
+  const handlePlayGame = () => {
+    navigation.navigate('Gamecast');
+  };
+
+  // Handle simulating user's game
+  const handleSimUserGame = async () => {
+    if (!schedule?.regularSeason) return null;
+    setIsLoading(true);
+
+    try {
+      const { simulateUserTeamGame } = await import('../core/season/WeekSimulator');
+      const result = simulateUserTeamGame(schedule, week, userTeamId, gameState);
+
+      if (!result) {
+        setIsLoading(false);
+        return null;
+      }
+
+      // Update schedule with user's game result
+      const updatedSchedule = { ...schedule };
+      const updatedGames = [...updatedSchedule.regularSeason];
+
+      const gameIndex = updatedGames.findIndex((g) => g.gameId === result.game.gameId);
+      if (gameIndex >= 0) {
+        updatedGames[gameIndex] = result.game;
+      }
+      updatedSchedule.regularSeason = updatedGames;
+
+      // Update team records
+      const updatedTeams = { ...gameState.teams };
+      const homeTeam = updatedTeams[result.game.homeTeamId];
+      const awayTeam = updatedTeams[result.game.awayTeamId];
+
+      if (homeTeam && awayTeam) {
+        const homeWon = result.result.homeScore > result.result.awayScore;
+        const awayWon = result.result.awayScore > result.result.homeScore;
+        const tie = result.result.homeScore === result.result.awayScore;
+
+        updatedTeams[result.game.homeTeamId] = {
+          ...homeTeam,
+          currentRecord: {
+            ...homeTeam.currentRecord,
+            wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+            losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+            ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+            pointsFor: homeTeam.currentRecord.pointsFor + result.result.homeScore,
+            pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.result.awayScore,
+          },
+        };
+        updatedTeams[result.game.awayTeamId] = {
+          ...awayTeam,
+          currentRecord: {
+            ...awayTeam.currentRecord,
+            wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+            losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+            ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+            pointsFor: awayTeam.currentRecord.pointsFor + result.result.awayScore,
+            pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.result.homeScore,
+          },
+        };
+      }
+
+      // Update season stats
+      let updatedSeasonStats = gameState.seasonStats || {};
+      updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, result.result);
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+        seasonStats: updatedSeasonStats,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+      setIsLoading(false);
+
+      return result.result;
+    } catch (error) {
+      console.error('Error simulating user game:', error);
+      setIsLoading(false);
+      return null;
+    }
+  };
+
+  // Handle simulating all other games
+  const handleSimOtherGames = async (): Promise<SimulatedGame[]> => {
+    if (!schedule?.regularSeason) return [];
+    setIsLoading(true);
+
+    try {
+      const weekResults = simulateWeek(week, schedule, gameState, userTeamId, false);
+
+      // Update schedule with simulated game results
+      const updatedSchedule = { ...schedule };
+      const updatedGames = [...updatedSchedule.regularSeason];
+
+      for (const simResult of weekResults.games) {
+        const gameIndex = updatedGames.findIndex((g) => g.gameId === simResult.game.gameId);
+        if (gameIndex >= 0) {
+          updatedGames[gameIndex] = simResult.game;
+        }
+      }
+      updatedSchedule.regularSeason = updatedGames;
+
+      // Update team records
+      const updatedTeams = { ...gameState.teams };
+      for (const simResult of weekResults.games) {
+        const { result, game } = simResult;
+        const homeTeam = updatedTeams[game.homeTeamId];
+        const awayTeam = updatedTeams[game.awayTeamId];
+
+        if (homeTeam && awayTeam) {
+          const homeWon = result.homeScore > result.awayScore;
+          const awayWon = result.awayScore > result.homeScore;
+          const tie = result.homeScore === result.awayScore;
+
+          updatedTeams[game.homeTeamId] = {
+            ...homeTeam,
+            currentRecord: {
+              ...homeTeam.currentRecord,
+              wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+              losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+              ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
+              pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
+            },
+          };
+          updatedTeams[game.awayTeamId] = {
+            ...awayTeam,
+            currentRecord: {
+              ...awayTeam.currentRecord,
+              wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+              losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+              ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
+              pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
+            },
+          };
+        }
+      }
+
+      // Aggregate player stats
+      let updatedSeasonStats = gameState.seasonStats || {};
+      for (const simResult of weekResults.games) {
+        updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, simResult.result);
+      }
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+        seasonStats: updatedSeasonStats,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+      setIsLoading(false);
+
+      // Convert to SimulatedGame format
+      const simulatedGames: SimulatedGame[] = weekResults.games.map((simResult) => {
+        const homeTeam = gameState.teams[simResult.game.homeTeamId];
+        const awayTeam = gameState.teams[simResult.game.awayTeamId];
+
+        return {
+          gameId: simResult.game.gameId,
+          homeTeam: {
+            id: simResult.game.homeTeamId,
+            city: homeTeam.city,
+            nickname: homeTeam.nickname,
+            abbr: homeTeam.abbreviation,
+            record: `${homeTeam.currentRecord.wins}-${homeTeam.currentRecord.losses}`,
+          },
+          awayTeam: {
+            id: simResult.game.awayTeamId,
+            city: awayTeam.city,
+            nickname: awayTeam.nickname,
+            abbr: awayTeam.abbreviation,
+            record: `${awayTeam.currentRecord.wins}-${awayTeam.currentRecord.losses}`,
+          },
+          isUserGame: false,
+          timeSlot: simResult.game.timeSlot || 'early_sunday',
+          isDivisional: simResult.game.isDivisional,
+          homeScore: simResult.result.homeScore,
+          awayScore: simResult.result.awayScore,
+          isComplete: true,
+          boxScore: simResult.result.boxScore,
+          result: simResult.result,
+        };
+      });
+
+      return simulatedGames;
+    } catch (error) {
+      console.error('Error simulating other games:', error);
+      setIsLoading(false);
+      return [];
+    }
+  };
+
+  // Handle completing the week and navigating to summary
+  const handleComplete = async (_results: SimulatedGame[]) => {
+    navigation.navigate('WeekSummary');
+  };
+
+  return (
+    <WeeklySchedulePopup
+      week={week}
+      phase={phase}
+      games={weeklyGames}
+      userTeamId={userTeamId}
+      isUserOnBye={isUserOnBye}
+      onPlayGame={handlePlayGame}
+      onSimUserGame={handleSimUserGame}
+      onSimOtherGames={handleSimOtherGames}
+      onComplete={handleComplete}
       onBack={() => navigation.goBack()}
     />
   );
