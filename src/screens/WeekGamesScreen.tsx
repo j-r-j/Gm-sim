@@ -43,8 +43,6 @@ export interface WeekGamesScreenProps {
   phase: string;
   /** All games for this week */
   games: WeekGameItem[];
-  /** User's team ID */
-  userTeamId: string;
   /** Whether user's game has been played */
   userGamePlayed: boolean;
   /** Whether all games are complete */
@@ -177,7 +175,6 @@ export function WeekGamesScreen({
   week,
   phase,
   games,
-  userTeamId: _userTeamId,
   userGamePlayed,
   allGamesComplete,
   onPlayGame,
@@ -185,8 +182,6 @@ export function WeekGamesScreen({
   onViewSummary,
   onBack,
 }: WeekGamesScreenProps): React.JSX.Element {
-  // _userTeamId is available for future use if needed
-
   const completedCount = games.filter((g) => g.isComplete).length;
   const totalCount = games.length;
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;

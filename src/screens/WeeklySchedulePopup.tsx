@@ -74,7 +74,7 @@ export interface WeeklySchedulePopupProps {
   phase: string;
   /** All games for this week */
   games: WeeklyGame[];
-  /** User's team ID */
+  /** User's team ID for highlighting */
   userTeamId: string;
   /** Whether user is on bye this week */
   isUserOnBye: boolean;

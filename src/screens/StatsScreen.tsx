@@ -301,12 +301,36 @@ function getTeamSeasonStats(gameState: GameState, teamId: string): TeamSeasonSta
   stats.pointsFor = team.currentRecord.pointsFor;
   stats.pointsAgainst = team.currentRecord.pointsAgainst;
 
-  // TODO: Pull actual yardage stats from gameState.seasonStats when implemented
-  // For now, leave yardage and turnover stats at 0 until games are played
+  // Aggregate yardage stats from player season stats
+  if (gameState.seasonStats) {
+    let totalPassYards = 0;
+    let totalRushYards = 0;
+    let totalTurnovers = 0;
+
+    // Sum stats from all players on this team's roster
+    const allRosterIds = [
+      ...team.rosterPlayerIds,
+      ...(team.practiceSquadIds || []),
+      ...(team.injuredReserveIds || []),
+    ];
+
+    for (const playerId of allRosterIds) {
+      const playerStats = gameState.seasonStats[playerId];
+      if (playerStats) {
+        totalPassYards += playerStats.passing.yards;
+        totalRushYards += playerStats.rushing.yards;
+        totalTurnovers += playerStats.passing.interceptions + playerStats.rushing.fumblesLost;
+      }
+    }
+
+    stats.totalYards = totalPassYards + totalRushYards;
+    stats.turnoversCommitted = totalTurnovers;
+  }
 
   if (gamesPlayed > 0) {
     stats.pointsPerGame = Math.round((stats.pointsFor / gamesPlayed) * 10) / 10;
     stats.pointsAllowedPerGame = Math.round((stats.pointsAgainst / gamesPlayed) * 10) / 10;
+    stats.yardsPerGame = Math.round((stats.totalYards / gamesPlayed) * 10) / 10;
   }
 
   return stats;

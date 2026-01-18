@@ -62,8 +62,6 @@ export interface WeekSummaryScreenProps {
   phase: string;
   /** All game results for this week */
   results: WeekGameResult[];
-  /** User's team ID */
-  userTeamId: string;
   /** User's team result summary */
   userResult: {
     won: boolean;
@@ -178,7 +176,6 @@ export function WeekSummaryScreen({
   week,
   phase,
   results,
-  userTeamId: _userTeamId,
   userResult,
   divisionStandings,
   conference,
@@ -190,7 +187,6 @@ export function WeekSummaryScreen({
   onViewBracket,
   onBack,
 }: WeekSummaryScreenProps): React.JSX.Element {
-  // _userTeamId is available for future use if needed
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
   const isPlayoffs = phase === 'playoffs';
 
