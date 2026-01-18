@@ -82,9 +82,7 @@ function PlayerDepthCard({
     >
       <View style={styles.playerCardHeader}>
         <Avatar id={player.id} size="xs" age={player.age} context="player" />
-        <View style={[styles.ratingBadge, { backgroundColor: getRatingColor(rating) }]}>
-          <Text style={styles.ratingText}>{rating}</Text>
-        </View>
+        <View style={[styles.ratingIndicator, { backgroundColor: getRatingColor(rating) }]} />
       </View>
       <Text style={styles.playerName}>{player.lastName}</Text>
       <Text style={styles.depthLabel}>{getDepthLabel(depth)}</Text>
@@ -455,15 +453,10 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.text,
   },
-  ratingBadge: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  ratingText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
+  ratingIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   depthLabel: {
     fontSize: fontSize.xs,
