@@ -33,6 +33,17 @@ import {
   applyDevelopmentChanges,
   type PhaseApplicationResult,
 } from './PhaseStateMappers';
+import {
+  generateSeasonAwards,
+  generateCoachEvaluations,
+  generateOTAReports,
+  generateRookieIntegrationReports,
+  generatePositionBattles,
+  generateDevelopmentReveals,
+  generateCampInjuries,
+  generatePreseasonGames,
+  generatePreseasonEvaluations,
+} from './bridges/PhaseGenerators';
 
 /**
  * Result of entering or processing a phase
@@ -104,13 +115,30 @@ export function enterPhase(
   let newGameState = { ...gameState };
 
   switch (phase) {
-    case 'season_end':
+    case 'season_end': {
       // Auto-generate draft order if not set
       if (newOffseasonData.draftOrder.length === 0) {
         newOffseasonData.draftOrder = calculateDraftOrder(newGameState);
         changes.push('Generated draft order from standings');
       }
+      // Auto-generate season awards
+      if (!newOffseasonData.awards || newOffseasonData.awards.length === 0) {
+        const awards = generateSeasonAwards(newGameState);
+        newOffseasonData.awards = awards;
+        changes.push(`Generated ${awards.length} season awards`);
+      }
       break;
+    }
+
+    case 'coaching_decisions': {
+      // Auto-generate coach evaluations
+      if (!newOffseasonData.coachEvaluations || newOffseasonData.coachEvaluations.length === 0) {
+        const evaluations = generateCoachEvaluations(newGameState);
+        newOffseasonData.coachEvaluations = evaluations;
+        changes.push(`Generated ${evaluations.length} coach evaluations`);
+      }
+      break;
+    }
 
     case 'combine':
       // Mark combine as starting
@@ -132,21 +160,68 @@ export function enterPhase(
       changes.push('NFL Draft begins');
       break;
 
-    case 'udfa':
+    case 'udfa': {
       // Generate UDFA pool from remaining prospects
       const remainingProspects = Object.values(newGameState.prospects);
       newOffseasonData.udfaPool = remainingProspects;
       changes.push(`UDFA pool generated: ${remainingProspects.length} prospects available`);
       break;
+    }
 
-    case 'training_camp':
-      // Position battles will be generated when screen is visited
+    case 'otas': {
+      // Auto-generate OTA reports
+      if (!newOffseasonData.otaReports || newOffseasonData.otaReports.length === 0) {
+        const otaReports = generateOTAReports(newGameState);
+        newOffseasonData.otaReports = otaReports;
+        changes.push(`Generated ${otaReports.length} OTA reports`);
+      }
+      // Auto-generate rookie integration reports
+      if (!newOffseasonData.rookieIntegrationReports || newOffseasonData.rookieIntegrationReports.length === 0) {
+        const rookieReports = generateRookieIntegrationReports(newGameState);
+        newOffseasonData.rookieIntegrationReports = rookieReports;
+        changes.push(`Generated ${rookieReports.length} rookie integration reports`);
+      }
+      break;
+    }
+
+    case 'training_camp': {
+      // Auto-generate position battles
+      if (!newOffseasonData.positionBattles || newOffseasonData.positionBattles.length === 0) {
+        const battles = generatePositionBattles(newGameState);
+        newOffseasonData.positionBattles = battles;
+        changes.push(`Generated ${battles.length} position battles`);
+      }
+      // Auto-generate development reveals
+      if (!newOffseasonData.developmentReveals || newOffseasonData.developmentReveals.length === 0) {
+        const reveals = generateDevelopmentReveals(newGameState);
+        newOffseasonData.developmentReveals = reveals;
+        changes.push(`Generated ${reveals.length} development reveals`);
+      }
+      // Auto-generate camp injuries
+      if (!newOffseasonData.campInjuries || newOffseasonData.campInjuries.length === 0) {
+        const injuries = generateCampInjuries(newGameState);
+        newOffseasonData.campInjuries = injuries;
+        changes.push(`Generated ${injuries.length} camp injuries`);
+      }
       changes.push('Training camp begins');
       break;
+    }
 
-    case 'preseason':
+    case 'preseason': {
+      // Auto-generate preseason games
+      if (!newOffseasonData.preseasonGames || newOffseasonData.preseasonGames.length === 0) {
+        const games = generatePreseasonGames(newGameState);
+        newOffseasonData.preseasonGames = games;
+        changes.push(`Generated ${games.length} preseason games`);
+
+        // Auto-generate evaluations from games
+        const evaluations = generatePreseasonEvaluations(games, newGameState);
+        newOffseasonData.preseasonEvaluations = evaluations;
+        changes.push(`Generated ${evaluations.length} preseason evaluations`);
+      }
       changes.push('Preseason schedule ready');
       break;
+    }
 
     case 'final_cuts':
       // Initialize waiver wire
