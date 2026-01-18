@@ -1,6 +1,11 @@
 /**
  * PlayerDetailCard Component
- * Expandable card with tabbed content for player details.
+ * Expandable card with tabbed content for comprehensive player details.
+ *
+ * Design inspired by:
+ * - ESPN Fantasy 2025 player cards with sticky headers and tabbed content
+ * - Madden NFL player profiles
+ * - Sleeper app clean, modern design patterns
  *
  * Tabs:
  * - Profile: Skills, physicals, traits, morale, fatigue, injury, scheme fit, role
@@ -10,7 +15,15 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  getRatingTierColor,
+} from '../../styles';
 import { Player } from '../../core/models/player/Player';
 import { Position } from '../../core/models/player/Position';
 import { SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
@@ -26,6 +39,7 @@ import { PlayerSeasonStats } from '../../core/game/SeasonStatsAggregator';
 import { SkillRangeDisplay } from './SkillRangeDisplay';
 import { PhysicalAttributesDisplay } from './PhysicalAttributesDisplay';
 import { TraitBadges } from './TraitBadges';
+import { RatingTierIndicator } from './RatingTierIndicator';
 
 type TabType = 'profile' | 'stats' | 'contract';
 type StatsViewType = 'career' | 'season';
@@ -80,15 +94,15 @@ function getPositionGroup(position: Position): 'offense' | 'defense' | 'special'
 /**
  * Get position color
  */
-function getPositionColor(position: Position): string {
+function getPositionColor(position: Position): { main: string; light: string } {
   const group = getPositionGroup(position);
   switch (group) {
     case 'offense':
-      return colors.primary;
+      return { main: colors.positionOffense, light: colors.positionOffenseLight };
     case 'defense':
-      return colors.secondary;
+      return { main: colors.positionDefense, light: colors.positionDefenseLight };
     case 'special':
-      return colors.info;
+      return { main: colors.positionSpecial, light: colors.positionSpecialLight };
   }
 }
 
@@ -131,39 +145,85 @@ function getPositionGroupKey(position: Position): keyof typeof SKILL_NAMES_BY_PO
 }
 
 /**
- * Status bar component for morale/fatigue
+ * Calculate average skill rating
  */
-function StatusBar({
-  label,
+function getAverageSkillRating(player: Player): number {
+  const positionKey = getPositionGroupKey(player.position);
+  const skillNames = SKILL_NAMES_BY_POSITION[positionKey];
+
+  let total = 0;
+  let count = 0;
+
+  for (const skillName of skillNames) {
+    const skill = player.skills[skillName];
+    if (skill) {
+      total += (skill.perceivedMin + skill.perceivedMax) / 2;
+      count++;
+    }
+  }
+
+  return count > 0 ? Math.round(total / count) : 50;
+}
+
+/**
+ * Circular Progress Bar for morale/fatigue
+ */
+function CircularProgressBar({
   value,
+  label,
   color,
   invertColor = false,
 }: {
-  label: string;
   value: number;
+  label: string;
   color: string;
   invertColor?: boolean;
 }): React.JSX.Element {
-  // For fatigue, higher is worse so we might want to invert the color logic
   const displayColor = invertColor
     ? value > 70
       ? colors.error
       : value > 40
         ? colors.warning
         : colors.success
-    : color;
+    : value >= 70
+      ? colors.success
+      : value >= 40
+        ? colors.warning
+        : colors.error;
 
   return (
-    <View style={styles.statusBarContainer}>
-      <View style={styles.statusBarHeader}>
-        <Text style={styles.statusBarLabel}>{label}</Text>
-        <Text style={styles.statusBarValue}>{value}</Text>
+    <View style={styles.circularProgress}>
+      <View style={[styles.circularOuter, { borderColor: `${displayColor}30` }]}>
+        <View style={[styles.circularInner, { borderColor: displayColor }]}>
+          <Text style={[styles.circularValue, { color: displayColor }]}>{value}</Text>
+        </View>
       </View>
-      <View style={styles.statusBarTrack}>
-        <View
-          style={[styles.statusBarFill, { width: `${value}%`, backgroundColor: displayColor }]}
-        />
-      </View>
+      <Text style={styles.circularLabel}>{label}</Text>
+    </View>
+  );
+}
+
+/**
+ * Quick Info Chip
+ */
+function InfoChip({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}): React.JSX.Element {
+  return (
+    <View
+      style={[
+        styles.infoChip,
+        color && { backgroundColor: `${color}15`, borderColor: `${color}40` },
+      ]}
+    >
+      <Text style={styles.infoChipLabel}>{label}</Text>
+      <Text style={[styles.infoChipValue, color && { color }]}>{value}</Text>
     </View>
   );
 }
@@ -175,14 +235,10 @@ function ProfileTab({
   player,
   teamOffensiveScheme,
   teamDefensiveScheme,
-  seasonStats,
-  careerStats,
 }: {
   player: Player;
   teamOffensiveScheme?: OffensiveScheme | null;
   teamDefensiveScheme?: DefensiveScheme | null;
-  seasonStats?: PlayerSeasonStats | null;
-  careerStats?: PlayerSeasonStats | null;
 }): React.JSX.Element {
   const positionKey = getPositionGroupKey(player.position);
   const skillNames = SKILL_NAMES_BY_POSITION[positionKey];
@@ -191,25 +247,57 @@ function ProfileTab({
 
   return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      {/* Role & Status Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Status</Text>
-        <View style={styles.roleContainer}>
-          <View style={styles.roleItem}>
-            <Text style={styles.roleLabel}>Current Role</Text>
-            <Text style={styles.roleValue}>{getRoleDisplayName(player.roleFit.currentRole)}</Text>
-          </View>
-          <View style={styles.roleItem}>
-            <Text style={styles.roleLabel}>Ceiling</Text>
-            <Text style={styles.roleValue}>{getRoleDisplayName(player.roleFit.ceiling)}</Text>
+      {/* Quick Status Row */}
+      <View style={styles.quickStatusRow}>
+        <CircularProgressBar value={player.morale} label="Morale" color={colors.success} />
+        <CircularProgressBar
+          value={player.fatigue}
+          label="Fatigue"
+          color={colors.info}
+          invertColor
+        />
+      </View>
+
+      {/* Injury Alert */}
+      {!isHealthy(player.injuryStatus) && (
+        <View style={styles.injuryAlert}>
+          <Text style={styles.injuryAlertIcon}>🩹</Text>
+          <View style={styles.injuryAlertContent}>
+            <Text style={styles.injuryAlertTitle}>
+              {getInjuryDisplayString(player.injuryStatus)}
+            </Text>
+            {player.injuryStatus.weeksRemaining > 0 && (
+              <Text style={styles.injuryAlertSubtitle}>
+                {player.injuryStatus.weeksRemaining} week
+                {player.injuryStatus.weeksRemaining !== 1 ? 's' : ''} remaining
+              </Text>
+            )}
           </View>
         </View>
-        <Text style={styles.roleFitDescription}>{getRoleFitDescription(player.roleFit)}</Text>
+      )}
+
+      {/* Role & Ceiling Cards */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Player Role</Text>
+        <View style={styles.roleCardsRow}>
+          <View style={styles.roleCard}>
+            <Text style={styles.roleCardLabel}>Current</Text>
+            <Text style={styles.roleCardValue}>
+              {getRoleDisplayName(player.roleFit.currentRole)}
+            </Text>
+          </View>
+          <View style={styles.roleCardDivider} />
+          <View style={styles.roleCard}>
+            <Text style={styles.roleCardLabel}>Ceiling</Text>
+            <Text style={styles.roleCardValue}>{getRoleDisplayName(player.roleFit.ceiling)}</Text>
+          </View>
+        </View>
+        <Text style={styles.roleDescription}>{getRoleFitDescription(player.roleFit)}</Text>
 
         {/* Scheme Fit */}
         {teamScheme && (
-          <View style={styles.schemeFitContainer}>
-            <Text style={styles.schemeFitLabel}>Scheme Fit:</Text>
+          <View style={styles.schemeFitBadge}>
+            <Text style={styles.schemeFitLabel}>Scheme Fit</Text>
             <Text style={styles.schemeFitValue}>
               {getSchemeFitDescription(player.schemeFits, teamScheme)}
             </Text>
@@ -217,94 +305,39 @@ function ProfileTab({
         )}
       </View>
 
-      {/* Morale, Fatigue, Injury Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Condition</Text>
-        <StatusBar
-          label="Morale"
-          value={player.morale}
-          color={
-            player.morale >= 70
-              ? colors.success
-              : player.morale >= 40
-                ? colors.warning
-                : colors.error
-          }
-        />
-        <StatusBar label="Fatigue" value={player.fatigue} color={colors.info} invertColor />
-        {!isHealthy(player.injuryStatus) && (
-          <View style={styles.injuryContainer}>
-            <Text style={styles.injuryIcon}>🩹</Text>
-            <Text style={styles.injuryText}>{getInjuryDisplayString(player.injuryStatus)}</Text>
-            {player.injuryStatus.weeksRemaining > 0 && (
-              <Text style={styles.injuryWeeks}>
-                ({player.injuryStatus.weeksRemaining} week
-                {player.injuryStatus.weeksRemaining !== 1 ? 's' : ''})
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
-
       {/* Skills Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Skills</Text>
-        {skillNames.map((skillName) => {
-          const skill = player.skills[skillName];
-          if (!skill) return null;
-          return (
-            <SkillRangeDisplay
-              key={skillName}
-              skillName={skillName}
-              perceivedMin={skill.perceivedMin}
-              perceivedMax={skill.perceivedMax}
-              playerAge={player.age}
-              maturityAge={skill.maturityAge}
-              compact
-            />
-          );
-        })}
-
-        {/* Traits - at bottom of Skills section */}
-        <View style={styles.traitsSubsection}>
-          <Text style={styles.sectionTitle}>Traits</Text>
-          <TraitBadges hiddenTraits={player.hiddenTraits} compact />
+        <View style={styles.skillsGrid}>
+          {skillNames.map((skillName) => {
+            const skill = player.skills[skillName];
+            if (!skill) return null;
+            return (
+              <SkillRangeDisplay
+                key={skillName}
+                skillName={skillName}
+                perceivedMin={skill.perceivedMin}
+                perceivedMax={skill.perceivedMax}
+                playerAge={player.age}
+                maturityAge={skill.maturityAge}
+                compact
+              />
+            );
+          })}
         </View>
+      </View>
+
+      {/* Traits Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Traits & Abilities</Text>
+        <TraitBadges hiddenTraits={player.hiddenTraits} />
       </View>
 
       {/* Physical Attributes Section */}
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Physical Attributes</Text>
         <PhysicalAttributesDisplay physical={player.physical} position={player.position} compact />
       </View>
-
-      {/* Stats Summary Section */}
-      {(seasonStats || careerStats) && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stats</Text>
-          <View style={styles.statsGridContainer}>
-            {/* Season Stats */}
-            {seasonStats && (
-              <View style={styles.statsColumn}>
-                <Text style={styles.statsColumnHeader}>This Season</Text>
-                <Text style={styles.statsGamesText}>
-                  {seasonStats.gamesPlayed} GP / {seasonStats.gamesStarted} GS
-                </Text>
-                <StatsSummaryRows stats={seasonStats} position={player.position} />
-              </View>
-            )}
-            {/* Career Stats */}
-            {careerStats && (
-              <View style={styles.statsColumn}>
-                <Text style={styles.statsColumnHeader}>Career</Text>
-                <Text style={styles.statsGamesText}>
-                  {careerStats.gamesPlayed} GP / {careerStats.gamesStarted} GS
-                </Text>
-                <StatsSummaryRows stats={careerStats} position={player.position} />
-              </View>
-            )}
-          </View>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -312,112 +345,127 @@ function ProfileTab({
 /**
  * Stats Summary Rows - shows key stats based on position
  */
-function StatsSummaryRows({
+function StatsSummaryCard({
   stats,
   position,
+  title,
 }: {
   stats: PlayerSeasonStats;
   position: Position;
+  title: string;
 }): React.JSX.Element | null {
   const positionGroup = getPositionGroup(position);
 
-  const renderStatLine = (label: string, value: string | number) => (
-    <View key={label} style={styles.statsSummaryRow}>
-      <Text style={styles.statsSummaryLabel}>{label}</Text>
-      <Text style={styles.statsSummaryValue}>{value}</Text>
+  const renderStatRow = (label: string, value: string | number, highlight?: boolean) => (
+    <View key={label} style={styles.statRow}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, highlight && styles.statValueHighlight]}>{value}</Text>
     </View>
   );
 
-  // QB stats
-  if (position === Position.QB) {
-    if (stats.passing.attempts === 0) return null;
-    const compPct = ((stats.passing.completions / stats.passing.attempts) * 100).toFixed(1);
-    return (
-      <View>
-        {renderStatLine('Comp/Att', `${stats.passing.completions}/${stats.passing.attempts}`)}
-        {renderStatLine('Comp %', `${compPct}%`)}
-        {renderStatLine('Pass Yds', stats.passing.yards)}
-        {renderStatLine('Pass TD', stats.passing.touchdowns)}
-        {renderStatLine('INT', stats.passing.interceptions)}
-        {renderStatLine('Rating', stats.passing.rating.toFixed(1))}
+  const renderStats = () => {
+    // QB stats
+    if (position === Position.QB && stats.passing.attempts > 0) {
+      const compPct = ((stats.passing.completions / stats.passing.attempts) * 100).toFixed(1);
+      return (
+        <>
+          {renderStatRow('Comp/Att', `${stats.passing.completions}/${stats.passing.attempts}`)}
+          {renderStatRow('Comp %', `${compPct}%`)}
+          {renderStatRow('Pass Yds', stats.passing.yards, true)}
+          {renderStatRow('Pass TD', stats.passing.touchdowns, true)}
+          {renderStatRow('INT', stats.passing.interceptions)}
+          {renderStatRow('Rating', stats.passing.rating.toFixed(1))}
+        </>
+      );
+    }
+
+    // RB stats
+    if (position === Position.RB) {
+      return (
+        <>
+          {stats.rushing.attempts > 0 && (
+            <>
+              {renderStatRow('Rush Yds', stats.rushing.yards, true)}
+              {renderStatRow('Rush TD', stats.rushing.touchdowns, true)}
+              {renderStatRow('YPC', stats.rushing.yardsPerCarry.toFixed(1))}
+            </>
+          )}
+          {stats.receiving.targets > 0 && (
+            <>
+              {renderStatRow('Rec', stats.receiving.receptions)}
+              {renderStatRow('Rec Yds', stats.receiving.yards)}
+            </>
+          )}
+        </>
+      );
+    }
+
+    // WR/TE stats
+    if ((position === Position.WR || position === Position.TE) && stats.receiving.targets > 0) {
+      return (
+        <>
+          {renderStatRow('Targets', stats.receiving.targets)}
+          {renderStatRow('Rec', stats.receiving.receptions)}
+          {renderStatRow('Rec Yds', stats.receiving.yards, true)}
+          {renderStatRow('Rec TD', stats.receiving.touchdowns, true)}
+          {renderStatRow('YPR', stats.receiving.yardsPerReception.toFixed(1))}
+        </>
+      );
+    }
+
+    // Defensive stats
+    if (positionGroup === 'defense') {
+      const hasStats =
+        stats.defensive.tackles > 0 ||
+        stats.defensive.sacks > 0 ||
+        stats.defensive.interceptions > 0;
+      if (!hasStats) return null;
+      return (
+        <>
+          {renderStatRow('Tackles', stats.defensive.tackles, true)}
+          {renderStatRow('TFL', stats.defensive.tacklesForLoss)}
+          {renderStatRow('Sacks', stats.defensive.sacks.toFixed(1), true)}
+          {renderStatRow('INT', stats.defensive.interceptions)}
+          {renderStatRow('PD', stats.defensive.passesDefended)}
+        </>
+      );
+    }
+
+    // Kicker stats
+    if (position === Position.K && stats.kicking.fieldGoalAttempts > 0) {
+      const fgPct = (
+        (stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts) *
+        100
+      ).toFixed(1);
+      return (
+        <>
+          {renderStatRow(
+            'FG',
+            `${stats.kicking.fieldGoalsMade}/${stats.kicking.fieldGoalAttempts}`
+          )}
+          {renderStatRow('FG %', `${fgPct}%`, true)}
+          {renderStatRow('Long', stats.kicking.longestFieldGoal)}
+        </>
+      );
+    }
+
+    return null;
+  };
+
+  const content = renderStats();
+  if (!content) return null;
+
+  return (
+    <View style={styles.statsSummaryCard}>
+      <View style={styles.statsSummaryHeader}>
+        <Text style={styles.statsSummaryTitle}>{title}</Text>
+        <Text style={styles.statsSummaryGames}>
+          {stats.gamesPlayed} GP / {stats.gamesStarted} GS
+        </Text>
       </View>
-    );
-  }
-
-  // RB stats
-  if (position === Position.RB) {
-    return (
-      <View>
-        {stats.rushing.attempts > 0 && (
-          <>
-            {renderStatLine('Rush Yds', stats.rushing.yards)}
-            {renderStatLine('Rush TD', stats.rushing.touchdowns)}
-            {renderStatLine('YPC', stats.rushing.yardsPerCarry.toFixed(1))}
-          </>
-        )}
-        {stats.receiving.targets > 0 && (
-          <>
-            {renderStatLine('Rec', stats.receiving.receptions)}
-            {renderStatLine('Rec Yds', stats.receiving.yards)}
-          </>
-        )}
-      </View>
-    );
-  }
-
-  // WR/TE stats
-  if (position === Position.WR || position === Position.TE) {
-    if (stats.receiving.targets === 0) return null;
-    return (
-      <View>
-        {renderStatLine('Targets', stats.receiving.targets)}
-        {renderStatLine('Rec', stats.receiving.receptions)}
-        {renderStatLine('Rec Yds', stats.receiving.yards)}
-        {renderStatLine('Rec TD', stats.receiving.touchdowns)}
-        {renderStatLine('YPR', stats.receiving.yardsPerReception.toFixed(1))}
-      </View>
-    );
-  }
-
-  // Defensive stats
-  if (positionGroup === 'defense') {
-    const hasStats =
-      stats.defensive.tackles > 0 || stats.defensive.sacks > 0 || stats.defensive.interceptions > 0;
-    if (!hasStats) return null;
-    return (
-      <View>
-        {renderStatLine('Tackles', stats.defensive.tackles)}
-        {renderStatLine('TFL', stats.defensive.tacklesForLoss)}
-        {renderStatLine('Sacks', stats.defensive.sacks.toFixed(1))}
-        {renderStatLine('INT', stats.defensive.interceptions)}
-        {renderStatLine('PD', stats.defensive.passesDefended)}
-      </View>
-    );
-  }
-
-  // Kicker stats
-  if (position === Position.K) {
-    if (stats.kicking.fieldGoalAttempts === 0) return null;
-    const fgPct = ((stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts) * 100).toFixed(
-      1
-    );
-    return (
-      <View>
-        {renderStatLine('FG', `${stats.kicking.fieldGoalsMade}/${stats.kicking.fieldGoalAttempts}`)}
-        {renderStatLine('FG %', `${fgPct}%`)}
-        {renderStatLine('Long', stats.kicking.longestFieldGoal)}
-      </View>
-    );
-  }
-
-  return null;
-}
-
-/**
- * Format stat value
- */
-function formatStat(value: number, decimals: number = 0): string {
-  return value.toFixed(decimals);
+      {content}
+    </View>
+  );
 }
 
 /**
@@ -433,120 +481,6 @@ function StatsTab({
   careerStats?: PlayerSeasonStats | null;
 }): React.JSX.Element {
   const [viewType, setViewType] = useState<StatsViewType>('season');
-  const stats = viewType === 'season' ? seasonStats : careerStats;
-  const positionGroup = getPositionGroup(player.position);
-
-  const renderStatRow = (label: string, value: string | number) => (
-    <View style={styles.statRow}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
-  );
-
-  const renderNoStats = () => (
-    <View style={styles.noStatsContainer}>
-      <Text style={styles.noStatsText}>No stats available</Text>
-    </View>
-  );
-
-  const renderPassingStats = () => {
-    if (!stats || stats.passing.attempts === 0) return null;
-    return (
-      <View style={styles.statsSection}>
-        <Text style={styles.statsSectionTitle}>Passing</Text>
-        {renderStatRow('Comp/Att', `${stats.passing.completions}/${stats.passing.attempts}`)}
-        {renderStatRow(
-          'Comp %',
-          `${((stats.passing.completions / stats.passing.attempts) * 100).toFixed(1)}%`
-        )}
-        {renderStatRow('Yards', formatStat(stats.passing.yards))}
-        {renderStatRow('TDs', formatStat(stats.passing.touchdowns))}
-        {renderStatRow('INTs', formatStat(stats.passing.interceptions))}
-        {renderStatRow('Rating', formatStat(stats.passing.rating, 1))}
-        {renderStatRow('Sacks', formatStat(stats.passing.sacks))}
-        {renderStatRow('Long', formatStat(stats.passing.longestPass))}
-      </View>
-    );
-  };
-
-  const renderRushingStats = () => {
-    if (!stats || stats.rushing.attempts === 0) return null;
-    return (
-      <View style={styles.statsSection}>
-        <Text style={styles.statsSectionTitle}>Rushing</Text>
-        {renderStatRow('Attempts', formatStat(stats.rushing.attempts))}
-        {renderStatRow('Yards', formatStat(stats.rushing.yards))}
-        {renderStatRow('YPC', formatStat(stats.rushing.yardsPerCarry, 1))}
-        {renderStatRow('TDs', formatStat(stats.rushing.touchdowns))}
-        {renderStatRow('Fumbles', formatStat(stats.rushing.fumbles))}
-        {renderStatRow('Long', formatStat(stats.rushing.longestRush))}
-      </View>
-    );
-  };
-
-  const renderReceivingStats = () => {
-    if (!stats || stats.receiving.targets === 0) return null;
-    return (
-      <View style={styles.statsSection}>
-        <Text style={styles.statsSectionTitle}>Receiving</Text>
-        {renderStatRow('Targets', formatStat(stats.receiving.targets))}
-        {renderStatRow('Receptions', formatStat(stats.receiving.receptions))}
-        {renderStatRow(
-          'Catch %',
-          stats.receiving.targets > 0
-            ? `${((stats.receiving.receptions / stats.receiving.targets) * 100).toFixed(1)}%`
-            : '0%'
-        )}
-        {renderStatRow('Yards', formatStat(stats.receiving.yards))}
-        {renderStatRow('YPR', formatStat(stats.receiving.yardsPerReception, 1))}
-        {renderStatRow('TDs', formatStat(stats.receiving.touchdowns))}
-        {renderStatRow('Drops', formatStat(stats.receiving.drops))}
-        {renderStatRow('Long', formatStat(stats.receiving.longestReception))}
-      </View>
-    );
-  };
-
-  const renderDefensiveStats = () => {
-    if (!stats) return null;
-    const hasDefensiveStats =
-      stats.defensive.tackles > 0 || stats.defensive.sacks > 0 || stats.defensive.interceptions > 0;
-    if (!hasDefensiveStats) return null;
-
-    return (
-      <View style={styles.statsSection}>
-        <Text style={styles.statsSectionTitle}>Defense</Text>
-        {renderStatRow('Tackles', formatStat(stats.defensive.tackles))}
-        {renderStatRow('TFL', formatStat(stats.defensive.tacklesForLoss))}
-        {renderStatRow('Sacks', formatStat(stats.defensive.sacks, 1))}
-        {renderStatRow('INTs', formatStat(stats.defensive.interceptions))}
-        {renderStatRow('PDs', formatStat(stats.defensive.passesDefended))}
-        {renderStatRow('FF', formatStat(stats.defensive.forcedFumbles))}
-        {renderStatRow('FR', formatStat(stats.defensive.fumblesRecovered))}
-        {renderStatRow('TDs', formatStat(stats.defensive.touchdowns))}
-      </View>
-    );
-  };
-
-  const renderKickingStats = () => {
-    if (!stats || stats.kicking.fieldGoalAttempts === 0) return null;
-    return (
-      <View style={styles.statsSection}>
-        <Text style={styles.statsSectionTitle}>Kicking</Text>
-        {renderStatRow('FG', `${stats.kicking.fieldGoalsMade}/${stats.kicking.fieldGoalAttempts}`)}
-        {renderStatRow(
-          'FG %',
-          stats.kicking.fieldGoalAttempts > 0
-            ? `${((stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts) * 100).toFixed(1)}%`
-            : '0%'
-        )}
-        {renderStatRow('Long', formatStat(stats.kicking.longestFieldGoal))}
-        {renderStatRow(
-          'XP',
-          `${stats.kicking.extraPointsMade}/${stats.kicking.extraPointAttempts}`
-        )}
-      </View>
-    );
-  };
 
   return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -562,7 +496,7 @@ function StatsTab({
           <Text
             style={[styles.statsToggleText, viewType === 'season' && styles.statsToggleTextActive]}
           >
-            Season
+            This Season
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -580,65 +514,31 @@ function StatsTab({
         </TouchableOpacity>
       </View>
 
-      {/* Games played info */}
-      {stats && (
-        <View style={styles.gamesInfo}>
-          <Text style={styles.gamesInfoText}>
-            {stats.gamesPlayed} Games Played ({stats.gamesStarted} Starts)
-          </Text>
-        </View>
-      )}
-
-      {/* Position-specific stats */}
-      {!stats ? (
-        renderNoStats()
+      {/* Stats display */}
+      {viewType === 'season' ? (
+        seasonStats ? (
+          <StatsSummaryCard
+            stats={seasonStats}
+            position={player.position}
+            title="Season Statistics"
+          />
+        ) : (
+          <View style={styles.noStatsContainer}>
+            <Text style={styles.noStatsIcon}>📊</Text>
+            <Text style={styles.noStatsText}>No season stats available</Text>
+          </View>
+        )
+      ) : careerStats ? (
+        <StatsSummaryCard
+          stats={careerStats}
+          position={player.position}
+          title="Career Statistics"
+        />
       ) : (
-        <>
-          {/* QB and skill positions - show passing/rushing/receiving */}
-          {player.position === Position.QB && (
-            <>
-              {renderPassingStats()}
-              {renderRushingStats()}
-            </>
-          )}
-
-          {/* RB - rushing and receiving */}
-          {player.position === Position.RB && (
-            <>
-              {renderRushingStats()}
-              {renderReceivingStats()}
-            </>
-          )}
-
-          {/* WR/TE - receiving and rushing */}
-          {(player.position === Position.WR || player.position === Position.TE) && (
-            <>
-              {renderReceivingStats()}
-              {renderRushingStats()}
-            </>
-          )}
-
-          {/* O-Line - we'd show sacks allowed but that's in game stats */}
-          {(player.position === Position.LT ||
-            player.position === Position.LG ||
-            player.position === Position.C ||
-            player.position === Position.RG ||
-            player.position === Position.RT) && (
-            <View style={styles.statsSection}>
-              <Text style={styles.statsSectionTitle}>Blocking</Text>
-              {renderStatRow('Games', formatStat(stats.gamesPlayed))}
-              {renderStatRow('Starts', formatStat(stats.gamesStarted))}
-              {/* O-line specific stats would be tracked separately */}
-            </View>
-          )}
-
-          {/* Defensive positions */}
-          {positionGroup === 'defense' && renderDefensiveStats()}
-
-          {/* Kickers/Punters */}
-          {(player.position === Position.K || player.position === Position.P) &&
-            renderKickingStats()}
-        </>
+        <View style={styles.noStatsContainer}>
+          <Text style={styles.noStatsIcon}>📊</Text>
+          <Text style={styles.noStatsText}>No career stats available</Text>
+        </View>
       )}
     </ScrollView>
   );
@@ -660,70 +560,105 @@ function ContractTab({
     ? getContractSummary(contract, currentYear)
     : null;
 
-  const renderContractRow = (label: string, value: string) => (
-    <View style={styles.contractRow}>
-      <Text style={styles.contractLabel}>{label}</Text>
-      <Text style={styles.contractValue}>{value}</Text>
-    </View>
-  );
-
   return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Draft Info Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Draft Info</Text>
-        <View style={styles.draftInfoContainer}>
-          {renderContractRow('Draft Year', player.draftYear.toString())}
-          {renderContractRow(
-            'Draft Selection',
-            player.draftRound > 0
-              ? `Round ${player.draftRound}, Pick ${player.draftPick}`
-              : 'Undrafted'
-          )}
-          {renderContractRow(
-            'Experience',
-            `${player.experience} year${player.experience !== 1 ? 's' : ''}`
-          )}
-          {renderContractRow('Age', player.age.toString())}
+        <Text style={styles.sectionTitle}>Draft History</Text>
+        <View style={styles.draftInfoCard}>
+          <View style={styles.draftInfoRow}>
+            <InfoChip label="Draft Year" value={player.draftYear.toString()} />
+            <InfoChip
+              label="Selection"
+              value={
+                player.draftRound > 0
+                  ? `Rd ${player.draftRound}, Pick ${player.draftPick}`
+                  : 'Undrafted'
+              }
+            />
+          </View>
+          <View style={styles.draftInfoRow}>
+            <InfoChip
+              label="Experience"
+              value={`${player.experience} yr${player.experience !== 1 ? 's' : ''}`}
+            />
+            <InfoChip label="Age" value={player.age.toString()} />
+          </View>
         </View>
       </View>
 
       {/* Contract Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Contract</Text>
+        <Text style={styles.sectionTitle}>Contract Details</Text>
         {summary ? (
-          <View style={styles.contractContainer}>
-            <View style={styles.contractHeader}>
-              <View
-                style={[
-                  styles.contractStatusBadge,
-                  summary.statusDescription === 'Expiring' && styles.contractStatusExpiring,
-                ]}
-              >
-                <Text style={styles.contractStatusText}>{summary.statusDescription}</Text>
+          <View style={styles.contractCard}>
+            {/* Contract status badge */}
+            <View
+              style={[
+                styles.contractStatusBadge,
+                summary.statusDescription === 'Expiring' && styles.contractStatusExpiring,
+              ]}
+            >
+              <Text style={styles.contractStatusText}>{summary.statusDescription}</Text>
+            </View>
+
+            {/* Contract values */}
+            <View style={styles.contractValuesGrid}>
+              <View style={styles.contractValueItem}>
+                <Text style={styles.contractValueLabel}>Total Value</Text>
+                <Text style={styles.contractValueAmount}>{summary.totalValue}</Text>
+              </View>
+              <View style={styles.contractValueItem}>
+                <Text style={styles.contractValueLabel}>Guaranteed</Text>
+                <Text style={styles.contractValueAmount}>{summary.guaranteed}</Text>
+              </View>
+              <View style={styles.contractValueItem}>
+                <Text style={styles.contractValueLabel}>AAV</Text>
+                <Text style={styles.contractValueAmount}>{summary.aav}</Text>
+              </View>
+              <View style={styles.contractValueItem}>
+                <Text style={styles.contractValueLabel}>Cap Hit</Text>
+                <Text style={styles.contractValueAmount}>{summary.currentCapHit}</Text>
               </View>
             </View>
-            {renderContractRow('Total Value', summary.totalValue)}
-            {renderContractRow('Guaranteed', summary.guaranteed)}
-            {renderContractRow('AAV', summary.aav)}
-            {renderContractRow('Length', `${summary.years} year${summary.years !== 1 ? 's' : ''}`)}
-            {renderContractRow('Years Remaining', summary.yearsRemaining.toString())}
-            {renderContractRow('Current Cap Hit', summary.currentCapHit)}
 
-            {contract?.hasNoTradeClause && (
-              <View style={styles.clauseBadge}>
-                <Text style={styles.clauseText}>No-Trade Clause</Text>
+            {/* Contract length */}
+            <View style={styles.contractLengthRow}>
+              <Text style={styles.contractLengthLabel}>
+                {summary.yearsRemaining} of {summary.years} years remaining
+              </Text>
+              <View style={styles.contractLengthBar}>
+                <View
+                  style={[
+                    styles.contractLengthFill,
+                    {
+                      width: `${((summary.years - summary.yearsRemaining) / summary.years) * 100}%`,
+                    },
+                  ]}
+                />
               </View>
-            )}
-            {contract?.hasNoTagClause && (
-              <View style={styles.clauseBadge}>
-                <Text style={styles.clauseText}>No-Tag Clause</Text>
+            </View>
+
+            {/* Contract clauses */}
+            {(contract?.hasNoTradeClause || contract?.hasNoTagClause) && (
+              <View style={styles.contractClausesRow}>
+                {contract?.hasNoTradeClause && (
+                  <View style={styles.clauseBadge}>
+                    <Text style={styles.clauseText}>No-Trade</Text>
+                  </View>
+                )}
+                {contract?.hasNoTagClause && (
+                  <View style={styles.clauseBadge}>
+                    <Text style={styles.clauseText}>No-Tag</Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
         ) : (
-          <View style={styles.noContractContainer}>
-            <Text style={styles.noContractText}>No active contract</Text>
+          <View style={styles.noContractCard}>
+            <Text style={styles.noContractIcon}>📝</Text>
+            <Text style={styles.noContractText}>No Active Contract</Text>
             <Text style={styles.noContractSubtext}>Free Agent</Text>
           </View>
         )}
@@ -748,77 +683,79 @@ export function PlayerDetailCard({
   onRelease,
 }: PlayerDetailCardProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
-  const positionColor = getPositionColor(player.position);
+  const positionColors = getPositionColor(player.position);
+  const avgRating = getAverageSkillRating(player);
+  const tierInfo = getRatingTierColor(avgRating);
 
   const content = (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={[styles.positionBadge, { backgroundColor: positionColor }]}>
-          <Text style={styles.positionText}>{player.position}</Text>
+      {/* Sticky Header - ESPN-style */}
+      <View style={[styles.stickyHeader, { borderBottomColor: tierInfo.primary }]}>
+        {/* Top row: Position badge, name, close button */}
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.positionBadge, { backgroundColor: positionColors.main }]}>
+              <Text style={styles.positionText}>{player.position}</Text>
+            </View>
+            <View style={styles.headerNameSection}>
+              <Text style={styles.playerName}>
+                {player.firstName} {player.lastName}
+              </Text>
+              <Text style={styles.playerSubtitle}>
+                {player.age} years old •{' '}
+                {player.experience > 0
+                  ? `${player.experience} yr${player.experience !== 1 ? 's' : ''} exp`
+                  : 'Rookie'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <RatingTierIndicator rating={avgRating} size="md" variant="badge" />
+            {onClose && (
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-        <View style={styles.headerInfo}>
-          <Text style={styles.playerName}>
-            {player.firstName} {player.lastName}
-          </Text>
-          <Text style={styles.playerDetails}>
-            Age {player.age} •{' '}
-            {player.experience > 0
-              ? `${player.experience} yr${player.experience !== 1 ? 's' : ''} exp`
-              : 'Rookie'}
-          </Text>
-        </View>
-        {onClose && (
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'profile' && styles.tabActive]}
-          onPress={() => setActiveTab('profile')}
-        >
-          <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
-            Profile
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'stats' && styles.tabActive]}
-          onPress={() => setActiveTab('stats')}
-        >
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>Stats</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'contract' && styles.tabActive]}
-          onPress={() => setActiveTab('contract')}
-        >
-          <Text style={[styles.tabText, activeTab === 'contract' && styles.tabTextActive]}>
-            Contract
-          </Text>
-        </TouchableOpacity>
+        {/* Tab Navigation */}
+        <View style={styles.tabBar}>
+          {(['profile', 'stats', 'contract'] as TabType[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabButtonText, activeTab === tab && styles.tabButtonTextActive]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+              {activeTab === tab && (
+                <View style={[styles.tabIndicator, { backgroundColor: positionColors.main }]} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'profile' && (
-        <ProfileTab
-          player={player}
-          teamOffensiveScheme={teamOffensiveScheme}
-          teamDefensiveScheme={teamDefensiveScheme}
-          seasonStats={seasonStats}
-          careerStats={careerStats}
-        />
-      )}
-      {activeTab === 'stats' && (
-        <StatsTab player={player} seasonStats={seasonStats} careerStats={careerStats} />
-      )}
-      {activeTab === 'contract' && (
-        <ContractTab player={player} contract={contract} currentYear={currentYear} />
-      )}
+      <View style={styles.tabContentContainer}>
+        {activeTab === 'profile' && (
+          <ProfileTab
+            player={player}
+            teamOffensiveScheme={teamOffensiveScheme}
+            teamDefensiveScheme={teamDefensiveScheme}
+          />
+        )}
+        {activeTab === 'stats' && (
+          <StatsTab player={player} seasonStats={seasonStats} careerStats={careerStats} />
+        )}
+        {activeTab === 'contract' && (
+          <ContractTab player={player} contract={contract} currentYear={currentYear} />
+        )}
+      </View>
 
-      {/* Release Button */}
+      {/* Footer Actions */}
       {onRelease && (
         <View style={styles.footerActions}>
           <TouchableOpacity style={styles.releaseButton} onPress={onRelease}>
@@ -858,16 +795,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+
+  // Sticky Header styles
+  stickyHeader: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 3,
+    ...shadows.md,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingBottom: spacing.md,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   positionBadge: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -878,7 +827,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
   },
-  headerInfo: {
+  headerNameSection: {
     flex: 1,
   },
   playerName: {
@@ -886,16 +835,21 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.text,
   },
-  playerDetails: {
-    fontSize: fontSize.md,
+  playerSubtitle: {
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xxs,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.border,
+    backgroundColor: colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -903,195 +857,210 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: colors.textSecondary,
   },
-  tabContainer: {
+
+  // Tab bar styles
+  tabBar: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingHorizontal: spacing.lg,
   },
-  tab: {
+  tabButton: {
     flex: 1,
-    paddingVertical: spacing.md,
     alignItems: 'center',
+    paddingVertical: spacing.md,
+    position: 'relative',
   },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
-  },
-  tabText: {
+  tabButtonActive: {},
+  tabButtonText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
-  tabTextActive: {
-    color: colors.primary,
+  tabButtonTextActive: {
+    color: colors.text,
     fontWeight: fontWeight.semibold,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: spacing.lg,
+    right: spacing.lg,
+    height: 3,
+    borderRadius: borderRadius.sm,
+  },
+
+  // Tab content
+  tabContentContainer: {
+    flex: 1,
   },
   tabContent: {
     flex: 1,
     padding: spacing.lg,
   },
+
+  // Section styles
   section: {
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.md,
   },
-  traitsSubsection: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  // Stats Summary styles
-  statsGridContainer: {
+
+  // Quick status row
+  quickStatusRow: {
     flexDirection: 'row',
-    gap: spacing.md,
-  },
-  statsColumn: {
-    flex: 1,
+    justifyContent: 'space-around',
+    padding: spacing.md,
     backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
+  },
+  circularProgress: {
+    alignItems: 'center',
+  },
+  circularOuter: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circularInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  circularValue: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  circularLabel: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+
+  // Injury alert
+  injuryAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.error}10`,
+    borderWidth: 1,
+    borderColor: colors.error,
     borderRadius: borderRadius.md,
     padding: spacing.md,
+    marginBottom: spacing.lg,
   },
-  statsColumnHeader: {
+  injuryAlertIcon: {
+    fontSize: fontSize.xl,
+    marginRight: spacing.md,
+  },
+  injuryAlertContent: {
+    flex: 1,
+  },
+  injuryAlertTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.error,
+  },
+  injuryAlertSubtitle: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.xs,
+    color: colors.error,
+    marginTop: spacing.xxs,
   },
-  statsGamesText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  statsSummaryRow: {
+
+  // Role cards
+  roleCardsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xxs,
-  },
-  statsSummaryLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-  },
-  statsSummaryValue: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    fontVariant: ['tabular-nums'],
-  },
-  // Role & Status styles
-  roleContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  roleItem: {
-    flex: 1,
     backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
-  roleLabel: {
+  roleCard: {
+    flex: 1,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  roleCardDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+  },
+  roleCardLabel: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    marginBottom: spacing.xxs,
+    marginBottom: spacing.xs,
   },
-  roleValue: {
+  roleCardValue: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.text,
   },
-  roleFitDescription: {
+  roleDescription: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontStyle: 'italic',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
-  schemeFitContainer: {
+  schemeFitBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.md,
     padding: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceLight,
     borderRadius: borderRadius.md,
+    gap: spacing.sm,
   },
   schemeFitLabel: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
-    marginRight: spacing.sm,
   },
   schemeFitValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.text,
-  },
-  // Status bar styles
-  statusBarContainer: {
-    marginBottom: spacing.md,
-  },
-  statusBarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  statusBarLabel: {
-    fontSize: fontSize.sm,
-    color: colors.text,
-  },
-  statusBarValue: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.text,
   },
-  statusBarTrack: {
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-  },
-  statusBarFill: {
-    height: '100%',
-    borderRadius: borderRadius.sm,
-  },
-  // Injury styles
-  injuryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: `${colors.error}15`,
-    borderRadius: borderRadius.md,
+
+  // Skills grid
+  skillsGrid: {},
+
+  // Info chip
+  infoChip: {
+    flex: 1,
+    backgroundColor: colors.surfaceLight,
     borderWidth: 1,
-    borderColor: colors.error,
-    marginTop: spacing.sm,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    alignItems: 'center',
   },
-  injuryIcon: {
-    fontSize: fontSize.lg,
-    marginRight: spacing.sm,
+  infoChipLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxs,
   },
-  injuryText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.error,
+  infoChipValue: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
   },
-  injuryWeeks: {
-    fontSize: fontSize.sm,
-    color: colors.error,
-    marginLeft: spacing.xs,
-  },
-  // Stats styles
+
+  // Stats toggle
   statsToggle: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceLight,
+    borderRadius: borderRadius.lg,
     padding: spacing.xxs,
     marginBottom: spacing.lg,
   },
@@ -1099,10 +1068,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     alignItems: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
   },
   statsToggleButtonActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface,
+    ...shadows.sm,
   },
   statsToggleText: {
     fontSize: fontSize.sm,
@@ -1110,30 +1080,33 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   statsToggleTextActive: {
-    color: colors.textOnPrimary,
+    color: colors.text,
+    fontWeight: fontWeight.semibold,
   },
-  gamesInfo: {
-    marginBottom: spacing.lg,
-  },
-  gamesInfoText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  statsSection: {
-    marginBottom: spacing.lg,
+
+  // Stats summary card
+  statsSummaryCard: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
   },
-  statsSectionTitle: {
+  statsSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  statsSummaryTitle: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.text,
-    marginBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.sm,
+  },
+  statsSummaryGames: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
   },
   statRow: {
     flexDirection: 'row',
@@ -1146,67 +1119,109 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.medium,
     color: colors.text,
     fontVariant: ['tabular-nums'],
   },
+  statValueHighlight: {
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+
+  // No stats container
   noStatsContainer: {
-    padding: spacing.xl,
     alignItems: 'center',
+    padding: spacing.xxl,
+    backgroundColor: colors.surfaceLight,
+    borderRadius: borderRadius.lg,
+  },
+  noStatsIcon: {
+    fontSize: fontSize.xxxl,
+    marginBottom: spacing.md,
   },
   noStatsText: {
     fontSize: fontSize.md,
-    color: colors.textLight,
-    fontStyle: 'italic',
+    color: colors.textSecondary,
   },
-  // Contract styles
-  draftInfoContainer: {
+
+  // Draft info
+  draftInfoCard: {
+    gap: spacing.sm,
+  },
+  draftInfoRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+
+  // Contract card
+  contractCard: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  contractContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  contractHeader: {
-    marginBottom: spacing.md,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
   },
   contractStatusBadge: {
     alignSelf: 'flex-start',
     backgroundColor: colors.success,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.md,
   },
   contractStatusExpiring: {
     backgroundColor: colors.warning,
   },
   contractStatusText: {
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textOnPrimary,
   },
-  contractRow: {
+  contractValuesGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  contractLabel: {
-    fontSize: fontSize.sm,
+  contractValueItem: {
+    width: '48%',
+    backgroundColor: colors.surfaceLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  contractValueLabel: {
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
+    marginBottom: spacing.xxs,
   },
-  contractValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+  contractValueAmount: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
     color: colors.text,
   },
-  clauseBadge: {
+  contractLengthRow: {
+    marginTop: spacing.sm,
+  },
+  contractLengthLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  contractLengthBar: {
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+  },
+  contractLengthFill: {
+    height: '100%',
+    backgroundColor: colors.info,
+    borderRadius: borderRadius.full,
+  },
+  contractClausesRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginTop: spacing.md,
-    alignSelf: 'flex-start',
+  },
+  clauseBadge: {
     backgroundColor: colors.info,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -1214,34 +1229,42 @@ const styles = StyleSheet.create({
   },
   clauseText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.semibold,
     color: colors.textOnPrimary,
   },
-  noContractContainer: {
-    padding: spacing.xl,
+
+  // No contract card
+  noContractCard: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    padding: spacing.xxl,
+    backgroundColor: colors.surfaceLight,
+    borderRadius: borderRadius.lg,
+  },
+  noContractIcon: {
+    fontSize: fontSize.xxxl,
+    marginBottom: spacing.md,
   },
   noContractText: {
-    fontSize: fontSize.md,
-    color: colors.textLight,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
   },
   noContractSubtext: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    color: colors.textLight,
     marginTop: spacing.xs,
   },
-  // Footer action styles
+
+  // Footer actions
   footerActions: {
     padding: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
   releaseButton: {
     backgroundColor: colors.error,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
     alignItems: 'center',
   },
