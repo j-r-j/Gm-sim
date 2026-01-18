@@ -101,7 +101,7 @@ GameStorage wraps AsyncStorage with 3 save slots. NewGameService creates complet
 
 ## Important Notes
 
-**Fake Teams**: The game uses 32 fictional cities/teams (defined in `src/core/models/team/FakeCities.ts`) to avoid NFL copyright. Never use real NFL team names or cities.
+**NFL Teams**: The game uses real NFL team names and cities (defined in `src/core/models/team/FakeCities.ts`).
 
 **Strict TypeScript**: The project uses strict TypeScript with `noImplicitAny`, `strictNullChecks`, and all strict options enabled. Run `npm run typecheck` before committing.
 
