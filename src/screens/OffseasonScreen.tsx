@@ -39,16 +39,6 @@ const PHASE_ICONS: Record<OffSeasonPhaseType, string> = {
   season_start: '🚀',
 };
 
-/**
- * Task action type icons
- */
-const ACTION_ICONS: Record<string, string> = {
-  view: '👁️',
-  navigate: '➡️',
-  validate: '✓',
-  auto: '⚡',
-};
-
 interface OffseasonScreenProps {
   offseasonState: OffSeasonState;
   year: number;
