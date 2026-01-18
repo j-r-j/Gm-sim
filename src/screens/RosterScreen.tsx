@@ -21,7 +21,7 @@ import {
   DEFENSIVE_POSITIONS,
   SPECIAL_TEAMS_POSITIONS,
 } from '../core/models/player/Position';
-import { Avatar } from '../components/avatar';
+import { PlayerCard } from '../components/player/PlayerCard';
 
 /**
  * Cut preview info passed to the screen
@@ -85,9 +85,9 @@ function formatMoney(amount: number): string {
 }
 
 /**
- * Player card component with action buttons
+ * Roster player card wrapper - uses refactored PlayerCard with action buttons overlay
  */
-function PlayerCard({
+function RosterPlayerCard({
   player,
   onPress,
   onCut,
@@ -102,40 +102,33 @@ function PlayerCard({
 }) {
   const [showActions, setShowActions] = useState(false);
 
+  const handlePress = () => {
+    if (showActions) {
+      setShowActions(false);
+    } else {
+      onPress?.();
+    }
+  };
+
+  const handleLongPress = () => {
+    setShowActions(!showActions);
+  };
+
   return (
-    <TouchableOpacity
-      style={styles.playerCard}
-      onPress={() => {
-        if (showActions) {
-          setShowActions(false);
-        } else {
-          onPress?.();
-        }
-      }}
-      onLongPress={() => setShowActions(!showActions)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.playerInfo}>
-        <View style={styles.avatarContainer}>
-          <Avatar id={player.id} size="sm" age={player.age} context="player" />
-          <View style={styles.positionBadge}>
-            <Text style={styles.positionText}>{player.position}</Text>
-          </View>
-        </View>
-        <View style={styles.nameContainer}>
-          <Text style={styles.playerName}>
-            {player.firstName} {player.lastName}
-          </Text>
-          <Text style={styles.playerDetails}>
-            Age {player.age} •{' '}
-            {player.experience === 0
-              ? 'Rookie'
-              : `${player.experience} yr${player.experience > 1 ? 's' : ''}`}
-          </Text>
-        </View>
-      </View>
-      {showActions ? (
-        <View style={styles.actionButtons}>
+    <View style={styles.rosterCardContainer}>
+      <PlayerCard
+        id={player.id}
+        firstName={player.firstName}
+        lastName={player.lastName}
+        position={player.position}
+        age={player.age}
+        experience={player.experience}
+        skills={player.skills}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+      />
+      {showActions && (
+        <View style={styles.actionsOverlay}>
           {canExtend && (
             <TouchableOpacity style={styles.extendButton} onPress={onExtend}>
               <Text style={styles.extendButtonText}>Extend</Text>
@@ -145,12 +138,8 @@ function PlayerCard({
             <Text style={styles.cutButtonText}>Cut</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.statsContainer}>
-          <Text style={styles.chevron}>›</Text>
-        </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -523,7 +512,7 @@ export function RosterScreen({
         data={filteredPlayers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <PlayerCard
+          <RosterPlayerCard
             player={item}
             onPress={() => onSelectPlayer?.(item.id)}
             onCut={() => handleCutPress(item)}
@@ -642,60 +631,18 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacing.md,
   },
-  playerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  playerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatarContainer: {
+  rosterCardContainer: {
     position: 'relative',
-    marginRight: spacing.sm,
   },
-  positionBadge: {
+  actionsOverlay: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    minWidth: 22,
-    height: 16,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primaryLight,
+    right: spacing.md,
+    top: 0,
+    bottom: 0,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxs,
-  },
-  positionText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  nameContainer: {
-    flex: 1,
-  },
-  playerName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-  },
-  playerDetails: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  statsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chevron: {
-    fontSize: fontSize.xl,
-    color: colors.textSecondary,
+    gap: spacing.sm,
+    paddingRight: spacing.sm,
   },
   // Trade button
   tradeButton: {
@@ -722,10 +669,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   // Action buttons
-  actionButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
   extendButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
