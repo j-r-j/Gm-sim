@@ -56,10 +56,23 @@ export function SeasonRecapScreen({
   onBack,
   onPlayerSelect,
 }: SeasonRecapScreenProps): React.JSX.Element {
-  const { year, teamRecord, divisionFinish, madePlayoffs, playoffResult, draftPosition, topPerformers, awards } = recap;
+  const {
+    year,
+    teamRecord,
+    divisionFinish,
+    madePlayoffs,
+    playoffResult,
+    draftPosition,
+    topPerformers,
+    awards,
+  } = recap;
 
   const recordString = `${teamRecord.wins}-${teamRecord.losses}${teamRecord.ties > 0 ? `-${teamRecord.ties}` : ''}`;
-  const winPct = ((teamRecord.wins + teamRecord.ties * 0.5) / (teamRecord.wins + teamRecord.losses + teamRecord.ties) * 100).toFixed(1);
+  const winPct = (
+    ((teamRecord.wins + teamRecord.ties * 0.5) /
+      (teamRecord.wins + teamRecord.losses + teamRecord.ties)) *
+    100
+  ).toFixed(1);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -89,7 +102,12 @@ export function SeasonRecapScreen({
           <View style={styles.outcomeGrid}>
             {/* Division Finish */}
             <View style={styles.outcomeCard}>
-              <View style={[styles.outcomeBadge, { backgroundColor: getDivisionColor(divisionFinish) + '20' }]}>
+              <View
+                style={[
+                  styles.outcomeBadge,
+                  { backgroundColor: getDivisionColor(divisionFinish) + '20' },
+                ]}
+              >
                 <Text style={[styles.outcomeValue, { color: getDivisionColor(divisionFinish) }]}>
                   {getOrdinalSuffix(divisionFinish)}
                 </Text>
@@ -99,8 +117,20 @@ export function SeasonRecapScreen({
 
             {/* Playoff Status */}
             <View style={styles.outcomeCard}>
-              <View style={[styles.outcomeBadge, { backgroundColor: madePlayoffs ? colors.success + '20' : colors.textLight + '20' }]}>
-                <Text style={[styles.outcomeValue, { color: madePlayoffs ? colors.success : colors.textSecondary }]}>
+              <View
+                style={[
+                  styles.outcomeBadge,
+                  {
+                    backgroundColor: madePlayoffs ? colors.success + '20' : colors.textLight + '20',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.outcomeValue,
+                    { color: madePlayoffs ? colors.success : colors.textSecondary },
+                  ]}
+                >
                   {madePlayoffs ? 'Yes' : 'No'}
                 </Text>
               </View>
@@ -120,8 +150,18 @@ export function SeasonRecapScreen({
 
           {/* Playoff Result */}
           {playoffResult && (
-            <View style={[styles.playoffResult, playoffResult.includes('Champions') && styles.championResult]}>
-              <Text style={[styles.playoffResultText, playoffResult.includes('Champions') && styles.championText]}>
+            <View
+              style={[
+                styles.playoffResult,
+                playoffResult.includes('Champions') && styles.championResult,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.playoffResultText,
+                  playoffResult.includes('Champions') && styles.championText,
+                ]}
+              >
                 {playoffResult}
               </Text>
             </View>
@@ -146,7 +186,9 @@ export function SeasonRecapScreen({
                   <Text style={styles.performerName}>{performer.playerName}</Text>
                   <Text style={styles.performerPosition}>{performer.position}</Text>
                 </View>
-                <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(performer.grade) }]}>
+                <View
+                  style={[styles.gradeBadge, { backgroundColor: getGradeColor(performer.grade) }]}
+                >
                   <Text style={styles.gradeText}>{performer.grade}</Text>
                 </View>
               </TouchableOpacity>
@@ -183,7 +225,9 @@ export function SeasonRecapScreen({
             <Text style={styles.sectionTitle}>Awards</Text>
             <View style={styles.noAwardsCard}>
               <Text style={styles.noAwardsText}>No individual awards this season</Text>
-              <Text style={styles.noAwardsSubtext}>Build a championship roster to earn recognition</Text>
+              <Text style={styles.noAwardsSubtext}>
+                Build a championship roster to earn recognition
+              </Text>
             </View>
           </View>
         )}
@@ -194,10 +238,10 @@ export function SeasonRecapScreen({
           <Text style={styles.summaryText}>
             With the #{draftPosition} overall pick in the upcoming draft,
             {draftPosition <= 10
-              ? " you have a chance to add a premium talent to the roster."
+              ? ' you have a chance to add a premium talent to the roster.'
               : draftPosition <= 20
-              ? " you can find a solid contributor to strengthen the team."
-              : " you'll need to scout carefully to find value in the later rounds."}
+                ? ' you can find a solid contributor to strengthen the team.'
+                : " you'll need to scout carefully to find value in the later rounds."}
           </Text>
           <Text style={styles.summaryText}>
             Time to evaluate the roster, make key decisions, and prepare for next season.
