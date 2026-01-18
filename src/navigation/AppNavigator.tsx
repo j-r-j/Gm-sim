@@ -54,6 +54,7 @@ import {
   StatsScreenWrapper,
   WeekGamesScreenWrapper,
   WeekSummaryScreenWrapper,
+  WeeklyScheduleScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -145,6 +146,7 @@ export function AppNavigator(): React.JSX.Element {
       {/* Week/Season Progression */}
       <Stack.Screen name="WeekGames" component={WeekGamesScreenWrapper} />
       <Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
+      <Stack.Screen name="WeeklySchedule" component={WeeklyScheduleScreenWrapper} />
     </Stack.Navigator>
   );
 }

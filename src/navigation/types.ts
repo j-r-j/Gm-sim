@@ -106,6 +106,7 @@ export type RootStackParamList = {
   // Week/Season Progression
   WeekGames: undefined;
   WeekSummary: undefined;
+  WeeklySchedule: undefined;
 };
 
 /**
@@ -204,4 +205,5 @@ export const Routes = {
   // Week/Season Progression
   WeekGames: 'WeekGames',
   WeekSummary: 'WeekSummary',
+  WeeklySchedule: 'WeeklySchedule',
 } as const;
