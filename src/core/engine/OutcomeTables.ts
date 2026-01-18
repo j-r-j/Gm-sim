@@ -481,12 +481,108 @@ export function generateOutcomeTable(
 }
 
 /**
+ * Truncated Gaussian distribution for more realistic yard outcomes
+ * Uses Box-Muller transform with truncation and skew
+ */
+function truncatedGaussian(
+  mean: number,
+  stdDev: number,
+  min: number,
+  max: number,
+  skew: number = 0
+): number {
+  // Box-Muller transform
+  const u1 = Math.random();
+  const u2 = Math.random();
+  let z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+
+  // Apply skew (positive skew = more likely to be above mean)
+  if (skew !== 0) {
+    z = z + skew * Math.abs(z) * (z > 0 ? 1 : -1);
+  }
+
+  let value = mean + z * stdDev;
+
+  // Truncate to range
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+/**
+ * Calculate yards using position-based Gaussian distribution
+ * Different play types have different expected distributions
+ */
+function calculateYardsGaussian(
+  min: number,
+  max: number,
+  outcome: PlayOutcome,
+  matchupAdvantage: number
+): number {
+  if (min === max) return min;
+
+  // Base mean and standard deviation
+  let mean = (min + max) / 2;
+  let stdDev = (max - min) / 4;
+  let skew = 0;
+
+  // Adjust based on outcome type - some outcomes cluster differently
+  switch (outcome) {
+    case 'big_gain':
+      // Big gains cluster toward the lower end with occasional explosives
+      mean = min + (max - min) * 0.35;
+      stdDev = (max - min) / 3;
+      skew = 0.3; // Right skew for occasional big plays
+      break;
+
+    case 'good_gain':
+      // Good gains are fairly normally distributed
+      mean = (min + max) / 2;
+      stdDev = (max - min) / 4;
+      break;
+
+    case 'moderate_gain':
+    case 'short_gain':
+      // Short gains cluster toward expected value
+      mean = (min + max) / 2;
+      stdDev = (max - min) / 5; // Tighter distribution
+      break;
+
+    case 'loss':
+    case 'big_loss':
+      // Losses cluster toward smaller losses
+      mean = max - (max - min) * 0.3; // Closer to max (smaller loss)
+      stdDev = (max - min) / 3;
+      skew = -0.2; // Left skew for occasional big losses
+      break;
+
+    case 'sack':
+      // Sacks cluster around -6 to -8 yards
+      mean = min + (max - min) * 0.4;
+      stdDev = (max - min) / 4;
+      break;
+
+    default:
+      break;
+  }
+
+  // Matchup advantage shifts the distribution
+  // Positive advantage = offense winning = better outcomes
+  const advantageShift = (matchupAdvantage / 40) * (max - min) * 0.2;
+  mean += advantageShift;
+
+  return truncatedGaussian(mean, stdDev, min, max, skew);
+}
+
+/**
  * Roll against outcome table and return result
  *
  * @param table - Outcome table to roll against
+ * @param matchupAdvantage - Optional matchup advantage for yard calculation (-40 to +40)
  * @returns The selected outcome with yards and effects
  */
-export function rollOutcome(table: OutcomeTableEntry[]): {
+export function rollOutcome(
+  table: OutcomeTableEntry[],
+  matchupAdvantage: number = 0
+): {
   outcome: PlayOutcome;
   yards: number;
   secondaryEffects: SecondaryEffect[];
@@ -511,25 +607,9 @@ export function rollOutcome(table: OutcomeTableEntry[]): {
     selectedEntry = table[table.length - 1];
   }
 
-  // Calculate yards within range
+  // Calculate yards using enhanced Gaussian distribution
   const { min, max } = selectedEntry.yardsRange;
-  let yards: number;
-
-  if (min === max) {
-    yards = min;
-  } else {
-    // Use normal distribution for more realistic yard distribution
-    const mean = (min + max) / 2;
-    const stdDev = (max - min) / 4;
-
-    // Box-Muller transform
-    const u1 = Math.random();
-    const u2 = Math.random();
-    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-
-    yards = Math.round(mean + z * stdDev);
-    yards = Math.max(min, Math.min(max, yards));
-  }
+  const yards = calculateYardsGaussian(min, max, selectedEntry.outcome, matchupAdvantage);
 
   return {
     outcome: selectedEntry.outcome,
