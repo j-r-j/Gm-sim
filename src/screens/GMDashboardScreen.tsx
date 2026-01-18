@@ -18,6 +18,7 @@ export type DashboardAction =
   | 'standings'
   | 'stats'
   | 'draft'
+  | 'bigBoard'
   | 'freeAgency'
   | 'staff'
   | 'finances'
@@ -469,6 +470,14 @@ export function GMDashboardScreen({
           color={colors.secondary}
           onPress={() => onAction('draft')}
           badge={isDraft ? 'DRAFT' : isCombine ? 'SCOUTING' : undefined}
+        />
+
+        <MenuCard
+          title="Big Board"
+          subtitle="Your scouting rankings"
+          icon="📋"
+          color={colors.info}
+          onPress={() => onAction('bigBoard')}
         />
 
         <MenuCard

@@ -864,6 +864,9 @@ export function DashboardScreenWrapper({
             navigation.navigate('DraftBoard');
           }
           break;
+        case 'bigBoard':
+          navigation.navigate('BigBoard');
+          break;
         case 'roster':
           navigation.navigate('Roster');
           break;
@@ -2272,9 +2275,195 @@ export function PlayerProfileScreenWrapper({
     return <LoadingFallback message="Player not found..." />;
   }
 
+  // Generate scout reports for prospects
+  let scoutReports: ScoutReport[] = [];
+  if (realProspect) {
+    const scouts = Object.values(gameState.scouts).filter(
+      (scout) => scout.teamId === gameState.userTeamId
+    );
+    const primaryScout = scouts[0];
+    const player = realProspect.player;
+
+    // Calculate skill ranges from player skills
+    const skillEntries = Object.values(player.skills);
+    const getAvgSkill = (): number => {
+      if (skillEntries.length === 0) return 65;
+      const sum = skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0);
+      return Math.round(sum / skillEntries.length);
+    };
+
+    const overallAvg = getAvgSkill();
+    const physicalAvg = Math.round((player.physical.speed || 70) * 0.5 + overallAvg * 0.5);
+    const technicalAvg = overallAvg;
+
+    const projectedRound =
+      realProspect.consensusProjection?.projectedRound ||
+      Math.max(1, Math.min(7, Math.ceil((100 - overallAvg) / 12)));
+
+    // Always generate at least an auto report
+    const autoRangeWidth = 25;
+    const autoConfidenceLevel: 'low' | 'medium' | 'high' = 'low';
+
+    const allTraits = [
+      ...(player.hiddenTraits?.positive || []).map((t) => ({
+        name: t,
+        category: 'character' as const,
+      })),
+      ...(player.hiddenTraits?.negative || []).map((t) => ({
+        name: t,
+        category: 'character' as const,
+      })),
+    ];
+
+    // Auto report (baseline scouting)
+    scoutReports.push({
+      id: `report-auto-${realProspect.id}`,
+      prospectId: realProspect.id,
+      prospectName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      reportType: 'auto',
+      generatedAt: Date.now() - 7 * 86400000,
+      scoutId: primaryScout?.id || 'scout-1',
+      scoutName: primaryScout ? `${primaryScout.firstName} ${primaryScout.lastName}` : 'Head Scout',
+      physicalMeasurements: {
+        height: `${Math.floor(player.physical.height / 12)}'${player.physical.height % 12}"`,
+        weight: player.physical.weight,
+        college: realProspect.collegeName || 'Unknown',
+      },
+      skillRanges: {
+        overall: {
+          min: Math.max(0, overallAvg - autoRangeWidth),
+          max: Math.min(99, overallAvg + autoRangeWidth),
+          confidence: autoConfidenceLevel,
+        },
+        physical: {
+          min: Math.max(0, physicalAvg - autoRangeWidth),
+          max: Math.min(99, physicalAvg + autoRangeWidth),
+          confidence: autoConfidenceLevel,
+        },
+        technical: {
+          min: Math.max(0, technicalAvg - autoRangeWidth),
+          max: Math.min(99, technicalAvg + autoRangeWidth),
+          confidence: autoConfidenceLevel,
+        },
+      },
+      visibleTraits: allTraits.slice(0, 1),
+      hiddenTraitCount: Math.max(0, allTraits.length - 1),
+      draftProjection: {
+        roundMin: Math.max(1, projectedRound - 1),
+        roundMax: Math.min(7, projectedRound + 1),
+        pickRangeDescription:
+          projectedRound <= 2 ? `Round ${projectedRound}-${projectedRound + 1}` : 'Day 2-3',
+        overallGrade:
+          projectedRound === 1
+            ? 'First-round talent'
+            : projectedRound <= 3
+              ? 'Day 2 pick'
+              : 'Mid-round prospect',
+      },
+      confidence: {
+        level: autoConfidenceLevel,
+        score: 35,
+        factors: [
+          { factor: 'Scouting Depth', impact: 'negative', description: 'Limited observation time' },
+        ],
+      },
+      needsMoreScouting: projectedRound <= 3,
+      scoutingHours: 3,
+    });
+
+    // Add focus report if this is a higher-rated prospect (mock for now)
+    if (projectedRound <= 3 || realProspect.flagged) {
+      const focusRangeWidth = 10;
+      const focusConfidenceLevel: 'low' | 'medium' | 'high' =
+        overallAvg >= 75 ? 'high' : overallAvg >= 60 ? 'medium' : 'low';
+
+      scoutReports.push({
+        id: `report-focus-${realProspect.id}`,
+        prospectId: realProspect.id,
+        prospectName: `${player.firstName} ${player.lastName}`,
+        position: player.position,
+        reportType: 'focus',
+        generatedAt: Date.now() - 2 * 86400000,
+        scoutId: primaryScout?.id || 'scout-1',
+        scoutName: primaryScout
+          ? `${primaryScout.firstName} ${primaryScout.lastName}`
+          : 'Head Scout',
+        physicalMeasurements: {
+          height: `${Math.floor(player.physical.height / 12)}'${player.physical.height % 12}"`,
+          weight: player.physical.weight,
+          college: realProspect.collegeName || 'Unknown',
+          fortyYardDash: 4.3 + Math.random() * 0.7,
+          verticalJump: 28 + Math.random() * 12,
+        },
+        skillRanges: {
+          overall: {
+            min: Math.max(0, overallAvg - focusRangeWidth),
+            max: Math.min(99, overallAvg + focusRangeWidth),
+            confidence: focusConfidenceLevel,
+          },
+          physical: {
+            min: Math.max(0, physicalAvg - focusRangeWidth),
+            max: Math.min(99, physicalAvg + focusRangeWidth),
+            confidence: focusConfidenceLevel,
+          },
+          technical: {
+            min: Math.max(0, technicalAvg - focusRangeWidth),
+            max: Math.min(99, technicalAvg + focusRangeWidth),
+            confidence: focusConfidenceLevel,
+          },
+        },
+        visibleTraits: allTraits,
+        hiddenTraitCount: 0,
+        draftProjection: {
+          roundMin: projectedRound,
+          roundMax: projectedRound,
+          pickRangeDescription: `Round ${projectedRound}`,
+          overallGrade:
+            projectedRound === 1
+              ? 'First-round talent'
+              : projectedRound === 2
+                ? 'Day 1-2 pick'
+                : 'Day 2 pick',
+        },
+        confidence: {
+          level: focusConfidenceLevel,
+          score: focusConfidenceLevel === 'high' ? 85 : focusConfidenceLevel === 'medium' ? 65 : 45,
+          factors: [
+            {
+              factor: 'Scouting Depth',
+              impact: 'positive',
+              description: 'In-depth evaluation completed',
+            },
+            { factor: 'Time Invested', impact: 'positive', description: '45+ hours of film study' },
+          ],
+        },
+        characterAssessment: {
+          workEthic: overallAvg >= 70 ? 'elite' : 'good',
+          leadership: overallAvg >= 75 ? 'leader' : 'follower',
+          coachability: overallAvg >= 70 ? 'excellent' : 'good',
+          maturity: overallAvg >= 65 ? 'mature' : 'developing',
+          competitiveness: overallAvg >= 70 ? 'fierce' : 'competitive',
+          notes: ['Good football character', 'Works hard in practice'],
+        },
+        playerComparison:
+          overallAvg >= 80
+            ? 'Reminds scouts of a young Pro Bowler'
+            : overallAvg >= 70
+              ? 'Solid starter potential'
+              : 'Rotational player',
+        ceiling: overallAvg >= 75 ? 'Pro Bowl caliber' : 'Quality starter',
+        floor: overallAvg >= 70 ? 'Reliable backup' : 'Practice squad',
+        needsMoreScouting: false,
+        scoutingHours: 45,
+      });
+    }
+  }
+
   return (
     <PlayerProfileScreen
       {...profileData}
+      scoutReports={scoutReports}
       onBack={() => navigation.goBack()}
       onToggleFlag={async () => {
         if (realProspect) {
