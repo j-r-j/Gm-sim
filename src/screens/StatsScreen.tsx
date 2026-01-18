@@ -1159,6 +1159,7 @@ const styles = StyleSheet.create({
   filterScrollContent: {
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
+    alignItems: 'center',
   },
   filterChip: {
     paddingHorizontal: spacing.md,
@@ -1197,6 +1198,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
+    alignItems: 'center',
   },
   statTypeScroll: {
     backgroundColor: colors.surfaceLight,
@@ -1207,6 +1209,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
+    alignItems: 'center',
   },
   listContent: {
     padding: spacing.md,
