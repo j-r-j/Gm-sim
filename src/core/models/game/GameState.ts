@@ -127,6 +127,9 @@ export interface GameState {
 
   // Season stats for players (optional for backward compatibility)
   seasonStats?: Record<string, import('../../game/SeasonStatsAggregator').PlayerSeasonStats>;
+
+  // Offseason persistent data (carries across phases)
+  offseasonData?: import('../../offseason/OffseasonPersistentData').OffseasonPersistentData;
 }
 
 /**
