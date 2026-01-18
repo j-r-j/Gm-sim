@@ -4,6 +4,12 @@
  */
 
 import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
+import { Player } from '../../models/player/Player';
+import { Coach } from '../../models/staff/Coach';
+import {
+  processTeamProgression,
+  ProgressionResult,
+} from '../../career/PlayerProgression';
 
 /**
  * Position battle status
@@ -439,4 +445,53 @@ ${injuries
   Status: ${i.practiceStatus}`
   )
   .join('\n\n')}`;
+}
+
+/**
+ * Training camp progression result
+ */
+export interface TrainingCampProgressionResult {
+  updatedPlayers: Player[];
+  progressionResults: ProgressionResult[];
+  notableImprovements: ProgressionResult[];
+  developmentNews: string[];
+}
+
+/**
+ * Processes player development during training camp
+ * This applies coach-influenced skill progression to all roster players
+ */
+export function processTrainingCampProgression(
+  players: Player[],
+  headCoach: Coach,
+  options: {
+    recentSuccess?: boolean;
+    yearsTogether?: number;
+  } = {}
+): TrainingCampProgressionResult {
+  const { updatedPlayers, results, notableImprovements } = processTeamProgression(
+    players,
+    headCoach,
+    {
+      yearsTogether: options.yearsTogether ?? 1,
+      recentSuccess: options.recentSuccess ?? false,
+      applyAgeModifier: true,
+    }
+  );
+
+  // Generate development news for notable improvements
+  const developmentNews: string[] = notableImprovements.map((result) => {
+    if (result.totalChange >= 5) {
+      return `${result.playerName} has emerged as a standout in training camp, showing remarkable improvement.`;
+    } else {
+      return `${result.playerName} has been impressive in camp with noticeable skill development.`;
+    }
+  });
+
+  return {
+    updatedPlayers,
+    progressionResults: results,
+    notableImprovements,
+    developmentNews,
+  };
 }

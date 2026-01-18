@@ -307,6 +307,7 @@ export {
   type DevelopmentReveal,
   type CampInjury,
   type TrainingCampSummary,
+  type TrainingCampProgressionResult,
   updatePositionBattle,
   createPositionBattle,
   generateDevelopmentReveal,
@@ -315,6 +316,7 @@ export {
   getTrainingCampSummary,
   getPositionBattleText,
   getCampInjuryReportText,
+  processTrainingCampProgression,
 } from './phases/TrainingCampPhase';
 
 // ============================================

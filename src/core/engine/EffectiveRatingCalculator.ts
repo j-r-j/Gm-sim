@@ -17,6 +17,7 @@ import {
   getSchemeFitModifier as getAdvancedSchemeFitModifier,
 } from '../coaching/SchemeFitCalculator';
 import { getChemistryModifier } from '../coaching/ChemistryCalculator';
+import { getGameDayCoachModifier } from '../coaching/CoachEvaluationSystem';
 
 /**
  * Game stakes affecting performance
@@ -121,6 +122,21 @@ export function calculateCoachChemistryModifier(player: Player, coach: Coach | n
 
   // The result value is already in -10 to +10 range
   return chemistryResult.value;
+}
+
+/**
+ * Calculate coach quality modifier (-5 to +10 range)
+ * Better coaches help all players perform better on game day
+ * Uses the coach's gameDayIQ attribute
+ */
+export function calculateCoachQualityModifier(coach: Coach | null): number {
+  if (!coach) return 0;
+
+  // getGameDayCoachModifier returns -0.05 to +0.10 multiplier
+  const gameDayMod = getGameDayCoachModifier(coach);
+
+  // Convert to rating points (-5 to +10)
+  return Math.round(gameDayMod * 100);
 }
 
 /**
@@ -230,6 +246,7 @@ function getPlayerTrueSkillValue(player: Player, skill: string): number {
  * + Scheme Fit (-10 to +8)
  * + Role Fit (-8 to +10)
  * + Coach Chemistry (-10 to +10)
+ * + Coach Quality (-5 to +10) - Coach's game-day IQ
  * + Weather Tolerance (-10 to +2)
  * + Game Stakes x "It" Factor (-15 to +15)
  * + Weekly Random (Consistency-based)
@@ -257,6 +274,7 @@ export function calculateEffectiveRating(params: EffectiveRatingParams): number 
   const schemeFit = calculateSchemeFitModifier(player, teamScheme);
   const roleFit = calculateRoleFitModifier(player, assignedRole);
   const coachChemistry = calculateCoachChemistryModifier(player, positionCoach);
+  const coachQuality = calculateCoachQualityModifier(positionCoach);
   const weatherMod = calculateWeatherModifier(player, weather);
   const stakesMod = calculateStakesModifier(player, gameStakes);
 
@@ -265,7 +283,7 @@ export function calculateEffectiveRating(params: EffectiveRatingParams): number 
 
   // Calculate pre-injury rating
   let effectiveRating =
-    baseRating + schemeFit + roleFit + coachChemistry + weatherMod + stakesMod + varianceMod;
+    baseRating + schemeFit + roleFit + coachChemistry + coachQuality + weatherMod + stakesMod + varianceMod;
 
   // Apply injury modifier as a multiplier
   const injuryMultiplier = getInjuryPerformanceModifier(player.injuryStatus);
