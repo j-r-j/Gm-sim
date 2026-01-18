@@ -158,6 +158,12 @@ function getWeekDisplay(week: number, phase: string): string {
   return '';
 }
 
+function getOrdinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
 export function GMDashboardScreen({
   gameState,
   onAction,
@@ -185,6 +191,37 @@ export function GMDashboardScreen({
   const patienceViewModel: PatienceViewModel | null = gameState.patienceMeter
     ? createPatienceViewModel(gameState.patienceMeter)
     : null;
+
+  // Calculate division standing
+  const divisionTeams = Object.values(gameState.teams).filter(
+    (t) => t.conference === userTeam.conference && t.division === userTeam.division
+  );
+  divisionTeams.sort((a, b) => {
+    const aWinPct =
+      a.currentRecord.wins + a.currentRecord.losses > 0
+        ? a.currentRecord.wins / (a.currentRecord.wins + a.currentRecord.losses)
+        : 0.5;
+    const bWinPct =
+      b.currentRecord.wins + b.currentRecord.losses > 0
+        ? b.currentRecord.wins / (b.currentRecord.wins + b.currentRecord.losses)
+        : 0.5;
+    if (bWinPct !== aWinPct) return bWinPct - aWinPct;
+    return (
+      b.currentRecord.pointsFor -
+      b.currentRecord.pointsAgainst -
+      (a.currentRecord.pointsFor - a.currentRecord.pointsAgainst)
+    );
+  });
+  const divisionPosition = divisionTeams.findIndex((t) => t.id === userTeam.id) + 1;
+  const divisionLeader = divisionTeams[0];
+  const gamesBehindLeader =
+    divisionPosition === 1
+      ? 0
+      : (divisionLeader.currentRecord.wins -
+          userTeam.currentRecord.wins +
+          (userTeam.currentRecord.losses - divisionLeader.currentRecord.losses)) /
+        2;
+  const isPlayoffs = phase === 'playoffs';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -266,6 +303,57 @@ export function GMDashboardScreen({
             )}
             <Text style={styles.jobSecurityArrow}>→</Text>
           </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Division/Playoff Status Bar */}
+      {!isOffseason && (
+        <TouchableOpacity
+          style={styles.divisionStatusBar}
+          onPress={() => onAction(isPlayoffs ? 'standings' : 'standings')}
+          activeOpacity={0.7}
+        >
+          {isPlayoffs ? (
+            <>
+              <View style={styles.playoffStatusLeft}>
+                <Text style={styles.playoffStatusLabel}>PLAYOFFS</Text>
+                <Text style={styles.playoffRoundText}>
+                  {getWeekDisplay(calendar.currentWeek, phase)}
+                </Text>
+              </View>
+              {userTeam.playoffSeed && (
+                <View style={styles.seedContainer}>
+                  <Text style={styles.seedLabel}>Seed</Text>
+                  <Text style={styles.seedNumber}>#{userTeam.playoffSeed}</Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <View style={styles.divisionStatusLeft}>
+                <Text style={styles.divisionName}>
+                  {userTeam.conference} {userTeam.division}
+                </Text>
+                <Text style={styles.divisionPosition}>
+                  {divisionPosition === 1
+                    ? 'Division Leader'
+                    : `${divisionPosition}${getOrdinalSuffix(divisionPosition)} in Division`}
+                </Text>
+              </View>
+              <View style={styles.divisionStatusRight}>
+                {divisionPosition === 1 ? (
+                  <View style={styles.leaderBadge}>
+                    <Text style={styles.leaderBadgeText}>LEAD</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.gamesBehind}>
+                    {gamesBehindLeader > 0 ? `-${gamesBehindLeader} GB` : 'Tied'}
+                  </Text>
+                )}
+                <Text style={styles.divisionArrow}>→</Text>
+              </View>
+            </>
+          )}
         </TouchableOpacity>
       )}
 
@@ -570,6 +658,82 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
     fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
+  },
+  // Division/Playoff Status Bar
+  divisionStatusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primaryLight,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  divisionStatusLeft: {
+    flex: 1,
+  },
+  divisionStatusRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  divisionName: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.bold,
+  },
+  divisionPosition: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
+  },
+  leaderBadge: {
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+  },
+  leaderBadgeText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+  },
+  gamesBehind: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  divisionArrow: {
+    fontSize: fontSize.lg,
+    color: colors.textSecondary,
+  },
+  playoffStatusLeft: {
+    flex: 1,
+  },
+  playoffStatusLabel: {
+    fontSize: fontSize.xs,
+    color: colors.secondary,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 1,
+  },
+  playoffRoundText: {
+    fontSize: fontSize.md,
+    color: colors.text,
+    fontWeight: fontWeight.semibold,
+    marginTop: spacing.xxs,
+  },
+  seedContainer: {
+    alignItems: 'center',
+  },
+  seedLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  seedNumber: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.success,
   },
   statusItem: {
     flex: 1,

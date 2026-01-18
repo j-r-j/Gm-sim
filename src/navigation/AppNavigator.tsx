@@ -51,6 +51,8 @@ import {
   CareerLegacyScreenWrapper,
   CombineScreenWrapper,
   StatsScreenWrapper,
+  WeekGamesScreenWrapper,
+  WeekSummaryScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -138,10 +140,9 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="Interview" component={InterviewScreenWrapper} />
       <Stack.Screen name="CareerLegacy" component={CareerLegacyScreenWrapper} />
 
-      {/* ==================
-          NEW SCREENS (Tier 1+)
-          These will be added as we implement them
-          ================== */}
+      {/* Week/Season Progression */}
+      <Stack.Screen name="WeekGames" component={WeekGamesScreenWrapper} />
+      <Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
     </Stack.Navigator>
   );
 }

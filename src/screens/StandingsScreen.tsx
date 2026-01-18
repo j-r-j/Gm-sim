@@ -21,7 +21,7 @@ export interface StandingsScreenProps {
   onBack: () => void;
 }
 
-type ViewMode = 'division' | 'conference';
+type ViewMode = 'division' | 'conference' | 'playoff';
 
 /**
  * Team row in standings table
@@ -142,7 +142,7 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
           onPress={() => setViewMode('division')}
         >
           <Text style={[styles.toggleText, viewMode === 'division' && styles.toggleTextActive]}>
-            By Division
+            Division
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -150,7 +150,15 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
           onPress={() => setViewMode('conference')}
         >
           <Text style={[styles.toggleText, viewMode === 'conference' && styles.toggleTextActive]}>
-            By Conference
+            Conference
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleButton, viewMode === 'playoff' && styles.toggleActive]}
+          onPress={() => setViewMode('playoff')}
+        >
+          <Text style={[styles.toggleText, viewMode === 'playoff' && styles.toggleTextActive]}>
+            Playoff Picture
           </Text>
         </TouchableOpacity>
       </View>
@@ -183,7 +191,7 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
               />
             ))}
           </>
-        ) : (
+        ) : viewMode === 'conference' ? (
           <>
             {/* AFC Conference */}
             <View style={styles.conferenceSection}>
@@ -211,6 +219,263 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
                   isUserTeam={team.teamId === userTeamId}
                 />
               ))}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Playoff Picture - AFC */}
+            <View style={styles.playoffSection}>
+              <Text style={styles.conferenceHeader}>AFC Playoff Picture</Text>
+
+              {/* Division Leaders */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Division Leaders (Seeds 1-4)</Text>
+                {['North', 'South', 'East', 'West'].map((div) => {
+                  const leader = standings.byDivision.AFC[div]?.[0];
+                  if (!leader) return null;
+                  return (
+                    <View
+                      key={`afc-${div}`}
+                      style={[
+                        styles.playoffRow,
+                        leader.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <View style={styles.seedBadge}>
+                        <Text style={styles.seedText}>
+                          {['North', 'South', 'East', 'West'].indexOf(div) + 1}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{div}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.wins}-{leader.losses}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Wild Card */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Wild Card (Seeds 5-7)</Text>
+                {standings.byConference.AFC.filter((team) => {
+                  // Exclude division leaders
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.AFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(0, 3)
+                  .map((team, index) => (
+                    <View
+                      key={team.teamId}
+                      style={[styles.playoffRow, team.teamId === userTeamId && styles.userTeamRow]}
+                    >
+                      <View style={[styles.seedBadge, styles.wildcardBadge]}>
+                        <Text style={styles.seedText}>{index + 5}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+
+              {/* In The Hunt */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>In The Hunt</Text>
+                {standings.byConference.AFC.filter((team) => {
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.AFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(3, 6)
+                  .map((team) => (
+                    <View
+                      key={team.teamId}
+                      style={[
+                        styles.playoffRow,
+                        styles.huntRow,
+                        team.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={[styles.playoffDivision, styles.huntText]}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+            </View>
+
+            {/* Playoff Picture - NFC */}
+            <View style={styles.playoffSection}>
+              <Text style={styles.conferenceHeader}>NFC Playoff Picture</Text>
+
+              {/* Division Leaders */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Division Leaders (Seeds 1-4)</Text>
+                {['North', 'South', 'East', 'West'].map((div) => {
+                  const leader = standings.byDivision.NFC[div]?.[0];
+                  if (!leader) return null;
+                  return (
+                    <View
+                      key={`nfc-${div}`}
+                      style={[
+                        styles.playoffRow,
+                        leader.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <View style={styles.seedBadge}>
+                        <Text style={styles.seedText}>
+                          {['North', 'South', 'East', 'West'].indexOf(div) + 1}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{div}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.wins}-{leader.losses}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Wild Card */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Wild Card (Seeds 5-7)</Text>
+                {standings.byConference.NFC.filter((team) => {
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.NFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(0, 3)
+                  .map((team, index) => (
+                    <View
+                      key={team.teamId}
+                      style={[styles.playoffRow, team.teamId === userTeamId && styles.userTeamRow]}
+                    >
+                      <View style={[styles.seedBadge, styles.wildcardBadge]}>
+                        <Text style={styles.seedText}>{index + 5}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+
+              {/* In The Hunt */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>In The Hunt</Text>
+                {standings.byConference.NFC.filter((team) => {
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.NFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(3, 6)
+                  .map((team) => (
+                    <View
+                      key={team.teamId}
+                      style={[
+                        styles.playoffRow,
+                        styles.huntRow,
+                        team.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={[styles.playoffDivision, styles.huntText]}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
             </View>
           </>
         )}
@@ -393,6 +658,76 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: spacing.xl,
+  },
+  // Playoff picture styles
+  playoffSection: {
+    marginBottom: spacing.lg,
+  },
+  playoffGroup: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  playoffGroupTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    backgroundColor: colors.surfaceLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  playoffRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  huntRow: {
+    opacity: 0.7,
+  },
+  seedBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  wildcardBadge: {
+    backgroundColor: colors.warning,
+  },
+  seedText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  playoffTeamAbbr: {
+    width: 50,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  playoffDivision: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  playoffRecord: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  huntText: {
+    color: colors.textSecondary,
   },
 });
 
