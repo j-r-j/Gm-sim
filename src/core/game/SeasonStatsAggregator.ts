@@ -547,3 +547,95 @@ export function getApproximateValueLeaders(
     .sort((a, b) => b.av - a.av)
     .slice(0, limit);
 }
+
+/**
+ * Update season stats from a single game result
+ * Accumulates player game stats into season totals
+ */
+export function updateSeasonStatsFromGame(
+  currentStats: Record<string, PlayerSeasonStats>,
+  gameResult: GameResult
+): Record<string, PlayerSeasonStats> {
+  const updatedStats = { ...currentStats };
+
+  // Process home team player stats
+  for (const [playerId, gameStats] of gameResult.homeStats.playerStats) {
+    updatedStats[playerId] = addGameStatsToSeason(
+      updatedStats[playerId] || createEmptyPlayerSeasonStats(playerId),
+      gameStats
+    );
+  }
+
+  // Process away team player stats
+  for (const [playerId, gameStats] of gameResult.awayStats.playerStats) {
+    updatedStats[playerId] = addGameStatsToSeason(
+      updatedStats[playerId] || createEmptyPlayerSeasonStats(playerId),
+      gameStats
+    );
+  }
+
+  return updatedStats;
+}
+
+/**
+ * Add a single game's stats to a player's season totals
+ */
+function addGameStatsToSeason(season: PlayerSeasonStats, game: PlayerGameStats): PlayerSeasonStats {
+  const updated: PlayerSeasonStats = {
+    ...season,
+    playerId: game.playerId,
+    gamesPlayed: season.gamesPlayed + 1,
+    gamesStarted: season.gamesStarted + (game.snapsPlayed >= 30 ? 1 : 0),
+    passing: addPassingStats(season.passing, game.passing),
+    rushing: addRushingStats(season.rushing, game.rushing),
+    receiving: addReceivingStats(season.receiving, game.receiving),
+    defensive: addDefensiveStats(season.defensive, game.defensive),
+    kicking: addKickingStats(season.kicking, game.kicking),
+    fantasyPoints: season.fantasyPoints + calculateFantasyPointsFromGame(game),
+    approximateValue: 0, // Will be recalculated
+  };
+
+  // Recalculate passer rating
+  if (updated.passing.attempts > 0) {
+    updated.passing.rating = calculatePasserRating(updated.passing);
+  }
+
+  // Recalculate approximate value
+  updated.approximateValue = calculateApproximateValue(updated);
+
+  return updated;
+}
+
+/**
+ * Calculate fantasy points for a game (helper)
+ */
+function calculateFantasyPointsFromGame(stats: PlayerGameStats): number {
+  let points = 0;
+
+  // Passing: 0.04 pts/yard, 4 pts/TD, -2 pts/INT
+  points += stats.passing.yards * 0.04;
+  points += stats.passing.touchdowns * 4;
+  points -= stats.passing.interceptions * 2;
+
+  // Rushing: 0.1 pts/yard, 6 pts/TD
+  points += stats.rushing.yards * 0.1;
+  points += stats.rushing.touchdowns * 6;
+  points -= stats.rushing.fumblesLost * 2;
+
+  // Receiving: 1 pt/reception, 0.1 pts/yard, 6 pts/TD
+  points += stats.receiving.receptions * 1;
+  points += stats.receiving.yards * 0.1;
+  points += stats.receiving.touchdowns * 6;
+
+  // Kicking: 3 pts/FG, 1 pt/XP
+  points += stats.kicking.fieldGoalsMade * 3;
+  points += stats.kicking.extraPointsMade * 1;
+
+  // Defense: 1 pt/sack, 2 pts/INT, 2 pts/fumble recovery, 6 pts/TD
+  points += stats.defensive.sacks * 1;
+  points += stats.defensive.interceptions * 2;
+  points += stats.defensive.fumblesRecovered * 2;
+  points += stats.defensive.touchdowns * 6;
+
+  return Math.round(points * 10) / 10;
+}

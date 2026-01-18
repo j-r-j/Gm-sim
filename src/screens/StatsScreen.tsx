@@ -280,11 +280,13 @@ const KICKING_CATEGORIES: StatCategory[] = [
 
 /**
  * Get season stats for a player
- * Returns empty stats if no games have been played yet
- * TODO: Pull from gameState.seasonStats when season stats persistence is implemented
+ * Returns stats from gameState.seasonStats or empty stats if not tracked yet
  */
-function getPlayerSeasonStats(_gameState: GameState, playerId: string): PlayerSeasonStats {
-  // Return empty stats - stats will be populated as games are played
+function getPlayerSeasonStats(gameState: GameState, playerId: string): PlayerSeasonStats {
+  // Return stats from seasonStats if available, otherwise empty stats
+  if (gameState.seasonStats && gameState.seasonStats[playerId]) {
+    return gameState.seasonStats[playerId];
+  }
   return createEmptyPlayerSeasonStats(playerId);
 }
 

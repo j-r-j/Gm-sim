@@ -142,7 +142,8 @@ import { createNewGame } from '../services/NewGameService';
 import { gameStorage, SaveSlot } from '../services/storage/GameStorage';
 import { FakeCity } from '../core/models/team/FakeCities';
 import { setupGame, GameConfig } from '../core/game/GameSetup';
-import { simulateWeek, advanceWeek } from '../core/season/WeekSimulator';
+import { simulateWeek, advanceWeek, getUserTeamGame } from '../core/season/WeekSimulator';
+import { updateSeasonStatsFromGame } from '../core/game/SeasonStatsAggregator';
 import {
   createOffSeasonState,
   completeTask as completeOffseasonTask,
@@ -1580,15 +1581,29 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
     return <LoadingFallback message="Loading gamecast..." />;
   }
 
+  const schedule = gameState.league.schedule;
+  const currentWeek = gameState.league.calendar.currentWeek;
+
+  // Get the user's game from the actual schedule
+  const userGame = schedule ? getUserTeamGame(schedule, currentWeek, gameState.userTeamId) : null;
+
+  if (!userGame) {
+    Alert.alert('No Game', 'No game scheduled for this week.');
+    navigation.goBack();
+    return <LoadingFallback message="No game scheduled..." />;
+  }
+
+  // Determine if user is home or away
+  const userIsHome = userGame.homeTeamId === gameState.userTeamId;
+  const opponentId = userIsHome ? userGame.awayTeamId : userGame.homeTeamId;
+
   const userTeam = gameState.teams[gameState.userTeamId];
-  const opponentTeamIds = Object.keys(gameState.teams).filter((id) => id !== gameState.userTeamId);
-  const opponentId =
-    opponentTeamIds[gameState.league.calendar.currentWeek % opponentTeamIds.length];
+  const opponentTeam = gameState.teams[opponentId];
 
   const gameConfig: GameConfig = {
-    homeTeamId: gameState.userTeamId,
-    awayTeamId: opponentId,
-    week: gameState.league.calendar.currentWeek,
+    homeTeamId: userGame.homeTeamId,
+    awayTeamId: userGame.awayTeamId,
+    week: currentWeek,
     isPlayoff: gameState.league.calendar.currentPhase === 'playoffs',
   };
 
@@ -1610,56 +1625,89 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
     <GamecastScreen
       gameSetup={realGameSetup}
       gameInfo={{
-        week: gameState.league.calendar.currentWeek,
+        week: currentWeek,
         date: new Date().toISOString().split('T')[0],
       }}
       onBack={() => navigation.goBack()}
       onGameEnd={async (result) => {
-        const won = result.homeScore > result.awayScore;
-        const lost = result.homeScore < result.awayScore;
+        // Determine user's outcome based on whether they were home or away
+        const userScore = userIsHome ? result.homeScore : result.awayScore;
+        const opponentScore = userIsHome ? result.awayScore : result.homeScore;
+        const userWon = userScore > opponentScore;
+        const userLost = userScore < opponentScore;
+
+        // Update user team streak
         const currentStreak = userTeam.currentRecord.streak;
-        const newStreak = won
+        const newStreak = userWon
           ? currentStreak > 0
             ? currentStreak + 1
             : 1
-          : lost
+          : userLost
             ? currentStreak < 0
               ? currentStreak - 1
               : -1
             : 0;
 
-        const updatedTeam = {
+        // Update opponent team streak
+        const oppCurrentStreak = opponentTeam.currentRecord.streak;
+        const oppNewStreak =
+          !userWon && !userLost
+            ? 0
+            : userWon
+              ? oppCurrentStreak < 0
+                ? oppCurrentStreak - 1
+                : -1
+              : oppCurrentStreak > 0
+                ? oppCurrentStreak + 1
+                : 1;
+
+        // Updated user team record
+        const updatedUserTeam = {
           ...userTeam,
           currentRecord: {
             ...userTeam.currentRecord,
-            wins: userTeam.currentRecord.wins + (won ? 1 : 0),
-            losses: userTeam.currentRecord.losses + (lost ? 1 : 0),
-            ties: userTeam.currentRecord.ties + (!won && !lost ? 1 : 0),
-            pointsFor: userTeam.currentRecord.pointsFor + result.homeScore,
-            pointsAgainst: userTeam.currentRecord.pointsAgainst + result.awayScore,
+            wins: userTeam.currentRecord.wins + (userWon ? 1 : 0),
+            losses: userTeam.currentRecord.losses + (userLost ? 1 : 0),
+            ties: userTeam.currentRecord.ties + (!userWon && !userLost ? 1 : 0),
+            pointsFor: userTeam.currentRecord.pointsFor + userScore,
+            pointsAgainst: userTeam.currentRecord.pointsAgainst + opponentScore,
             streak: newStreak,
           },
         };
 
-        const updatedState: GameState = {
+        // Updated opponent team record
+        const updatedOpponentTeam = {
+          ...opponentTeam,
+          currentRecord: {
+            ...opponentTeam.currentRecord,
+            wins: opponentTeam.currentRecord.wins + (userLost ? 1 : 0),
+            losses: opponentTeam.currentRecord.losses + (userWon ? 1 : 0),
+            ties: opponentTeam.currentRecord.ties + (!userWon && !userLost ? 1 : 0),
+            pointsFor: opponentTeam.currentRecord.pointsFor + opponentScore,
+            pointsAgainst: opponentTeam.currentRecord.pointsAgainst + userScore,
+            streak: oppNewStreak,
+          },
+        };
+
+        // Update season stats from game result
+        const updatedSeasonStats = updateSeasonStatsFromGame(gameState.seasonStats || {}, result);
+
+        let updatedState: GameState = {
           ...gameState,
           teams: {
             ...gameState.teams,
-            [userTeam.id]: updatedTeam,
+            [userTeam.id]: updatedUserTeam,
+            [opponentTeam.id]: updatedOpponentTeam,
           },
+          seasonStats: updatedSeasonStats,
         };
 
         // Also update the schedule to mark user's game as complete
         const existingSchedule = gameState.league.schedule;
-        let finalUpdatedState = updatedState;
 
         if (existingSchedule && existingSchedule.regularSeason) {
-          const currentWeek = gameState.league.calendar.currentWeek;
           const updatedGames = existingSchedule.regularSeason.map((game) => {
-            if (
-              game.week === currentWeek &&
-              (game.homeTeamId === gameState.userTeamId || game.awayTeamId === gameState.userTeamId)
-            ) {
+            if (game.gameId === userGame.gameId) {
               return {
                 ...game,
                 isComplete: true,
@@ -1671,7 +1719,7 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
             return game;
           });
 
-          finalUpdatedState = {
+          updatedState = {
             ...updatedState,
             league: {
               ...updatedState.league,
@@ -1683,8 +1731,8 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
           };
         }
 
-        setGameState(finalUpdatedState);
-        await saveGameState(finalUpdatedState);
+        setGameState(updatedState);
+        await saveGameState(updatedState);
 
         // Navigate to WeekGames to show other games and allow simming
         navigation.navigate('WeekGames');
@@ -4803,98 +4851,65 @@ export function WeekGamesScreenWrapper({
     setIsLoading(true);
 
     try {
-      const updatedTeams = { ...gameState.teams };
+      // Use the proper simulateWeek function which uses the game engine
+      // This will track player stats properly
+      const weekResults = simulateWeek(week, schedule, gameState, userTeamId, false);
+
+      // Update schedule with simulated game results
       const updatedSchedule = { ...schedule };
       const updatedGames = [...updatedSchedule.regularSeason];
 
-      // Simulate remaining games
-      for (let i = 0; i < updatedGames.length; i++) {
-        const game = updatedGames[i];
-        if (game.week !== week || game.isComplete) continue;
-        if (game.homeTeamId === userTeamId || game.awayTeamId === userTeamId) continue;
+      // Update each simulated game in the schedule
+      for (const simResult of weekResults.games) {
+        const gameIndex = updatedGames.findIndex((g) => g.gameId === simResult.game.gameId);
+        if (gameIndex >= 0) {
+          updatedGames[gameIndex] = simResult.game;
+        }
+      }
+      updatedSchedule.regularSeason = updatedGames;
 
-        // Simple score simulation
-        const homeScore = Math.floor(Math.random() * 35) + 10;
-        const awayScore = Math.floor(Math.random() * 35) + 10;
-        const winnerId =
-          homeScore > awayScore ? game.homeTeamId : homeScore < awayScore ? game.awayTeamId : null;
-
-        updatedGames[i] = {
-          ...game,
-          isComplete: true,
-          homeScore,
-          awayScore,
-          winnerId,
-        };
-
-        // Update team records
+      // Update team records from simulated games
+      const updatedTeams = { ...gameState.teams };
+      for (const simResult of weekResults.games) {
+        const { result, game } = simResult;
         const homeTeam = updatedTeams[game.homeTeamId];
         const awayTeam = updatedTeams[game.awayTeamId];
 
         if (homeTeam && awayTeam) {
-          if (homeScore > awayScore) {
-            updatedTeams[game.homeTeamId] = {
-              ...homeTeam,
-              currentRecord: {
-                ...homeTeam.currentRecord,
-                wins: homeTeam.currentRecord.wins + 1,
-                pointsFor: homeTeam.currentRecord.pointsFor + homeScore,
-                pointsAgainst: homeTeam.currentRecord.pointsAgainst + awayScore,
-              },
-            };
-            updatedTeams[game.awayTeamId] = {
-              ...awayTeam,
-              currentRecord: {
-                ...awayTeam.currentRecord,
-                losses: awayTeam.currentRecord.losses + 1,
-                pointsFor: awayTeam.currentRecord.pointsFor + awayScore,
-                pointsAgainst: awayTeam.currentRecord.pointsAgainst + homeScore,
-              },
-            };
-          } else if (awayScore > homeScore) {
-            updatedTeams[game.homeTeamId] = {
-              ...homeTeam,
-              currentRecord: {
-                ...homeTeam.currentRecord,
-                losses: homeTeam.currentRecord.losses + 1,
-                pointsFor: homeTeam.currentRecord.pointsFor + homeScore,
-                pointsAgainst: homeTeam.currentRecord.pointsAgainst + awayScore,
-              },
-            };
-            updatedTeams[game.awayTeamId] = {
-              ...awayTeam,
-              currentRecord: {
-                ...awayTeam.currentRecord,
-                wins: awayTeam.currentRecord.wins + 1,
-                pointsFor: awayTeam.currentRecord.pointsFor + awayScore,
-                pointsAgainst: awayTeam.currentRecord.pointsAgainst + homeScore,
-              },
-            };
-          } else {
-            // Tie
-            updatedTeams[game.homeTeamId] = {
-              ...homeTeam,
-              currentRecord: {
-                ...homeTeam.currentRecord,
-                ties: homeTeam.currentRecord.ties + 1,
-                pointsFor: homeTeam.currentRecord.pointsFor + homeScore,
-                pointsAgainst: homeTeam.currentRecord.pointsAgainst + awayScore,
-              },
-            };
-            updatedTeams[game.awayTeamId] = {
-              ...awayTeam,
-              currentRecord: {
-                ...awayTeam.currentRecord,
-                ties: awayTeam.currentRecord.ties + 1,
-                pointsFor: awayTeam.currentRecord.pointsFor + awayScore,
-                pointsAgainst: awayTeam.currentRecord.pointsAgainst + homeScore,
-              },
-            };
-          }
+          const homeWon = result.homeScore > result.awayScore;
+          const awayWon = result.awayScore > result.homeScore;
+          const tie = result.homeScore === result.awayScore;
+
+          updatedTeams[game.homeTeamId] = {
+            ...homeTeam,
+            currentRecord: {
+              ...homeTeam.currentRecord,
+              wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+              losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+              ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
+              pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
+            },
+          };
+          updatedTeams[game.awayTeamId] = {
+            ...awayTeam,
+            currentRecord: {
+              ...awayTeam.currentRecord,
+              wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+              losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+              ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
+              pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
+            },
+          };
         }
       }
 
-      updatedSchedule.regularSeason = updatedGames;
+      // Aggregate player stats from all simulated games
+      let updatedSeasonStats = gameState.seasonStats || {};
+      for (const simResult of weekResults.games) {
+        updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, simResult.result);
+      }
 
       const updatedState: GameState = {
         ...gameState,
@@ -4903,6 +4918,7 @@ export function WeekGamesScreenWrapper({
           schedule: updatedSchedule,
         },
         teams: updatedTeams,
+        seasonStats: updatedSeasonStats,
       };
 
       setGameState(updatedState);
