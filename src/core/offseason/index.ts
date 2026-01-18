@@ -396,4 +396,10 @@ export {
   getUserUDFAs,
   canUserSignMore,
   getUDFAPhaseSummary,
+  // Phase Data Flow (OTA→Camp→Preseason→FinalCuts)
+  otaToTrainingCampInput,
+  trainingCampToPreseasonInput,
+  preseasonToFinalCutsInput,
+  calculateRosterNeeds,
+  summarizePhaseDataFlow,
 } from './bridges';
