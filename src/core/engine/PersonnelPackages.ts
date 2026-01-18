@@ -201,34 +201,41 @@ export function calculatePersonnelMismatch(
   isRunPlay: boolean
 ): PersonnelMismatch {
   const offense = OFFENSIVE_PERSONNEL[offensePackage];
-  // Defense personnel info available for future detailed matchup calculations
-  const _defense = DEFENSIVE_PERSONNEL[defensePackage];
+  const defense = DEFENSIVE_PERSONNEL[defensePackage];
+
+  // Get defense modifier based on play type
+  const defenseModifier = isRunPlay
+    ? defense.runDefenseModifier
+    : defense.passDefenseModifier;
 
   // Heavy offense vs light defense = run advantage
   if (offense.runTendency >= 60 && defensePackage === 'dime') {
+    // Dime has -12 run defense modifier, amplifies the mismatch
     return {
       type: 'run',
       advantage: 'offense',
-      modifier: 12,
+      modifier: 12 + Math.abs(defense.runDefenseModifier) / 2,
       description: 'Heavy personnel vs light box - running lanes open',
     };
   }
 
   if (offense.runTendency >= 60 && defensePackage === 'quarter') {
+    // Quarter has -20 run defense modifier
     return {
       type: 'run',
       advantage: 'offense',
-      modifier: 18,
+      modifier: 18 + Math.abs(defense.runDefenseModifier) / 2,
       description: 'Jumbo vs prevent - massive run advantage',
     };
   }
 
   // Spread offense vs heavy defense = pass advantage
   if (offense.runTendency <= 30 && defensePackage === 'goalLine') {
+    // Goal line has -15 pass defense modifier
     return {
       type: 'pass',
       advantage: 'offense',
-      modifier: 15,
+      modifier: 15 + Math.abs(defense.passDefenseModifier) / 2,
       description: 'Spread vs goal line - DBs in coverage mismatches',
     };
   }
@@ -242,21 +249,23 @@ export function calculatePersonnelMismatch(
     };
   }
 
-  // Defense correctly identifies tendency
+  // Defense correctly identifies tendency - use defense modifiers
   if (isRunPlay && offense.runTendency >= 60 && defensePackage === 'goalLine') {
+    // Goal line has +15 run defense modifier
     return {
       type: 'run',
       advantage: 'defense',
-      modifier: -8,
+      modifier: -8 - defense.runDefenseModifier / 2,
       description: 'Defense loaded box against obvious run',
     };
   }
 
   if (!isRunPlay && offense.runTendency <= 30 && defensePackage === 'dime') {
+    // Dime has +15 pass defense modifier
     return {
       type: 'pass',
       advantage: 'defense',
-      modifier: -5,
+      modifier: -5 - defense.passDefenseModifier / 2,
       description: 'Defense in pass coverage vs pass-heavy personnel',
     };
   }
@@ -271,7 +280,21 @@ export function calculatePersonnelMismatch(
     };
   }
 
-  // Balanced matchup
+  // Balanced matchup - apply defense modifier as a base adjustment
+  // Positive modifier for defense helps defense, negative helps offense
+  const baseModifier = isRunPlay
+    ? -defense.runDefenseModifier / 4
+    : -defense.passDefenseModifier / 4;
+
+  if (Math.abs(baseModifier) >= 2) {
+    return {
+      type: isRunPlay ? 'run' : 'pass',
+      advantage: baseModifier > 0 ? 'offense' : 'defense',
+      modifier: Math.round(baseModifier),
+      description: `Defense personnel ${defenseModifier > 0 ? 'strong' : 'weak'} against ${isRunPlay ? 'run' : 'pass'}`,
+    };
+  }
+
   return {
     type: 'none',
     advantage: 'neutral',

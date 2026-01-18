@@ -79,6 +79,7 @@ import {
 import {
   getSchemeMatchupEffects,
   getPlayTypeEffects,
+  applySchemeEffects,
 } from './SchemeMatchupEffects';
 import {
   RunGameTracker,
@@ -466,14 +467,18 @@ export function resolveEnhancedPlay(
     defensiveEffectives.reduce((sum, p) => sum + p.effective, 0) /
     (defensiveEffectives.length || 1);
 
-  // Apply scheme effects to base outcomes
-  let outcomeTable = generateOutcomeTable(
+  // Generate base outcome table
+  const baseOutcomeTable = generateOutcomeTable(
     avgOffRating + matchupAdvantage / 2,
     avgDefRating - matchupAdvantage / 2,
     playType,
     situation,
     context.fieldPosition
   );
+
+  // Apply scheme effects to modify outcome probabilities
+  // isPass is already defined above at step 8
+  const outcomeTable = applySchemeEffects(baseOutcomeTable, playTypeEffects, isPass);
 
   // 10. ROLL OUTCOME
   const roll = rollOutcome(outcomeTable, matchupAdvantage);

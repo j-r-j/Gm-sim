@@ -381,38 +381,63 @@ function mergeEffects(effects1: PlayTypeEffects, effects2: PlayTypeEffects): Pla
 }
 
 /**
- * Apply scheme effects to outcome probabilities
+ * Outcome table entry type (imported from OutcomeTables)
  */
-export function applySchemeEffects(
-  baseProbabilities: Record<string, number>,
+interface OutcomeTableEntryLike {
+  outcome: string;
+  probability: number;
+  yardsRange: { min: number; max: number };
+  secondaryEffects?: string[];
+}
+
+/**
+ * Apply scheme effects to outcome table entries
+ */
+export function applySchemeEffects<T extends OutcomeTableEntryLike>(
+  outcomeTable: T[],
   effects: PlayTypeEffects,
   isPassPlay: boolean
-): Record<string, number> {
-  const modified = { ...baseProbabilities };
+): T[] {
+  // Create a deep copy of the outcome table
+  const modified: T[] = [];
+  for (const entry of outcomeTable) {
+    modified.push({
+      ...entry,
+      yardsRange: { ...entry.yardsRange },
+      secondaryEffects: entry.secondaryEffects ? [...entry.secondaryEffects] : undefined,
+    });
+  }
+
+  // Helper to find and modify an entry by outcome
+  const modifyEntry = (outcomeName: string, multiplier: number) => {
+    for (const entry of modified) {
+      if (entry.outcome === outcomeName) {
+        entry.probability *= multiplier;
+        break;
+      }
+    }
+  };
 
   if (isPassPlay) {
     // Completion effects
     if (effects.completion) {
       const completionOutcomes = ['touchdown', 'big_gain', 'good_gain', 'moderate_gain', 'short_gain'];
+      const multiplier = 1 + effects.completion / 100;
       for (const outcome of completionOutcomes) {
-        if (modified[outcome]) {
-          modified[outcome] *= 1 + effects.completion / 100;
-        }
+        modifyEntry(outcome, multiplier);
       }
       // Inverse effect on incomplete
-      if (modified.incomplete) {
-        modified.incomplete *= 1 - effects.completion / 100;
-      }
+      modifyEntry('incomplete', 1 - effects.completion / 100);
     }
 
     // Sack effects
-    if (effects.sack && modified.sack) {
-      modified.sack *= 1 + effects.sack / 100;
+    if (effects.sack) {
+      modifyEntry('sack', 1 + effects.sack / 100);
     }
 
     // Interception effects
-    if (effects.interception && modified.interception) {
-      modified.interception *= 1 + effects.interception / 100;
+    if (effects.interception) {
+      modifyEntry('interception', 1 + effects.interception / 100);
     }
   }
 
@@ -420,27 +445,40 @@ export function applySchemeEffects(
   if (effects.yards) {
     if (effects.yards > 0) {
       // Positive: boost big/good gains, reduce short gains
-      if (modified.big_gain) modified.big_gain *= 1 + effects.yards / 100;
-      if (modified.good_gain) modified.good_gain *= 1 + effects.yards / 150;
-      if (modified.short_gain) modified.short_gain *= 1 - effects.yards / 200;
+      modifyEntry('big_gain', 1 + effects.yards / 100);
+      modifyEntry('good_gain', 1 + effects.yards / 150);
+      modifyEntry('short_gain', 1 - effects.yards / 200);
     } else {
       // Negative: reduce big/good gains, boost short gains
-      if (modified.big_gain) modified.big_gain *= 1 + effects.yards / 100;
-      if (modified.good_gain) modified.good_gain *= 1 + effects.yards / 150;
-      if (modified.short_gain) modified.short_gain *= 1 - effects.yards / 200;
+      modifyEntry('big_gain', 1 + effects.yards / 100);
+      modifyEntry('good_gain', 1 + effects.yards / 150);
+      modifyEntry('short_gain', 1 - effects.yards / 200);
     }
   }
 
   // Big play effects
   if (effects.bigPlay) {
-    if (modified.big_gain) modified.big_gain *= 1 + effects.bigPlay / 100;
-    if (modified.touchdown) modified.touchdown *= 1 + effects.bigPlay / 100;
+    const multiplier = 1 + effects.bigPlay / 100;
+    modifyEntry('big_gain', multiplier);
+    modifyEntry('touchdown', multiplier);
   }
 
   // Fumble effects
   if (effects.fumble) {
-    if (modified.fumble) modified.fumble *= 1 + effects.fumble / 100;
-    if (modified.fumble_lost) modified.fumble_lost *= 1 + effects.fumble / 100;
+    const multiplier = 1 + effects.fumble / 100;
+    modifyEntry('fumble', multiplier);
+    modifyEntry('fumble_lost', multiplier);
+  }
+
+  // Normalize probabilities to sum to 1
+  let totalProb = 0;
+  for (const entry of modified) {
+    totalProb += entry.probability;
+  }
+  if (totalProb > 0 && totalProb !== 1) {
+    for (const entry of modified) {
+      entry.probability /= totalProb;
+    }
   }
 
   return modified;

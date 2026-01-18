@@ -85,7 +85,7 @@ export interface PhaseResult {
 /**
  * OL player with phase-specific rating
  */
-interface OLPlayer {
+export interface OLPlayer {
   position: string;
   passBlockRating: number;
   player: Player;
@@ -94,7 +94,7 @@ interface OLPlayer {
 /**
  * DL/LB player with phase-specific rating
  */
-interface RusherPlayer {
+export interface RusherPlayer {
   position: string;
   passRushRating: number;
   player: Player;
@@ -129,14 +129,24 @@ export function determinePassRushPhase(
 }
 
 /**
- * Calculate phase-adjusted matchup
- * Reserved for future detailed phase-by-phase matchup resolution
+ * Phase matchup result with detailed breakdown
  */
-function _calculatePhaseMatchup(
+export interface PhaseMatchupResult {
+  advantage: number;
+  weakLink: { position: string; deficit: number } | null;
+  strongestRusher: { position: string; rating: number } | null;
+  phaseModifier: number;
+}
+
+/**
+ * Calculate phase-adjusted matchup with detailed OL vs DL resolution
+ * Uses positional importance weights that vary by phase
+ */
+export function calculatePhaseMatchup(
   olPlayers: OLPlayer[],
   rushers: RusherPlayer[],
   phase: PassRushPhase
-): { advantage: number; weakLink: { position: string; deficit: number } | null } {
+): PhaseMatchupResult {
   const weights = PHASE_WEIGHTS[phase];
 
   // OL side: weighted average with weak link detection
@@ -182,7 +192,22 @@ function _calculatePhaseMatchup(
       ? { position: olWeakest.position, deficit: Math.abs(weakLinkDeficit) }
       : null;
 
-  return { advantage, weakLink };
+  // Phase-specific modifier
+  let phaseModifier = 0;
+  if (phase === 'quick') {
+    // Interior matters most, edge rushers not set
+    phaseModifier = 10;
+  } else if (phase === 'extended') {
+    // Edge rushers have time to win, weak links get exposed
+    phaseModifier = weakLink ? -weakLink.deficit / 2 : -5;
+  }
+
+  return {
+    advantage,
+    weakLink,
+    strongestRusher: rushStrongest.rating > 0 ? rushStrongest : null,
+    phaseModifier,
+  };
 }
 
 /**

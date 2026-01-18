@@ -235,10 +235,14 @@ export {
   calculateScrambleOutcome,
   getOverallPassRushResult,
   calculateProtectionTime,
+  calculatePhaseMatchup,
   PHASE_TIMING,
   PHASE_WEIGHTS,
   type PassRushPhase,
   type PhaseResult,
+  type PhaseMatchupResult,
+  type OLPlayer,
+  type RusherPlayer,
 } from './PassRushPhases';
 
 // Presnap Reads
