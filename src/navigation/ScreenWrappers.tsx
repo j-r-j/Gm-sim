@@ -11,7 +11,7 @@
  */
 
 import React, { useCallback, useEffect } from 'react';
-import { Alert, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 import { useGame } from './GameContext';
 import { ScreenProps } from './types';
@@ -35,6 +35,7 @@ import { DraftBoardScreen } from '../screens/DraftBoardScreen';
 import { DraftRoomScreen, DraftRoomProspect } from '../screens/DraftRoomScreen';
 import { FreeAgencyScreen, FreeAgent } from '../screens/FreeAgencyScreen';
 import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
+import { PlayerDetailCard } from '../components/player';
 import { ProspectDetailScreen } from '../screens/ProspectDetailScreen';
 import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { SeasonRecapScreen } from '../screens/SeasonRecapScreen';
@@ -133,6 +134,7 @@ import {
   calculateCompValue,
 } from '../core/freeAgency/CompensatoryPickCalculator';
 import { Position } from '../core/models/player/Position';
+import { OffensiveScheme, DefensiveScheme } from '../core/models/player/SchemeFit';
 import { Rumor } from '../core/news/RumorMill';
 import { WeeklyDigest } from '../core/news/WeeklyDigest';
 import { NewsItem } from '../core/news/NewsGenerators';
@@ -2475,6 +2477,47 @@ export function PlayerProfileScreenWrapper({
     }
   }
 
+  // For players (not prospects), use the new PlayerDetailCard
+  if (realPlayer) {
+    // Get the player's contract from gameState.contracts
+    const playerContract = gameState.contracts[realPlayer.id] ?? null;
+
+    // Get the team's coaches to find schemes
+    const teamCoaches = Object.values(gameState.coaches).filter(
+      (c) => c.teamId === gameState.userTeamId
+    );
+    const offensiveCoordinator = teamCoaches.find((c) => c.role === 'offensiveCoordinator');
+    const defensiveCoordinator = teamCoaches.find((c) => c.role === 'defensiveCoordinator');
+    const headCoach = teamCoaches.find((c) => c.role === 'headCoach');
+
+    // Get schemes from coordinators, falling back to head coach
+    const teamOffensiveScheme =
+      (offensiveCoordinator?.scheme as OffensiveScheme | undefined) ??
+      (headCoach?.scheme as OffensiveScheme | undefined) ??
+      null;
+    const teamDefensiveScheme =
+      (defensiveCoordinator?.scheme as DefensiveScheme | undefined) ?? null;
+
+    // Get season stats if available
+    const seasonStats = gameState.seasonStats?.[realPlayer.id] ?? null;
+
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <PlayerDetailCard
+          player={realPlayer}
+          contract={playerContract}
+          currentYear={gameState.league.calendar.currentYear}
+          teamOffensiveScheme={teamOffensiveScheme}
+          teamDefensiveScheme={teamDefensiveScheme}
+          seasonStats={seasonStats}
+          onClose={() => navigation.goBack()}
+          isModal={false}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // For prospects, use the existing PlayerProfileScreen
   return (
     <PlayerProfileScreen
       {...profileData}
