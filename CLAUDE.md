@@ -105,4 +105,6 @@ GameStorage wraps AsyncStorage with 3 save slots. NewGameService creates complet
 
 **Strict TypeScript**: The project uses strict TypeScript with `noImplicitAny`, `strictNullChecks`, and all strict options enabled. Run `npm run typecheck` before committing.
 
+**Formatting**: Run `npm run format:check` before each push to ensure Prettier formatting passes CI.
+
 **Test Setup**: Tests use Jest with `src/tests/setup.ts` for AsyncStorage mocks. Test files are co-located with source files using `.test.ts` extension.
