@@ -402,4 +402,14 @@ export {
   preseasonToFinalCutsInput,
   calculateRosterNeeds,
   summarizePhaseDataFlow,
+  // Phase Generators (auto-generate phase data from GameState)
+  generateSeasonAwards,
+  generateCoachEvaluations,
+  generateOTAReports,
+  generateRookieIntegrationReports,
+  generatePositionBattles,
+  generateDevelopmentReveals,
+  generateCampInjuries,
+  generatePreseasonGames,
+  generatePreseasonEvaluations,
 } from './bridges';
