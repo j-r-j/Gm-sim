@@ -5586,7 +5586,7 @@ export function WeeklyScheduleScreenWrapper({
   const userTeamId = gameState.userTeamId;
 
   // Check if user is on bye
-  const byeWeek = schedule?.byeWeeks?.get?.(userTeamId);
+  const byeWeek = schedule?.byeWeeks?.[userTeamId];
   const isUserOnBye = byeWeek === week;
 
   // Get all games for current week
