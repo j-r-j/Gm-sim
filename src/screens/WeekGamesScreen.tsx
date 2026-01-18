@@ -5,14 +5,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 
 /**
@@ -228,7 +221,10 @@ export function WeekGamesScreen({
         data={games}
         keyExtractor={(item) => item.gameId}
         renderItem={({ item }) => (
-          <GameCard game={item} onPlay={item.isUserGame && !item.isComplete ? onPlayGame : undefined} />
+          <GameCard
+            game={item}
+            onPlay={item.isUserGame && !item.isComplete ? onPlayGame : undefined}
+          />
         )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}

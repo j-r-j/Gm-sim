@@ -5,14 +5,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 
 /**
@@ -166,18 +159,12 @@ function DivisionMiniStandings({
           style={[styles.standingRow, team.isUserTeam && styles.userStandingRow]}
         >
           <Text style={styles.standingRank}>{index + 1}.</Text>
-          <Text style={[styles.standingAbbr, team.isUserTeam && styles.userText]}>
-            {team.abbr}
-          </Text>
+          <Text style={[styles.standingAbbr, team.isUserTeam && styles.userText]}>{team.abbr}</Text>
           <Text style={[styles.standingRecord, team.isUserTeam && styles.userText]}>
             {team.wins}-{team.losses}
           </Text>
-          {team.gamesBehind > 0 && (
-            <Text style={styles.gamesBehind}>-{team.gamesBehind}</Text>
-          )}
-          {team.playoffPosition === 'leader' && (
-            <Text style={styles.playoffBadge}>DIV</Text>
-          )}
+          {team.gamesBehind > 0 && <Text style={styles.gamesBehind}>-{team.gamesBehind}</Text>}
+          {team.playoffPosition === 'leader' && <Text style={styles.playoffBadge}>DIV</Text>}
           {team.playoffPosition === 'wildcard' && (
             <Text style={[styles.playoffBadge, styles.wildcardBadge]}>WC</Text>
           )}
@@ -228,7 +215,9 @@ export function WeekSummaryScreen({
         {/* User's Game Result */}
         {userResult && (
           <View style={[styles.section, styles.userResultSection]}>
-            <View style={[styles.userResultCard, userResult.won ? styles.winCard : styles.lossCard]}>
+            <View
+              style={[styles.userResultCard, userResult.won ? styles.winCard : styles.lossCard]}
+            >
               <Text style={styles.userResultLabel}>YOUR RESULT</Text>
               <Text style={styles.userResultOutcome}>{userResult.won ? 'VICTORY!' : 'DEFEAT'}</Text>
               <Text style={styles.userResultScore}>{userResult.score}</Text>

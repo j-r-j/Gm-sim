@@ -4681,7 +4681,8 @@ export function WeekGamesScreenWrapper({
         // Simple score simulation
         const homeScore = Math.floor(Math.random() * 35) + 10;
         const awayScore = Math.floor(Math.random() * 35) + 10;
-        const winnerId = homeScore > awayScore ? game.homeTeamId : homeScore < awayScore ? game.awayTeamId : null;
+        const winnerId =
+          homeScore > awayScore ? game.homeTeamId : homeScore < awayScore ? game.awayTeamId : null;
 
         updatedGames[i] = {
           ...game,
