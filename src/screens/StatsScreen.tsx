@@ -319,9 +319,7 @@ function getTeamSeasonStats(gameState: GameState, teamId: string): TeamSeasonSta
       if (playerStats) {
         totalPassYards += playerStats.passing.yards;
         totalRushYards += playerStats.rushing.yards;
-        totalTurnovers +=
-          playerStats.passing.interceptions +
-          playerStats.rushing.fumblesLost;
+        totalTurnovers += playerStats.passing.interceptions + playerStats.rushing.fumblesLost;
       }
     }
 

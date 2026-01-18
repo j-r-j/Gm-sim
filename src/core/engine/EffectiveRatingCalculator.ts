@@ -283,7 +283,14 @@ export function calculateEffectiveRating(params: EffectiveRatingParams): number 
 
   // Calculate pre-injury rating
   let effectiveRating =
-    baseRating + schemeFit + roleFit + coachChemistry + coachQuality + weatherMod + stakesMod + varianceMod;
+    baseRating +
+    schemeFit +
+    roleFit +
+    coachChemistry +
+    coachQuality +
+    weatherMod +
+    stakesMod +
+    varianceMod;
 
   // Apply injury modifier as a multiplier
   const injuryMultiplier = getInjuryPerformanceModifier(player.injuryStatus);

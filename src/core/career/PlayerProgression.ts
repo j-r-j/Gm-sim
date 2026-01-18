@@ -117,7 +117,10 @@ export function applyOffseasonProgression(
   const skillChanges: Record<string, number> = {};
   if (impact.impactAreas.length > 0 && adjustedImpact !== 0) {
     // Distribute impact across affected skills
-    const changePerSkill = Math.max(1, Math.round(Math.abs(adjustedImpact) / impact.impactAreas.length));
+    const changePerSkill = Math.max(
+      1,
+      Math.round(Math.abs(adjustedImpact) / impact.impactAreas.length)
+    );
     const sign = adjustedImpact >= 0 ? 1 : -1;
 
     for (const skill of impact.impactAreas) {
@@ -211,14 +214,8 @@ export function applySkillChanges(player: Player, result: ProgressionResult): Pl
       // Narrow perceived range slightly when skill changes
       // This simulates scouts getting better read on the player
       const rangeShrink = Math.abs(change) > 2 ? 2 : 1;
-      const newPerceivedMin = Math.min(
-        skillValue.perceivedMin + rangeShrink,
-        newTrueValue
-      );
-      const newPerceivedMax = Math.max(
-        skillValue.perceivedMax - rangeShrink,
-        newTrueValue
-      );
+      const newPerceivedMin = Math.min(skillValue.perceivedMin + rangeShrink, newTrueValue);
+      const newPerceivedMax = Math.max(skillValue.perceivedMax - rangeShrink, newTrueValue);
 
       newSkills[skillName] = {
         trueValue: newTrueValue,
@@ -333,28 +330,26 @@ export function generateDevelopmentNews(
 
     if (result.totalChange >= 5) {
       // Significant positive development
-      const headlineTemplate = SIGNIFICANT_HEADLINES[
-        Math.floor(Math.random() * SIGNIFICANT_HEADLINES.length)
-      ];
+      const headlineTemplate =
+        SIGNIFICANT_HEADLINES[Math.floor(Math.random() * SIGNIFICANT_HEADLINES.length)];
       headline = headlineTemplate.replace('{playerName}', result.playerName);
-      body = `${result.playerName} has been one of the standouts this offseason. ` +
+      body =
+        `${result.playerName} has been one of the standouts this offseason. ` +
         `Under ${coachName}'s guidance, ${result.developmentDescription}`;
       isPositive = true;
       priority = 'high';
     } else if (result.totalChange >= 3) {
       // Moderate positive development
-      const headlineTemplate = MODERATE_HEADLINES[
-        Math.floor(Math.random() * MODERATE_HEADLINES.length)
-      ];
+      const headlineTemplate =
+        MODERATE_HEADLINES[Math.floor(Math.random() * MODERATE_HEADLINES.length)];
       headline = headlineTemplate.replace('{playerName}', result.playerName);
       body = `${result.playerName} is making progress this offseason. ${result.developmentDescription}`;
       isPositive = true;
       priority = 'medium';
     } else {
       // Negative development
-      const headlineTemplate = NEGATIVE_HEADLINES[
-        Math.floor(Math.random() * NEGATIVE_HEADLINES.length)
-      ];
+      const headlineTemplate =
+        NEGATIVE_HEADLINES[Math.floor(Math.random() * NEGATIVE_HEADLINES.length)];
       headline = headlineTemplate.replace('{playerName}', result.playerName);
       body = `There are concerns about ${result.playerName}'s development. ${result.developmentDescription}`;
       isPositive = false;

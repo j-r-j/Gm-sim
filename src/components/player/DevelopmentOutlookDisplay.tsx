@@ -28,9 +28,7 @@ export interface DevelopmentOutlookDisplayProps {
 /**
  * Get color for relationship quality
  */
-function getRelationshipColor(
-  relationship: DevelopmentImpactViewModel['relationship']
-): string {
+function getRelationshipColor(relationship: DevelopmentImpactViewModel['relationship']): string {
   switch (relationship) {
     case 'excellent':
       return colors.success;
@@ -50,9 +48,7 @@ function getRelationshipColor(
 /**
  * Get emoji for relationship quality
  */
-function getRelationshipEmoji(
-  relationship: DevelopmentImpactViewModel['relationship']
-): string {
+function getRelationshipEmoji(relationship: DevelopmentImpactViewModel['relationship']): string {
   switch (relationship) {
     case 'excellent':
       return '🌟';
@@ -86,12 +82,7 @@ export function DevelopmentOutlookDisplay({
   );
 
   // Calculate development impact
-  const impact = calculateDevelopmentImpact(
-    coach,
-    player,
-    chemistry.chemistry,
-    schemeFitLevel
-  );
+  const impact = calculateDevelopmentImpact(coach, player, chemistry.chemistry, schemeFitLevel);
 
   // Get view model for display
   const viewModel = createDevelopmentImpactViewModel(
@@ -150,9 +141,7 @@ export function DevelopmentOutlookDisplay({
           <View style={styles.areasRow}>
             {impact.impactAreas.slice(0, 3).map((area) => (
               <View key={area} style={styles.areaBadge}>
-                <Text style={styles.areaBadgeText}>
-                  {area.replace(/([A-Z])/g, ' $1').trim()}
-                </Text>
+                <Text style={styles.areaBadgeText}>{area.replace(/([A-Z])/g, ' $1').trim()}</Text>
               </View>
             ))}
           </View>

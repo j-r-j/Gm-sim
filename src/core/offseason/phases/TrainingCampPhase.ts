@@ -6,10 +6,7 @@
 import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
 import { Player } from '../../models/player/Player';
 import { Coach } from '../../models/staff/Coach';
-import {
-  processTeamProgression,
-  ProgressionResult,
-} from '../../career/PlayerProgression';
+import { processTeamProgression, ProgressionResult } from '../../career/PlayerProgression';
 
 /**
  * Position battle status
