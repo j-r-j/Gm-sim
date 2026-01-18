@@ -9,6 +9,12 @@ import type { AwardWinner, CoachEvaluationResult } from '../OffseasonPersistentD
 import type { OTAReport, RookieIntegrationReport } from '../phases/OTAsPhase';
 import type { PositionBattle, PositionBattleCompetitor, DevelopmentReveal, CampInjury } from '../phases/TrainingCampPhase';
 import type { PreseasonGame, PreseasonPlayerPerformance, PreseasonEvaluation } from '../phases/PreseasonPhase';
+import type {
+  OwnerExpectations as PersistentOwnerExpectations,
+  MediaProjection as PersistentMediaProjection,
+  SeasonGoal as PersistentSeasonGoal,
+} from '../OffseasonPersistentData';
+import { calculateOwnerExpectations, generateMediaProjections, generateSeasonGoals } from '../phases/SeasonStartPhase';
 import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../../models/player/Position';
 
 // =============================================================================
@@ -627,4 +633,148 @@ export function generatePreseasonEvaluations(
   }
 
   return evaluations;
+}
+
+// =============================================================================
+// Season Start Phase Generators
+// =============================================================================
+
+/**
+ * Generates season start data (owner expectations, media projections, goals)
+ * Returns types compatible with OffseasonPersistentData
+ */
+export function generateSeasonStartData(gameState: GameState): {
+  ownerExpectations: PersistentOwnerExpectations;
+  mediaProjections: PersistentMediaProjection[];
+  seasonGoals: PersistentSeasonGoal[];
+} {
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  if (!userTeam) {
+    // Return defaults if no team found
+    return {
+      ownerExpectations: {
+        wins: { minimum: 6, expected: 8, stretch: 10 },
+        playoffs: true,
+        division: false,
+        championship: false,
+        playerDevelopment: [],
+        financialTargets: { minRevenue: 0, maxSpending: 200 },
+        patience: 50,
+      },
+      mediaProjections: [],
+      seasonGoals: [],
+    };
+  }
+
+  // Calculate roster strength from team players
+  let rosterStrength = 0;
+  let playerCount = 0;
+  for (const playerId of userTeam.rosterPlayerIds) {
+    const player = gameState.players[playerId];
+    if (player) {
+      rosterStrength += getPlayerScore(player);
+      playerCount++;
+    }
+  }
+  rosterStrength = playerCount > 0 ? rosterStrength / playerCount : 60;
+
+  // Get previous season wins
+  const previousSeasonWins = userTeam.currentRecord.wins;
+
+  // Determine owner personality based on owner data
+  const owner = gameState.owners[userTeam.ownerId];
+  let ownerPersonality: 'patient' | 'demanding' | 'balanced' = 'balanced';
+  if (owner?.personality?.traits) {
+    const patience = owner.personality.traits.patience;
+    if (patience >= 70) ownerPersonality = 'patient';
+    else if (patience <= 30) ownerPersonality = 'demanding';
+  }
+
+  // Get years with team
+  const yearsWithTeam = gameState.careerStats.seasonsCompleted;
+
+  // Generate owner expectations using SeasonStartPhase calculator
+  const phaseExpectations = calculateOwnerExpectations(
+    rosterStrength,
+    previousSeasonWins,
+    ownerPersonality,
+    yearsWithTeam
+  );
+
+  // Convert to persistent format
+  const ownerExpectations: PersistentOwnerExpectations = {
+    wins: {
+      minimum: phaseExpectations.minimumWins,
+      expected: phaseExpectations.minimumWins + 2,
+      stretch: Math.min(17, phaseExpectations.minimumWins + 4),
+    },
+    playoffs: phaseExpectations.playoffExpectation !== 'miss',
+    division: phaseExpectations.playoffExpectation === 'deep_run' || phaseExpectations.playoffExpectation === 'championship',
+    championship: phaseExpectations.playoffExpectation === 'championship',
+    playerDevelopment: phaseExpectations.specificGoals.filter(g => g.includes('player') || g.includes('develop')),
+    financialTargets: { minRevenue: 0, maxSpending: 200 },
+    patience: phaseExpectations.patientLevel,
+  };
+
+  // Generate media projections using SeasonStartPhase generator
+  const scheduleStrength = 0.5;
+  const phaseProjections = generateMediaProjections(
+    rosterStrength,
+    scheduleStrength,
+    previousSeasonWins
+  );
+
+  // Convert to persistent format
+  const mediaProjections: PersistentMediaProjection[] = phaseProjections.map(p => ({
+    source: p.source,
+    projectedWins: p.projectedWins,
+    projectedLosses: p.projectedLosses,
+    playoffOdds: p.playoffProjection === 'super_bowl' ? 85 :
+                 p.playoffProjection === 'division' ? 70 :
+                 p.playoffProjection === 'wild_card' ? 50 : 20,
+    divisionOdds: p.playoffProjection === 'super_bowl' ? 60 :
+                  p.playoffProjection === 'division' ? 40 : 15,
+    championshipOdds: p.playoffProjection === 'super_bowl' ? 12 :
+                      p.playoffProjection === 'division' ? 5 : 1,
+    ranking: p.teamRanking,
+    analysis: p.analysis,
+  }));
+
+  // Get key players for goals
+  const keyPlayers: Array<{ name: string; position: string }> = [];
+  const sortedPlayers = userTeam.rosterPlayerIds
+    .map(id => gameState.players[id])
+    .filter((p): p is Player => p !== undefined)
+    .sort((a, b) => getPlayerScore(b) - getPlayerScore(a))
+    .slice(0, 5);
+
+  for (const player of sortedPlayers) {
+    keyPlayers.push({
+      name: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+    });
+  }
+
+  // Generate season goals using SeasonStartPhase generator and convert
+  const phaseGoals = generateSeasonGoals(phaseExpectations, keyPlayers);
+
+  // Convert to persistent format
+  const seasonGoals: PersistentSeasonGoal[] = phaseGoals.map(g => ({
+    id: g.id,
+    type: g.type === 'team' ? (g.id.includes('wins') ? 'wins' :
+          g.id.includes('playoffs') ? 'playoffs' :
+          g.id.includes('championship') ? 'championship' : 'custom') :
+          g.type === 'player' ? 'player_development' :
+          g.type === 'personal' ? 'custom' : 'custom',
+    description: g.description,
+    target: g.target,
+    status: 'pending' as const,
+  }));
+
+  return {
+    ownerExpectations,
+    mediaProjections,
+    seasonGoals,
+  };
 }

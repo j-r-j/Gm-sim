@@ -412,4 +412,5 @@ export {
   generateCampInjuries,
   generatePreseasonGames,
   generatePreseasonEvaluations,
+  generateSeasonStartData,
 } from './bridges';

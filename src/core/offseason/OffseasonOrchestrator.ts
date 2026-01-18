@@ -43,6 +43,7 @@ import {
   generateCampInjuries,
   generatePreseasonGames,
   generatePreseasonEvaluations,
+  generateSeasonStartData,
 } from './bridges/PhaseGenerators';
 
 /**
@@ -229,9 +230,19 @@ export function enterPhase(
       changes.push('Final roster cutdown begins');
       break;
 
-    case 'season_start':
+    case 'season_start': {
+      // Auto-generate season start data
+      if (!newOffseasonData.ownerExpectations || !newOffseasonData.mediaProjections || !newOffseasonData.seasonGoals) {
+        const seasonStartData = generateSeasonStartData(newGameState);
+        newOffseasonData.ownerExpectations = seasonStartData.ownerExpectations;
+        newOffseasonData.mediaProjections = seasonStartData.mediaProjections;
+        newOffseasonData.seasonGoals = seasonStartData.seasonGoals;
+        changes.push('Generated owner expectations and season goals');
+        changes.push(`Generated ${seasonStartData.mediaProjections.length} media projections`);
+      }
       changes.push('Season preparation begins');
       break;
+    }
   }
 
   newOffseasonData = mergeOffseasonData(newOffseasonData, {
