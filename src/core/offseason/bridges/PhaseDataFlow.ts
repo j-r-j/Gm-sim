@@ -5,9 +5,13 @@
 
 import type { GameState } from '../../models/game/GameState';
 import type { OffseasonPersistentData } from '../OffseasonPersistentData';
-import type { OTAReport, RookieIntegrationReport, PositionBattlePreview } from '../phases/OTAsPhase';
+import type {
+  OTAReport,
+  RookieIntegrationReport,
+  PositionBattlePreview,
+} from '../phases/OTAsPhase';
 import type { PositionBattle, DevelopmentReveal, CampInjury } from '../phases/TrainingCampPhase';
-import type { PreseasonEvaluation, PreseasonPlayerPerformance } from '../phases/PreseasonPhase';
+import type { PreseasonEvaluation } from '../phases/PreseasonPhase';
 import type { CutEvaluationPlayer } from '../phases/FinalCutsPhase';
 
 /**
@@ -45,7 +49,7 @@ export function otaToTrainingCampInput(
   }
 
   // Convert position battle previews to seeds
-  const positionBattleSeeds = positionBattlePreviews.map(preview => {
+  const positionBattleSeeds = positionBattlePreviews.map((preview) => {
     // Calculate incumbent advantage based on competition level
     let incumbentAdvantage = 10;
     if (preview.competitionLevel === 'heated') incumbentAdvantage = 5;
@@ -54,7 +58,7 @@ export function otaToTrainingCampInput(
     return {
       position: preview.position,
       incumbentId: preview.incumbentId,
-      challengerIds: preview.challengers.map(c => c.playerId),
+      challengerIds: preview.challengers.map((c) => c.playerId),
       incumbentAdvantage,
     };
   });
@@ -198,7 +202,7 @@ export function preseasonToFinalCutsInput(
     let guaranteed = 0;
     if (contract) {
       const currentYear = gameState.league.calendar.currentYear;
-      const yearData = contract.yearlyBreakdown.find(y => y.year === currentYear);
+      const yearData = contract.yearlyBreakdown.find((y) => y.year === currentYear);
       if (yearData) {
         deadCapIfCut = yearData.bonus;
         guaranteed = yearData.bonus;
@@ -221,7 +225,10 @@ export function preseasonToFinalCutsInput(
       // Calculate approximate overall from skills (use perceived high end)
       let overallRating = 70; // Default
       if (player.skills.perceived) {
-        const perceivedValues = Object.values(player.skills.perceived) as Array<{ low: number; high: number }>;
+        const perceivedValues = Object.values(player.skills.perceived) as Array<{
+          low: number;
+          high: number;
+        }>;
         if (perceivedValues.length > 0) {
           const sum = perceivedValues.reduce((acc, range) => acc + range.high, 0);
           overallRating = Math.round(sum / perceivedValues.length);
@@ -281,8 +288,20 @@ export function calculateRosterNeeds(
   // Calculate position breakdown
   const positionBreakdown = new Map<string, { current: number; ideal: number }>();
   const idealCounts: Record<string, number> = {
-    QB: 3, RB: 4, WR: 6, TE: 3, OT: 4, OG: 4, C: 2,
-    DE: 4, DT: 4, LB: 7, CB: 6, S: 4, K: 1, P: 1,
+    QB: 3,
+    RB: 4,
+    WR: 6,
+    TE: 3,
+    OT: 4,
+    OG: 4,
+    C: 2,
+    DE: 4,
+    DT: 4,
+    LB: 7,
+    CB: 6,
+    S: 4,
+    K: 1,
+    P: 1,
   };
 
   // Count current players by position

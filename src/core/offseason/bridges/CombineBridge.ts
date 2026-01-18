@@ -126,9 +126,7 @@ export function getProspectCombineResults(
 export function getCombineRisers(
   combineResultsRecord: Record<string, CombineResults>
 ): CombineResults[] {
-  return Object.values(combineResultsRecord).filter(
-    r => determineStockChange(r) === 'riser'
-  );
+  return Object.values(combineResultsRecord).filter((r) => determineStockChange(r) === 'riser');
 }
 
 /**
@@ -137,7 +135,5 @@ export function getCombineRisers(
 export function getCombineFallers(
   combineResultsRecord: Record<string, CombineResults>
 ): CombineResults[] {
-  return Object.values(combineResultsRecord).filter(
-    r => determineStockChange(r) === 'faller'
-  );
+  return Object.values(combineResultsRecord).filter((r) => determineStockChange(r) === 'faller');
 }

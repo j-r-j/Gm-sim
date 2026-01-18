@@ -75,7 +75,8 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
  */
 function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
   // Get badge text based on role
-  const badgeText = scout.role === 'headScout' ? 'HS' : scout.role === 'offensiveScout' ? 'OS' : 'DS';
+  const badgeText =
+    scout.role === 'headScout' ? 'HS' : scout.role === 'offensiveScout' ? 'OS' : 'DS';
   const maxFocus = getMaxFocusProspects(scout.attributes.experience);
   const currentFocus = scout.focusProspects.length;
 
@@ -110,12 +111,7 @@ function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
         </View>
         <View style={styles.focusContainer}>
           <Text style={styles.ratingLabel}>Focus</Text>
-          <Text
-            style={[
-              styles.focusValue,
-              currentFocus >= maxFocus && styles.focusValueFull,
-            ]}
-          >
+          <Text style={[styles.focusValue, currentFocus >= maxFocus && styles.focusValueFull]}>
             {currentFocus}/{maxFocus}
           </Text>
         </View>

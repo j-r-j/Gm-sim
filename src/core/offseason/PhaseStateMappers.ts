@@ -6,7 +6,6 @@
 import type { GameState } from '../models/game/GameState';
 import type { Player } from '../models/player/Player';
 import type { PlayerContract, ContractYear } from '../contracts/Contract';
-import type { Team } from '../models/team/Team';
 import type { InjuryStatus, InjurySeverity, InjuryType } from '../models/player/InjuryStatus';
 import type {
   CoachingChangeRecord,
@@ -160,7 +159,7 @@ export function applyContractDecisions(
 
         // Remove player's contract
         const contractId = Object.keys(newContracts).find(
-          id => newContracts[id].playerId === decision.playerId
+          (id) => newContracts[id].playerId === decision.playerId
         );
         if (contractId) {
           // Update contract to null on player
@@ -189,7 +188,7 @@ export function applyContractDecisions(
       } else if (decision.type === 'restructure') {
         // Update contract with new terms
         const contractId = Object.keys(newContracts).find(
-          id => newContracts[id].playerId === decision.playerId
+          (id) => newContracts[id].playerId === decision.playerId
         );
         if (contractId && decision.details.newSalary !== undefined) {
           const contract = newContracts[contractId];
@@ -214,7 +213,7 @@ export function applyContractDecisions(
       } else if (decision.type === 'franchise_tag' || decision.type === 'transition_tag') {
         // Apply tag to player's contract
         const contractId = Object.keys(newContracts).find(
-          id => newContracts[id].playerId === decision.playerId
+          (id) => newContracts[id].playerId === decision.playerId
         );
         if (contractId && decision.details.newSalary !== undefined) {
           const currentYear = gameState.league.calendar.currentYear;
@@ -255,10 +254,7 @@ export function applyContractDecisions(
 /**
  * Converts a prospect to a player after being drafted
  */
-function convertProspectToPlayer(
-  prospect: Prospect,
-  gameState: GameState
-): Player {
+function convertProspectToPlayer(prospect: Prospect, gameState: GameState): Player {
   // The prospect already contains a full Player object
   return {
     ...prospect.player,
@@ -397,7 +393,10 @@ export function applyFreeAgencySignings(
           const updatedRosterPlayerIds = prevTeam.rosterPlayerIds.filter(
             (id: string) => id !== signing.playerId
           );
-          newTeams[signing.previousTeamId] = { ...prevTeam, rosterPlayerIds: updatedRosterPlayerIds };
+          newTeams[signing.previousTeamId] = {
+            ...prevTeam,
+            rosterPlayerIds: updatedRosterPlayerIds,
+          };
           result.changes.teamsModified.push(signing.previousTeamId);
         }
       }
@@ -512,7 +511,7 @@ export function applyUDFASignings(
           year: currentYear + i,
           bonus: i === 0 ? signing.signingBonus : 0,
           salary: signing.baseSalary,
-          capHit: signing.baseSalary + (signing.signingBonus / signing.contractYears),
+          capHit: signing.baseSalary + signing.signingBonus / signing.contractYears,
           isVoidYear: false,
           isGuaranteed: false,
         })
@@ -601,7 +600,7 @@ function mapSeverityToInjurySeverity(
 function mapInjuryType(injuryType: string): InjuryType {
   const typeMap: Record<string, InjuryType> = {
     'Hamstring strain': 'hamstring',
-    'Hamstring': 'hamstring',
+    Hamstring: 'hamstring',
     'Soft tissue injury': 'other',
     'Ankle sprain': 'ankle',
     'Knee injury': 'knee',
@@ -610,10 +609,10 @@ function mapInjuryType(injuryType: string): InjuryType {
     'Shoulder stinger': 'shoulder',
     'ACL tear': 'acl',
     'Achilles rupture': 'achilles',
-    'Concussion': 'concussion',
-    'Back': 'back',
-    'Foot': 'foot',
-    'Hand': 'hand',
+    Concussion: 'concussion',
+    Back: 'back',
+    Foot: 'foot',
+    Hand: 'hand',
   };
   return typeMap[injuryType] || 'other';
 }
@@ -691,7 +690,7 @@ export function applyRosterMoves(
       if (!player) continue;
 
       // Find player's team from contract
-      const contract = Object.values(newContracts).find(c => c.playerId === playerId);
+      const contract = Object.values(newContracts).find((c) => c.playerId === playerId);
       const teamId = contract?.teamId;
 
       if (teamId) {
@@ -714,7 +713,7 @@ export function applyRosterMoves(
 
       // Remove contract
       const contractId = Object.keys(newContracts).find(
-        id => newContracts[id].playerId === playerId
+        (id) => newContracts[id].playerId === playerId
       );
       if (contractId) {
         delete newContracts[contractId];
@@ -732,7 +731,7 @@ export function applyRosterMoves(
       if (!player) continue;
 
       // Find player's team from contract
-      const contract = Object.values(newContracts).find(c => c.playerId === playerId);
+      const contract = Object.values(newContracts).find((c) => c.playerId === playerId);
       const teamId = contract?.teamId;
 
       if (teamId) {
@@ -765,7 +764,7 @@ export function applyRosterMoves(
       if (!player) continue;
 
       // Find player's team from contract
-      const contract = Object.values(newContracts).find(c => c.playerId === playerId);
+      const contract = Object.values(newContracts).find((c) => c.playerId === playerId);
       const teamId = contract?.teamId;
 
       if (teamId) {

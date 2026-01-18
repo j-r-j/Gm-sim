@@ -3,8 +3,13 @@
  * Connects UDFAPhase.ts (OffSeasonState events) with UDFASystem.ts (actual system)
  */
 
-import { GameState } from '../../models/game/GameState';
-import { OffSeasonState, addEvent, addSigning, completeTask, PlayerSigning } from '../OffSeasonPhaseManager';
+import {
+  OffSeasonState,
+  addEvent,
+  addSigning,
+  completeTask,
+  PlayerSigning,
+} from '../OffSeasonPhaseManager';
 import {
   createUDFAPool,
   attemptUDFASigning,
@@ -12,7 +17,6 @@ import {
   getTopUDFAs,
   getUserRemainingBudget,
   getUserSignedUDFAs,
-  getTeamSignedUDFAs,
   getUDFAPoolSummary,
   UDFAPoolState,
   UDFASigningResult,
@@ -50,10 +54,7 @@ export function processUserUDFASigning(
 /**
  * Runs AI UDFA signing simulation
  */
-export function runAIUDFASignings(
-  poolState: UDFAPoolState,
-  rounds: number = 3
-): UDFAPoolState {
+export function runAIUDFASignings(poolState: UDFAPoolState, rounds: number = 3): UDFAPoolState {
   return simulateAISignings(poolState, rounds);
 }
 
@@ -62,7 +63,7 @@ export function runAIUDFASignings(
  */
 export function convertToUDFASigningRecords(
   poolState: UDFAPoolState,
-  userTeamId: string
+  _userTeamId: string
 ): UDFASigningRecord[] {
   const records: UDFASigningRecord[] = [];
 
@@ -95,7 +96,7 @@ function estimateSigningBonus(
   // Try to find the interest level for this signing
   const interests = poolState.aiInterests.get(prospectId);
   if (interests) {
-    const teamInterest = interests.find(i => i.teamId === teamId);
+    const teamInterest = interests.find((i) => i.teamId === teamId);
     if (teamInterest) {
       return teamInterest.bonusOffer;
     }
@@ -203,7 +204,10 @@ export function canUserSignMore(poolState: UDFAPoolState): boolean {
 /**
  * Gets complete UDFA phase summary
  */
-export function getUDFAPhaseSummary(poolState: UDFAPoolState, userTeamId: string): {
+export function getUDFAPhaseSummary(
+  poolState: UDFAPoolState,
+  _userTeamId: string
+): {
   userSignings: Prospect[];
   userBudgetRemaining: number;
   totalAvailable: number;

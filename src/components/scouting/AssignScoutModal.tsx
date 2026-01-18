@@ -17,7 +17,11 @@ import { colors, fontSize, fontWeight, borderRadius, spacing } from '../../style
 import { Scout } from '../../core/models/staff/Scout';
 import { getMaxFocusProspects, canAssignFocusPlayer } from '../../core/scouting/FocusPlayerSystem';
 import { createScoutAccuracyViewModel } from '../../core/scouting/ScoutAccuracySystem';
-import { Position, isOffensivePosition, isDefensivePosition } from '../../core/models/player/Position';
+import {
+  Position,
+  isOffensivePosition,
+  isDefensivePosition,
+} from '../../core/models/player/Position';
 import { Avatar } from '../avatar';
 
 export interface AssignScoutModalProps {

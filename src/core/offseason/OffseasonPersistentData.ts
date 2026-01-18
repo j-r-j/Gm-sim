@@ -5,16 +5,8 @@
 
 import type { CombineResults } from '../draft/CombineSimulator';
 import type { ProDayResults } from '../draft/ProDaySimulator';
-import type {
-  PositionBattle,
-  DevelopmentReveal,
-  CampInjury,
-} from './phases/TrainingCampPhase';
-import type {
-  PreseasonGame,
-  PreseasonEvaluation,
-  PreseasonInjury,
-} from './phases/PreseasonPhase';
+import type { PositionBattle, DevelopmentReveal, CampInjury } from './phases/TrainingCampPhase';
+import type { PreseasonGame, PreseasonEvaluation, PreseasonInjury } from './phases/PreseasonPhase';
 import type { OTAReport, RookieIntegrationReport } from './phases/OTAsPhase';
 import type { SeasonRecap } from './OffSeasonPhaseManager';
 import type { Prospect } from '../draft/Prospect';
@@ -51,7 +43,14 @@ export interface MediaProjection {
  */
 export interface SeasonGoal {
   id: string;
-  type: 'wins' | 'playoffs' | 'division' | 'championship' | 'player_development' | 'financial' | 'custom';
+  type:
+    | 'wins'
+    | 'playoffs'
+    | 'division'
+    | 'championship'
+    | 'player_development'
+    | 'financial'
+    | 'custom';
   description: string;
   target: string | number;
   status: 'pending' | 'on_track' | 'at_risk' | 'achieved' | 'failed';

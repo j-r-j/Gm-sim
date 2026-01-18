@@ -7,14 +7,27 @@ import type { GameState } from '../../models/game/GameState';
 import type { Player } from '../../models/player/Player';
 import type { AwardWinner, CoachEvaluationResult } from '../OffseasonPersistentData';
 import type { OTAReport, RookieIntegrationReport } from '../phases/OTAsPhase';
-import type { PositionBattle, PositionBattleCompetitor, DevelopmentReveal, CampInjury } from '../phases/TrainingCampPhase';
-import type { PreseasonGame, PreseasonPlayerPerformance, PreseasonEvaluation } from '../phases/PreseasonPhase';
+import type {
+  PositionBattle,
+  PositionBattleCompetitor,
+  DevelopmentReveal,
+  CampInjury,
+} from '../phases/TrainingCampPhase';
+import type {
+  PreseasonGame,
+  PreseasonPlayerPerformance,
+  PreseasonEvaluation,
+} from '../phases/PreseasonPhase';
 import type {
   OwnerExpectations as PersistentOwnerExpectations,
   MediaProjection as PersistentMediaProjection,
   SeasonGoal as PersistentSeasonGoal,
 } from '../OffseasonPersistentData';
-import { calculateOwnerExpectations, generateMediaProjections, generateSeasonGoals } from '../phases/SeasonStartPhase';
+import {
+  calculateOwnerExpectations,
+  generateMediaProjections,
+  generateSeasonGoals,
+} from '../phases/SeasonStartPhase';
 import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../../models/player/Position';
 
 // =============================================================================
@@ -33,7 +46,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   // Find best player for MVP (simplified - highest perceived skills average)
   const mvpCandidate = findTopPlayerByPosition(players, null);
   if (mvpCandidate) {
-    const team = teams.find(t => t.rosterPlayerIds.includes(mvpCandidate.id));
+    const team = teams.find((t) => t.rosterPlayerIds.includes(mvpCandidate.id));
     awards.push({
       award: 'MVP',
       playerId: mvpCandidate.id,
@@ -46,7 +59,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   // Offensive Player of the Year
   const opoy = findTopPlayerByPosition(players, 'offense');
   if (opoy) {
-    const team = teams.find(t => t.rosterPlayerIds.includes(opoy.id));
+    const team = teams.find((t) => t.rosterPlayerIds.includes(opoy.id));
     awards.push({
       award: 'Offensive Player of the Year',
       playerId: opoy.id,
@@ -59,7 +72,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   // Defensive Player of the Year
   const dpoy = findTopPlayerByPosition(players, 'defense');
   if (dpoy) {
-    const team = teams.find(t => t.rosterPlayerIds.includes(dpoy.id));
+    const team = teams.find((t) => t.rosterPlayerIds.includes(dpoy.id));
     awards.push({
       award: 'Defensive Player of the Year',
       playerId: dpoy.id,
@@ -72,7 +85,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   // Offensive Rookie of the Year
   const oroy = findTopRookie(players, 'offense');
   if (oroy) {
-    const team = teams.find(t => t.rosterPlayerIds.includes(oroy.id));
+    const team = teams.find((t) => t.rosterPlayerIds.includes(oroy.id));
     awards.push({
       award: 'Offensive Rookie of the Year',
       playerId: oroy.id,
@@ -85,7 +98,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   // Defensive Rookie of the Year
   const droy = findTopRookie(players, 'defense');
   if (droy) {
-    const team = teams.find(t => t.rosterPlayerIds.includes(droy.id));
+    const team = teams.find((t) => t.rosterPlayerIds.includes(droy.id));
     awards.push({
       award: 'Defensive Rookie of the Year',
       playerId: droy.id,
@@ -102,7 +115,7 @@ function findTopPlayerByPosition(
   players: Player[],
   side: 'offense' | 'defense' | null
 ): Player | undefined {
-  const filtered = players.filter(p => {
+  const filtered = players.filter((p) => {
     if (side === 'offense') return OFFENSIVE_POSITIONS.includes(p.position);
     if (side === 'defense') return DEFENSIVE_POSITIONS.includes(p.position);
     return true;
@@ -111,15 +124,13 @@ function findTopPlayerByPosition(
   return filtered.sort((a, b) => getPlayerScore(b) - getPlayerScore(a))[0];
 }
 
-function findTopRookie(
-  players: Player[],
-  side: 'offense' | 'defense'
-): Player | undefined {
-  const rookies = players.filter(p => {
+function findTopRookie(players: Player[], side: 'offense' | 'defense'): Player | undefined {
+  const rookies = players.filter((p) => {
     const isRookie = p.experience === 0;
-    const matchesSide = side === 'offense'
-      ? OFFENSIVE_POSITIONS.includes(p.position)
-      : DEFENSIVE_POSITIONS.includes(p.position);
+    const matchesSide =
+      side === 'offense'
+        ? OFFENSIVE_POSITIONS.includes(p.position)
+        : DEFENSIVE_POSITIONS.includes(p.position);
     return isRookie && matchesSide;
   });
 
@@ -152,7 +163,8 @@ export function generateCoachEvaluations(gameState: GameState): CoachEvaluationR
   if (hierarchy.headCoach) {
     const coach = gameState.coaches[hierarchy.headCoach];
     if (coach) {
-      const winPct = userTeam.currentRecord.wins /
+      const winPct =
+        userTeam.currentRecord.wins /
         (userTeam.currentRecord.wins + userTeam.currentRecord.losses || 1);
 
       evaluations.push({
@@ -297,23 +309,35 @@ export function generateOTAReports(gameState: GameState): OTAReport[] {
 
 function getImpressionNote(impression: string): string {
   switch (impression) {
-    case 'standout': return 'One of the most impressive performers in OTAs';
-    case 'solid': return 'Meeting expectations with steady improvement';
-    case 'average': return 'Performing at expected level';
-    case 'concerning': return 'Coaches working to address concerns';
-    case 'injury': return 'Limited participation due to minor injury';
-    default: return '';
+    case 'standout':
+      return 'One of the most impressive performers in OTAs';
+    case 'solid':
+      return 'Meeting expectations with steady improvement';
+    case 'average':
+      return 'Performing at expected level';
+    case 'concerning':
+      return 'Coaches working to address concerns';
+    case 'injury':
+      return 'Limited participation due to minor injury';
+    default:
+      return '';
   }
 }
 
 function getCoachFeedback(impression: string): string {
   switch (impression) {
-    case 'standout': return "Extremely pleased with his progress. He's going to be a key contributor.";
-    case 'solid': return 'Doing exactly what we expected. Steady and reliable.';
-    case 'average': return "Still evaluating, but he's showing flashes.";
-    case 'concerning': return "We're working with him to get up to speed.";
-    case 'injury': return 'Taking it slow, being smart with his recovery.';
-    default: return '';
+    case 'standout':
+      return "Extremely pleased with his progress. He's going to be a key contributor.";
+    case 'solid':
+      return 'Doing exactly what we expected. Steady and reliable.';
+    case 'average':
+      return "Still evaluating, but he's showing flashes.";
+    case 'concerning':
+      return "We're working with him to get up to speed.";
+    case 'injury':
+      return 'Taking it slow, being smart with his recovery.';
+    default:
+      return '';
   }
 }
 
@@ -355,9 +379,12 @@ export function generateRookieIntegrationReports(gameState: GameState): RookieIn
 
 function generateRookieNotes(learningCurve: string): string[] {
   switch (learningCurve) {
-    case 'ahead': return ['Picking up the playbook quickly', 'Showing NFL-level instincts'];
-    case 'behind': return ['Taking extra time in meetings', 'Needs more reps'];
-    default: return ['Progressing as expected', 'Fitting in well with teammates'];
+    case 'ahead':
+      return ['Picking up the playbook quickly', 'Showing NFL-level instincts'];
+    case 'behind':
+      return ['Taking extra time in meetings', 'Needs more reps'];
+    default:
+      return ['Progressing as expected', 'Fitting in well with teammates'];
   }
 }
 
@@ -401,7 +428,7 @@ export function generatePositionBattles(gameState: GameState): PositionBattle[] 
       trend: 'steady' as const,
       highlights: [],
       concerns: [],
-      practiceGrade: idx === 0 ? 'A' as const : 'B' as const,
+      practiceGrade: idx === 0 ? ('A' as const) : ('B' as const),
     }));
 
     const scoreDiff = competitors[0].currentScore - (competitors[1]?.currentScore ?? 0);
@@ -440,7 +467,13 @@ export function generateDevelopmentReveals(gameState: GameState): DevelopmentRev
     const player = gameState.players[playerId];
     if (!player) continue;
 
-    const revealTypes: DevelopmentReveal['revealType'][] = ['trait', 'skill_jump', 'decline', 'injury_concern', 'intangible'];
+    const revealTypes: DevelopmentReveal['revealType'][] = [
+      'trait',
+      'skill_jump',
+      'decline',
+      'injury_concern',
+      'intangible',
+    ];
     const type = revealTypes[Math.floor(Math.random() * revealTypes.length)];
 
     reveals.push({
@@ -449,8 +482,12 @@ export function generateDevelopmentReveals(gameState: GameState): DevelopmentRev
       position: player.position,
       revealType: type,
       description: getRevealDescription(type, player),
-      impact: type === 'skill_jump' || type === 'intangible' ? 'positive' :
-              type === 'decline' || type === 'injury_concern' ? 'negative' : 'neutral',
+      impact:
+        type === 'skill_jump' || type === 'intangible'
+          ? 'positive'
+          : type === 'decline' || type === 'injury_concern'
+            ? 'negative'
+            : 'neutral',
       details: {},
     });
   }
@@ -461,12 +498,18 @@ export function generateDevelopmentReveals(gameState: GameState): DevelopmentRev
 function getRevealDescription(type: DevelopmentReveal['revealType'], player: Player): string {
   const name = `${player.firstName} ${player.lastName}`;
   switch (type) {
-    case 'skill_jump': return `${name} showing significant improvement in practice`;
-    case 'trait': return `${name} displaying leadership qualities in camp`;
-    case 'decline': return `${name} appears to have lost a step`;
-    case 'injury_concern': return `${name} dealing with nagging injury concerns`;
-    case 'intangible': return `${name} showing exceptional work ethic`;
-    default: return `${name} development update`;
+    case 'skill_jump':
+      return `${name} showing significant improvement in practice`;
+    case 'trait':
+      return `${name} displaying leadership qualities in camp`;
+    case 'decline':
+      return `${name} appears to have lost a step`;
+    case 'injury_concern':
+      return `${name} dealing with nagging injury concerns`;
+    case 'intangible':
+      return `${name} showing exceptional work ethic`;
+    default:
+      return `${name} development update`;
   }
 }
 
@@ -504,17 +547,28 @@ export function generateCampInjuries(gameState: GameState): CampInjury[] {
 }
 
 function getRandomInjuryType(): string {
-  const types = ['Hamstring strain', 'Ankle sprain', 'Knee soreness', 'Shoulder inflammation', 'Back tightness'];
+  const types = [
+    'Hamstring strain',
+    'Ankle sprain',
+    'Knee soreness',
+    'Shoulder inflammation',
+    'Back tightness',
+  ];
   return types[Math.floor(Math.random() * types.length)];
 }
 
 function getEstimatedReturn(severity: CampInjury['severity']): string {
   switch (severity) {
-    case 'minor': return '1-2 days';
-    case 'moderate': return '1-2 weeks';
-    case 'serious': return '4-6 weeks';
-    case 'season_ending': return 'Season';
-    default: return 'TBD';
+    case 'minor':
+      return '1-2 days';
+    case 'moderate':
+      return '1-2 weeks';
+    case 'serious':
+      return '4-6 weeks';
+    case 'season_ending':
+      return 'Season';
+    default:
+      return 'TBD';
   }
 }
 
@@ -554,7 +608,10 @@ export function generatePreseasonGames(gameState: GameState): PreseasonGame[] {
   return games;
 }
 
-function generatePlayerPerformances(gameState: GameState, gameNum: number): PreseasonPlayerPerformance[] {
+function generatePlayerPerformances(
+  gameState: GameState,
+  gameNum: number
+): PreseasonPlayerPerformance[] {
   const performances: PreseasonPlayerPerformance[] = [];
   const userTeam = gameState.teams[gameState.userTeamId];
 
@@ -577,11 +634,19 @@ function generatePlayerPerformances(gameState: GameState, gameNum: number): Pres
       playerId,
       playerName: `${player.firstName} ${player.lastName}`,
       position: player.position,
-      snaps: gameNum === 3 ? 10 + Math.floor(Math.random() * 20) : 20 + Math.floor(Math.random() * 30),
+      snaps:
+        gameNum === 3 ? 10 + Math.floor(Math.random() * 20) : 20 + Math.floor(Math.random() * 30),
       grade,
       stats: {},
       notes: [],
-      rosterImpact: grade === 'A' ? 'lock' : grade === 'B' ? 'bubble' : grade === 'D' || grade === 'F' ? 'cut_candidate' : 'bubble',
+      rosterImpact:
+        grade === 'A'
+          ? 'lock'
+          : grade === 'B'
+            ? 'bubble'
+            : grade === 'D' || grade === 'F'
+              ? 'cut_candidate'
+              : 'bubble',
     });
   }
 
@@ -626,7 +691,14 @@ export function generatePreseasonEvaluations(
       totalSnaps,
       avgGrade,
       trend: avgGrade >= 80 ? 'improving' : avgGrade >= 65 ? 'steady' : 'declining',
-      rosterProjection: avgGrade >= 85 ? 'lock' : avgGrade >= 75 ? 'bubble' : avgGrade >= 65 ? 'practice_squad' : 'cut_candidate',
+      rosterProjection:
+        avgGrade >= 85
+          ? 'lock'
+          : avgGrade >= 75
+            ? 'bubble'
+            : avgGrade >= 65
+              ? 'practice_squad'
+              : 'cut_candidate',
       keyMoments: [],
       recommendation: avgGrade >= 75 ? 'Keep on roster' : 'Consider for PS or cut',
     });
@@ -710,9 +782,13 @@ export function generateSeasonStartData(gameState: GameState): {
       stretch: Math.min(17, phaseExpectations.minimumWins + 4),
     },
     playoffs: phaseExpectations.playoffExpectation !== 'miss',
-    division: phaseExpectations.playoffExpectation === 'deep_run' || phaseExpectations.playoffExpectation === 'championship',
+    division:
+      phaseExpectations.playoffExpectation === 'deep_run' ||
+      phaseExpectations.playoffExpectation === 'championship',
     championship: phaseExpectations.playoffExpectation === 'championship',
-    playerDevelopment: phaseExpectations.specificGoals.filter(g => g.includes('player') || g.includes('develop')),
+    playerDevelopment: phaseExpectations.specificGoals.filter(
+      (g) => g.includes('player') || g.includes('develop')
+    ),
     financialTargets: { minRevenue: 0, maxSpending: 200 },
     patience: phaseExpectations.patientLevel,
   };
@@ -726,17 +802,22 @@ export function generateSeasonStartData(gameState: GameState): {
   );
 
   // Convert to persistent format
-  const mediaProjections: PersistentMediaProjection[] = phaseProjections.map(p => ({
+  const mediaProjections: PersistentMediaProjection[] = phaseProjections.map((p) => ({
     source: p.source,
     projectedWins: p.projectedWins,
     projectedLosses: p.projectedLosses,
-    playoffOdds: p.playoffProjection === 'super_bowl' ? 85 :
-                 p.playoffProjection === 'division' ? 70 :
-                 p.playoffProjection === 'wild_card' ? 50 : 20,
-    divisionOdds: p.playoffProjection === 'super_bowl' ? 60 :
-                  p.playoffProjection === 'division' ? 40 : 15,
-    championshipOdds: p.playoffProjection === 'super_bowl' ? 12 :
-                      p.playoffProjection === 'division' ? 5 : 1,
+    playoffOdds:
+      p.playoffProjection === 'super_bowl'
+        ? 85
+        : p.playoffProjection === 'division'
+          ? 70
+          : p.playoffProjection === 'wild_card'
+            ? 50
+            : 20,
+    divisionOdds:
+      p.playoffProjection === 'super_bowl' ? 60 : p.playoffProjection === 'division' ? 40 : 15,
+    championshipOdds:
+      p.playoffProjection === 'super_bowl' ? 12 : p.playoffProjection === 'division' ? 5 : 1,
     ranking: p.teamRanking,
     analysis: p.analysis,
   }));
@@ -744,7 +825,7 @@ export function generateSeasonStartData(gameState: GameState): {
   // Get key players for goals
   const keyPlayers: Array<{ name: string; position: string }> = [];
   const sortedPlayers = userTeam.rosterPlayerIds
-    .map(id => gameState.players[id])
+    .map((id) => gameState.players[id])
     .filter((p): p is Player => p !== undefined)
     .sort((a, b) => getPlayerScore(b) - getPlayerScore(a))
     .slice(0, 5);
@@ -760,13 +841,22 @@ export function generateSeasonStartData(gameState: GameState): {
   const phaseGoals = generateSeasonGoals(phaseExpectations, keyPlayers);
 
   // Convert to persistent format
-  const seasonGoals: PersistentSeasonGoal[] = phaseGoals.map(g => ({
+  const seasonGoals: PersistentSeasonGoal[] = phaseGoals.map((g) => ({
     id: g.id,
-    type: g.type === 'team' ? (g.id.includes('wins') ? 'wins' :
-          g.id.includes('playoffs') ? 'playoffs' :
-          g.id.includes('championship') ? 'championship' : 'custom') :
-          g.type === 'player' ? 'player_development' :
-          g.type === 'personal' ? 'custom' : 'custom',
+    type:
+      g.type === 'team'
+        ? g.id.includes('wins')
+          ? 'wins'
+          : g.id.includes('playoffs')
+            ? 'playoffs'
+            : g.id.includes('championship')
+              ? 'championship'
+              : 'custom'
+        : g.type === 'player'
+          ? 'player_development'
+          : g.type === 'personal'
+            ? 'custom'
+            : 'custom',
     description: g.description,
     target: g.target,
     status: 'pending' as const,

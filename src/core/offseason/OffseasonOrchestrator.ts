@@ -4,10 +4,7 @@
  */
 
 import type { GameState } from '../models/game/GameState';
-import type {
-  OffSeasonState,
-  OffSeasonPhaseType,
-} from './OffSeasonPhaseManager';
+import type { OffSeasonState, OffSeasonPhaseType } from './OffSeasonPhaseManager';
 import {
   PHASE_ORDER,
   PHASE_NAMES,
@@ -31,7 +28,6 @@ import {
   applyInjuries,
   applyRosterMoves,
   applyDevelopmentChanges,
-  type PhaseApplicationResult,
 } from './PhaseStateMappers';
 import {
   generateSeasonAwards,
@@ -85,10 +81,7 @@ export function initializeOffseason(gameState: GameState): PhaseProcessResult {
 /**
  * Enters a specific phase and runs any automatic processing
  */
-export function enterPhase(
-  gameState: GameState,
-  phase: OffSeasonPhaseType
-): PhaseProcessResult {
+export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): PhaseProcessResult {
   const offseasonState = gameState.offseasonState;
   const offseasonData = gameState.offseasonData || createEmptyOffseasonData();
 
@@ -177,7 +170,10 @@ export function enterPhase(
         changes.push(`Generated ${otaReports.length} OTA reports`);
       }
       // Auto-generate rookie integration reports
-      if (!newOffseasonData.rookieIntegrationReports || newOffseasonData.rookieIntegrationReports.length === 0) {
+      if (
+        !newOffseasonData.rookieIntegrationReports ||
+        newOffseasonData.rookieIntegrationReports.length === 0
+      ) {
         const rookieReports = generateRookieIntegrationReports(newGameState);
         newOffseasonData.rookieIntegrationReports = rookieReports;
         changes.push(`Generated ${rookieReports.length} rookie integration reports`);
@@ -193,7 +189,10 @@ export function enterPhase(
         changes.push(`Generated ${battles.length} position battles`);
       }
       // Auto-generate development reveals
-      if (!newOffseasonData.developmentReveals || newOffseasonData.developmentReveals.length === 0) {
+      if (
+        !newOffseasonData.developmentReveals ||
+        newOffseasonData.developmentReveals.length === 0
+      ) {
         const reveals = generateDevelopmentReveals(newGameState);
         newOffseasonData.developmentReveals = reveals;
         changes.push(`Generated ${reveals.length} development reveals`);
@@ -232,7 +231,11 @@ export function enterPhase(
 
     case 'season_start': {
       // Auto-generate season start data
-      if (!newOffseasonData.ownerExpectations || !newOffseasonData.mediaProjections || !newOffseasonData.seasonGoals) {
+      if (
+        !newOffseasonData.ownerExpectations ||
+        !newOffseasonData.mediaProjections ||
+        !newOffseasonData.seasonGoals
+      ) {
         const seasonStartData = generateSeasonStartData(newGameState);
         newOffseasonData.ownerExpectations = seasonStartData.ownerExpectations;
         newOffseasonData.mediaProjections = seasonStartData.mediaProjections;
@@ -268,10 +271,7 @@ export function enterPhase(
 /**
  * Processes phase-specific actions and updates GameState
  */
-export function processPhaseAction(
-  gameState: GameState,
-  action: PhaseAction
-): PhaseProcessResult {
+export function processPhaseAction(gameState: GameState, action: PhaseAction): PhaseProcessResult {
   const offseasonState = gameState.offseasonState;
   const offseasonData = gameState.offseasonData || createEmptyOffseasonData();
 
@@ -378,8 +378,8 @@ export function processPhaseAction(
       });
       changes.push(
         `Applied roster moves: ${action.cuts.length} cuts, ` +
-        `${action.practiceSquadSignings.length} PS signings, ` +
-        `${action.irPlacements.length} IR placements`
+          `${action.practiceSquadSignings.length} PS signings, ` +
+          `${action.irPlacements.length} IR placements`
       );
       errors.push(...result.errors);
       break;
@@ -689,8 +689,8 @@ export function getOffseasonSummary(gameState: GameState): {
     phase: offseasonState ? PHASE_NAMES[offseasonState.currentPhase] : 'Not started',
     progress: getOffseasonProgress(gameState),
     draftPicks: offseasonData?.draftSelections?.length ?? 0,
-    signings: (offseasonData?.freeAgentSignings?.length ?? 0) +
-              (offseasonData?.udfaSignings?.length ?? 0),
+    signings:
+      (offseasonData?.freeAgentSignings?.length ?? 0) + (offseasonData?.udfaSignings?.length ?? 0),
     coachingChanges: offseasonData?.coachingChanges?.length ?? 0,
     contractDecisions: offseasonData?.contractDecisions?.length ?? 0,
   };
@@ -709,7 +709,7 @@ function calculateDraftOrder(gameState: GameState): string[] {
     return aWinPct - bWinPct; // Worst record first
   });
 
-  return sortedTeams.map(t => t.id);
+  return sortedTeams.map((t) => t.id);
 }
 
 // =============================================================================
@@ -728,15 +728,8 @@ import type {
   SeasonGoal,
   CoachEvaluationResult,
 } from './OffseasonPersistentData';
-import type {
-  PositionBattle,
-  DevelopmentReveal,
-  CampInjury,
-} from './phases/TrainingCampPhase';
-import type {
-  PreseasonGame,
-  PreseasonEvaluation,
-} from './phases/PreseasonPhase';
+import type { PositionBattle, DevelopmentReveal, CampInjury } from './phases/TrainingCampPhase';
+import type { PreseasonGame, PreseasonEvaluation } from './phases/PreseasonPhase';
 import type { OTAReport, RookieIntegrationReport } from './phases/OTAsPhase';
 import type { CombineResults } from '../draft/CombineSimulator';
 import type { SeasonRecap } from './OffSeasonPhaseManager';
@@ -749,15 +742,32 @@ export type PhaseAction =
   | { type: 'apply_fa_signings'; signings: FreeAgentSigningRecord[] }
   | { type: 'apply_udfa_signings'; signings: UDFASigningRecord[] }
   | { type: 'apply_injuries'; injuries: CampInjury[] }
-  | { type: 'apply_roster_moves'; cuts: string[]; practiceSquadSignings: string[]; irPlacements: string[] }
-  | { type: 'apply_development'; changes: Array<{ playerId: string; attributeChanges: Record<string, number>; overallChange?: number }> }
+  | {
+      type: 'apply_roster_moves';
+      cuts: string[];
+      practiceSquadSignings: string[];
+      irPlacements: string[];
+    }
+  | {
+      type: 'apply_development';
+      changes: Array<{
+        playerId: string;
+        attributeChanges: Record<string, number>;
+        overallChange?: number;
+      }>;
+    }
   | { type: 'store_position_battles'; battles: PositionBattle[] }
   | { type: 'store_development_reveals'; reveals: DevelopmentReveal[] }
   | { type: 'store_camp_injuries'; injuries: CampInjury[] }
   | { type: 'store_preseason_games'; games: PreseasonGame[] }
   | { type: 'store_preseason_evaluations'; evaluations: PreseasonEvaluation[] }
   | { type: 'store_ota_reports'; reports: OTAReport[] }
-  | { type: 'store_owner_expectations'; expectations: OwnerExpectations; projections: MediaProjection[]; goals: SeasonGoal[] }
+  | {
+      type: 'store_owner_expectations';
+      expectations: OwnerExpectations;
+      projections: MediaProjection[];
+      goals: SeasonGoal[];
+    }
   | { type: 'store_combine_results'; results: Record<string, CombineResults> }
   | { type: 'store_awards'; awards: AwardWinner[] }
   | { type: 'store_coach_evaluations'; evaluations: CoachEvaluationResult[] }
