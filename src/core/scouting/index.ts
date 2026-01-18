@@ -15,7 +15,7 @@ export {
   createScoutingDepartmentState,
   getDepartmentScouts,
   getScoutsByRole,
-  getScoutingDirector,
+  getHeadScout,
   getScoutsForRegion,
   getPrimaryScoutForRegion,
   getScoutingVacancies,

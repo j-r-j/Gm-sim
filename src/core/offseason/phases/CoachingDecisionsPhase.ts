@@ -455,17 +455,8 @@ function mapCandidateSchemeToScheme(
   };
 
   // Determine if role is offensive or defensive
-  const offensiveRoles: CoachRole[] = [
-    'headCoach',
-    'offensiveCoordinator',
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-  ];
-
-  const defensiveRoles: CoachRole[] = ['defensiveCoordinator', 'dlCoach', 'lbCoach', 'dbCoach'];
+  const offensiveRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator'];
+  const defensiveRoles: CoachRole[] = ['defensiveCoordinator'];
 
   if (offensiveRoles.includes(role)) {
     return offensiveSchemeMap[scheme] || 'westCoast';
@@ -475,7 +466,6 @@ function mapCandidateSchemeToScheme(
     return defensiveSchemeMap[scheme] || 'fourThreeUnder';
   }
 
-  // Special teams or unknown
   return null;
 }
 

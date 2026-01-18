@@ -7,35 +7,20 @@ import { CoachRole, ScoutRole } from './StaffSalary';
 
 /**
  * Staff hierarchy for a team
- * 14 coaching positions + 8 scouting positions = 22 total staff
+ * 3 coaching positions + 3 scouting positions = 6 total staff
  */
 export interface StaffHierarchy {
   teamId: string;
 
-  // Coaching staff (14 positions)
+  // Coaching staff (3 positions)
   headCoach: string | null; // Coach ID
   offensiveCoordinator: string | null;
   defensiveCoordinator: string | null;
-  specialTeamsCoordinator: string | null;
-  qbCoach: string | null;
-  rbCoach: string | null;
-  wrCoach: string | null;
-  teCoach: string | null;
-  olCoach: string | null;
-  dlCoach: string | null;
-  lbCoach: string | null;
-  dbCoach: string | null;
-  stCoach: string | null;
 
-  // Scouting staff (8 positions)
-  scoutingDirector: string | null;
-  nationalScout: string | null;
-  regionalScoutNortheast: string | null;
-  regionalScoutSoutheast: string | null;
-  regionalScoutMidwest: string | null;
-  regionalScoutWest: string | null;
-  regionalScoutSouthwest: string | null;
-  proScout: string | null;
+  // Scouting staff (3 positions)
+  headScout: string | null;
+  offensiveScout: string | null;
+  defensiveScout: string | null;
 
   // Budget
   staffBudget: number;
@@ -51,42 +36,31 @@ export const COACHING_REPORTS_TO: Record<CoachRole, CoachRole | 'gm'> = {
   headCoach: 'gm',
   offensiveCoordinator: 'headCoach',
   defensiveCoordinator: 'headCoach',
-  specialTeamsCoordinator: 'headCoach',
-  qbCoach: 'offensiveCoordinator',
-  rbCoach: 'offensiveCoordinator',
-  wrCoach: 'offensiveCoordinator',
-  teCoach: 'offensiveCoordinator',
-  olCoach: 'offensiveCoordinator',
-  dlCoach: 'defensiveCoordinator',
-  lbCoach: 'defensiveCoordinator',
-  dbCoach: 'defensiveCoordinator',
-  stCoach: 'specialTeamsCoordinator',
 };
 
 /**
  * Reporting structure for scouts
  */
 export const SCOUTING_REPORTS_TO: Record<ScoutRole, ScoutRole | 'gm'> = {
-  scoutingDirector: 'gm',
-  nationalScout: 'scoutingDirector',
-  regionalScout: 'scoutingDirector',
-  proScout: 'scoutingDirector',
+  headScout: 'gm',
+  offensiveScout: 'headScout',
+  defensiveScout: 'headScout',
 };
 
 /**
  * Number of coaching positions
  */
-export const COACHING_POSITIONS_COUNT = 13; // Not including additional stCoach
+export const COACHING_POSITIONS_COUNT = 3;
 
 /**
  * Number of scouting positions
  */
-export const SCOUTING_POSITIONS_COUNT = 8;
+export const SCOUTING_POSITIONS_COUNT = 3;
 
 /**
  * Total staff positions
  */
-export const TOTAL_STAFF_POSITIONS = 21; // 13 coaching + 8 scouting
+export const TOTAL_STAFF_POSITIONS = 6;
 
 /**
  * Creates an empty staff hierarchy for a team
@@ -99,26 +73,11 @@ export function createEmptyStaffHierarchy(teamId: string, staffBudget: number): 
     headCoach: null,
     offensiveCoordinator: null,
     defensiveCoordinator: null,
-    specialTeamsCoordinator: null,
-    qbCoach: null,
-    rbCoach: null,
-    wrCoach: null,
-    teCoach: null,
-    olCoach: null,
-    dlCoach: null,
-    lbCoach: null,
-    dbCoach: null,
-    stCoach: null,
 
     // Scouting staff
-    scoutingDirector: null,
-    nationalScout: null,
-    regionalScoutNortheast: null,
-    regionalScoutSoutheast: null,
-    regionalScoutMidwest: null,
-    regionalScoutWest: null,
-    regionalScoutSouthwest: null,
-    proScout: null,
+    headScout: null,
+    offensiveScout: null,
+    defensiveScout: null,
 
     // Budget
     staffBudget,
@@ -136,16 +95,6 @@ export function getCoachHierarchyKey(role: CoachRole): keyof StaffHierarchy {
     headCoach: 'headCoach',
     offensiveCoordinator: 'offensiveCoordinator',
     defensiveCoordinator: 'defensiveCoordinator',
-    specialTeamsCoordinator: 'specialTeamsCoordinator',
-    qbCoach: 'qbCoach',
-    rbCoach: 'rbCoach',
-    wrCoach: 'wrCoach',
-    teCoach: 'teCoach',
-    olCoach: 'olCoach',
-    dlCoach: 'dlCoach',
-    lbCoach: 'lbCoach',
-    dbCoach: 'dbCoach',
-    stCoach: 'stCoach',
   };
 
   return mapping[role];
@@ -155,37 +104,14 @@ export function getCoachHierarchyKey(role: CoachRole): keyof StaffHierarchy {
  * Gets all coaching position keys
  */
 export function getCoachingPositionKeys(): (keyof StaffHierarchy)[] {
-  return [
-    'headCoach',
-    'offensiveCoordinator',
-    'defensiveCoordinator',
-    'specialTeamsCoordinator',
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-    'stCoach',
-  ];
+  return ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 }
 
 /**
  * Gets all scouting position keys
  */
 export function getScoutingPositionKeys(): (keyof StaffHierarchy)[] {
-  return [
-    'scoutingDirector',
-    'nationalScout',
-    'regionalScoutNortheast',
-    'regionalScoutSoutheast',
-    'regionalScoutMidwest',
-    'regionalScoutWest',
-    'regionalScoutSouthwest',
-    'proScout',
-  ];
+  return ['headScout', 'offensiveScout', 'defensiveScout'];
 }
 
 /**
@@ -286,9 +212,7 @@ export function hasMinimumStaff(hierarchy: StaffHierarchy): boolean {
 
   // Must have at least one coordinator
   const hasCoordinator =
-    hierarchy.offensiveCoordinator !== null ||
-    hierarchy.defensiveCoordinator !== null ||
-    hierarchy.specialTeamsCoordinator !== null;
+    hierarchy.offensiveCoordinator !== null || hierarchy.defensiveCoordinator !== null;
 
   if (!hasCoordinator) {
     return false;

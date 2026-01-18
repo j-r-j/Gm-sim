@@ -35,6 +35,7 @@ import { DraftBoardScreen } from '../screens/DraftBoardScreen';
 import { DraftRoomScreen, DraftRoomProspect } from '../screens/DraftRoomScreen';
 import { FreeAgencyScreen, FreeAgent } from '../screens/FreeAgencyScreen';
 import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
+import { ProspectDetailScreen } from '../screens/ProspectDetailScreen';
 import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { SeasonRecapScreen } from '../screens/SeasonRecapScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
@@ -1267,49 +1268,15 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    qbCoach: 'Quarterbacks Coach',
-    rbCoach: 'Running Backs Coach',
-    wrCoach: 'Wide Receivers Coach',
-    teCoach: 'Tight Ends Coach',
-    olCoach: 'Offensive Line Coach',
-    dlCoach: 'Defensive Line Coach',
-    lbCoach: 'Linebackers Coach',
-    dbCoach: 'Defensive Backs Coach',
-    stCoach: 'Special Teams Coach',
   };
 
   const rolePriorities: Record<CoachRole, 'critical' | 'important' | 'normal'> = {
     headCoach: 'critical',
     offensiveCoordinator: 'important',
     defensiveCoordinator: 'important',
-    specialTeamsCoordinator: 'normal',
-    qbCoach: 'normal',
-    rbCoach: 'normal',
-    wrCoach: 'normal',
-    teCoach: 'normal',
-    olCoach: 'normal',
-    dlCoach: 'normal',
-    lbCoach: 'normal',
-    dbCoach: 'normal',
-    stCoach: 'normal',
   };
 
-  const allRoles: CoachRole[] = [
-    'headCoach',
-    'offensiveCoordinator',
-    'defensiveCoordinator',
-    'specialTeamsCoordinator',
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-    'stCoach',
-  ];
+  const allRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   const vacancies = allRoles
     .filter((role) => {
@@ -3667,6 +3634,9 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
       needsMoreScouting: confidenceScore < 60,
       isLocked: false,
       userNotes: prospect.userNotes || '',
+      latestScoutId: '',
+      latestScoutName: 'Head Scout',
+      latestReportSummary: `OVR ${overallMin}-${overallMax} | Rd ${projectedRound}`,
     };
   });
 
@@ -3743,7 +3713,7 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
       rankings={rankings}
       positionalNeeds={positionalNeeds}
       onBack={() => navigation.goBack()}
-      onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+      onProspectSelect={(prospectId) => navigation.navigate('ProspectDetail', { prospectId })}
       onToggleLock={(prospectId) => {
         const prospect = gameState.prospects[prospectId];
         Alert.alert(
@@ -3751,6 +3721,153 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
           `${prospect?.player.firstName} ${prospect?.player.lastName}'s ranking has been locked on your board.`
         );
       }}
+    />
+  );
+}
+
+// ============================================
+// PROSPECT DETAIL SCREEN
+// ============================================
+
+export function ProspectDetailScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'ProspectDetail'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+  const { prospectId } = route.params;
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading prospect..." />;
+  }
+
+  const prospect = gameState.prospects[prospectId];
+  if (!prospect) {
+    navigation.goBack();
+    return <LoadingFallback message="Prospect not found..." />;
+  }
+
+  // Get user team's scouts
+  const teamScouts = Object.values(gameState.scouts || {}).filter(
+    (scout) => scout.teamId === gameState.userTeamId
+  );
+
+  // Build scout reports array (empty for now if not implemented)
+  const scoutReports: ScoutReport[] = [];
+
+  // Get assigned scout if any
+  const assignedScout = teamScouts.find((scout) =>
+    scout.focusProspects.includes(prospectId)
+  ) || null;
+
+  // Calculate focus progress if assigned
+  let focusProgress = null;
+  if (assignedScout) {
+    // Mock progress (would come from game state in full implementation)
+    focusProgress = {
+      prospectId,
+      scoutId: assignedScout.id,
+      weeksCompleted: 1,
+      weeksTotal: 3,
+      currentPhase: 'film' as const,
+      partialReport: null,
+    };
+  }
+
+  // Get physical measurements
+  const physical = prospect.player.physical || { height: "6'0\"", weight: 200 };
+  const height = typeof physical.height === 'string' ? physical.height : `${Math.floor(physical.height / 12)}'${physical.height % 12}"`;
+  const weight = typeof physical.weight === 'number' ? physical.weight : 200;
+
+  // Calculate tier
+  const skillEntries = Object.values(prospect.player.skills);
+  const avgSkill =
+    skillEntries.length > 0
+      ? Math.round(
+          skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+            skillEntries.length
+        )
+      : 65;
+
+  const projectedRound =
+    prospect.consensusProjection?.projectedRound ||
+    Math.max(1, Math.min(7, Math.ceil((100 - avgSkill) / 12)));
+
+  const tier: DraftTier =
+    projectedRound === 1 && avgSkill >= 80
+      ? 'elite'
+      : projectedRound === 1
+        ? 'first_round'
+        : projectedRound === 2
+          ? 'second_round'
+          : projectedRound <= 3
+            ? 'day_two'
+            : projectedRound <= 5
+              ? 'day_three'
+              : projectedRound <= 6
+                ? 'priority_fa'
+                : 'draftable';
+
+  const handleAssignScout = async (scoutId: string) => {
+    const scout = gameState.scouts?.[scoutId];
+    if (!scout) return;
+
+    // Add prospect to scout's focus list
+    const updatedScouts = {
+      ...gameState.scouts,
+      [scoutId]: {
+        ...scout,
+        focusProspects: [...scout.focusProspects, prospectId],
+      },
+    };
+
+    const updatedState: GameState = {
+      ...gameState,
+      scouts: updatedScouts,
+    };
+
+    setGameState(updatedState);
+    await saveGameState(updatedState);
+
+    Alert.alert(
+      'Scout Assigned',
+      `${scout.firstName} ${scout.lastName} has been assigned to scout ${prospect.player.firstName} ${prospect.player.lastName}.`
+    );
+  };
+
+  const handleToggleLock = async () => {
+    const updatedState: GameState = {
+      ...gameState,
+      prospects: {
+        ...gameState.prospects,
+        [prospectId]: {
+          ...prospect,
+          flagged: !prospect.flagged,
+        },
+      },
+    };
+
+    setGameState(updatedState);
+    await saveGameState(updatedState);
+  };
+
+  return (
+    <ProspectDetailScreen
+      prospectId={prospectId}
+      prospectName={`${prospect.player.firstName} ${prospect.player.lastName}`}
+      position={prospect.player.position}
+      college={prospect.collegeName || 'Unknown'}
+      height={height}
+      weight={weight}
+      reports={scoutReports}
+      focusProgress={focusProgress}
+      assignedScout={assignedScout}
+      availableScouts={teamScouts}
+      tier={tier}
+      userNotes={prospect.userNotes || ''}
+      isLocked={prospect.flagged || false}
+      onBack={() => navigation.goBack()}
+      onAssignScout={handleAssignScout}
+      onToggleLock={handleToggleLock}
     />
   );
 }

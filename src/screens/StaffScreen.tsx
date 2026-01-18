@@ -10,6 +10,8 @@ import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
 import { Avatar } from '../components/avatar';
 import { CoachRole } from '../core/models/staff/StaffSalary';
+import { ScoutAccuracyBadge } from '../components/scouting/ScoutAccuracyBadge';
+import { getMaxFocusProspects } from '../core/scouting/FocusPlayerSystem';
 
 /**
  * Vacancy info for display
@@ -72,28 +74,51 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
  * Scout card component
  */
 function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
+  // Get badge text based on role
+  const badgeText = scout.role === 'headScout' ? 'HS' : scout.role === 'offensiveScout' ? 'OS' : 'DS';
+  const maxFocus = getMaxFocusProspects(scout.attributes.experience);
+  const currentFocus = scout.focusProspects.length;
+
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
         <View style={styles.avatarContainer}>
           <Avatar id={scout.id} size="sm" context="coach" accentColor={colors.accent} />
           <View style={[styles.roleBadge, { backgroundColor: colors.accent }]}>
-            <Text style={styles.roleText}>SC</Text>
+            <Text style={styles.roleText}>{badgeText}</Text>
           </View>
         </View>
         <View style={styles.nameContainer}>
-          <Text style={styles.staffName}>
-            {scout.firstName} {scout.lastName}
-          </Text>
-          <Text style={styles.staffRole}>
-            {scout.attributes.regionKnowledge || 'General'} Region •{' '}
-            {scout.attributes.positionSpecialty || 'All'} Specialist
-          </Text>
+          <View style={styles.scoutNameRow}>
+            <Text style={styles.staffName}>
+              {scout.firstName} {scout.lastName}
+            </Text>
+            <ScoutAccuracyBadge scout={scout} size="sm" />
+          </View>
+          <Text style={styles.staffRole}>{formatScoutRole(scout.role)}</Text>
+          {scout.attributes.positionSpecialty && (
+            <Text style={styles.specialtyText}>
+              Specialty: {scout.attributes.positionSpecialty}
+            </Text>
+          )}
         </View>
       </View>
-      <View style={styles.ratingContainer}>
-        <Text style={styles.ratingLabel}>Exp</Text>
-        <Text style={styles.ratingValue}>{scout.attributes.experience}</Text>
+      <View style={styles.scoutStatsContainer}>
+        <View style={styles.ratingContainer}>
+          <Text style={styles.ratingLabel}>Exp</Text>
+          <Text style={styles.ratingValue}>{scout.attributes.experience}</Text>
+        </View>
+        <View style={styles.focusContainer}>
+          <Text style={styles.ratingLabel}>Focus</Text>
+          <Text
+            style={[
+              styles.focusValue,
+              currentFocus >= maxFocus && styles.focusValueFull,
+            ]}
+          >
+            {currentFocus}/{maxFocus}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -136,15 +161,18 @@ function formatRole(role: string): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    quarterbacksCoach: 'Quarterbacks Coach',
-    runningBacksCoach: 'Running Backs Coach',
-    wideReceiversCoach: 'Wide Receivers Coach',
-    tightEndsCoach: 'Tight Ends Coach',
-    offensiveLineCoach: 'Offensive Line Coach',
-    defensiveLineCoach: 'Defensive Line Coach',
-    linebackersCoach: 'Linebackers Coach',
-    secondaryCoach: 'Secondary Coach',
+  };
+  return roleMap[role] || role;
+}
+
+/**
+ * Format scout role for display
+ */
+function formatScoutRole(role: string): string {
+  const roleMap: Record<string, string> = {
+    headScout: 'Head Scout',
+    offensiveScout: 'Offensive Scout',
+    defensiveScout: 'Defensive Scout',
   };
   return roleMap[role] || role;
 }
@@ -378,6 +406,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.primary,
+  },
+  scoutNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  specialtyText: {
+    fontSize: fontSize.xs,
+    color: colors.accent,
+    marginTop: 2,
+  },
+  scoutStatsContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  focusContainer: {
+    alignItems: 'center',
+  },
+  focusValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  focusValueFull: {
+    color: colors.warning,
   },
   emptyState: {
     padding: spacing.xl,

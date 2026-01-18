@@ -61,7 +61,7 @@ describe('EffectiveRatingCalculator', () => {
 
     it('should return 0 for coach with no established chemistry', () => {
       const player = generatePlayer({ position: Position.C });
-      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'olCoach');
+      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'offensiveCoordinator');
 
       const modifier = calculateCoachChemistryModifier(player, coach);
 
@@ -70,7 +70,7 @@ describe('EffectiveRatingCalculator', () => {
 
     it('should return the chemistry value when established', () => {
       const player = generatePlayer({ position: Position.CB });
-      const coach = createDefaultCoach('coach-1', 'Jane', 'Doe', 'dbCoach');
+      const coach = createDefaultCoach('coach-1', 'Jane', 'Doe', 'defensiveCoordinator');
       coach.playerChemistry[player.id] = 7;
 
       const modifier = calculateCoachChemistryModifier(player, coach);
@@ -80,7 +80,7 @@ describe('EffectiveRatingCalculator', () => {
 
     it('should return value in range (-10 to +10)', () => {
       const player = generatePlayer({ position: Position.DE });
-      const coach = createDefaultCoach('coach-1', 'Bob', 'Jones', 'dlCoach');
+      const coach = createDefaultCoach('coach-1', 'Bob', 'Jones', 'defensiveCoordinator');
 
       // Set various chemistry values
       const chemistries = [-10, -5, 0, 5, 10];

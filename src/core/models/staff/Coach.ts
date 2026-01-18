@@ -240,30 +240,14 @@ export function getCoachFullName(coach: Coach): string {
  * Checks if a coach is a coordinator
  */
 export function isCoordinator(coach: Coach): boolean {
-  return (
-    coach.role === 'offensiveCoordinator' ||
-    coach.role === 'defensiveCoordinator' ||
-    coach.role === 'specialTeamsCoordinator'
-  );
+  return coach.role === 'offensiveCoordinator' || coach.role === 'defensiveCoordinator';
 }
 
 /**
- * Checks if a coach is a position coach
+ * Checks if a coach is the head coach
  */
-export function isPositionCoach(coach: Coach): boolean {
-  const positionCoachRoles: CoachRole[] = [
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-    'stCoach',
-  ];
-
-  return positionCoachRoles.includes(coach.role);
+export function isHeadCoach(coach: Coach): boolean {
+  return coach.role === 'headCoach';
 }
 
 /**

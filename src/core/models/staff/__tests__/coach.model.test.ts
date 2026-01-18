@@ -8,7 +8,6 @@ import {
   validateCoach,
   getCoachFullName,
   isCoordinator,
-  isPositionCoach,
   getCareerWinningPercentage,
 } from '../Coach';
 import {
@@ -111,36 +110,9 @@ describe('Coach Entity', () => {
       expect(isCoordinator(coach)).toBe(true);
     });
 
-    it('should return true for special teams coordinator', () => {
-      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'specialTeamsCoordinator');
-      expect(isCoordinator(coach)).toBe(true);
-    });
-
     it('should return false for head coach', () => {
       const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'headCoach');
       expect(isCoordinator(coach)).toBe(false);
-    });
-
-    it('should return false for position coach', () => {
-      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'qbCoach');
-      expect(isCoordinator(coach)).toBe(false);
-    });
-  });
-
-  describe('isPositionCoach', () => {
-    it('should return true for QB coach', () => {
-      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'qbCoach');
-      expect(isPositionCoach(coach)).toBe(true);
-    });
-
-    it('should return true for DB coach', () => {
-      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'dbCoach');
-      expect(isPositionCoach(coach)).toBe(true);
-    });
-
-    it('should return false for coordinator', () => {
-      const coach = createDefaultCoach('coach-1', 'John', 'Smith', 'offensiveCoordinator');
-      expect(isPositionCoach(coach)).toBe(false);
     });
   });
 

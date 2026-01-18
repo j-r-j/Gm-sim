@@ -55,7 +55,7 @@ describe('ProScoutingSystem', () => {
 
   // Helper to create scout with specific evaluation
   function createScoutWithEvaluation(evaluation: number): Scout {
-    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'proScout');
+    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'defensiveScout');
     return {
       ...scout,
       attributes: {
