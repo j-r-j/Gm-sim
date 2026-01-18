@@ -2,13 +2,25 @@
  * SkillRangeDisplay Component
  * Displays a skill value as a visual range bar, showing perceived min to max.
  *
+ * Design inspired by:
+ * - FIFA Ultimate Team face stats display
+ * - Madden skill bar visualizations
+ * - Modern sports app stat displays
+ *
  * BRAND GUIDELINE: Skills are ALWAYS shown as ranges, never true values.
  * The range narrows as players mature (age approaches maturityAge).
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  getRatingTierColor,
+} from '../../styles';
 
 export interface SkillRangeDisplayProps {
   /** Name of the skill (e.g., 'armStrength', 'accuracy') */
@@ -25,13 +37,14 @@ export interface SkillRangeDisplayProps {
   compact?: boolean;
   /** Whether the skill is revealed (single value, not range) */
   isRevealed?: boolean;
+  /** Display variant */
+  variant?: 'bar' | 'minimal' | 'detailed';
 }
 
 /**
  * Format skill name from camelCase to display format
  */
 function formatSkillName(name: string): string {
-  // Insert space before capital letters and capitalize first letter
   return name
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (str) => str.toUpperCase())
@@ -39,25 +52,302 @@ function formatSkillName(name: string): string {
 }
 
 /**
- * Get color based on skill value (midpoint of range)
+ * Get abbreviated skill name for compact display
  */
-function getSkillColor(min: number, max: number): string {
-  const midpoint = (min + max) / 2;
-  if (midpoint >= 80) return colors.success;
-  if (midpoint >= 60) return colors.info;
-  if (midpoint >= 40) return colors.warning;
-  return colors.error;
+function getAbbreviatedSkillName(name: string): string {
+  const abbreviations: Record<string, string> = {
+    armStrength: 'ARM',
+    accuracy: 'ACC',
+    shortAccuracy: 'SAC',
+    mediumAccuracy: 'MAC',
+    deepAccuracy: 'DAC',
+    throwOnRun: 'TOR',
+    pocketPresence: 'PKT',
+    speed: 'SPD',
+    acceleration: 'ACC',
+    agility: 'AGI',
+    strength: 'STR',
+    carrying: 'CAR',
+    ballCarrierVision: 'BCV',
+    breakTackle: 'BTK',
+    stiffArm: 'SFA',
+    spinMove: 'SPN',
+    jukeMove: 'JKE',
+    routeRunning: 'RTE',
+    catching: 'CTH',
+    catchInTraffic: 'CIT',
+    release: 'RLS',
+    runBlocking: 'RBK',
+    passBlocking: 'PBK',
+    impactBlocking: 'IBK',
+    leadBlocking: 'LBK',
+    tackling: 'TAK',
+    hitPower: 'HIT',
+    pursuit: 'PUR',
+    playRecognition: 'PRC',
+    manCoverage: 'MAN',
+    zoneCoverage: 'ZON',
+    press: 'PRS',
+    finesse: 'FIN',
+    power: 'POW',
+    blockShedding: 'BSH',
+    kickPower: 'KPW',
+    kickAccuracy: 'KAC',
+    awareness: 'AWR',
+    stamina: 'STA',
+    injury: 'INJ',
+    toughness: 'TGH',
+  };
+  return abbreviations[name] || name.substring(0, 3).toUpperCase();
 }
 
 /**
- * Get range uncertainty indicator
+ * Get uncertainty level description
  */
-function getUncertaintyLevel(min: number, max: number): string {
+function getUncertaintyLevel(min: number, max: number): { label: string; level: number } {
   const range = max - min;
-  if (range <= 5) return 'High Certainty';
-  if (range <= 15) return 'Moderate';
-  if (range <= 25) return 'Uncertain';
-  return 'Very Uncertain';
+  if (range <= 5) return { label: 'Precise', level: 4 };
+  if (range <= 15) return { label: 'Confident', level: 3 };
+  if (range <= 25) return { label: 'Estimated', level: 2 };
+  return { label: 'Uncertain', level: 1 };
+}
+
+/**
+ * Minimal variant - Just the bar and value
+ */
+function MinimalDisplay({
+  skillName,
+  perceivedMin,
+  perceivedMax,
+  showAsRevealed,
+  tierColor,
+  revealedValue,
+}: {
+  skillName: string;
+  perceivedMin: number;
+  perceivedMax: number;
+  showAsRevealed: boolean;
+  tierColor: string;
+  revealedValue: number;
+}): React.JSX.Element {
+  return (
+    <View style={styles.minimalContainer}>
+      <Text style={styles.minimalLabel}>{getAbbreviatedSkillName(skillName)}</Text>
+      <View style={styles.minimalBarContainer}>
+        <View style={styles.minimalBarTrack}>
+          {showAsRevealed ? (
+            <View
+              style={[
+                styles.minimalBarFill,
+                { width: `${revealedValue}%`, backgroundColor: tierColor },
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.minimalBarRange,
+                {
+                  left: `${perceivedMin}%`,
+                  width: `${perceivedMax - perceivedMin}%`,
+                  backgroundColor: tierColor,
+                },
+              ]}
+            />
+          )}
+        </View>
+      </View>
+      <Text style={[styles.minimalValue, { color: tierColor }]}>
+        {showAsRevealed ? revealedValue : `${perceivedMin}-${perceivedMax}`}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Compact bar variant
+ */
+function CompactDisplay({
+  skillName,
+  perceivedMin,
+  perceivedMax,
+  showAsRevealed,
+  tierColor,
+  tierBg,
+  revealedValue,
+}: {
+  skillName: string;
+  perceivedMin: number;
+  perceivedMax: number;
+  showAsRevealed: boolean;
+  tierColor: string;
+  tierBg: string;
+  revealedValue: number;
+}): React.JSX.Element {
+  return (
+    <View style={styles.compactContainer}>
+      <View style={styles.compactLabelContainer}>
+        <Text style={styles.compactLabel}>{formatSkillName(skillName)}</Text>
+        <View style={[styles.compactTierDot, { backgroundColor: tierColor }]} />
+      </View>
+      <View style={styles.compactBarSection}>
+        <View style={[styles.compactBarBackground, { backgroundColor: tierBg }]}>
+          {showAsRevealed ? (
+            <View
+              style={[
+                styles.compactBarFill,
+                {
+                  width: `${revealedValue}%`,
+                  backgroundColor: tierColor,
+                },
+              ]}
+            />
+          ) : (
+            <>
+              {/* Background fill up to range start */}
+              <View
+                style={[
+                  styles.compactBarFill,
+                  {
+                    width: `${perceivedMin}%`,
+                    backgroundColor: `${tierColor}30`,
+                  },
+                ]}
+              />
+              {/* Range indicator */}
+              <View
+                style={[
+                  styles.compactBarRange,
+                  {
+                    left: `${perceivedMin}%`,
+                    width: `${perceivedMax - perceivedMin}%`,
+                    backgroundColor: tierColor,
+                  },
+                ]}
+              />
+            </>
+          )}
+          {/* Tick marks */}
+          <View style={[styles.compactTick, { left: '50%' }]} />
+          <View style={[styles.compactTick, { left: '75%' }]} />
+        </View>
+        <Text style={styles.compactValue}>
+          {showAsRevealed ? revealedValue : `${perceivedMin}-${perceivedMax}`}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Detailed variant with all information
+ */
+function DetailedDisplay({
+  skillName,
+  perceivedMin,
+  perceivedMax,
+  playerAge,
+  maturityAge,
+  showAsRevealed,
+  tierColor,
+  tierBg,
+  revealedValue,
+}: {
+  skillName: string;
+  perceivedMin: number;
+  perceivedMax: number;
+  playerAge?: number;
+  maturityAge?: number;
+  showAsRevealed: boolean;
+  tierColor: string;
+  tierBg: string;
+  revealedValue: number;
+}): React.JSX.Element {
+  const uncertainty = getUncertaintyLevel(perceivedMin, perceivedMax);
+
+  return (
+    <View style={styles.detailedContainer}>
+      {/* Header row */}
+      <View style={styles.detailedHeader}>
+        <View style={styles.detailedLabelRow}>
+          <View
+            style={[
+              styles.detailedTierIndicator,
+              { backgroundColor: tierBg, borderColor: tierColor },
+            ]}
+          >
+            <View style={[styles.detailedTierDot, { backgroundColor: tierColor }]} />
+          </View>
+          <Text style={styles.detailedLabel}>{formatSkillName(skillName)}</Text>
+        </View>
+        <Text style={[styles.detailedValue, { color: tierColor }]}>
+          {showAsRevealed ? revealedValue : `${perceivedMin} - ${perceivedMax}`}
+        </Text>
+      </View>
+
+      {/* Bar visualization */}
+      <View style={styles.detailedBarContainer}>
+        <View style={[styles.detailedBarTrack, { backgroundColor: tierBg }]}>
+          {/* Scale markers */}
+          <View style={[styles.detailedScaleMarker, { left: '25%' }]}>
+            <View style={styles.detailedScaleLine} />
+          </View>
+          <View style={[styles.detailedScaleMarker, { left: '50%' }]}>
+            <View style={[styles.detailedScaleLine, styles.detailedScaleLineMajor]} />
+          </View>
+          <View style={[styles.detailedScaleMarker, { left: '75%' }]}>
+            <View style={styles.detailedScaleLine} />
+          </View>
+
+          {/* Fill or range */}
+          {showAsRevealed ? (
+            <View
+              style={[
+                styles.detailedBarFill,
+                {
+                  width: `${revealedValue}%`,
+                  backgroundColor: tierColor,
+                },
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.detailedBarRange,
+                {
+                  left: `${perceivedMin}%`,
+                  width: `${perceivedMax - perceivedMin}%`,
+                  backgroundColor: tierColor,
+                },
+              ]}
+            />
+          )}
+        </View>
+      </View>
+
+      {/* Footer info */}
+      {!showAsRevealed && (
+        <View style={styles.detailedFooter}>
+          <View style={styles.uncertaintyBadge}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.uncertaintyDot,
+                  i < uncertainty.level
+                    ? { backgroundColor: tierColor }
+                    : { backgroundColor: colors.border },
+                ]}
+              />
+            ))}
+            <Text style={styles.uncertaintyText}>{uncertainty.label}</Text>
+          </View>
+          {playerAge !== undefined && maturityAge !== undefined && (
+            <Text style={styles.maturityText}>Reveals age {maturityAge}</Text>
+          )}
+        </View>
+      )}
+    </View>
+  );
 }
 
 /**
@@ -71,196 +361,132 @@ export function SkillRangeDisplay({
   maturityAge,
   compact = false,
   isRevealed = false,
+  variant = 'bar',
 }: SkillRangeDisplayProps): React.JSX.Element {
-  // Calculate if the skill should be shown as revealed (single value)
+  // Calculate if the skill should be shown as revealed
   const showAsRevealed =
     isRevealed ||
     (playerAge !== undefined && maturityAge !== undefined && playerAge >= maturityAge);
 
-  // For revealed skills, show the midpoint (which equals true value after maturity)
+  // For revealed skills, show the midpoint
   const revealedValue = Math.round((perceivedMin + perceivedMax) / 2);
+  const midpoint = showAsRevealed ? revealedValue : Math.round((perceivedMin + perceivedMax) / 2);
 
-  const rangeWidth = perceivedMax - perceivedMin;
-  const leftPosition = perceivedMin;
-  const skillColor = getSkillColor(perceivedMin, perceivedMax);
+  // Get tier colors
+  const tierInfo = getRatingTierColor(midpoint);
 
-  if (compact) {
-    return (
-      <View style={styles.compactContainer}>
-        <Text style={styles.compactLabel}>{formatSkillName(skillName)}</Text>
-        <View style={styles.compactBarContainer}>
-          <View style={styles.compactBarBackground}>
-            {showAsRevealed ? (
-              <View
-                style={[
-                  styles.compactBarFill,
-                  {
-                    left: 0,
-                    width: `${revealedValue}%`,
-                    backgroundColor: skillColor,
-                  },
-                ]}
-              />
-            ) : (
-              <View
-                style={[
-                  styles.compactBarFill,
-                  {
-                    left: `${leftPosition}%`,
-                    width: `${rangeWidth}%`,
-                    backgroundColor: skillColor,
-                  },
-                ]}
-              />
-            )}
-          </View>
-          <Text style={styles.compactValue}>
-            {showAsRevealed ? revealedValue : `${perceivedMin}-${perceivedMax}`}
-          </Text>
-        </View>
-      </View>
-    );
+  // Use compact variant if compact prop is true
+  const effectiveVariant = compact ? 'bar' : variant;
+
+  switch (effectiveVariant) {
+    case 'minimal':
+      return (
+        <MinimalDisplay
+          skillName={skillName}
+          perceivedMin={perceivedMin}
+          perceivedMax={perceivedMax}
+          showAsRevealed={showAsRevealed}
+          tierColor={tierInfo.primary}
+          revealedValue={revealedValue}
+        />
+      );
+    case 'detailed':
+      return (
+        <DetailedDisplay
+          skillName={skillName}
+          perceivedMin={perceivedMin}
+          perceivedMax={perceivedMax}
+          playerAge={playerAge}
+          maturityAge={maturityAge}
+          showAsRevealed={showAsRevealed}
+          tierColor={tierInfo.primary}
+          tierBg={tierInfo.background}
+          revealedValue={revealedValue}
+        />
+      );
+    default: // bar (compact)
+      return (
+        <CompactDisplay
+          skillName={skillName}
+          perceivedMin={perceivedMin}
+          perceivedMax={perceivedMax}
+          showAsRevealed={showAsRevealed}
+          tierColor={tierInfo.primary}
+          tierBg={tierInfo.background}
+          revealedValue={revealedValue}
+        />
+      );
   }
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>{formatSkillName(skillName)}</Text>
-        <Text style={styles.valueText}>
-          {showAsRevealed ? revealedValue : `${perceivedMin} - ${perceivedMax}`}
-        </Text>
-      </View>
-
-      <View style={styles.barContainer}>
-        {/* Background track with tick marks */}
-        <View style={styles.barBackground}>
-          {/* Tick marks at 25, 50, 75 */}
-          <View style={[styles.tickMark, { left: '25%' }]} />
-          <View style={[styles.tickMark, { left: '50%' }]} />
-          <View style={[styles.tickMark, { left: '75%' }]} />
-
-          {/* Range or revealed value indicator */}
-          {showAsRevealed ? (
-            <View
-              style={[
-                styles.barFill,
-                {
-                  left: 0,
-                  width: `${revealedValue}%`,
-                  backgroundColor: skillColor,
-                  borderTopRightRadius: borderRadius.sm,
-                  borderBottomRightRadius: borderRadius.sm,
-                },
-              ]}
-            />
-          ) : (
-            <View
-              style={[
-                styles.rangeIndicator,
-                {
-                  left: `${leftPosition}%`,
-                  width: `${rangeWidth}%`,
-                  backgroundColor: skillColor,
-                },
-              ]}
-            />
-          )}
-        </View>
-      </View>
-
-      {/* Uncertainty indicator for unrevealed skills */}
-      {!showAsRevealed && (
-        <View style={styles.uncertaintyRow}>
-          <Text style={styles.uncertaintyText}>
-            {getUncertaintyLevel(perceivedMin, perceivedMax)}
-          </Text>
-          {playerAge !== undefined && maturityAge !== undefined && (
-            <Text style={styles.maturityText}>Reveals at age {maturityAge}</Text>
-          )}
-        </View>
-      )}
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.md,
-  },
-  labelRow: {
+  // Minimal variant styles
+  minimalContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.xs,
     marginBottom: spacing.xs,
   },
-  label: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.text,
-  },
-  valueText: {
-    fontSize: fontSize.md,
+  minimalLabel: {
+    width: 32,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
-    color: colors.text,
-    fontVariant: ['tabular-nums'],
+    color: colors.textSecondary,
   },
-  barContainer: {
-    height: 12,
+  minimalBarContainer: {
+    flex: 1,
+    height: 4,
   },
-  barBackground: {
+  minimalBarTrack: {
     flex: 1,
     backgroundColor: colors.border,
     borderRadius: borderRadius.sm,
     overflow: 'hidden',
     position: 'relative',
   },
-  tickMark: {
+  minimalBarFill: {
     position: 'absolute',
     top: 0,
+    left: 0,
     bottom: 0,
-    width: 1,
-    backgroundColor: colors.textLight,
-    opacity: 0.3,
+    borderRadius: borderRadius.sm,
   },
-  barFill: {
+  minimalBarRange: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     borderRadius: borderRadius.sm,
   },
-  rangeIndicator: {
-    position: 'absolute',
-    top: 2,
-    bottom: 2,
-    borderRadius: borderRadius.sm,
-    opacity: 0.9,
-  },
-  uncertaintyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xxs,
-  },
-  uncertaintyText: {
+  minimalValue: {
+    width: 40,
     fontSize: fontSize.xs,
-    color: colors.textLight,
-    fontStyle: 'italic',
+    fontWeight: fontWeight.semibold,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
-  maturityText: {
-    fontSize: fontSize.xs,
-    color: colors.textLight,
-  },
-  // Compact styles
+
+  // Compact variant styles
   compactContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  compactLabel: {
+  compactLabelContainer: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  compactLabel: {
     fontSize: fontSize.sm,
     color: colors.text,
   },
-  compactBarContainer: {
+  compactTierDot: {
+    width: 6,
+    height: 6,
+    borderRadius: borderRadius.full,
+  },
+  compactBarSection: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,7 +495,6 @@ const styles = StyleSheet.create({
   compactBarBackground: {
     flex: 1,
     height: 8,
-    backgroundColor: colors.border,
     borderRadius: borderRadius.sm,
     overflow: 'hidden',
     position: 'relative',
@@ -277,7 +502,21 @@ const styles = StyleSheet.create({
   compactBarFill: {
     position: 'absolute',
     top: 0,
+    left: 0,
     bottom: 0,
+  },
+  compactBarRange: {
+    position: 'absolute',
+    top: 1,
+    bottom: 1,
+    borderRadius: borderRadius.sm,
+  },
+  compactTick: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   compactValue: {
     minWidth: 50,
@@ -286,6 +525,109 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
+  },
+
+  // Detailed variant styles
+  detailedContainer: {
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+  },
+  detailedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  detailedLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailedTierIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailedTierDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+  },
+  detailedLabel: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  detailedValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    fontVariant: ['tabular-nums'],
+  },
+  detailedBarContainer: {
+    height: 16,
+    marginBottom: spacing.sm,
+  },
+  detailedBarTrack: {
+    flex: 1,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  detailedScaleMarker: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+  },
+  detailedScaleLine: {
+    flex: 1,
+    width: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  detailedScaleLineMajor: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  detailedBarFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    borderRadius: borderRadius.md,
+  },
+  detailedBarRange: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    borderRadius: borderRadius.sm,
+  },
+  detailedFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  uncertaintyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  uncertaintyDot: {
+    width: 4,
+    height: 4,
+    borderRadius: borderRadius.full,
+  },
+  uncertaintyText: {
+    marginLeft: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+  },
+  maturityText: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
   },
 });
 

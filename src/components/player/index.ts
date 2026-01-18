@@ -12,3 +12,9 @@ export {
 } from './PhysicalAttributesDisplay';
 export { CollegeStatsDisplay, type CollegeStatsDisplayProps } from './CollegeStatsDisplay';
 export { PlayerDetailCard, type PlayerDetailCardProps } from './PlayerDetailCard';
+export {
+  RatingTierIndicator,
+  type RatingTierIndicatorProps,
+  type RatingTierSize,
+  type RatingTierVariant,
+} from './RatingTierIndicator';

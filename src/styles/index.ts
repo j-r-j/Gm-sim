@@ -12,6 +12,7 @@ export {
   borderRadius,
   shadows,
   commonStyles,
+  getRatingTierColor,
   type Theme,
   type Colors,
   type Spacing,

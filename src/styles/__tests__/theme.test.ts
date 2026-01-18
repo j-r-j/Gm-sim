@@ -65,8 +65,10 @@ describe('Theme', () => {
 
     it('should have valid hex color format', () => {
       const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+      const rgbaColorRegex = /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/;
       Object.values(colors).forEach((color) => {
-        expect(color).toMatch(hexColorRegex);
+        const isValidColor = hexColorRegex.test(color) || rgbaColorRegex.test(color);
+        expect(isValidColor).toBe(true);
       });
     });
   });
