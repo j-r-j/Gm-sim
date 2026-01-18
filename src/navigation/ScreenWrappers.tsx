@@ -5504,6 +5504,9 @@ export function WeeklyScheduleScreenWrapper({
   for (const game of regularSeasonGames) {
     if (game.week !== week) continue;
 
+    // Skip already-complete games - they shouldn't appear in the simulation popup
+    if (game.isComplete) continue;
+
     const homeTeam = gameState.teams[game.homeTeamId];
     const awayTeam = gameState.teams[game.awayTeamId];
 

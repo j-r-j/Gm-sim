@@ -429,12 +429,14 @@ export function resolvePlay(
   // Calculate new game state
   let yardsGained = roll.yards;
   const turnover = roll.outcome === 'interception' || roll.outcome === 'fumble_lost';
-  const touchdown =
-    roll.outcome === 'touchdown' || (yardsGained > 0 && context.fieldPosition + yardsGained >= 100);
 
-  // Adjust yards for touchdown
-  if (touchdown && roll.outcome !== 'touchdown') {
-    yardsGained = 100 - context.fieldPosition;
+  // Only explicit touchdown outcomes count as touchdowns
+  // Big gains that would reach the endzone are capped at the 1-yard line instead
+  let touchdown = roll.outcome === 'touchdown';
+
+  // Cap non-touchdown gains at the 1-yard line
+  if (!touchdown && yardsGained > 0 && context.fieldPosition + yardsGained >= 100) {
+    yardsGained = 99 - context.fieldPosition; // Stop at the 1-yard line
   }
 
   // Calculate new field position
