@@ -10,12 +10,44 @@ import {
   OffSeasonState,
   OffSeasonTask,
   TaskTargetScreen,
+  OffSeasonPhaseType,
   PHASE_NAMES,
   PHASE_DESCRIPTIONS,
+  PHASE_ORDER,
+  PHASE_NUMBERS,
   getCurrentPhaseTasks,
   getProgress,
+  getNextPhase,
   OffSeasonProgress,
 } from '../core/offseason/OffSeasonPhaseManager';
+
+/**
+ * Phase icons for visual identification
+ */
+const PHASE_ICONS: Record<OffSeasonPhaseType, string> = {
+  season_end: '🏁',
+  coaching_decisions: '🎯',
+  contract_management: '📝',
+  combine: '🏃',
+  free_agency: '🤝',
+  draft: '📋',
+  udfa: '🔍',
+  otas: '🏈',
+  training_camp: '⛺',
+  preseason: '🎮',
+  final_cuts: '✂️',
+  season_start: '🚀',
+};
+
+/**
+ * Task action type icons
+ */
+const ACTION_ICONS: Record<string, string> = {
+  view: '👁️',
+  navigate: '➡️',
+  validate: '✓',
+  auto: '⚡',
+};
 
 interface OffseasonScreenProps {
   offseasonState: OffSeasonState;
@@ -111,6 +143,56 @@ function TaskCard({
   );
 }
 
+/**
+ * Phase Timeline - shows all 12 phases with current highlighted
+ */
+function PhaseTimeline({ currentPhase, completedPhases }: { currentPhase: OffSeasonPhaseType; completedPhases: OffSeasonPhaseType[] }): React.JSX.Element {
+  return (
+    <View style={styles.timelineContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.timeline}>
+          {PHASE_ORDER.map((phase, index) => {
+            const isComplete = completedPhases.includes(phase);
+            const isCurrent = phase === currentPhase;
+            const phaseNumber = PHASE_NUMBERS[phase];
+
+            return (
+              <View key={phase} style={styles.timelineItem}>
+                <View style={[
+                  styles.timelineNode,
+                  isComplete && styles.timelineNodeComplete,
+                  isCurrent && styles.timelineNodeCurrent,
+                ]}>
+                  {isComplete ? (
+                    <Text style={styles.timelineNodeText}>✓</Text>
+                  ) : (
+                    <Text style={[styles.timelineNodeText, isCurrent && styles.timelineNodeTextCurrent]}>
+                      {phaseNumber}
+                    </Text>
+                  )}
+                </View>
+                {index < PHASE_ORDER.length - 1 && (
+                  <View style={[
+                    styles.timelineConnector,
+                    isComplete && styles.timelineConnectorComplete,
+                  ]} />
+                )}
+                <Text style={[
+                  styles.timelineLabel,
+                  isCurrent && styles.timelineLabelCurrent,
+                  isComplete && styles.timelineLabelComplete,
+                ]} numberOfLines={1}>
+                  {PHASE_ICONS[phase]}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 function ProgressBar({ progress }: { progress: OffSeasonProgress }): React.JSX.Element {
   return (
     <View style={styles.progressContainer}>
@@ -143,6 +225,10 @@ export function OffseasonScreen({
 
   const phaseName = PHASE_NAMES[offseasonState.currentPhase];
   const phaseDescription = PHASE_DESCRIPTIONS[offseasonState.currentPhase];
+  const phaseIcon = PHASE_ICONS[offseasonState.currentPhase];
+  const nextPhase = getNextPhase(offseasonState);
+  const nextPhaseName = nextPhase ? PHASE_NAMES[nextPhase] : null;
+  const nextPhaseIcon = nextPhase ? PHASE_ICONS[nextPhase] : null;
 
   /**
    * Handle task action based on task type
@@ -197,11 +283,20 @@ export function OffseasonScreen({
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Phase Timeline */}
+        <PhaseTimeline
+          currentPhase={offseasonState.currentPhase}
+          completedPhases={offseasonState.completedPhases}
+        />
+
         {/* Progress Bar */}
         <ProgressBar progress={progress} />
 
         {/* Phase Info */}
         <View style={styles.phaseInfo}>
+          <View style={styles.phaseIconContainer}>
+            <Text style={styles.phaseIcon}>{phaseIcon}</Text>
+          </View>
           <Text style={styles.phaseTitle}>{phaseName}</Text>
           <Text style={styles.phaseDescription}>{phaseDescription}</Text>
           <Text style={styles.phaseDay}>Day {offseasonState.phaseDay}</Text>
@@ -239,17 +334,31 @@ export function OffseasonScreen({
 
         {/* Advance Button */}
         <View style={styles.advanceSection}>
+          {/* Next Phase Preview */}
+          {nextPhaseName && progress.canAdvance && (
+            <View style={styles.nextPhasePreview}>
+              <Text style={styles.nextPhaseLabel}>Next Phase</Text>
+              <View style={styles.nextPhaseContent}>
+                <Text style={styles.nextPhaseIcon}>{nextPhaseIcon}</Text>
+                <Text style={styles.nextPhaseName}>{nextPhaseName}</Text>
+              </View>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.advanceButton, !progress.canAdvance && styles.advanceButtonDisabled]}
             onPress={onAdvancePhase}
             disabled={!progress.canAdvance}
           >
             <Text style={styles.advanceButtonText}>
-              {progress.isComplete ? 'Start Season' : 'Advance to Next Phase'}
+              {progress.isComplete ? '🚀 Start Season' : `Continue to ${nextPhaseName || 'Next Phase'}`}
             </Text>
           </TouchableOpacity>
           {!progress.canAdvance && (
             <Text style={styles.advanceHint}>Complete all required tasks to advance</Text>
+          )}
+          {progress.canAdvance && requiredTasks.every(t => t.isComplete) && optionalTasks.some(t => !t.isComplete) && (
+            <Text style={styles.optionalHint}>Optional tasks can be completed or skipped</Text>
           )}
         </View>
 
@@ -310,6 +419,67 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  // Timeline styles
+  timelineContainer: {
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  timeline: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
+  timelineItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  timelineNode: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineNodeComplete: {
+    backgroundColor: colors.success,
+  },
+  timelineNodeCurrent: {
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  timelineNodeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  timelineNodeTextCurrent: {
+    color: colors.textOnPrimary,
+  },
+  timelineConnector: {
+    width: 12,
+    height: 2,
+    backgroundColor: colors.border,
+  },
+  timelineConnectorComplete: {
+    backgroundColor: colors.success,
+  },
+  timelineLabel: {
+    fontSize: fontSize.lg,
+    marginLeft: -28,
+    marginTop: 32,
+    width: 28,
+    textAlign: 'center',
+  },
+  timelineLabelCurrent: {
+    opacity: 1,
+  },
+  timelineLabelComplete: {
+    opacity: 0.6,
+  },
   progressContainer: {
     padding: spacing.lg,
     backgroundColor: colors.surface,
@@ -352,22 +522,38 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '10',
     borderBottomWidth: 1,
     borderBottomColor: colors.primary + '30',
+    alignItems: 'center',
+  },
+  phaseIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  phaseIcon: {
+    fontSize: 32,
   },
   phaseTitle: {
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.primary,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   phaseDescription: {
     fontSize: fontSize.md,
     color: colors.text,
     lineHeight: 22,
+    textAlign: 'center',
   },
   phaseDay: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+    textAlign: 'center',
   },
   phaseActionButton: {
     marginHorizontal: spacing.lg,
@@ -522,6 +708,41 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.sm,
     fontStyle: 'italic',
+  },
+  optionalHint: {
+    fontSize: fontSize.sm,
+    color: colors.info,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
+  },
+  nextPhasePreview: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    width: '100%',
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  nextPhaseLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  nextPhaseContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nextPhaseIcon: {
+    fontSize: fontSize.xl,
+    marginRight: spacing.sm,
+  },
+  nextPhaseName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
   },
   eventsSection: {
     padding: spacing.lg,

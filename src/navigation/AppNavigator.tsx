@@ -28,6 +28,7 @@ import {
   FreeAgencyScreenWrapper,
   PlayerProfileScreenWrapper,
   OffseasonScreenWrapper,
+  SeasonRecapScreenWrapper,
   CareerSummaryScreenWrapper,
   FiredScreenWrapper,
   CoachProfileScreenWrapper,
@@ -113,6 +114,7 @@ export function AppNavigator(): React.JSX.Element {
 
       {/* Offseason */}
       <Stack.Screen name="Offseason" component={OffseasonScreenWrapper} />
+      <Stack.Screen name="SeasonRecap" component={SeasonRecapScreenWrapper} />
       <Stack.Screen name="OTAs" component={OTAsScreenWrapper} />
       <Stack.Screen name="TrainingCamp" component={TrainingCampScreenWrapper} />
       <Stack.Screen name="Preseason" component={PreseasonScreenWrapper} />

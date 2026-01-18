@@ -42,6 +42,7 @@ export type RootStackParamList = {
 
   // Offseason
   Offseason: undefined;
+  SeasonRecap: undefined;
 
   // Career
   CareerSummary: undefined;
@@ -152,6 +153,7 @@ export const Routes = {
 
   // Offseason
   Offseason: 'Offseason',
+  SeasonRecap: 'SeasonRecap',
   OTAs: 'OTAs',
   TrainingCamp: 'TrainingCamp',
   Preseason: 'Preseason',
