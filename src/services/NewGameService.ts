@@ -144,7 +144,8 @@ function createCoachesForTeam(teamId: string): Coach[] {
       coachId: coachId,
       teamId: teamId,
       yearsTotal,
-      salaryPerYear: role === 'headCoach' ? 8000000 + randomInt(0, 10000000) : 2000000 + randomInt(0, 4000000),
+      salaryPerYear:
+        role === 'headCoach' ? 8000000 + randomInt(0, 10000000) : 2000000 + randomInt(0, 4000000),
       guaranteedMoney: randomInt(500000, 3000000),
       startYear: 2025,
     });

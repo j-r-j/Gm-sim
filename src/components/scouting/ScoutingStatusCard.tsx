@@ -42,8 +42,7 @@ function getConfidenceLevel(reports: ScoutReport[]): 'low' | 'medium' | 'high' {
   if (hasFocus) return 'high';
 
   // Average confidence from auto reports
-  const avgConfidence =
-    reports.reduce((sum, r) => sum + r.confidence.score, 0) / reports.length;
+  const avgConfidence = reports.reduce((sum, r) => sum + r.confidence.score, 0) / reports.length;
 
   if (avgConfidence >= 70) return 'high';
   if (avgConfidence >= 50) return 'medium';
@@ -156,7 +155,14 @@ export function ScoutingStatusCard({
               style={[
                 styles.confidenceLevel,
                 { backgroundColor: confidenceColor },
-                { width: confidenceLevel === 'high' ? '100%' : confidenceLevel === 'medium' ? '60%' : '30%' },
+                {
+                  width:
+                    confidenceLevel === 'high'
+                      ? '100%'
+                      : confidenceLevel === 'medium'
+                        ? '60%'
+                        : '30%',
+                },
               ]}
             />
           </View>

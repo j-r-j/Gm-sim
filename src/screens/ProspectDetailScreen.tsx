@@ -4,14 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
@@ -117,9 +110,7 @@ function ReportCard({ report }: { report: ScoutReport }) {
               {isFocus ? 'Focus Report' : 'Auto Report'}
             </Text>
           </View>
-          <Text style={styles.reportDate}>
-            {new Date(report.generatedAt).toLocaleDateString()}
-          </Text>
+          <Text style={styles.reportDate}>{new Date(report.generatedAt).toLocaleDateString()}</Text>
         </View>
         <Text style={styles.reportScout}>{report.scoutName}</Text>
       </View>
