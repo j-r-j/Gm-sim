@@ -5317,7 +5317,6 @@ export function WeekGamesScreenWrapper({
       week={week}
       phase={phase}
       games={weekGames}
-      userTeamId={userTeamId}
       userGamePlayed={userGamePlayed}
       allGamesComplete={allGamesComplete}
       onPlayGame={handlePlayGame}
@@ -5552,7 +5551,6 @@ export function WeekSummaryScreenWrapper({
       week={week}
       phase={phase}
       results={results}
-      userTeamId={userTeamId}
       userResult={userResult}
       divisionStandings={divisionStandings}
       conference={userTeam.conference}
@@ -5852,7 +5850,6 @@ export function WeeklyScheduleScreenWrapper({
       week={week}
       phase={phase}
       games={weeklyGames}
-      userTeamId={userTeamId}
       isUserOnBye={isUserOnBye}
       onPlayGame={handlePlayGame}
       onSimUserGame={handleSimUserGame}

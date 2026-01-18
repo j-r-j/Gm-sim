@@ -64,8 +64,6 @@ export interface WeeklySchedulePopupProps {
   phase: string;
   /** All games for this week */
   games: WeeklyGame[];
-  /** User's team ID */
-  userTeamId: string;
   /** Whether user is on bye this week */
   isUserOnBye: boolean;
   /** Callback to play user's game (navigate to gamecast) */
@@ -245,7 +243,6 @@ export function WeeklySchedulePopup({
   week,
   phase,
   games,
-  userTeamId: _userTeamId,
   isUserOnBye,
   onPlayGame,
   onSimUserGame,
@@ -253,7 +250,6 @@ export function WeeklySchedulePopup({
   onComplete,
   onBack,
 }: WeeklySchedulePopupProps): React.JSX.Element {
-  // _userTeamId is available for future use if needed
   const [simPhase, setSimPhase] = useState<SimPhase>('initial');
   const [simulatedGames, setSimulatedGames] = useState<Map<string, SimulatedGame>>(new Map());
   const [animatingGameId, setAnimatingGameId] = useState<string | null>(null);
