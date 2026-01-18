@@ -51,6 +51,8 @@ export interface PlayerDetailCardProps {
   onClose?: () => void;
   /** Whether to show as a modal */
   isModal?: boolean;
+  /** Callback to release the player */
+  onRelease?: () => void;
 }
 
 /**
@@ -173,10 +175,14 @@ function ProfileTab({
   player,
   teamOffensiveScheme,
   teamDefensiveScheme,
+  seasonStats,
+  careerStats,
 }: {
   player: Player;
   teamOffensiveScheme?: OffensiveScheme | null;
   teamDefensiveScheme?: DefensiveScheme | null;
+  seasonStats?: PlayerSeasonStats | null;
+  careerStats?: PlayerSeasonStats | null;
 }): React.JSX.Element {
   const positionKey = getPositionGroupKey(player.position);
   const skillNames = SKILL_NAMES_BY_POSITION[positionKey];
@@ -258,6 +264,12 @@ function ProfileTab({
             />
           );
         })}
+
+        {/* Traits - at bottom of Skills section */}
+        <View style={styles.traitsSubsection}>
+          <Text style={styles.sectionTitle}>Traits</Text>
+          <TraitBadges hiddenTraits={player.hiddenTraits} compact />
+        </View>
       </View>
 
       {/* Physical Attributes Section */}
@@ -265,13 +277,140 @@ function ProfileTab({
         <PhysicalAttributesDisplay physical={player.physical} position={player.position} compact />
       </View>
 
-      {/* Traits Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Traits</Text>
-        <TraitBadges hiddenTraits={player.hiddenTraits} compact />
-      </View>
+      {/* Stats Summary Section */}
+      {(seasonStats || careerStats) && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Stats</Text>
+          <View style={styles.statsGridContainer}>
+            {/* Season Stats */}
+            {seasonStats && (
+              <View style={styles.statsColumn}>
+                <Text style={styles.statsColumnHeader}>This Season</Text>
+                <Text style={styles.statsGamesText}>
+                  {seasonStats.gamesPlayed} GP / {seasonStats.gamesStarted} GS
+                </Text>
+                <StatsSummaryRows stats={seasonStats} position={player.position} />
+              </View>
+            )}
+            {/* Career Stats */}
+            {careerStats && (
+              <View style={styles.statsColumn}>
+                <Text style={styles.statsColumnHeader}>Career</Text>
+                <Text style={styles.statsGamesText}>
+                  {careerStats.gamesPlayed} GP / {careerStats.gamesStarted} GS
+                </Text>
+                <StatsSummaryRows stats={careerStats} position={player.position} />
+              </View>
+            )}
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
+}
+
+/**
+ * Stats Summary Rows - shows key stats based on position
+ */
+function StatsSummaryRows({
+  stats,
+  position,
+}: {
+  stats: PlayerSeasonStats;
+  position: Position;
+}): React.JSX.Element | null {
+  const positionGroup = getPositionGroup(position);
+
+  const renderStatLine = (label: string, value: string | number) => (
+    <View key={label} style={styles.statsSummaryRow}>
+      <Text style={styles.statsSummaryLabel}>{label}</Text>
+      <Text style={styles.statsSummaryValue}>{value}</Text>
+    </View>
+  );
+
+  // QB stats
+  if (position === Position.QB) {
+    if (stats.passing.attempts === 0) return null;
+    const compPct = ((stats.passing.completions / stats.passing.attempts) * 100).toFixed(1);
+    return (
+      <View>
+        {renderStatLine('Comp/Att', `${stats.passing.completions}/${stats.passing.attempts}`)}
+        {renderStatLine('Comp %', `${compPct}%`)}
+        {renderStatLine('Pass Yds', stats.passing.yards)}
+        {renderStatLine('Pass TD', stats.passing.touchdowns)}
+        {renderStatLine('INT', stats.passing.interceptions)}
+        {renderStatLine('Rating', stats.passing.rating.toFixed(1))}
+      </View>
+    );
+  }
+
+  // RB stats
+  if (position === Position.RB) {
+    return (
+      <View>
+        {stats.rushing.attempts > 0 && (
+          <>
+            {renderStatLine('Rush Yds', stats.rushing.yards)}
+            {renderStatLine('Rush TD', stats.rushing.touchdowns)}
+            {renderStatLine('YPC', stats.rushing.yardsPerCarry.toFixed(1))}
+          </>
+        )}
+        {stats.receiving.targets > 0 && (
+          <>
+            {renderStatLine('Rec', stats.receiving.receptions)}
+            {renderStatLine('Rec Yds', stats.receiving.yards)}
+          </>
+        )}
+      </View>
+    );
+  }
+
+  // WR/TE stats
+  if (position === Position.WR || position === Position.TE) {
+    if (stats.receiving.targets === 0) return null;
+    return (
+      <View>
+        {renderStatLine('Targets', stats.receiving.targets)}
+        {renderStatLine('Rec', stats.receiving.receptions)}
+        {renderStatLine('Rec Yds', stats.receiving.yards)}
+        {renderStatLine('Rec TD', stats.receiving.touchdowns)}
+        {renderStatLine('YPR', stats.receiving.yardsPerReception.toFixed(1))}
+      </View>
+    );
+  }
+
+  // Defensive stats
+  if (positionGroup === 'defense') {
+    const hasStats =
+      stats.defensive.tackles > 0 || stats.defensive.sacks > 0 || stats.defensive.interceptions > 0;
+    if (!hasStats) return null;
+    return (
+      <View>
+        {renderStatLine('Tackles', stats.defensive.tackles)}
+        {renderStatLine('TFL', stats.defensive.tacklesForLoss)}
+        {renderStatLine('Sacks', stats.defensive.sacks.toFixed(1))}
+        {renderStatLine('INT', stats.defensive.interceptions)}
+        {renderStatLine('PD', stats.defensive.passesDefended)}
+      </View>
+    );
+  }
+
+  // Kicker stats
+  if (position === Position.K) {
+    if (stats.kicking.fieldGoalAttempts === 0) return null;
+    const fgPct = ((stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts) * 100).toFixed(
+      1
+    );
+    return (
+      <View>
+        {renderStatLine('FG', `${stats.kicking.fieldGoalsMade}/${stats.kicking.fieldGoalAttempts}`)}
+        {renderStatLine('FG %', `${fgPct}%`)}
+        {renderStatLine('Long', stats.kicking.longestFieldGoal)}
+      </View>
+    );
+  }
+
+  return null;
 }
 
 /**
@@ -606,6 +745,7 @@ export function PlayerDetailCard({
   careerStats,
   onClose,
   isModal = true,
+  onRelease,
 }: PlayerDetailCardProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const positionColor = getPositionColor(player.position);
@@ -667,6 +807,8 @@ export function PlayerDetailCard({
           player={player}
           teamOffensiveScheme={teamOffensiveScheme}
           teamDefensiveScheme={teamDefensiveScheme}
+          seasonStats={seasonStats}
+          careerStats={careerStats}
         />
       )}
       {activeTab === 'stats' && (
@@ -674,6 +816,15 @@ export function PlayerDetailCard({
       )}
       {activeTab === 'contract' && (
         <ContractTab player={player} contract={contract} currentYear={currentYear} />
+      )}
+
+      {/* Release Button */}
+      {onRelease && (
+        <View style={styles.footerActions}>
+          <TouchableOpacity style={styles.releaseButton} onPress={onRelease}>
+            <Text style={styles.releaseButtonText}>Release Player</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -789,6 +940,52 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.md,
+  },
+  traitsSubsection: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  // Stats Summary styles
+  statsGridContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  statsColumn: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+  },
+  statsColumnHeader: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  statsGamesText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  statsSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xxs,
+  },
+  statsSummaryLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  statsSummaryValue: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
   },
   // Role & Status styles
   roleContainer: {
@@ -1034,6 +1231,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  // Footer action styles
+  footerActions: {
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  releaseButton: {
+    backgroundColor: colors.error,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  releaseButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
 });
 
