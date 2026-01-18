@@ -23,7 +23,7 @@ import {
 
 // Helper function to create mock scout
 function createMockScout(evaluation: number = 70): Scout {
-  const scout = createDefaultScout('scout-1', 'John', 'Smith', 'regionalScout');
+  const scout = createDefaultScout('scout-1', 'John', 'Smith', 'offensiveScout');
   return {
     ...scout,
     attributes: {

@@ -40,7 +40,7 @@ describe('AutoScoutingSystem', () => {
 
   // Helper to create scout with specific evaluation
   function createScoutWithEvaluation(evaluation: number): Scout {
-    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
     return {
       ...scout,
       attributes: {
@@ -194,7 +194,7 @@ describe('AutoScoutingSystem', () => {
 
   describe('processWeeklyAutoScouting', () => {
     it('should process prospects based on scout speed', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       const prospects: ProspectData[] = [];
       for (let i = 0; i < 20; i++) {
         prospects.push(createMockProspect({ id: `prospect-${i}` }));
@@ -207,7 +207,7 @@ describe('AutoScoutingSystem', () => {
     });
 
     it('should filter prospects by scout region', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       // Scout region is northeast by default
       const prospects = [
         createMockProspect({ id: 'p1', region: 'northeast' }),
@@ -225,7 +225,7 @@ describe('AutoScoutingSystem', () => {
     });
 
     it('should return empty results if auto-scouting is disabled', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       const disabledScout: Scout = { ...scout, autoScoutingActive: false };
       const prospects = [createMockProspect()];
 

@@ -5,7 +5,7 @@
 import {
   createScoutingDepartmentState,
   getScoutsByRole,
-  getScoutingDirector,
+  getHeadScout,
   getScoutsForRegion,
   getPrimaryScoutForRegion,
   getScoutingVacancies,
@@ -47,14 +47,14 @@ describe('ScoutingDepartmentManager', () => {
     });
 
     it('should have correct structure', () => {
-      const directors = SCOUTING_DEPARTMENT_STRUCTURE.filter((p) => p.role === 'scoutingDirector');
+      const directors = SCOUTING_DEPARTMENT_STRUCTURE.filter((p) => p.role === 'headScout');
       const nationalScouts = SCOUTING_DEPARTMENT_STRUCTURE.filter(
-        (p) => p.role === 'nationalScout'
+        (p) => p.role === 'headScout'
       );
       const regionalScouts = SCOUTING_DEPARTMENT_STRUCTURE.filter(
-        (p) => p.role === 'regionalScout'
+        (p) => p.role === 'offensiveScout'
       );
-      const proScouts = SCOUTING_DEPARTMENT_STRUCTURE.filter((p) => p.role === 'proScout');
+      const proScouts = SCOUTING_DEPARTMENT_STRUCTURE.filter((p) => p.role === 'defensiveScout');
 
       expect(directors).toHaveLength(1);
       expect(directors[0].count).toBe(1);
@@ -69,7 +69,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('hireScout', () => {
     it('should hire a scout to the department', () => {
       const state = createScoutingDepartmentState('team-1', 5_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       const result = hireScout(state, scout, 2_000_000, 3);
 
@@ -83,7 +83,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reject hire if over budget', () => {
       const state = createScoutingDepartmentState('team-1', 1_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       const result = hireScout(state, scout, 2_000_000, 3);
 
@@ -92,7 +92,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reject hire if salary out of range', () => {
       const state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       // Scouting director min is 1,000,000
       const result = hireScout(state, scout, 100_000, 3);
@@ -102,8 +102,8 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reject hire if no vacancy', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
-      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'scoutingDirector');
+      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
+      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       state = hireScout(state, scout1, 2_000_000, 3)!;
       const result = hireScout(state, scout2, 2_000_000, 3);
@@ -113,7 +113,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should add regional assignment for regional scout', () => {
       const state = createScoutingDepartmentState('team-1', 5_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       // The default scout sets region to 'northeast' for regional scouts
 
       const result = hireScout(state, scout, 400_000, 3);
@@ -129,7 +129,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('fireScout', () => {
     it('should fire a scout from the department', () => {
       let state = createScoutingDepartmentState('team-1', 5_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, scout, 2_000_000, 3)!;
 
       const result = fireScout(state, 'scout-1');
@@ -149,7 +149,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should remove regional assignments when firing regional scout', () => {
       let state = createScoutingDepartmentState('team-1', 5_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       state = hireScout(state, scout, 400_000, 3)!;
 
       expect(state.regionalAssignments).toHaveLength(1);
@@ -174,20 +174,20 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reduce vacancies when scouts are hired', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, scout, 2_000_000, 3)!;
 
       const vacancies = getScoutingVacancies(state);
 
       expect(vacancies.length).toBe(TOTAL_SCOUTING_POSITIONS - 1);
-      expect(vacancies.find((v) => v.role === 'scoutingDirector')).toBeUndefined();
+      expect(vacancies.find((v) => v.role === 'headScout')).toBeUndefined();
     });
 
     it('should mark director vacancy as critical', () => {
       const state = createScoutingDepartmentState('team-1', 5_000_000);
 
       const vacancies = getScoutingVacancies(state);
-      const directorVacancy = vacancies.find((v) => v.role === 'scoutingDirector');
+      const directorVacancy = vacancies.find((v) => v.role === 'headScout');
 
       expect(directorVacancy?.priority).toBe('critical');
     });
@@ -196,14 +196,14 @@ describe('ScoutingDepartmentManager', () => {
   describe('getScoutsByRole', () => {
     it('should return scouts filtered by role', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const director = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
-      const national = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
+      const director = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
+      const national = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       state = hireScout(state, director, 2_000_000, 3)!;
       state = hireScout(state, national, 800_000, 3)!;
 
-      const directors = getScoutsByRole(state, 'scoutingDirector');
-      const nationals = getScoutsByRole(state, 'nationalScout');
+      const directors = getScoutsByRole(state, 'headScout');
+      const nationals = getScoutsByRole(state, 'headScout');
 
       expect(directors).toHaveLength(1);
       expect(directors[0].id).toBe('scout-1');
@@ -212,13 +212,13 @@ describe('ScoutingDepartmentManager', () => {
     });
   });
 
-  describe('getScoutingDirector', () => {
+  describe('getHeadScout', () => {
     it('should return the scouting director', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const director = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const director = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, director, 2_000_000, 3)!;
 
-      const result = getScoutingDirector(state);
+      const result = getHeadScout(state);
 
       expect(result).not.toBeNull();
       expect(result!.id).toBe('scout-1');
@@ -227,7 +227,7 @@ describe('ScoutingDepartmentManager', () => {
     it('should return null if no director', () => {
       const state = createScoutingDepartmentState('team-1', 5_000_000);
 
-      const result = getScoutingDirector(state);
+      const result = getHeadScout(state);
 
       expect(result).toBeNull();
     });
@@ -236,7 +236,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('assignScoutToRegion', () => {
     it('should assign national scout to region', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const national = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const national = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, national, 800_000, 3)!;
 
       const result = assignScoutToRegion(state, 'scout-1', 'southeast', true);
@@ -249,7 +249,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reject assignment for non-scout roles', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const director = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const director = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, director, 2_000_000, 3)!;
 
       const result = assignScoutToRegion(state, 'scout-1', 'southeast', false);
@@ -261,8 +261,8 @@ describe('ScoutingDepartmentManager', () => {
   describe('advanceScoutingYear', () => {
     it('should advance contracts and return expired ones', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
-      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
+      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
+      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       state = hireScout(state, scout1, 2_000_000, 1)!; // 1 year contract
       state = hireScout(state, scout2, 800_000, 3)!; // 3 year contract
@@ -279,8 +279,8 @@ describe('ScoutingDepartmentManager', () => {
   describe('getScoutingDepartmentSummary', () => {
     it('should return accurate summary', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const director = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
-      const national = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
+      const director = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
+      const national = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       state = hireScout(state, director, 2_000_000, 3)!;
       state = hireScout(state, national, 800_000, 3)!;
@@ -297,7 +297,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should show all regions covered with national scout', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const national = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const national = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, national, 800_000, 3)!;
 
       const summary = getScoutingDepartmentSummary(state);
@@ -310,7 +310,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('hasMinimumScoutingStaff', () => {
     it('should return true with director', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const director = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const director = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, director, 2_000_000, 3)!;
 
       expect(hasMinimumScoutingStaff(state)).toBe(true);
@@ -318,7 +318,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should return true with national scout', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const national = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const national = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, national, 800_000, 3)!;
 
       expect(hasMinimumScoutingStaff(state)).toBe(true);
@@ -326,7 +326,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should return false with only regional or pro scout', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       state = hireScout(state, regional, 400_000, 3)!;
 
       expect(hasMinimumScoutingStaff(state)).toBe(false);
@@ -336,7 +336,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('validateScoutingDepartmentState', () => {
     it('should validate correct state', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, scout, 2_000_000, 3)!;
 
       expect(validateScoutingDepartmentState(state)).toBe(true);
@@ -357,7 +357,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('renewScoutContract', () => {
     it('should renew a scout contract', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, scout, 2_000_000, 1)!;
 
       const result = renewScoutContract(state, 'scout-1', 2_500_000, 3);
@@ -370,7 +370,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reject renewal if over budget', () => {
       let state = createScoutingDepartmentState('team-1', 3_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, scout, 2_000_000, 1)!;
 
       // Try to renew at 4M when budget is only 3M
@@ -383,7 +383,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('getScoutsForRegion', () => {
     it('should return scouts assigned to a region', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       state = hireScout(state, regional, 400_000, 3)!;
 
       const scouts = getScoutsForRegion(state, 'northeast');
@@ -394,7 +394,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should return empty for unassigned region', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       state = hireScout(state, regional, 400_000, 3)!;
 
       const scouts = getScoutsForRegion(state, 'west');
@@ -406,7 +406,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('getPrimaryScoutForRegion', () => {
     it('should return primary scout for region', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'regionalScout');
+      const regional = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
       state = hireScout(state, regional, 400_000, 3)!;
 
       const primary = getPrimaryScoutForRegion(state, 'northeast');
@@ -427,7 +427,7 @@ describe('ScoutingDepartmentManager', () => {
   describe('removeScoutFromRegion', () => {
     it('should remove scout from region assignment', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const national = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const national = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, national, 800_000, 3)!;
       state = assignScoutToRegion(state, 'scout-1', 'southeast', false)!;
 
@@ -451,7 +451,7 @@ describe('ScoutingDepartmentManager', () => {
 
     it('should reject budget reduction below spent amount', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       state = hireScout(state, scout, 2_000_000, 3)!;
 
       const result = updateScoutingBudget(state, 1_000_000);
@@ -463,8 +463,8 @@ describe('ScoutingDepartmentManager', () => {
   describe('getTotalDepartmentSalary', () => {
     it('should calculate total salary correctly', () => {
       let state = createScoutingDepartmentState('team-1', 10_000_000);
-      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'scoutingDirector');
-      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
+      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
+      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       state = hireScout(state, scout1, 2_000_000, 3)!;
       state = hireScout(state, scout2, 800_000, 3)!;

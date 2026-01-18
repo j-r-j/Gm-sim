@@ -113,21 +113,21 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should return true for QB coach affecting QB', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
       const qb = createTestPlayer(Position.QB);
 
       expect(coachAffectsPlayer(coach, qb)).toBe(true);
     });
 
     it('should return false for QB coach affecting non-QB', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
       const wr = createTestPlayer(Position.WR);
 
       expect(coachAffectsPlayer(coach, wr)).toBe(false);
     });
 
     it('should return true for OL coach affecting all OL positions', () => {
-      const coach = createTestCoach('coach-1', 'olCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
 
       expect(coachAffectsPlayer(coach, createTestPlayer(Position.LT))).toBe(true);
       expect(coachAffectsPlayer(coach, createTestPlayer(Position.LG))).toBe(true);
@@ -137,7 +137,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should return true for DB coach affecting all DB positions', () => {
-      const coach = createTestCoach('coach-1', 'dbCoach');
+      const coach = createTestCoach('coach-1', 'defensiveCoordinator');
 
       expect(coachAffectsPlayer(coach, createTestPlayer(Position.CB))).toBe(true);
       expect(coachAffectsPlayer(coach, createTestPlayer(Position.FS))).toBe(true);
@@ -147,7 +147,7 @@ describe('Coach Evaluation System', () => {
 
   describe('calculateDevelopmentImpact', () => {
     it('should return zero impact for non-affecting coach', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
       const wr = createTestPlayer(Position.WR);
 
       const impact = calculateDevelopmentImpact(coach, wr, 0, 'neutral');
@@ -157,7 +157,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should calculate positive impact for high-development coach', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach', { development: 90 });
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 90 });
       const qb = createTestPlayer(Position.QB);
 
       const impact = calculateDevelopmentImpact(coach, qb, 5, 'good');
@@ -166,7 +166,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should include chemistry modifier in impact', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach', { development: 70 });
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 70 });
       const qb = createTestPlayer(Position.QB);
 
       const lowChemImpact = calculateDevelopmentImpact(coach, qb, -5, 'neutral');
@@ -176,7 +176,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should include scheme bonus for good fit', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach', { development: 70 });
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 70 });
       const qb = createTestPlayer(Position.QB);
 
       const goodFitImpact = calculateDevelopmentImpact(coach, qb, 0, 'perfect');
@@ -187,7 +187,7 @@ describe('Coach Evaluation System', () => {
 
     it('should reduce head coach impact by 50%', () => {
       const hc = createTestCoach('coach-1', 'headCoach', { development: 80 });
-      const qbCoach = createTestCoach('coach-2', 'qbCoach', { development: 80 });
+      const qbCoach = createTestCoach('coach-2', 'offensiveCoordinator', { development: 80 });
       const qb = createTestPlayer(Position.QB);
 
       const hcImpact = calculateDevelopmentImpact(hc, qb, 0, 'neutral');
@@ -197,7 +197,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should return impact areas for position coaches', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
       const qb = createTestPlayer(Position.QB);
 
       const impact = calculateDevelopmentImpact(coach, qb, 0, 'neutral');
@@ -277,7 +277,7 @@ describe('Coach Evaluation System', () => {
 
   describe('calculatePlayerCoachChemistry', () => {
     it('should calculate chemistry with all sources', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach', { development: 80 });
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 80 });
       const player = createTestPlayer(Position.QB);
 
       const chemistry = calculatePlayerCoachChemistry(coach, player, 'good', 2, true);
@@ -290,7 +290,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should include tenure bonus', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
       const player = createTestPlayer(Position.QB);
 
       const noTenure = calculatePlayerCoachChemistry(coach, player, 'neutral', 0, false);
@@ -300,7 +300,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should include success bonus', () => {
-      const coach = createTestCoach('coach-1', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
       const player = createTestPlayer(Position.QB);
 
       const noSuccess = calculatePlayerCoachChemistry(coach, player, 'neutral', 0, false);
@@ -424,7 +424,7 @@ describe('Coach Evaluation System', () => {
 
   describe('calculateCombinedStaffDevelopmentBonus', () => {
     it('should calculate combined bonus from all coaches', () => {
-      const positionCoach = createTestCoach('coach-1', 'qbCoach', { development: 80 });
+      const positionCoach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 80 });
       const coordinator = createTestCoach('coach-2', 'offensiveCoordinator', { development: 70 });
       const headCoach = createTestCoach('coach-3', 'headCoach', { development: 60 });
 
@@ -434,7 +434,7 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should handle null coaches', () => {
-      const positionCoach = createTestCoach('coach-1', 'qbCoach', { development: 80 });
+      const positionCoach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 80 });
 
       const bonus = calculateCombinedStaffDevelopmentBonus(positionCoach, null, null);
 
@@ -442,8 +442,8 @@ describe('Coach Evaluation System', () => {
     });
 
     it('should weight position coach highest', () => {
-      const highDevCoach = createTestCoach('coach-1', 'qbCoach', { development: 90 });
-      const lowDevCoach = createTestCoach('coach-2', 'qbCoach', { development: 30 });
+      const highDevCoach = createTestCoach('coach-1', 'offensiveCoordinator', { development: 90 });
+      const lowDevCoach = createTestCoach('coach-2', 'offensiveCoordinator', { development: 30 });
 
       const highAsPosition = calculateCombinedStaffDevelopmentBonus(
         highDevCoach,

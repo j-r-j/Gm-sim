@@ -67,7 +67,7 @@ describe('FocusPlayerSystem', () => {
 
   // Helper to create scout with specific attributes
   function createScoutWithAttributes(evaluation: number, experience: number): Scout {
-    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
     return {
       ...scout,
       attributes: {
