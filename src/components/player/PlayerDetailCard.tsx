@@ -16,7 +16,11 @@ import { Position } from '../../core/models/player/Position';
 import { SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
 import { getInjuryDisplayString, isHealthy } from '../../core/models/player/InjuryStatus';
 import { getRoleDisplayName, getRoleFitDescription } from '../../core/models/player/RoleFit';
-import { getSchemeFitDescription, OffensiveScheme, DefensiveScheme } from '../../core/models/player/SchemeFit';
+import {
+  getSchemeFitDescription,
+  OffensiveScheme,
+  DefensiveScheme,
+} from '../../core/models/player/SchemeFit';
 import { PlayerContract, getContractSummary, ContractSummary } from '../../core/contracts/Contract';
 import { PlayerSeasonStats } from '../../core/game/SeasonStatsAggregator';
 import { SkillRangeDisplay } from './SkillRangeDisplay';
@@ -54,8 +58,15 @@ export interface PlayerDetailCardProps {
  */
 function getPositionGroup(position: Position): 'offense' | 'defense' | 'special' {
   const offensePositions = [
-    Position.QB, Position.RB, Position.WR, Position.TE,
-    Position.LT, Position.LG, Position.C, Position.RG, Position.RT,
+    Position.QB,
+    Position.RB,
+    Position.WR,
+    Position.TE,
+    Position.LT,
+    Position.LG,
+    Position.C,
+    Position.RG,
+    Position.RT,
   ];
   const specialPositions = [Position.K, Position.P];
 
@@ -70,9 +81,12 @@ function getPositionGroup(position: Position): 'offense' | 'defense' | 'special'
 function getPositionColor(position: Position): string {
   const group = getPositionGroup(position);
   switch (group) {
-    case 'offense': return colors.primary;
-    case 'defense': return colors.secondary;
-    case 'special': return colors.info;
+    case 'offense':
+      return colors.primary;
+    case 'defense':
+      return colors.secondary;
+    case 'special':
+      return colors.info;
   }
 }
 
@@ -81,25 +95,36 @@ function getPositionColor(position: Position): string {
  */
 function getPositionGroupKey(position: Position): keyof typeof SKILL_NAMES_BY_POSITION {
   switch (position) {
-    case Position.QB: return 'QB';
-    case Position.RB: return 'RB';
-    case Position.WR: return 'WR';
-    case Position.TE: return 'TE';
+    case Position.QB:
+      return 'QB';
+    case Position.RB:
+      return 'RB';
+    case Position.WR:
+      return 'WR';
+    case Position.TE:
+      return 'TE';
     case Position.LT:
     case Position.LG:
     case Position.C:
     case Position.RG:
-    case Position.RT: return 'OL';
+    case Position.RT:
+      return 'OL';
     case Position.DE:
-    case Position.DT: return 'DL';
+    case Position.DT:
+      return 'DL';
     case Position.OLB:
-    case Position.ILB: return 'LB';
+    case Position.ILB:
+      return 'LB';
     case Position.CB:
     case Position.FS:
-    case Position.SS: return 'DB';
-    case Position.K: return 'K';
-    case Position.P: return 'P';
-    default: return 'QB';
+    case Position.SS:
+      return 'DB';
+    case Position.K:
+      return 'K';
+    case Position.P:
+      return 'P';
+    default:
+      return 'QB';
   }
 }
 
@@ -110,7 +135,7 @@ function StatusBar({
   label,
   value,
   color,
-  invertColor = false
+  invertColor = false,
 }: {
   label: string;
   value: number;
@@ -119,7 +144,11 @@ function StatusBar({
 }): React.JSX.Element {
   // For fatigue, higher is worse so we might want to invert the color logic
   const displayColor = invertColor
-    ? (value > 70 ? colors.error : value > 40 ? colors.warning : colors.success)
+    ? value > 70
+      ? colors.error
+      : value > 40
+        ? colors.warning
+        : colors.success
     : color;
 
   return (
@@ -130,10 +159,7 @@ function StatusBar({
       </View>
       <View style={styles.statusBarTrack}>
         <View
-          style={[
-            styles.statusBarFill,
-            { width: `${value}%`, backgroundColor: displayColor }
-          ]}
+          style={[styles.statusBarFill, { width: `${value}%`, backgroundColor: displayColor }]}
         />
       </View>
     </View>
@@ -191,21 +217,23 @@ function ProfileTab({
         <StatusBar
           label="Morale"
           value={player.morale}
-          color={player.morale >= 70 ? colors.success : player.morale >= 40 ? colors.warning : colors.error}
+          color={
+            player.morale >= 70
+              ? colors.success
+              : player.morale >= 40
+                ? colors.warning
+                : colors.error
+          }
         />
-        <StatusBar
-          label="Fatigue"
-          value={player.fatigue}
-          color={colors.info}
-          invertColor
-        />
+        <StatusBar label="Fatigue" value={player.fatigue} color={colors.info} invertColor />
         {!isHealthy(player.injuryStatus) && (
           <View style={styles.injuryContainer}>
             <Text style={styles.injuryIcon}>🩹</Text>
             <Text style={styles.injuryText}>{getInjuryDisplayString(player.injuryStatus)}</Text>
             {player.injuryStatus.weeksRemaining > 0 && (
               <Text style={styles.injuryWeeks}>
-                ({player.injuryStatus.weeksRemaining} week{player.injuryStatus.weeksRemaining !== 1 ? 's' : ''})
+                ({player.injuryStatus.weeksRemaining} week
+                {player.injuryStatus.weeksRemaining !== 1 ? 's' : ''})
               </Text>
             )}
           </View>
@@ -234,11 +262,7 @@ function ProfileTab({
 
       {/* Physical Attributes Section */}
       <View style={styles.section}>
-        <PhysicalAttributesDisplay
-          physical={player.physical}
-          position={player.position}
-          compact
-        />
+        <PhysicalAttributesDisplay physical={player.physical} position={player.position} compact />
       </View>
 
       {/* Traits Section */}
@@ -292,7 +316,10 @@ function StatsTab({
       <View style={styles.statsSection}>
         <Text style={styles.statsSectionTitle}>Passing</Text>
         {renderStatRow('Comp/Att', `${stats.passing.completions}/${stats.passing.attempts}`)}
-        {renderStatRow('Comp %', `${((stats.passing.completions / stats.passing.attempts) * 100).toFixed(1)}%`)}
+        {renderStatRow(
+          'Comp %',
+          `${((stats.passing.completions / stats.passing.attempts) * 100).toFixed(1)}%`
+        )}
         {renderStatRow('Yards', formatStat(stats.passing.yards))}
         {renderStatRow('TDs', formatStat(stats.passing.touchdowns))}
         {renderStatRow('INTs', formatStat(stats.passing.interceptions))}
@@ -325,9 +352,12 @@ function StatsTab({
         <Text style={styles.statsSectionTitle}>Receiving</Text>
         {renderStatRow('Targets', formatStat(stats.receiving.targets))}
         {renderStatRow('Receptions', formatStat(stats.receiving.receptions))}
-        {renderStatRow('Catch %', stats.receiving.targets > 0
-          ? `${((stats.receiving.receptions / stats.receiving.targets) * 100).toFixed(1)}%`
-          : '0%')}
+        {renderStatRow(
+          'Catch %',
+          stats.receiving.targets > 0
+            ? `${((stats.receiving.receptions / stats.receiving.targets) * 100).toFixed(1)}%`
+            : '0%'
+        )}
         {renderStatRow('Yards', formatStat(stats.receiving.yards))}
         {renderStatRow('YPR', formatStat(stats.receiving.yardsPerReception, 1))}
         {renderStatRow('TDs', formatStat(stats.receiving.touchdowns))}
@@ -339,9 +369,8 @@ function StatsTab({
 
   const renderDefensiveStats = () => {
     if (!stats) return null;
-    const hasDefensiveStats = stats.defensive.tackles > 0 ||
-      stats.defensive.sacks > 0 ||
-      stats.defensive.interceptions > 0;
+    const hasDefensiveStats =
+      stats.defensive.tackles > 0 || stats.defensive.sacks > 0 || stats.defensive.interceptions > 0;
     if (!hasDefensiveStats) return null;
 
     return (
@@ -365,11 +394,17 @@ function StatsTab({
       <View style={styles.statsSection}>
         <Text style={styles.statsSectionTitle}>Kicking</Text>
         {renderStatRow('FG', `${stats.kicking.fieldGoalsMade}/${stats.kicking.fieldGoalAttempts}`)}
-        {renderStatRow('FG %', stats.kicking.fieldGoalAttempts > 0
-          ? `${((stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts) * 100).toFixed(1)}%`
-          : '0%')}
+        {renderStatRow(
+          'FG %',
+          stats.kicking.fieldGoalAttempts > 0
+            ? `${((stats.kicking.fieldGoalsMade / stats.kicking.fieldGoalAttempts) * 100).toFixed(1)}%`
+            : '0%'
+        )}
         {renderStatRow('Long', formatStat(stats.kicking.longestFieldGoal))}
-        {renderStatRow('XP', `${stats.kicking.extraPointsMade}/${stats.kicking.extraPointAttempts}`)}
+        {renderStatRow(
+          'XP',
+          `${stats.kicking.extraPointsMade}/${stats.kicking.extraPointAttempts}`
+        )}
       </View>
     );
   };
@@ -379,18 +414,28 @@ function StatsTab({
       {/* Toggle between season and career */}
       <View style={styles.statsToggle}>
         <TouchableOpacity
-          style={[styles.statsToggleButton, viewType === 'season' && styles.statsToggleButtonActive]}
+          style={[
+            styles.statsToggleButton,
+            viewType === 'season' && styles.statsToggleButtonActive,
+          ]}
           onPress={() => setViewType('season')}
         >
-          <Text style={[styles.statsToggleText, viewType === 'season' && styles.statsToggleTextActive]}>
+          <Text
+            style={[styles.statsToggleText, viewType === 'season' && styles.statsToggleTextActive]}
+          >
             Season
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.statsToggleButton, viewType === 'career' && styles.statsToggleButtonActive]}
+          style={[
+            styles.statsToggleButton,
+            viewType === 'career' && styles.statsToggleButtonActive,
+          ]}
           onPress={() => setViewType('career')}
         >
-          <Text style={[styles.statsToggleText, viewType === 'career' && styles.statsToggleTextActive]}>
+          <Text
+            style={[styles.statsToggleText, viewType === 'career' && styles.statsToggleTextActive]}
+          >
             Career
           </Text>
         </TouchableOpacity>
@@ -406,7 +451,9 @@ function StatsTab({
       )}
 
       {/* Position-specific stats */}
-      {!stats ? renderNoStats() : (
+      {!stats ? (
+        renderNoStats()
+      ) : (
         <>
           {/* QB and skill positions - show passing/rushing/receiving */}
           {player.position === Position.QB && (
@@ -433,8 +480,10 @@ function StatsTab({
           )}
 
           {/* O-Line - we'd show sacks allowed but that's in game stats */}
-          {(player.position === Position.LT || player.position === Position.LG ||
-            player.position === Position.C || player.position === Position.RG ||
+          {(player.position === Position.LT ||
+            player.position === Position.LG ||
+            player.position === Position.C ||
+            player.position === Position.RG ||
             player.position === Position.RT) && (
             <View style={styles.statsSection}>
               <Text style={styles.statsSectionTitle}>Blocking</Text>
@@ -448,7 +497,8 @@ function StatsTab({
           {positionGroup === 'defense' && renderDefensiveStats()}
 
           {/* Kickers/Punters */}
-          {(player.position === Position.K || player.position === Position.P) && renderKickingStats()}
+          {(player.position === Position.K || player.position === Position.P) &&
+            renderKickingStats()}
         </>
       )}
     </ScrollView>
@@ -491,7 +541,10 @@ function ContractTab({
               ? `Round ${player.draftRound}, Pick ${player.draftPick}`
               : 'Undrafted'
           )}
-          {renderContractRow('Experience', `${player.experience} year${player.experience !== 1 ? 's' : ''}`)}
+          {renderContractRow(
+            'Experience',
+            `${player.experience} year${player.experience !== 1 ? 's' : ''}`
+          )}
           {renderContractRow('Age', player.age.toString())}
         </View>
       </View>
@@ -502,10 +555,12 @@ function ContractTab({
         {summary ? (
           <View style={styles.contractContainer}>
             <View style={styles.contractHeader}>
-              <View style={[
-                styles.contractStatusBadge,
-                summary.statusDescription === 'Expiring' && styles.contractStatusExpiring
-              ]}>
+              <View
+                style={[
+                  styles.contractStatusBadge,
+                  summary.statusDescription === 'Expiring' && styles.contractStatusExpiring,
+                ]}
+              >
                 <Text style={styles.contractStatusText}>{summary.statusDescription}</Text>
               </View>
             </View>
@@ -563,9 +618,14 @@ export function PlayerDetailCard({
           <Text style={styles.positionText}>{player.position}</Text>
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.playerName}>{player.firstName} {player.lastName}</Text>
+          <Text style={styles.playerName}>
+            {player.firstName} {player.lastName}
+          </Text>
           <Text style={styles.playerDetails}>
-            Age {player.age} • {player.experience > 0 ? `${player.experience} yr${player.experience !== 1 ? 's' : ''} exp` : 'Rookie'}
+            Age {player.age} •{' '}
+            {player.experience > 0
+              ? `${player.experience} yr${player.experience !== 1 ? 's' : ''} exp`
+              : 'Rookie'}
           </Text>
         </View>
         {onClose && (
@@ -589,9 +649,7 @@ export function PlayerDetailCard({
           style={[styles.tab, activeTab === 'stats' && styles.tabActive]}
           onPress={() => setActiveTab('stats')}
         >
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>
-            Stats
-          </Text>
+          <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>Stats</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'contract' && styles.tabActive]}
@@ -612,34 +670,19 @@ export function PlayerDetailCard({
         />
       )}
       {activeTab === 'stats' && (
-        <StatsTab
-          player={player}
-          seasonStats={seasonStats}
-          careerStats={careerStats}
-        />
+        <StatsTab player={player} seasonStats={seasonStats} careerStats={careerStats} />
       )}
       {activeTab === 'contract' && (
-        <ContractTab
-          player={player}
-          contract={contract}
-          currentYear={currentYear}
-        />
+        <ContractTab player={player} contract={contract} currentYear={currentYear} />
       )}
     </View>
   );
 
   if (isModal) {
     return (
-      <Modal
-        visible={true}
-        animationType="slide"
-        transparent
-        onRequestClose={onClose}
-      >
+      <Modal visible={true} animationType="slide" transparent onRequestClose={onClose}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {content}
-          </View>
+          <View style={styles.modalContent}>{content}</View>
         </View>
       </Modal>
     );

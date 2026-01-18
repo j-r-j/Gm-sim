@@ -17,14 +17,14 @@ import {
   getCareerWinningPercentage,
 } from '../../core/models/staff/Coach';
 import { CoachRole } from '../../core/models/staff/StaffSalary';
-import { PersonalityType, getPersonalityDescription } from '../../core/models/staff/CoachPersonality';
+import {
+  PersonalityType,
+  getPersonalityDescription,
+} from '../../core/models/staff/CoachPersonality';
 import { TreeName } from '../../core/models/staff/CoachingTree';
 import { getReputationTier, ReputationTier } from '../../core/models/staff/CoachAttributes';
 import { getTendenciesDescription } from '../../core/models/staff/CoordinatorTendencies';
-import {
-  getTotalContractValue,
-  isContractExpiring,
-} from '../../core/models/staff/CoachContract';
+import { getTotalContractValue, isContractExpiring } from '../../core/models/staff/CoachContract';
 import { OffensiveScheme, DefensiveScheme } from '../../core/models/player/SchemeFit';
 
 type TabType = 'profile' | 'career' | 'contract';
@@ -50,20 +50,9 @@ function getRoleColor(role: CoachRole): string {
     case 'headCoach':
       return colors.primary;
     case 'offensiveCoordinator':
-    case 'qbCoach':
-    case 'rbCoach':
-    case 'wrCoach':
-    case 'teCoach':
-    case 'olCoach':
       return colors.success;
     case 'defensiveCoordinator':
-    case 'dlCoach':
-    case 'lbCoach':
-    case 'dbCoach':
       return colors.secondary;
-    case 'specialTeamsCoordinator':
-    case 'stCoach':
-      return colors.info;
     default:
       return colors.textSecondary;
   }
@@ -77,16 +66,6 @@ function getRoleDisplayName(role: CoachRole): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    qbCoach: 'Quarterbacks Coach',
-    rbCoach: 'Running Backs Coach',
-    wrCoach: 'Wide Receivers Coach',
-    teCoach: 'Tight Ends Coach',
-    olCoach: 'Offensive Line Coach',
-    dlCoach: 'Defensive Line Coach',
-    lbCoach: 'Linebackers Coach',
-    dbCoach: 'Defensive Backs Coach',
-    stCoach: 'Special Teams Coach',
   };
   return roleNames[role] || role;
 }
@@ -297,8 +276,14 @@ function CareerTab({ coach }: { coach: Coach }): React.JSX.Element {
   // Calculate career totals
   const totalWins = coach.careerHistory.reduce((sum, entry) => sum + entry.wins, 0);
   const totalLosses = coach.careerHistory.reduce((sum, entry) => sum + entry.losses, 0);
-  const totalChampionships = coach.careerHistory.reduce((sum, entry) => sum + entry.championships, 0);
-  const totalPlayoffs = coach.careerHistory.reduce((sum, entry) => sum + entry.playoffAppearances, 0);
+  const totalChampionships = coach.careerHistory.reduce(
+    (sum, entry) => sum + entry.championships,
+    0
+  );
+  const totalPlayoffs = coach.careerHistory.reduce(
+    (sum, entry) => sum + entry.playoffAppearances,
+    0
+  );
   const winPct = getCareerWinningPercentage(coach);
 
   const renderHistoryEntry = (entry: CareerHistoryEntry, index: number) => (
@@ -360,7 +345,9 @@ function CareerTab({ coach }: { coach: Coach }): React.JSX.Element {
             <Text style={styles.careerStatLabel}>Playoffs</Text>
           </View>
           <View style={styles.careerStatItem}>
-            <Text style={[styles.careerStatValue, totalChampionships > 0 && styles.championshipValue]}>
+            <Text
+              style={[styles.careerStatValue, totalChampionships > 0 && styles.championshipValue]}
+            >
               {totalChampionships}
             </Text>
             <Text style={styles.careerStatLabel}>Championships</Text>
@@ -420,14 +407,21 @@ function ContractTab({
                 ]}
               >
                 <Text style={styles.contractStatusText}>
-                  {contract.isInterim ? 'Interim' : isContractExpiring(contract) ? 'Expiring' : 'Active'}
+                  {contract.isInterim
+                    ? 'Interim'
+                    : isContractExpiring(contract)
+                      ? 'Expiring'
+                      : 'Active'}
                 </Text>
               </View>
             </View>
             {renderContractRow('Total Value', formatMoney(getTotalContractValue(contract)))}
             {renderContractRow('Annual Salary', formatMoney(contract.salaryPerYear))}
             {renderContractRow('Guaranteed', formatMoney(contract.guaranteedMoney))}
-            {renderContractRow('Length', `${contract.yearsTotal} year${contract.yearsTotal !== 1 ? 's' : ''}`)}
+            {renderContractRow(
+              'Length',
+              `${contract.yearsTotal} year${contract.yearsTotal !== 1 ? 's' : ''}`
+            )}
             {renderContractRow('Years Remaining', contract.yearsRemaining.toString())}
             {renderContractRow('Dead Money if Fired', formatMoney(contract.deadMoneyIfFired))}
 
@@ -460,7 +454,8 @@ function ContractTab({
             <View style={styles.interviewsContainer}>
               <Text style={styles.interviewsCount}>
                 {coach.interviewRequests.length + interviewingTeams.length} team
-                {coach.interviewRequests.length + interviewingTeams.length !== 1 ? 's' : ''} interested
+                {coach.interviewRequests.length + interviewingTeams.length !== 1 ? 's' : ''}{' '}
+                interested
               </Text>
               {interviewingTeams.length > 0 && (
                 <View style={styles.interviewingTeamsList}>
@@ -515,11 +510,7 @@ export function CoachCard({
               ? 'HC'
               : coach.role === 'offensiveCoordinator'
                 ? 'OC'
-                : coach.role === 'defensiveCoordinator'
-                  ? 'DC'
-                  : coach.role === 'specialTeamsCoordinator'
-                    ? 'ST'
-                    : coach.role.slice(0, 2).toUpperCase()}
+                : 'DC'}
           </Text>
         </View>
         <View style={styles.headerInfo}>
