@@ -4,6 +4,68 @@
  */
 
 // ============================================
+// Offseason Orchestrator (NEW - Phase A)
+// ============================================
+export {
+  // Main orchestrator functions
+  initializeOffseason,
+  enterPhase,
+  processPhaseAction,
+  advanceToNextPhase,
+  isOffseasonComplete,
+  getCurrentPhase,
+  getOffseasonProgress,
+  completeOffseason,
+  getOffseasonSummary,
+
+  // Types
+  type PhaseProcessResult,
+  type PhaseAction,
+} from './OffseasonOrchestrator';
+
+// ============================================
+// Offseason Persistent Data (NEW - Phase A)
+// ============================================
+export {
+  // Types
+  type OffseasonPersistentData,
+  type OwnerExpectations as PersistentOwnerExpectations,
+  type MediaProjection as PersistentMediaProjection,
+  type SeasonGoal as PersistentSeasonGoal,
+  type AwardWinner as PersistentAwardWinner,
+  type WaiverPlayer,
+  type CoachEvaluationResult,
+  type CoachingChangeRecord,
+  type ContractDecisionRecord,
+  type DraftSelectionRecord,
+  type FreeAgentSigningRecord,
+  type UDFASigningRecord,
+
+  // Functions
+  createEmptyOffseasonData,
+  validateOffseasonData,
+  mergeOffseasonData,
+} from './OffseasonPersistentData';
+
+// ============================================
+// Phase State Mappers (NEW - Phase A)
+// ============================================
+export {
+  // Functions
+  applyCoachingChanges,
+  applyContractDecisions,
+  applyDraftSelections,
+  applyFreeAgencySignings,
+  applyUDFASignings,
+  applyInjuries,
+  applyRosterMoves,
+  applyDevelopmentChanges,
+
+  // Types
+  type PhaseApplicationResult,
+} from './PhaseStateMappers';
+
+// ============================================
 // Off-Season Phase Manager
 // ============================================
 export {
@@ -312,3 +374,43 @@ export {
   getMediaProjectionsText,
   getGoalsText,
 } from './phases/SeasonStartPhase';
+
+// ============================================
+// Bridge Modules (Phase B - System Consolidation)
+// ============================================
+export {
+  // Combine Bridge
+  runCombineSimulation,
+  integrateCombineIntoOffseasonState,
+  getProspectCombineResults,
+  getCombineRisers,
+  getCombineFallers,
+  // UDFA Bridge
+  initializeUDFAPool,
+  processUserUDFASigning,
+  runAIUDFASignings,
+  convertToUDFASigningRecords,
+  integrateUDFAIntoOffseasonState,
+  getTopAvailableUDFAs,
+  getUserBudget,
+  getUserUDFAs,
+  canUserSignMore,
+  getUDFAPhaseSummary,
+  // Phase Data Flow (OTA→Camp→Preseason→FinalCuts)
+  otaToTrainingCampInput,
+  trainingCampToPreseasonInput,
+  preseasonToFinalCutsInput,
+  calculateRosterNeeds,
+  summarizePhaseDataFlow,
+  // Phase Generators (auto-generate phase data from GameState)
+  generateSeasonAwards,
+  generateCoachEvaluations,
+  generateOTAReports,
+  generateRookieIntegrationReports,
+  generatePositionBattles,
+  generateDevelopmentReveals,
+  generateCampInjuries,
+  generatePreseasonGames,
+  generatePreseasonEvaluations,
+  generateSeasonStartData,
+} from './bridges';
