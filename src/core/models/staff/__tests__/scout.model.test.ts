@@ -52,7 +52,6 @@ describe('Scout Entity', () => {
       expect(scout.isAvailable).toBe(true);
       expect(scout.isRetired).toBe(false);
     });
-
   });
 
   describe('validateScout', () => {

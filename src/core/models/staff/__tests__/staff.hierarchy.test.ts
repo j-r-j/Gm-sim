@@ -48,11 +48,7 @@ describe('Staff Hierarchy', () => {
 
     it('should include all expected coaching positions', () => {
       const coachingKeys = getCoachingPositionKeys();
-      const expectedPositions = [
-        'headCoach',
-        'offensiveCoordinator',
-        'defensiveCoordinator',
-      ];
+      const expectedPositions = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
       for (const position of expectedPositions) {
         expect(coachingKeys).toContain(position);

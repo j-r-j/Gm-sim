@@ -3755,9 +3755,8 @@ export function ProspectDetailScreenWrapper({
   const scoutReports: ScoutReport[] = [];
 
   // Get assigned scout if any
-  const assignedScout = teamScouts.find((scout) =>
-    scout.focusProspects.includes(prospectId)
-  ) || null;
+  const assignedScout =
+    teamScouts.find((scout) => scout.focusProspects.includes(prospectId)) || null;
 
   // Calculate focus progress if assigned
   let focusProgress = null;
@@ -3774,8 +3773,11 @@ export function ProspectDetailScreenWrapper({
   }
 
   // Get physical measurements
-  const physical = prospect.player.physical || { height: "6'0\"", weight: 200 };
-  const height = typeof physical.height === 'string' ? physical.height : `${Math.floor(physical.height / 12)}'${physical.height % 12}"`;
+  const physical = prospect.player.physical || { height: '6\'0"', weight: 200 };
+  const height =
+    typeof physical.height === 'string'
+      ? physical.height
+      : `${Math.floor(physical.height / 12)}'${physical.height % 12}"`;
   const weight = typeof physical.weight === 'number' ? physical.weight : 200;
 
   // Calculate tier
