@@ -58,6 +58,13 @@ import { CoachHiringScreen } from '../screens/CoachHiringScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import { CombineProDayScreen } from '../screens/CombineProDayScreen';
 import { StatsScreen } from '../screens/StatsScreen';
+import { WeekGamesScreen, WeekGameItem } from '../screens/WeekGamesScreen';
+import {
+  WeekSummaryScreen,
+  WeekGameResult,
+  DivisionStandingEntry,
+  PlayoffImplication,
+} from '../screens/WeekSummaryScreen';
 import {
   CombineResults,
   CombineGrade,
@@ -833,7 +840,8 @@ export function DashboardScreenWrapper({
     (action: DashboardAction) => {
       switch (action) {
         case 'gamecast':
-          navigation.navigate('Gamecast');
+          // Navigate to WeekGames first to see all games for the week
+          navigation.navigate('WeekGames');
           break;
         case 'depthChart':
           navigation.navigate('DepthChart');
@@ -1640,9 +1648,45 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
           },
         };
 
-        setGameState(updatedState);
-        await saveGameState(updatedState);
-        navigation.goBack();
+        // Also update the schedule to mark user's game as complete
+        const existingSchedule = gameState.league.schedule;
+        let finalUpdatedState = updatedState;
+
+        if (existingSchedule && existingSchedule.regularSeason) {
+          const currentWeek = gameState.league.calendar.currentWeek;
+          const updatedGames = existingSchedule.regularSeason.map((game) => {
+            if (
+              game.week === currentWeek &&
+              (game.homeTeamId === gameState.userTeamId || game.awayTeamId === gameState.userTeamId)
+            ) {
+              return {
+                ...game,
+                isComplete: true,
+                homeScore: result.homeScore,
+                awayScore: result.awayScore,
+                winnerId: result.winnerId,
+              };
+            }
+            return game;
+          });
+
+          finalUpdatedState = {
+            ...updatedState,
+            league: {
+              ...updatedState.league,
+              schedule: {
+                ...existingSchedule,
+                regularSeason: updatedGames,
+              },
+            },
+          };
+        }
+
+        setGameState(finalUpdatedState);
+        await saveGameState(finalUpdatedState);
+
+        // Navigate to WeekGames to show other games and allow simming
+        navigation.navigate('WeekGames');
       }}
     />
   );
@@ -4544,6 +4588,420 @@ export function StatsScreenWrapper({ navigation }: ScreenProps<'Stats'>): React.
       gameState={gameState}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+    />
+  );
+}
+
+// ============================================
+// WEEK GAMES SCREEN
+// ============================================
+
+export function WeekGamesScreenWrapper({
+  navigation,
+}: ScreenProps<'WeekGames'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading week games..." />;
+  }
+
+  const { calendar, schedule } = gameState.league;
+  const week = calendar.currentWeek;
+  const phase = calendar.currentPhase;
+  const userTeamId = gameState.userTeamId;
+
+  // Get all games for current week
+  const weekGames: WeekGameItem[] = [];
+  const regularSeasonGames = schedule?.regularSeason || [];
+
+  for (const game of regularSeasonGames) {
+    if (game.week !== week) continue;
+
+    const homeTeam = gameState.teams[game.homeTeamId];
+    const awayTeam = gameState.teams[game.awayTeamId];
+
+    if (!homeTeam || !awayTeam) continue;
+
+    const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
+
+    weekGames.push({
+      gameId: game.gameId,
+      homeTeam: {
+        id: game.homeTeamId,
+        name: `${homeTeam.city} ${homeTeam.nickname}`,
+        abbr: homeTeam.abbreviation,
+        record: `${homeTeam.currentRecord.wins}-${homeTeam.currentRecord.losses}`,
+      },
+      awayTeam: {
+        id: game.awayTeamId,
+        name: `${awayTeam.city} ${awayTeam.nickname}`,
+        abbr: awayTeam.abbreviation,
+        record: `${awayTeam.currentRecord.wins}-${awayTeam.currentRecord.losses}`,
+      },
+      isUserGame,
+      isComplete: game.isComplete,
+      homeScore: game.homeScore,
+      awayScore: game.awayScore,
+      timeSlot: game.timeSlot || 'early_sunday',
+      isDivisional: game.isDivisional,
+    });
+  }
+
+  // Sort: user game first, then by time slot
+  const timeSlotOrder = ['thursday', 'early_sunday', 'late_sunday', 'sunday_night', 'monday_night'];
+  weekGames.sort((a, b) => {
+    if (a.isUserGame && !b.isUserGame) return -1;
+    if (!a.isUserGame && b.isUserGame) return 1;
+    return timeSlotOrder.indexOf(a.timeSlot) - timeSlotOrder.indexOf(b.timeSlot);
+  });
+
+  const userGame = weekGames.find((g) => g.isUserGame);
+  const userGamePlayed = userGame?.isComplete ?? false;
+  const allGamesComplete = weekGames.every((g) => g.isComplete);
+
+  const handlePlayGame = () => {
+    navigation.navigate('Gamecast');
+  };
+
+  const handleSimRemaining = async () => {
+    if (!schedule?.regularSeason) return;
+    setIsLoading(true);
+
+    try {
+      const updatedTeams = { ...gameState.teams };
+      const updatedSchedule = { ...schedule };
+      const updatedGames = [...updatedSchedule.regularSeason];
+
+      // Simulate remaining games
+      for (let i = 0; i < updatedGames.length; i++) {
+        const game = updatedGames[i];
+        if (game.week !== week || game.isComplete) continue;
+        if (game.homeTeamId === userTeamId || game.awayTeamId === userTeamId) continue;
+
+        // Simple score simulation
+        const homeScore = Math.floor(Math.random() * 35) + 10;
+        const awayScore = Math.floor(Math.random() * 35) + 10;
+        const winnerId =
+          homeScore > awayScore ? game.homeTeamId : homeScore < awayScore ? game.awayTeamId : null;
+
+        updatedGames[i] = {
+          ...game,
+          isComplete: true,
+          homeScore,
+          awayScore,
+          winnerId,
+        };
+
+        // Update team records
+        const homeTeam = updatedTeams[game.homeTeamId];
+        const awayTeam = updatedTeams[game.awayTeamId];
+
+        if (homeTeam && awayTeam) {
+          if (homeScore > awayScore) {
+            updatedTeams[game.homeTeamId] = {
+              ...homeTeam,
+              currentRecord: {
+                ...homeTeam.currentRecord,
+                wins: homeTeam.currentRecord.wins + 1,
+                pointsFor: homeTeam.currentRecord.pointsFor + homeScore,
+                pointsAgainst: homeTeam.currentRecord.pointsAgainst + awayScore,
+              },
+            };
+            updatedTeams[game.awayTeamId] = {
+              ...awayTeam,
+              currentRecord: {
+                ...awayTeam.currentRecord,
+                losses: awayTeam.currentRecord.losses + 1,
+                pointsFor: awayTeam.currentRecord.pointsFor + awayScore,
+                pointsAgainst: awayTeam.currentRecord.pointsAgainst + homeScore,
+              },
+            };
+          } else if (awayScore > homeScore) {
+            updatedTeams[game.homeTeamId] = {
+              ...homeTeam,
+              currentRecord: {
+                ...homeTeam.currentRecord,
+                losses: homeTeam.currentRecord.losses + 1,
+                pointsFor: homeTeam.currentRecord.pointsFor + homeScore,
+                pointsAgainst: homeTeam.currentRecord.pointsAgainst + awayScore,
+              },
+            };
+            updatedTeams[game.awayTeamId] = {
+              ...awayTeam,
+              currentRecord: {
+                ...awayTeam.currentRecord,
+                wins: awayTeam.currentRecord.wins + 1,
+                pointsFor: awayTeam.currentRecord.pointsFor + awayScore,
+                pointsAgainst: awayTeam.currentRecord.pointsAgainst + homeScore,
+              },
+            };
+          } else {
+            // Tie
+            updatedTeams[game.homeTeamId] = {
+              ...homeTeam,
+              currentRecord: {
+                ...homeTeam.currentRecord,
+                ties: homeTeam.currentRecord.ties + 1,
+                pointsFor: homeTeam.currentRecord.pointsFor + homeScore,
+                pointsAgainst: homeTeam.currentRecord.pointsAgainst + awayScore,
+              },
+            };
+            updatedTeams[game.awayTeamId] = {
+              ...awayTeam,
+              currentRecord: {
+                ...awayTeam.currentRecord,
+                ties: awayTeam.currentRecord.ties + 1,
+                pointsFor: awayTeam.currentRecord.pointsFor + awayScore,
+                pointsAgainst: awayTeam.currentRecord.pointsAgainst + homeScore,
+              },
+            };
+          }
+        }
+      }
+
+      updatedSchedule.regularSeason = updatedGames;
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+
+      // Navigate to summary
+      navigation.navigate('WeekSummary');
+    } catch (error) {
+      console.error('Error simulating games:', error);
+      Alert.alert('Error', 'Failed to simulate remaining games');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewSummary = () => {
+    navigation.navigate('WeekSummary');
+  };
+
+  return (
+    <WeekGamesScreen
+      week={week}
+      phase={phase}
+      games={weekGames}
+      userTeamId={userTeamId}
+      userGamePlayed={userGamePlayed}
+      allGamesComplete={allGamesComplete}
+      onPlayGame={handlePlayGame}
+      onSimRemaining={handleSimRemaining}
+      onViewSummary={handleViewSummary}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// WEEK SUMMARY SCREEN
+// ============================================
+
+export function WeekSummaryScreenWrapper({
+  navigation,
+}: ScreenProps<'WeekSummary'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading week summary..." />;
+  }
+
+  const { calendar, schedule } = gameState.league;
+  const week = calendar.currentWeek;
+  const phase = calendar.currentPhase;
+  const userTeamId = gameState.userTeamId;
+  const userTeam = gameState.teams[userTeamId];
+
+  // Get all game results for current week
+  const results: WeekGameResult[] = [];
+  const regularSeasonGames = schedule?.regularSeason || [];
+
+  for (const game of regularSeasonGames) {
+    if (game.week !== week || !game.isComplete) continue;
+
+    const homeTeam = gameState.teams[game.homeTeamId];
+    const awayTeam = gameState.teams[game.awayTeamId];
+
+    if (!homeTeam || !awayTeam) continue;
+
+    const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
+
+    results.push({
+      gameId: game.gameId,
+      homeTeam: {
+        id: game.homeTeamId,
+        abbr: homeTeam.abbreviation,
+        name: `${homeTeam.city} ${homeTeam.nickname}`,
+      },
+      awayTeam: {
+        id: game.awayTeamId,
+        abbr: awayTeam.abbreviation,
+        name: `${awayTeam.city} ${awayTeam.nickname}`,
+      },
+      homeScore: game.homeScore ?? 0,
+      awayScore: game.awayScore ?? 0,
+      isUserGame,
+      isUpset: false, // Could calculate based on records
+    });
+  }
+
+  // Find user's game result
+  const userGameResult = results.find((r) => r.isUserGame);
+  let userResult = null;
+  if (userGameResult) {
+    const isHome = userGameResult.homeTeam.id === userTeamId;
+    const userScore = isHome ? userGameResult.homeScore : userGameResult.awayScore;
+    const oppScore = isHome ? userGameResult.awayScore : userGameResult.homeScore;
+    const opponent = isHome ? userGameResult.awayTeam.name : userGameResult.homeTeam.name;
+
+    userResult = {
+      won: userScore > oppScore,
+      score: `${userScore} - ${oppScore}`,
+      opponent,
+      newRecord: `${userTeam.currentRecord.wins}-${userTeam.currentRecord.losses}`,
+    };
+  }
+
+  // Get division standings
+  const divisionTeams = Object.values(gameState.teams).filter(
+    (t) => t.conference === userTeam.conference && t.division === userTeam.division
+  );
+
+  divisionTeams.sort((a, b) => {
+    const aWinPct =
+      a.currentRecord.wins + a.currentRecord.losses > 0
+        ? a.currentRecord.wins / (a.currentRecord.wins + a.currentRecord.losses)
+        : 0;
+    const bWinPct =
+      b.currentRecord.wins + b.currentRecord.losses > 0
+        ? b.currentRecord.wins / (b.currentRecord.wins + b.currentRecord.losses)
+        : 0;
+    if (bWinPct !== aWinPct) return bWinPct - aWinPct;
+    return (
+      b.currentRecord.pointsFor -
+      b.currentRecord.pointsAgainst -
+      (a.currentRecord.pointsFor - a.currentRecord.pointsAgainst)
+    );
+  });
+
+  const leaderWins = divisionTeams[0]?.currentRecord.wins ?? 0;
+  const leaderLosses = divisionTeams[0]?.currentRecord.losses ?? 0;
+
+  const divisionStandings: DivisionStandingEntry[] = divisionTeams.map((team, index) => {
+    const gamesBehind =
+      index === 0
+        ? 0
+        : (leaderWins - team.currentRecord.wins + (team.currentRecord.losses - leaderLosses)) / 2;
+
+    return {
+      teamId: team.id,
+      abbr: team.abbreviation,
+      wins: team.currentRecord.wins,
+      losses: team.currentRecord.losses,
+      isUserTeam: team.id === userTeamId,
+      playoffPosition: index === 0 ? 'leader' : index < 4 ? 'in_hunt' : 'out',
+      gamesBehind: Math.max(0, gamesBehind),
+    };
+  });
+
+  // Playoff implications (simplified)
+  const playoffImplications: PlayoffImplication[] = [];
+  if (week >= 14) {
+    // Check for clinching/elimination scenarios
+    for (const team of Object.values(gameState.teams)) {
+      const minWins = team.currentRecord.wins;
+
+      // Simple clinching logic
+      if (minWins >= 11 && team.conference === userTeam.conference) {
+        playoffImplications.push({
+          teamId: team.id,
+          teamName: `${team.city} ${team.nickname}`,
+          type: 'clinched_playoff',
+          description: 'Clinched playoff berth',
+        });
+      }
+    }
+  }
+
+  // Career record
+  const careerRecord = {
+    wins: gameState.careerStats.totalWins,
+    losses: gameState.careerStats.totalLosses,
+    seasons: gameState.careerStats.seasonsCompleted,
+  };
+
+  const handleAdvanceWeek = async () => {
+    setIsLoading(true);
+    try {
+      let newWeek = calendar.currentWeek + 1;
+      let newPhase = calendar.currentPhase;
+
+      // Handle phase transitions
+      if (newPhase === 'regularSeason' && newWeek > 18) {
+        newWeek = 19;
+        newPhase = 'playoffs';
+      }
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          calendar: {
+            ...calendar,
+            currentWeek: newWeek,
+            currentPhase: newPhase,
+          },
+        },
+        careerStats: {
+          ...gameState.careerStats,
+          totalWins: gameState.careerStats.totalWins + (userResult?.won ? 1 : 0),
+          totalLosses: gameState.careerStats.totalLosses + (userResult && !userResult.won ? 1 : 0),
+        },
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+
+      // Navigate appropriately
+      if (newPhase === 'playoffs') {
+        navigation.navigate('PlayoffBracket');
+      } else {
+        navigation.navigate('Dashboard');
+      }
+    } catch (error) {
+      console.error('Error advancing week:', error);
+      Alert.alert('Error', 'Failed to advance week');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <WeekSummaryScreen
+      week={week}
+      phase={phase}
+      results={results}
+      userTeamId={userTeamId}
+      userResult={userResult}
+      divisionStandings={divisionStandings}
+      conference={userTeam.conference}
+      division={userTeam.division}
+      playoffImplications={playoffImplications}
+      careerRecord={careerRecord}
+      onAdvanceWeek={handleAdvanceWeek}
+      onViewStandings={() => navigation.navigate('Standings')}
+      onViewBracket={phase === 'playoffs' ? () => navigation.navigate('PlayoffBracket') : undefined}
+      onBack={() => navigation.goBack()}
     />
   );
 }

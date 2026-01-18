@@ -101,6 +101,10 @@ export type RootStackParamList = {
 
   // Stats
   Stats: undefined;
+
+  // Week/Season Progression
+  WeekGames: undefined;
+  WeekSummary: undefined;
 };
 
 /**
@@ -194,4 +198,8 @@ export const Routes = {
 
   // Stats
   Stats: 'Stats',
+
+  // Week/Season Progression
+  WeekGames: 'WeekGames',
+  WeekSummary: 'WeekSummary',
 } as const;
