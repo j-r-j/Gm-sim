@@ -115,12 +115,83 @@ describe('TraitGenerator', () => {
       }
     });
 
-    it('should always have empty revealedToUser array', () => {
+    it('should have empty revealedToUser array for rookies (experience 0-1)', () => {
       for (const position of allPositions) {
         for (let i = 0; i < 5; i++) {
-          const traits = generateHiddenTraits(position);
+          const traits = generateHiddenTraits(position, 0);
           expect(traits.revealedToUser).toEqual([]);
+
+          const traits1Year = generateHiddenTraits(position, 1);
+          expect(traits1Year.revealedToUser).toEqual([]);
         }
+      }
+    });
+
+    it('should reveal some traits for veterans with 2+ years experience', () => {
+      // Generate many veteran players to ensure statistical significance
+      let veteransWithRevealedTraits = 0;
+      const totalVeterans = 200;
+
+      for (let i = 0; i < totalVeterans; i++) {
+        const traits = generateHiddenTraits(Position.QB, 8); // 8+ years = 95% revelation
+        const totalTraits = traits.positive.length + traits.negative.length;
+
+        // Veterans with traits should have some revealed
+        if (totalTraits > 0 && traits.revealedToUser.length > 0) {
+          veteransWithRevealedTraits++;
+        }
+      }
+
+      // Most veterans with traits should have at least some revealed
+      // Allow for cases where a player has no traits at all
+      expect(veteransWithRevealedTraits).toBeGreaterThan(totalVeterans * 0.5);
+    });
+
+    it('should reveal more traits with more experience', () => {
+      // Test that higher experience reveals more traits on average
+      const samplesPerTier = 300;
+      const experienceLevels = [3, 5, 8]; // different tiers
+      const avgRevealed: Record<number, number> = {};
+
+      for (const exp of experienceLevels) {
+        let totalRevealed = 0;
+        let playersWithTraits = 0;
+
+        for (let i = 0; i < samplesPerTier; i++) {
+          const traits = generateHiddenTraits(Position.WR, exp);
+          const totalTraits = traits.positive.length + traits.negative.length;
+
+          if (totalTraits > 0) {
+            totalRevealed += traits.revealedToUser.length / totalTraits;
+            playersWithTraits++;
+          }
+        }
+
+        avgRevealed[exp] = playersWithTraits > 0 ? totalRevealed / playersWithTraits : 0;
+      }
+
+      // Higher experience should reveal more traits
+      expect(avgRevealed[8]).toBeGreaterThan(avgRevealed[5]);
+      expect(avgRevealed[5]).toBeGreaterThan(avgRevealed[3]);
+    });
+
+    it('should only reveal traits the player actually has', () => {
+      for (let i = 0; i < 100; i++) {
+        const traits = generateHiddenTraits(Position.RB, 10);
+        const allPlayerTraits = [...traits.positive, ...traits.negative];
+
+        for (const revealed of traits.revealedToUser) {
+          expect(allPlayerTraits).toContain(revealed);
+        }
+      }
+    });
+
+    it('should not reveal more traits than the player has', () => {
+      for (let i = 0; i < 100; i++) {
+        const traits = generateHiddenTraits(Position.CB, 10);
+        const totalTraits = traits.positive.length + traits.negative.length;
+
+        expect(traits.revealedToUser.length).toBeLessThanOrEqual(totalTraits);
       }
     });
 

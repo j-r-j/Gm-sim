@@ -302,11 +302,49 @@ export const POSITION_TRAIT_MODIFIERS: Record<
 };
 
 /**
+ * Calculates how many traits should be revealed based on experience.
+ * Veterans have established reputations, so more of their traits are known.
+ * @param experience - Years of NFL experience
+ * @param totalTraits - Total number of traits the player has
+ * @returns Number of traits that should be revealed
+ */
+function calculateTraitsToReveal(experience: number, totalTraits: number): number {
+  if (totalTraits === 0) return 0;
+
+  // Revelation percentage based on experience
+  // 0-1 years: 0% (rookies/young players are unknown)
+  // 2-3 years: ~40% (some traits start showing)
+  // 4-5 years: ~60% (established players)
+  // 6-7 years: ~80% (well-known veterans)
+  // 8+ years: ~95% (most traits are known)
+  let revealPercentage: number;
+  if (experience <= 1) {
+    revealPercentage = 0;
+  } else if (experience <= 3) {
+    revealPercentage = 0.4;
+  } else if (experience <= 5) {
+    revealPercentage = 0.6;
+  } else if (experience <= 7) {
+    revealPercentage = 0.8;
+  } else {
+    revealPercentage = 0.95;
+  }
+
+  // Calculate number of traits to reveal with some randomness
+  const baseTraits = Math.floor(totalTraits * revealPercentage);
+  // Add chance for one more trait to be revealed
+  const extraTrait = chance(revealPercentage) ? 1 : 0;
+
+  return Math.min(totalTraits, baseTraits + extraTrait);
+}
+
+/**
  * Generates hidden traits for a player.
  * @param position - The player's position
- * @returns Generated hidden traits with revealedToUser empty
+ * @param experience - Years of NFL experience (default 0 for rookies)
+ * @returns Generated hidden traits with appropriate traits revealed for veterans
  */
-export function generateHiddenTraits(position: Position): HiddenTraits {
+export function generateHiddenTraits(position: Position, experience: number = 0): HiddenTraits {
   const positionModifiers = POSITION_TRAIT_MODIFIERS[position];
   const selectedPositive: PositiveTrait[] = [];
   const selectedNegative: NegativeTrait[] = [];
@@ -384,10 +422,23 @@ export function generateHiddenTraits(position: Position): HiddenTraits {
     }
   }
 
+  // Determine which traits to reveal based on experience
+  const allTraits = [...selectedPositive, ...selectedNegative];
+  const numToReveal = calculateTraitsToReveal(experience, allTraits.length);
+  const revealedToUser: string[] = [];
+
+  if (numToReveal > 0 && allTraits.length > 0) {
+    // Shuffle all traits and pick the ones to reveal
+    const shuffledAllTraits = [...allTraits].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < numToReveal && i < shuffledAllTraits.length; i++) {
+      revealedToUser.push(shuffledAllTraits[i]);
+    }
+  }
+
   return {
     positive: selectedPositive,
     negative: selectedNegative,
-    revealedToUser: [], // Never revealed at generation
+    revealedToUser,
   };
 }
 

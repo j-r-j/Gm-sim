@@ -118,10 +118,22 @@ describe('PlayerGenerator', () => {
       }
     });
 
-    it('should have empty revealedToUser for traits', () => {
+    it('should have empty revealedToUser for rookies and reveal traits for veterans', () => {
+      // Rookies (draft prospects) should have no revealed traits
       for (let i = 0; i < 20; i++) {
-        const player = generatePlayer();
-        expect(player.hiddenTraits.revealedToUser).toEqual([]);
+        const rookie = generatePlayer({ forDraft: true });
+        expect(rookie.hiddenTraits.revealedToUser).toEqual([]);
+      }
+
+      // Veterans may have some revealed traits (depending on experience and what traits they have)
+      // The revealed traits should only include traits the player actually has
+      for (let i = 0; i < 20; i++) {
+        const player = generatePlayer({ ageRange: { min: 30, max: 35 } }); // Force veteran age
+        const allTraits = [...player.hiddenTraits.positive, ...player.hiddenTraits.negative];
+
+        for (const revealed of player.hiddenTraits.revealedToUser) {
+          expect(allTraits).toContain(revealed);
+        }
       }
     });
   });
