@@ -181,9 +181,9 @@ describe('Stadium', () => {
     });
 
     it('should set city in name', () => {
-      const stadium = createDefaultStadium('stadium-1', 'team-1', 'Atlantic City');
-      expect(stadium.name).toBe('Atlantic City Stadium');
-      expect(stadium.city).toBe('Atlantic City');
+      const stadium = createDefaultStadium('stadium-1', 'team-1', 'Buffalo');
+      expect(stadium.name).toBe('Buffalo Stadium');
+      expect(stadium.city).toBe('Buffalo');
     });
   });
 

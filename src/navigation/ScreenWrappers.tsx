@@ -2422,10 +2422,12 @@ export function SeasonRecapScreenWrapper({
   const teamName = `${userTeam.city} ${userTeam.nickname}`;
 
   // Helper to calculate player overall rating from skills
-  const calculatePlayerOverall = (player: typeof gameState.players[string]) => {
+  const calculatePlayerOverall = (player: (typeof gameState.players)[string]) => {
     const skills = Object.values(player.skills);
     return skills.length > 0
-      ? Math.round(skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) / skills.length)
+      ? Math.round(
+          skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) / skills.length
+        )
       : 50;
   };
 
@@ -2444,8 +2446,12 @@ export function SeasonRecapScreenWrapper({
       .map((teamId: string) => gameState.teams[teamId])
       .filter(Boolean)
       .sort((a, b) => {
-        const aWinPct = a.currentRecord.wins / Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
-        const bWinPct = b.currentRecord.wins / Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
+        const aWinPct =
+          a.currentRecord.wins /
+          Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
+        const bWinPct =
+          b.currentRecord.wins /
+          Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
         return bWinPct - aWinPct;
       });
     const divisionFinish = divisionTeams.findIndex((t) => t.id === gameState.userTeamId) + 1 || 4;
@@ -2453,8 +2459,12 @@ export function SeasonRecapScreenWrapper({
     // Calculate draft position based on record (simplified)
     const allTeams = Object.values(gameState.teams);
     const sortedByRecord = [...allTeams].sort((a, b) => {
-      const aWinPct = a.currentRecord.wins / Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
-      const bWinPct = b.currentRecord.wins / Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
+      const aWinPct =
+        a.currentRecord.wins /
+        Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
+      const bWinPct =
+        b.currentRecord.wins /
+        Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
       return aWinPct - bWinPct; // Worst record gets best pick
     });
 

@@ -136,7 +136,13 @@ function TaskCard({
 /**
  * Phase Timeline - shows all 12 phases with current highlighted
  */
-function PhaseTimeline({ currentPhase, completedPhases }: { currentPhase: OffSeasonPhaseType; completedPhases: OffSeasonPhaseType[] }): React.JSX.Element {
+function PhaseTimeline({
+  currentPhase,
+  completedPhases,
+}: {
+  currentPhase: OffSeasonPhaseType;
+  completedPhases: OffSeasonPhaseType[];
+}): React.JSX.Element {
   return (
     <View style={styles.timelineContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -148,30 +154,39 @@ function PhaseTimeline({ currentPhase, completedPhases }: { currentPhase: OffSea
 
             return (
               <View key={phase} style={styles.timelineItem}>
-                <View style={[
-                  styles.timelineNode,
-                  isComplete && styles.timelineNodeComplete,
-                  isCurrent && styles.timelineNodeCurrent,
-                ]}>
+                <View
+                  style={[
+                    styles.timelineNode,
+                    isComplete && styles.timelineNodeComplete,
+                    isCurrent && styles.timelineNodeCurrent,
+                  ]}
+                >
                   {isComplete ? (
                     <Text style={styles.timelineNodeText}>✓</Text>
                   ) : (
-                    <Text style={[styles.timelineNodeText, isCurrent && styles.timelineNodeTextCurrent]}>
+                    <Text
+                      style={[styles.timelineNodeText, isCurrent && styles.timelineNodeTextCurrent]}
+                    >
                       {phaseNumber}
                     </Text>
                   )}
                 </View>
                 {index < PHASE_ORDER.length - 1 && (
-                  <View style={[
-                    styles.timelineConnector,
-                    isComplete && styles.timelineConnectorComplete,
-                  ]} />
+                  <View
+                    style={[
+                      styles.timelineConnector,
+                      isComplete && styles.timelineConnectorComplete,
+                    ]}
+                  />
                 )}
-                <Text style={[
-                  styles.timelineLabel,
-                  isCurrent && styles.timelineLabelCurrent,
-                  isComplete && styles.timelineLabelComplete,
-                ]} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.timelineLabel,
+                    isCurrent && styles.timelineLabelCurrent,
+                    isComplete && styles.timelineLabelComplete,
+                  ]}
+                  numberOfLines={1}
+                >
                   {PHASE_ICONS[phase]}
                 </Text>
               </View>
@@ -341,15 +356,19 @@ export function OffseasonScreen({
             disabled={!progress.canAdvance}
           >
             <Text style={styles.advanceButtonText}>
-              {progress.isComplete ? '🚀 Start Season' : `Continue to ${nextPhaseName || 'Next Phase'}`}
+              {progress.isComplete
+                ? '🚀 Start Season'
+                : `Continue to ${nextPhaseName || 'Next Phase'}`}
             </Text>
           </TouchableOpacity>
           {!progress.canAdvance && (
             <Text style={styles.advanceHint}>Complete all required tasks to advance</Text>
           )}
-          {progress.canAdvance && requiredTasks.every(t => t.isComplete) && optionalTasks.some(t => !t.isComplete) && (
-            <Text style={styles.optionalHint}>Optional tasks can be completed or skipped</Text>
-          )}
+          {progress.canAdvance &&
+            requiredTasks.every((t) => t.isComplete) &&
+            optionalTasks.some((t) => !t.isComplete) && (
+              <Text style={styles.optionalHint}>Optional tasks can be completed or skipped</Text>
+            )}
         </View>
 
         {/* Recent Events */}
