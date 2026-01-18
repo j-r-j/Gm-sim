@@ -36,6 +36,7 @@ import { DraftRoomScreen, DraftRoomProspect } from '../screens/DraftRoomScreen';
 import { FreeAgencyScreen, FreeAgent } from '../screens/FreeAgencyScreen';
 import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
 import { OffseasonScreen } from '../screens/OffseasonScreen';
+import { SeasonRecapScreen } from '../screens/SeasonRecapScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
 import { CoachProfileScreen } from '../screens/CoachProfileScreen';
 import { DepthChartScreen } from '../screens/DepthChartScreen';
@@ -2309,7 +2310,7 @@ export function OffseasonScreenWrapper({
         navigation.navigate('Preseason');
         break;
       case 'SeasonRecap':
-        navigation.navigate('CareerSummary');
+        navigation.navigate('SeasonRecap');
         break;
       case 'OwnerRelations':
         navigation.navigate('OwnerRelations');
@@ -2389,6 +2390,130 @@ export function OffseasonScreenWrapper({
       onCompleteTask={handleCompleteTask}
       onAdvancePhase={handleAdvanceOffseasonPhase}
       onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// SEASON RECAP SCREEN
+// ============================================
+
+export function SeasonRecapScreenWrapper({
+  navigation,
+}: ScreenProps<'SeasonRecap'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'SeasonRecap');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading season recap..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const teamName = `${userTeam.city} ${userTeam.nickname}`;
+
+  // Helper to calculate player overall rating from skills
+  const calculatePlayerOverall = (player: typeof gameState.players[string]) => {
+    const skills = Object.values(player.skills);
+    return skills.length > 0
+      ? Math.round(skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) / skills.length)
+      : 50;
+  };
+
+  // Get or generate season recap data
+  let recap = gameState.offseasonState?.seasonRecap;
+
+  if (!recap) {
+    // Get team record from Team.currentRecord
+    const teamRecord = userTeam.currentRecord;
+
+    // Calculate division finish by comparing records of teams in same division
+    const confKey = userTeam.conference.toLowerCase() as 'afc' | 'nfc';
+    const divKey = userTeam.division.toLowerCase() as 'north' | 'south' | 'east' | 'west';
+    const divisionTeamIds = gameState.league.standings[confKey]?.[divKey] || [];
+    const divisionTeams = divisionTeamIds
+      .map((teamId: string) => gameState.teams[teamId])
+      .filter(Boolean)
+      .sort((a, b) => {
+        const aWinPct = a.currentRecord.wins / Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
+        const bWinPct = b.currentRecord.wins / Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
+        return bWinPct - aWinPct;
+      });
+    const divisionFinish = divisionTeams.findIndex((t) => t.id === gameState.userTeamId) + 1 || 4;
+
+    // Calculate draft position based on record (simplified)
+    const allTeams = Object.values(gameState.teams);
+    const sortedByRecord = [...allTeams].sort((a, b) => {
+      const aWinPct = a.currentRecord.wins / Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
+      const bWinPct = b.currentRecord.wins / Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
+      return aWinPct - bWinPct; // Worst record gets best pick
+    });
+
+    const draftPosition = sortedByRecord.findIndex((t) => t.id === gameState.userTeamId) + 1 || 16;
+
+    // Get top performers from roster with calculated ratings
+    const rosterPlayersWithRatings = userTeam.rosterPlayerIds
+      .map((id) => gameState.players[id])
+      .filter(Boolean)
+      .map((player) => ({ player, rating: calculatePlayerOverall(player) }))
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 5);
+
+    const topPerformers = rosterPlayersWithRatings.map(({ player, rating }) => {
+      // Calculate grade based on overall rating
+      let grade: string;
+      if (rating >= 90) grade = 'A+';
+      else if (rating >= 85) grade = 'A';
+      else if (rating >= 80) grade = 'A-';
+      else if (rating >= 75) grade = 'B+';
+      else if (rating >= 70) grade = 'B';
+      else if (rating >= 65) grade = 'B-';
+      else if (rating >= 60) grade = 'C+';
+      else if (rating >= 55) grade = 'C';
+      else grade = 'C-';
+
+      return {
+        playerId: player.id,
+        playerName: `${player.firstName} ${player.lastName}`,
+        position: player.position,
+        grade,
+      };
+    });
+
+    // Determine if team made playoffs (simplified: 10+ wins)
+    const madePlayoffs = teamRecord.wins >= 10;
+
+    recap = {
+      year: gameState.league.calendar.currentYear,
+      teamRecord: {
+        wins: teamRecord.wins,
+        losses: teamRecord.losses,
+        ties: teamRecord.ties,
+      },
+      divisionFinish,
+      madePlayoffs,
+      playoffResult: null,
+      draftPosition,
+      topPerformers,
+      awards: [], // No awards system yet
+    };
+  }
+
+  return (
+    <SeasonRecapScreen
+      recap={recap}
+      teamName={teamName}
+      onBack={() => navigation.goBack()}
+      onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
   );
 }
