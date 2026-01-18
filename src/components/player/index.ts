@@ -18,3 +18,7 @@ export {
   type RatingTierSize,
   type RatingTierVariant,
 } from './RatingTierIndicator';
+export {
+  DevelopmentOutlookDisplay,
+  type DevelopmentOutlookDisplayProps,
+} from './DevelopmentOutlookDisplay';

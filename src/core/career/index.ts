@@ -319,7 +319,9 @@ export {
 export {
   ProgressionResult,
   ProgressionOptions,
+  DevelopmentNewsItem,
   applyOffseasonProgression,
   applySkillChanges,
   processTeamProgression,
+  generateDevelopmentNews,
 } from './PlayerProgression';

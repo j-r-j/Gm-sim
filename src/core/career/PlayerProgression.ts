@@ -270,3 +270,106 @@ export function processTeamProgression(
     notableImprovements,
   };
 }
+
+/**
+ * Development news item for display
+ */
+export interface DevelopmentNewsItem {
+  playerId: string;
+  playerName: string;
+  headline: string;
+  body: string;
+  isPositive: boolean;
+  priority: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Headlines for significant development
+ */
+const SIGNIFICANT_HEADLINES = [
+  '{playerName} Emerges as Camp Standout',
+  '{playerName} Shows Impressive Growth',
+  'Coaches Impressed with {playerName}',
+  '{playerName} Making Big Strides',
+  'Breakout Potential: {playerName}',
+];
+
+/**
+ * Headlines for moderate development
+ */
+const MODERATE_HEADLINES = [
+  '{playerName} Showing Improvement',
+  '{playerName} Progressing Nicely',
+  'Steady Growth for {playerName}',
+  '{playerName} Developing Well',
+];
+
+/**
+ * Headlines for negative development
+ */
+const NEGATIVE_HEADLINES = [
+  '{playerName} Struggling in Development',
+  'Concerns About {playerName} Progress',
+  '{playerName} Regression Worries Coaches',
+];
+
+/**
+ * Generates news items for notable progression results
+ */
+export function generateDevelopmentNews(
+  results: ProgressionResult[],
+  coachName: string
+): DevelopmentNewsItem[] {
+  const newsItems: DevelopmentNewsItem[] = [];
+
+  for (const result of results) {
+    // Only generate news for significant changes
+    if (Math.abs(result.totalChange) < 3) continue;
+
+    let headline: string;
+    let body: string;
+    let isPositive: boolean;
+    let priority: 'high' | 'medium' | 'low';
+
+    if (result.totalChange >= 5) {
+      // Significant positive development
+      const headlineTemplate = SIGNIFICANT_HEADLINES[
+        Math.floor(Math.random() * SIGNIFICANT_HEADLINES.length)
+      ];
+      headline = headlineTemplate.replace('{playerName}', result.playerName);
+      body = `${result.playerName} has been one of the standouts this offseason. ` +
+        `Under ${coachName}'s guidance, ${result.developmentDescription}`;
+      isPositive = true;
+      priority = 'high';
+    } else if (result.totalChange >= 3) {
+      // Moderate positive development
+      const headlineTemplate = MODERATE_HEADLINES[
+        Math.floor(Math.random() * MODERATE_HEADLINES.length)
+      ];
+      headline = headlineTemplate.replace('{playerName}', result.playerName);
+      body = `${result.playerName} is making progress this offseason. ${result.developmentDescription}`;
+      isPositive = true;
+      priority = 'medium';
+    } else {
+      // Negative development
+      const headlineTemplate = NEGATIVE_HEADLINES[
+        Math.floor(Math.random() * NEGATIVE_HEADLINES.length)
+      ];
+      headline = headlineTemplate.replace('{playerName}', result.playerName);
+      body = `There are concerns about ${result.playerName}'s development. ${result.developmentDescription}`;
+      isPositive = false;
+      priority = 'medium';
+    }
+
+    newsItems.push({
+      playerId: result.playerId,
+      playerName: result.playerName,
+      headline,
+      body,
+      isPositive,
+      priority,
+    });
+  }
+
+  return newsItems;
+}
