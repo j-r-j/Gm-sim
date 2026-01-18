@@ -10,6 +10,8 @@ import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
 import { Avatar } from '../components/avatar';
 import { CoachRole } from '../core/models/staff/StaffSalary';
+import { ScoutAccuracyBadge } from '../components/scouting/ScoutAccuracyBadge';
+import { getMaxFocusProspects } from '../core/scouting/FocusPlayerSystem';
 
 /**
  * Vacancy info for display
@@ -74,6 +76,8 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
 function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
   // Get badge text based on role
   const badgeText = scout.role === 'headScout' ? 'HS' : scout.role === 'offensiveScout' ? 'OS' : 'DS';
+  const maxFocus = getMaxFocusProspects(scout.attributes.experience);
+  const currentFocus = scout.focusProspects.length;
 
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
@@ -85,15 +89,36 @@ function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
           </View>
         </View>
         <View style={styles.nameContainer}>
-          <Text style={styles.staffName}>
-            {scout.firstName} {scout.lastName}
-          </Text>
+          <View style={styles.scoutNameRow}>
+            <Text style={styles.staffName}>
+              {scout.firstName} {scout.lastName}
+            </Text>
+            <ScoutAccuracyBadge scout={scout} size="sm" />
+          </View>
           <Text style={styles.staffRole}>{formatScoutRole(scout.role)}</Text>
+          {scout.attributes.positionSpecialty && (
+            <Text style={styles.specialtyText}>
+              Specialty: {scout.attributes.positionSpecialty}
+            </Text>
+          )}
         </View>
       </View>
-      <View style={styles.ratingContainer}>
-        <Text style={styles.ratingLabel}>Exp</Text>
-        <Text style={styles.ratingValue}>{scout.attributes.experience}</Text>
+      <View style={styles.scoutStatsContainer}>
+        <View style={styles.ratingContainer}>
+          <Text style={styles.ratingLabel}>Exp</Text>
+          <Text style={styles.ratingValue}>{scout.attributes.experience}</Text>
+        </View>
+        <View style={styles.focusContainer}>
+          <Text style={styles.ratingLabel}>Focus</Text>
+          <Text
+            style={[
+              styles.focusValue,
+              currentFocus >= maxFocus && styles.focusValueFull,
+            ]}
+          >
+            {currentFocus}/{maxFocus}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -381,6 +406,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.primary,
+  },
+  scoutNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  specialtyText: {
+    fontSize: fontSize.xs,
+    color: colors.accent,
+    marginTop: 2,
+  },
+  scoutStatsContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  focusContainer: {
+    alignItems: 'center',
+  },
+  focusValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  focusValueFull: {
+    color: colors.warning,
   },
   emptyState: {
     padding: spacing.xl,

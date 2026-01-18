@@ -39,6 +39,9 @@ export type RootStackParamList = {
     playerId?: string;
     prospectId?: string;
   };
+  ProspectDetail: {
+    prospectId: string;
+  };
 
   // Offseason
   Offseason: undefined;
@@ -148,6 +151,7 @@ export const Routes = {
 
   // Profiles
   PlayerProfile: 'PlayerProfile',
+  ProspectDetail: 'ProspectDetail',
   CoachProfile: 'CoachProfile',
 
   // Offseason
