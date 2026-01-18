@@ -119,8 +119,16 @@ describe('Coach Evaluation System', () => {
       expect(coachAffectsPlayer(coach, qb)).toBe(true);
     });
 
-    it('should return false for QB coach affecting non-QB', () => {
+    it('should return true for OC affecting WR', () => {
+      // In simplified structure, OC affects all offensive players including WR
       const coach = createTestCoach('coach-1', 'offensiveCoordinator');
+      const wr = createTestPlayer(Position.WR);
+
+      expect(coachAffectsPlayer(coach, wr)).toBe(true);
+    });
+
+    it('should return false for DC affecting offensive player', () => {
+      const coach = createTestCoach('coach-1', 'defensiveCoordinator');
       const wr = createTestPlayer(Position.WR);
 
       expect(coachAffectsPlayer(coach, wr)).toBe(false);
@@ -147,7 +155,8 @@ describe('Coach Evaluation System', () => {
 
   describe('calculateDevelopmentImpact', () => {
     it('should return zero impact for non-affecting coach', () => {
-      const coach = createTestCoach('coach-1', 'offensiveCoordinator');
+      // DC doesn't affect offensive players
+      const coach = createTestCoach('coach-1', 'defensiveCoordinator');
       const wr = createTestPlayer(Position.WR);
 
       const impact = calculateDevelopmentImpact(coach, wr, 0, 'neutral');

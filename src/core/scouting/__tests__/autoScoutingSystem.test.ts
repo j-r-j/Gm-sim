@@ -206,9 +206,9 @@ describe('AutoScoutingSystem', () => {
       expect(result.reportsGenerated.length).toBeLessThanOrEqual(prospects.length);
     });
 
-    it('should filter prospects by scout region', () => {
+    it('should scout prospects from any region in simplified structure', () => {
+      // In the simplified 3-scout structure, scouts can scout any region
       const scout = createDefaultScout('scout-1', 'John', 'Doe', 'offensiveScout');
-      // Scout region is northeast by default
       const prospects = [
         createMockProspect({ id: 'p1', region: 'northeast' }),
         createMockProspect({ id: 'p2', region: 'southeast' }),
@@ -217,11 +217,8 @@ describe('AutoScoutingSystem', () => {
 
       const result = processWeeklyAutoScouting(scout, prospects, 1, 2023);
 
-      // Should only scout northeast prospects
-      for (const report of result.reportsGenerated) {
-        const prospect = prospects.find((p) => p.id === report.prospectId);
-        expect(prospect?.region).toBe('northeast');
-      }
+      // Scouts can now cover any region
+      expect(result.reportsGenerated.length).toBeGreaterThan(0);
     });
 
     it('should return empty results if auto-scouting is disabled', () => {
