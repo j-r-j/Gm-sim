@@ -33,7 +33,7 @@ function getRelationshipColor(relationship: DevelopmentImpactViewModel['relation
     case 'excellent':
       return colors.success;
     case 'good':
-      return colors.successLight || '#4ade80';
+      return '#4ade80'; // Light green
     case 'neutral':
       return colors.textSecondary;
     case 'strained':
@@ -153,7 +153,7 @@ export function DevelopmentOutlookDisplay({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.cardBackground,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     gap: spacing.sm,
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
   },
   outlookBox: {
-    backgroundColor: colors.backgroundTertiary || colors.background,
+    backgroundColor: colors.surfaceLight,
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     marginTop: spacing.xs,

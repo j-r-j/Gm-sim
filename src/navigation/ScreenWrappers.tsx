@@ -5850,6 +5850,7 @@ export function WeeklyScheduleScreenWrapper({
       week={week}
       phase={phase}
       games={weeklyGames}
+      userTeamId={userTeamId}
       isUserOnBye={isUserOnBye}
       onPlayGame={handlePlayGame}
       onSimUserGame={handleSimUserGame}

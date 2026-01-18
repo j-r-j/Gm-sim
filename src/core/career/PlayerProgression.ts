@@ -6,13 +6,12 @@
 
 import { Player } from '../models/player/Player';
 import { Coach } from '../models/staff/Coach';
-import { TechnicalSkills, SkillValue } from '../models/player/TechnicalSkills';
+import { TechnicalSkills } from '../models/player/TechnicalSkills';
 import { FitLevel } from '../models/player/SchemeFit';
 import {
   calculateDevelopmentImpact,
   calculatePlayerCoachChemistry,
   getMotivationModifier,
-  DevelopmentImpact,
 } from '../coaching/CoachEvaluationSystem';
 
 /**
