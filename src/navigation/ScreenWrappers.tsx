@@ -154,6 +154,10 @@ import {
   TaskTargetScreen,
 } from '../core/offseason/OffSeasonPhaseManager';
 import {
+  enterPhase,
+  initializeOffseason,
+} from '../core/offseason/OffseasonOrchestrator';
+import {
   createNewsFeedState,
   generateAndAddLeagueNews,
   advanceNewsFeedWeek,
@@ -666,14 +670,25 @@ export function DashboardScreenWrapper({
         offseasonPhase = 1;
 
         if (!gameState.offseasonState) {
-          const newOffseasonState = createOffSeasonState(newYear);
-          const updatedState: GameState = {
+          // Use orchestrator to initialize offseason with persistent data
+          const initResult = initializeOffseason({
             ...gameState,
-            offseasonState: newOffseasonState,
             league: {
               ...gameState.league,
               calendar: {
                 ...calendar,
+                currentYear: newYear,
+              },
+            },
+          });
+          // Then enter the first phase to auto-generate data
+          const phaseResult = enterPhase(initResult.gameState, 'season_end');
+          const updatedState: GameState = {
+            ...phaseResult.gameState,
+            league: {
+              ...phaseResult.gameState.league,
+              calendar: {
+                ...phaseResult.gameState.league.calendar,
                 currentWeek: newWeek,
                 currentPhase: newPhase,
                 currentYear: newYear,
@@ -774,17 +789,27 @@ export function DashboardScreenWrapper({
             return;
           }
         } else {
-          // Fallback: create offseason state if missing
-          const newOffseasonState = createOffSeasonState(newYear);
-          offseasonPhase = 1;
-
-          const updatedState: GameState = {
+          // Fallback: create offseason state if missing using orchestrator
+          const initResult = initializeOffseason({
             ...gameState,
-            offseasonState: newOffseasonState,
             league: {
               ...gameState.league,
               calendar: {
                 ...calendar,
+                currentYear: newYear,
+              },
+            },
+          });
+          // Enter the first phase to auto-generate data
+          const phaseResult = enterPhase(initResult.gameState, 'season_end');
+          offseasonPhase = 1;
+
+          const updatedState: GameState = {
+            ...phaseResult.gameState,
+            league: {
+              ...phaseResult.gameState.league,
+              calendar: {
+                ...phaseResult.gameState.league.calendar,
                 currentWeek: newWeek,
                 currentPhase: newPhase,
                 currentYear: newYear,
@@ -2272,13 +2297,26 @@ export function OffseasonScreenWrapper({
 }: ScreenProps<'Offseason'>): React.JSX.Element {
   const { gameState, setGameState, saveGameState } = useGame();
 
+  // Initialize offseason if it doesn't exist
+  useEffect(() => {
+    if (gameState && !gameState.offseasonState) {
+      // Use orchestrator to initialize offseason with persistent data
+      const initResult = initializeOffseason(gameState);
+      // Enter the first phase to auto-generate data
+      const phaseResult = enterPhase(initResult.gameState, 'season_end');
+      setGameState(phaseResult.gameState);
+      saveGameState(phaseResult.gameState);
+    }
+  }, [gameState?.offseasonState]);
+
   if (!gameState) {
     return <LoadingFallback message="Loading offseason..." />;
   }
 
-  let offseasonState = gameState.offseasonState;
+  const offseasonState = gameState.offseasonState;
   if (!offseasonState) {
-    offseasonState = createOffSeasonState(gameState.league.calendar.currentYear);
+    // Initializing offseason state...
+    return <LoadingFallback message="Initializing offseason..." />;
   }
 
   // Get roster size for validation display
@@ -2379,14 +2417,19 @@ export function OffseasonScreenWrapper({
       Alert.alert('Offseason Complete', 'Preseason begins!');
       navigation.goBack();
     } else {
+      // Use orchestrator to enter the new phase and auto-generate data
+      const phaseResult = enterPhase(
+        { ...gameState, offseasonState: newOffseasonState },
+        newOffseasonState.currentPhase
+      );
+
       const phaseIndex = PHASE_ORDER.indexOf(newOffseasonState.currentPhase);
       const updatedState: GameState = {
-        ...gameState,
-        offseasonState: newOffseasonState,
+        ...phaseResult.gameState,
         league: {
-          ...gameState.league,
+          ...phaseResult.gameState.league,
           calendar: {
-            ...gameState.league.calendar,
+            ...phaseResult.gameState.league.calendar,
             offseasonPhase: phaseIndex + 1,
           },
         },
