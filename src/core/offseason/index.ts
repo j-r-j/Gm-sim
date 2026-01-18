@@ -372,3 +372,26 @@ export {
   getMediaProjectionsText,
   getGoalsText,
 } from './phases/SeasonStartPhase';
+
+// ============================================
+// Bridge Modules (Phase B - System Consolidation)
+// ============================================
+export {
+  // Combine Bridge
+  runCombineSimulation,
+  integrateCombineIntoOffseasonState,
+  getProspectCombineResults,
+  getCombineRisers,
+  getCombineFallers,
+  // UDFA Bridge
+  initializeUDFAPool,
+  processUserUDFASigning,
+  runAIUDFASignings,
+  convertToUDFASigningRecords,
+  integrateUDFAIntoOffseasonState,
+  getTopAvailableUDFAs,
+  getUserBudget,
+  getUserUDFAs,
+  canUserSignMore,
+  getUDFAPhaseSummary,
+} from './bridges';
