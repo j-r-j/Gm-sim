@@ -558,6 +558,23 @@ export function DashboardScreenWrapper({
         }
       }
 
+      // Decrement weeks remaining for players still injured
+      for (const playerId of Object.keys(updatedPlayers)) {
+        const player = updatedPlayers[playerId];
+        if (
+          player.injuryStatus.weeksRemaining > 0 &&
+          !advanceResult.recoveredPlayers.includes(playerId)
+        ) {
+          updatedPlayers[playerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              weeksRemaining: player.injuryStatus.weeksRemaining - 1,
+            },
+          };
+        }
+      }
+
       // Generate news
       let updatedNewsFeed =
         gameState.newsFeed || createNewsFeedState(calendar.currentYear, calendar.currentWeek);
@@ -5460,6 +5477,41 @@ export function WeekSummaryScreenWrapper({
         newPhase = 'playoffs';
       }
 
+      // Process injury recovery using the advanceWeek function
+      const advanceResult = advanceWeek(calendar.currentWeek, gameState);
+      const updatedPlayers = { ...gameState.players };
+
+      for (const recoveredPlayerId of advanceResult.recoveredPlayers) {
+        const player = updatedPlayers[recoveredPlayerId];
+        if (player) {
+          updatedPlayers[recoveredPlayerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              severity: 'none',
+              weeksRemaining: 0,
+            },
+          };
+        }
+      }
+
+      // Also decrement weeks remaining for players still injured
+      for (const playerId of Object.keys(updatedPlayers)) {
+        const player = updatedPlayers[playerId];
+        if (
+          player.injuryStatus.weeksRemaining > 0 &&
+          !advanceResult.recoveredPlayers.includes(playerId)
+        ) {
+          updatedPlayers[playerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              weeksRemaining: player.injuryStatus.weeksRemaining - 1,
+            },
+          };
+        }
+      }
+
       const updatedState: GameState = {
         ...gameState,
         league: {
@@ -5470,6 +5522,7 @@ export function WeekSummaryScreenWrapper({
             currentPhase: newPhase,
           },
         },
+        players: updatedPlayers,
         careerStats: {
           ...gameState.careerStats,
           totalWins: gameState.careerStats.totalWins + (userResult?.won ? 1 : 0),
