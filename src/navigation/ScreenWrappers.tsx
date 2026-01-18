@@ -4918,8 +4918,6 @@ export function WeekSummaryScreenWrapper({
   if (week >= 14) {
     // Check for clinching/elimination scenarios
     for (const team of Object.values(gameState.teams)) {
-      const gamesRemaining = 18 - week;
-      const maxWins = team.currentRecord.wins + gamesRemaining;
       const minWins = team.currentRecord.wins;
 
       // Simple clinching logic

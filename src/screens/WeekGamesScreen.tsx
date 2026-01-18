@@ -4,7 +4,7 @@
  * and simulate remaining games
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
-import { Team } from '../core/models/team/Team';
-import { ScheduledGame } from '../core/season/ScheduleGenerator';
 
 /**
  * Game display item
@@ -109,7 +107,6 @@ function GameCard({
 }): React.JSX.Element {
   const getResultBadge = () => {
     if (!game.isComplete) return null;
-    const homeWon = (game.homeScore ?? 0) > (game.awayScore ?? 0);
     return (
       <View style={styles.resultBadge}>
         <Text style={styles.resultBadgeText}>FINAL</Text>
@@ -187,7 +184,7 @@ export function WeekGamesScreen({
   week,
   phase,
   games,
-  userTeamId,
+  userTeamId: _userTeamId,
   userGamePlayed,
   allGamesComplete,
   onPlayGame,
@@ -195,25 +192,7 @@ export function WeekGamesScreen({
   onViewSummary,
   onBack,
 }: WeekGamesScreenProps): React.JSX.Element {
-  // Group games by time slot
-  const groupedGames = useMemo(() => {
-    const groups: Record<string, WeekGameItem[]> = {};
-    const order = ['thursday', 'early_sunday', 'late_sunday', 'sunday_night', 'monday_night'];
-
-    for (const game of games) {
-      const slot = game.timeSlot || 'early_sunday';
-      if (!groups[slot]) {
-        groups[slot] = [];
-      }
-      groups[slot].push(game);
-    }
-
-    // Sort by order
-    return order.filter((slot) => groups[slot]?.length > 0).map((slot) => ({
-      slot,
-      games: groups[slot],
-    }));
-  }, [games]);
+  // _userTeamId is available for future use if needed
 
   const completedCount = games.filter((g) => g.isComplete).length;
   const totalCount = games.length;

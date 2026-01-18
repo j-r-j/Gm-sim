@@ -4,7 +4,7 @@
  * Includes standings impact and playoff implications
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
-import { Team } from '../core/models/team/Team';
 
 /**
  * Game result for display
@@ -192,7 +191,7 @@ export function WeekSummaryScreen({
   week,
   phase,
   results,
-  userTeamId,
+  userTeamId: _userTeamId,
   userResult,
   divisionStandings,
   conference,
@@ -204,6 +203,7 @@ export function WeekSummaryScreen({
   onViewBracket,
   onBack,
 }: WeekSummaryScreenProps): React.JSX.Element {
+  // _userTeamId is available for future use if needed
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
   const isPlayoffs = phase === 'playoffs';
 
