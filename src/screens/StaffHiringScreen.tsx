@@ -139,6 +139,7 @@ function CandidateCard({
   onSelect,
   onViewDetails,
   disabled,
+  disabledReason,
 }: {
   candidate: HiringCandidate;
   isSelected: boolean;
@@ -146,6 +147,7 @@ function CandidateCard({
   onSelect: () => void;
   onViewDetails: () => void;
   disabled?: boolean;
+  disabledReason?: string;
 }): React.JSX.Element {
   const tier = getReputationTier(candidate.coach.attributes.reputation);
   const roleColor = getRoleColor(candidate.coach.role);
@@ -162,6 +164,13 @@ function CandidateCard({
       disabled={disabled}
       activeOpacity={0.8}
     >
+      {/* Budget Warning Banner */}
+      {disabled && disabledReason && (
+        <View style={styles.disabledBanner}>
+          <Text style={styles.disabledBannerText}>{disabledReason}</Text>
+        </View>
+      )}
+
       {/* Former Staff Badge */}
       {candidate.isFormerStaff && (
         <View style={styles.formerStaffBadge}>
@@ -265,7 +274,7 @@ function CandidateCard({
 }
 
 /**
- * Progress Step Component
+ * Progress Step Component - now tappable to allow revision
  */
 function ProgressStep({
   step,
@@ -273,20 +282,25 @@ function ProgressStep({
   isActive,
   isComplete,
   selectedName,
+  onPress,
+  canTap,
 }: {
   step: number;
   label: string;
   isActive: boolean;
   isComplete: boolean;
   selectedName?: string;
+  onPress?: () => void;
+  canTap?: boolean;
 }): React.JSX.Element {
-  return (
+  const content = (
     <View style={[styles.progressStep, isActive && styles.progressStepActive]}>
       <View
         style={[
           styles.progressCircle,
           isActive && styles.progressCircleActive,
           isComplete && styles.progressCircleComplete,
+          canTap && styles.progressCircleTappable,
         ]}
       >
         <Text
@@ -305,8 +319,19 @@ function ProgressStep({
           {selectedName}
         </Text>
       )}
+      {canTap && !isActive && <Text style={styles.progressTapHint}>tap to edit</Text>}
     </View>
   );
+
+  if (canTap && onPress && !isActive) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return content;
 }
 
 /**
@@ -533,6 +558,13 @@ export function StaffHiringScreen({
               ? calculatePairChemistry(selectedHC.coach, candidate.coach)
               : null;
 
+          // Calculate how much over budget this candidate is
+          const getDisabledReason = (): string | undefined => {
+            if (affordable) return undefined;
+            const overBudget = candidate.expectedSalary - remainingBudget;
+            return `Exceeds budget by ${formatMoney(overBudget)}`;
+          };
+
           return (
             <CandidateCard
               key={candidate.coach.id || index}
@@ -542,6 +574,7 @@ export function StaffHiringScreen({
               onSelect={() => setCurrentSelection(candidate)}
               onViewDetails={() => setViewingCoach(candidate.coach)}
               disabled={!affordable}
+              disabledReason={getDisabledReason()}
             />
           );
         })}
@@ -643,6 +676,8 @@ export function StaffHiringScreen({
               ? `${selectedHC.coach.firstName[0]}. ${selectedHC.coach.lastName}`
               : undefined
           }
+          canTap={selectedHC !== null && step !== 'headCoach'}
+          onPress={() => setStep('headCoach')}
         />
         <View style={styles.progressLine} />
         <ProgressStep
@@ -655,6 +690,8 @@ export function StaffHiringScreen({
               ? `${selectedOC.coach.firstName[0]}. ${selectedOC.coach.lastName}`
               : undefined
           }
+          canTap={selectedOC !== null && step !== 'offensiveCoordinator'}
+          onPress={() => setStep('offensiveCoordinator')}
         />
         <View style={styles.progressLine} />
         <ProgressStep
@@ -667,6 +704,8 @@ export function StaffHiringScreen({
               ? `${selectedDC.coach.firstName[0]}. ${selectedDC.coach.lastName}`
               : undefined
           }
+          canTap={selectedDC !== null && step !== 'defensiveCoordinator'}
+          onPress={() => setStep('defensiveCoordinator')}
         />
         <View style={styles.progressLine} />
         <ProgressStep step={4} label="Review" isActive={step === 'review'} isComplete={false} />
@@ -830,6 +869,16 @@ const styles = StyleSheet.create({
     maxWidth: 60,
     textAlign: 'center',
   },
+  progressTapHint: {
+    fontSize: 9,
+    color: colors.primary,
+    marginTop: spacing.xxs,
+    fontWeight: fontWeight.medium,
+  },
+  progressCircleTappable: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
   progressLine: {
     width: 24,
     height: 2,
@@ -919,7 +968,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '08',
   },
   candidateCardDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
+  },
+  disabledBanner: {
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderTopLeftRadius: borderRadius.lg - 2,
+    borderTopRightRadius: borderRadius.lg - 2,
+    marginTop: -spacing.md,
+    marginHorizontal: -spacing.md,
+    marginBottom: spacing.sm,
+  },
+  disabledBannerText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
+    textAlign: 'center',
   },
   formerStaffBadge: {
     position: 'absolute',

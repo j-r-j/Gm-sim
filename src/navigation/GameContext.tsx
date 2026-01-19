@@ -18,6 +18,9 @@ export interface GameContextValue {
   isLoading: boolean;
   firingRecord: FiringRecord | null;
 
+  // New game setup state (persists during team selection -> staff decision -> hiring flow)
+  pendingNewGame: GameState | null;
+
   // Draft state (kept here for persistence across navigation)
   draftCurrentPick: number;
   draftedProspects: Record<string, string>;
@@ -30,6 +33,10 @@ export interface GameContextValue {
   saveGameState: (state: GameState) => Promise<void>;
   setIsLoading: (loading: boolean) => void;
   setFiringRecord: (record: FiringRecord | null) => void;
+
+  // New game setup actions
+  setPendingNewGame: (state: GameState | null) => void;
+  clearPendingNewGame: () => void;
 
   // Draft actions
   setDraftCurrentPick: (pick: number) => void;
@@ -88,6 +95,14 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
   const [isLoading, setIsLoading] = useState(false);
   const [firingRecord, setFiringRecord] = useState<FiringRecord | null>(null);
 
+  // New game setup state (persists during staff decision/hiring flow)
+  const [pendingNewGame, setPendingNewGame] = useState<GameState | null>(null);
+
+  // Clear pending new game
+  const clearPendingNewGame = useCallback(() => {
+    setPendingNewGame(null);
+  }, []);
+
   // Draft state
   const [draftCurrentPick, setDraftCurrentPick] = useState(1);
   const [draftedProspects, setDraftedProspects] = useState<Record<string, string>>({});
@@ -135,6 +150,7 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       gameState,
       isLoading,
       firingRecord,
+      pendingNewGame,
       draftCurrentPick,
       draftedProspects,
       autoPickEnabled,
@@ -144,6 +160,8 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       saveGameState,
       setIsLoading,
       setFiringRecord,
+      setPendingNewGame,
+      clearPendingNewGame,
       setDraftCurrentPick,
       setDraftedProspects,
       setAutoPickEnabled,
@@ -154,12 +172,14 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       gameState,
       isLoading,
       firingRecord,
+      pendingNewGame,
       draftCurrentPick,
       draftedProspects,
       autoPickEnabled,
       draftPaused,
       saveGame,
       saveGameState,
+      clearPendingNewGame,
       resetDraftState,
     ]
   );

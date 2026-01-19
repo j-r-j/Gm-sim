@@ -332,16 +332,29 @@ export function StartScreenWrapper({ navigation }: ScreenProps<'Start'>): React.
 export function TeamSelectionScreenWrapper({
   navigation,
 }: ScreenProps<'TeamSelection'>): React.JSX.Element {
+  const { setPendingNewGame } = useGame();
+
   const handleTeamSelected = useCallback(
     (team: FakeCity, gmName: string, saveSlot: SaveSlot) => {
-      // Navigate to staff decision screen instead of creating game immediately
+      // Generate the game state ONCE and store in context
+      const newGameState = createNewGame({
+        saveSlot,
+        gmName,
+        selectedTeam: team,
+        startYear: 2025,
+      });
+
+      // Store in context so it persists across navigation
+      setPendingNewGame(newGameState);
+
+      // Navigate to staff decision screen
       navigation.navigate('StaffDecision', {
         teamCity: team.abbreviation,
         gmName,
         saveSlot,
       });
     },
-    [navigation]
+    [navigation, setPendingNewGame]
   );
 
   const handleBack = useCallback(() => {
@@ -359,29 +372,22 @@ export function StaffDecisionScreenWrapper({
   navigation,
   route,
 }: ScreenProps<'StaffDecision'>): React.JSX.Element {
-  const { setGameState, setIsLoading } = useGame();
-  const { teamCity: teamAbbrev, gmName, saveSlot } = route.params;
+  const { pendingNewGame, setGameState, setIsLoading, clearPendingNewGame } = useGame();
+  const { teamCity: teamAbbrev, saveSlot } = route.params;
 
   // Find the team by abbreviation
   const teamCity = FAKE_CITIES.find((c) => c.abbreviation === teamAbbrev);
 
-  if (!teamCity) {
+  // Use pending game state from context (generated in TeamSelection)
+  if (!teamCity || !pendingNewGame) {
     return (
       <SafeAreaView style={styles.fallbackContainer}>
-        <Text>Team not found</Text>
+        <Text>{!pendingNewGame ? 'Game state not found. Please go back.' : 'Team not found'}</Text>
       </SafeAreaView>
     );
   }
 
-  // Create a temporary game state to get the generated coaches
-  const tempGameState = createNewGame({
-    saveSlot: saveSlot as SaveSlot,
-    gmName,
-    selectedTeam: teamCity,
-    startYear: 2025,
-  });
-
-  const userTeam = tempGameState.teams[tempGameState.userTeamId];
+  const userTeam = pendingNewGame.teams[pendingNewGame.userTeamId];
 
   // Get coaches from gameState using the staffHierarchy IDs
   const getCoachesFromHierarchy = (): Coach[] => {
@@ -393,21 +399,20 @@ export function StaffDecisionScreenWrapper({
     ].filter((id): id is string => id !== null);
 
     return coachIds
-      .map((id) => tempGameState.coaches[id])
+      .map((id) => pendingNewGame.coaches[id])
       .filter((c): c is Coach => c !== undefined);
   };
 
   const coaches = getCoachesFromHierarchy();
-
-  // Default staff budget (can be adjusted)
   const staffBudget = userTeam?.staffHierarchy.staffBudget || 30000000;
 
   const handleKeepStaff = useCallback(async () => {
     setIsLoading(true);
     try {
       // Save and proceed with existing staff
-      await gameStorage.save(saveSlot as SaveSlot, tempGameState);
-      setGameState(tempGameState);
+      await gameStorage.save(saveSlot as SaveSlot, pendingNewGame);
+      setGameState(pendingNewGame);
+      clearPendingNewGame();
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -419,21 +424,36 @@ export function StaffDecisionScreenWrapper({
     } finally {
       setIsLoading(false);
     }
-  }, [navigation, setGameState, setIsLoading, tempGameState, saveSlot]);
+  }, [navigation, setGameState, setIsLoading, pendingNewGame, saveSlot, clearPendingNewGame]);
 
   const handleCleanHouse = useCallback(() => {
-    // Navigate to hiring screen with former staff
-    navigation.navigate('StaffHiring', {
-      teamCity: teamAbbrev,
-      gmName,
-      saveSlot,
-      formerStaffIds: coaches.map((c: Coach) => c.id),
-    });
-  }, [navigation, teamAbbrev, gmName, saveSlot, coaches]);
+    // Show confirmation dialog before proceeding
+    Alert.alert(
+      'Clean House?',
+      'This will release all current coaching staff. They will be available to rehire from the candidate pool. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, Clean House',
+          style: 'destructive',
+          onPress: () => {
+            navigation.navigate('StaffHiring', {
+              teamCity: teamAbbrev,
+              gmName: route.params.gmName,
+              saveSlot,
+              formerStaffIds: coaches.map((c: Coach) => c.id),
+            });
+          },
+        },
+      ]
+    );
+  }, [navigation, teamAbbrev, route.params.gmName, saveSlot, coaches]);
 
   const handleBack = useCallback(() => {
+    // Clear pending game when going back to team selection
+    clearPendingNewGame();
     navigation.goBack();
-  }, [navigation]);
+  }, [navigation, clearPendingNewGame]);
 
   return (
     <StaffDecisionScreen
@@ -457,36 +477,28 @@ export function StaffHiringScreenWrapper({
   navigation,
   route,
 }: ScreenProps<'StaffHiring'>): React.JSX.Element {
-  const { setGameState, setIsLoading } = useGame();
-  const { teamCity: teamAbbrev, gmName, saveSlot, formerStaffIds = [] } = route.params;
+  const { pendingNewGame, setGameState, setIsLoading, clearPendingNewGame } = useGame();
+  const { teamCity: teamAbbrev, saveSlot, formerStaffIds = [] } = route.params;
 
   // Find the team by abbreviation
   const teamCity = FAKE_CITIES.find((c) => c.abbreviation === teamAbbrev);
 
-  if (!teamCity) {
+  // Use pending game state from context
+  if (!teamCity || !pendingNewGame) {
     return (
       <SafeAreaView style={styles.fallbackContainer}>
-        <Text>Team not found</Text>
+        <Text>{!pendingNewGame ? 'Game state not found. Please go back.' : 'Team not found'}</Text>
       </SafeAreaView>
     );
   }
 
-  // Create a temporary game state to get the generated coaches (for former staff)
-  const tempGameState = createNewGame({
-    saveSlot: saveSlot as SaveSlot,
-    gmName,
-    selectedTeam: teamCity,
-    startYear: 2025,
-  });
+  const userTeam = pendingNewGame.teams[pendingNewGame.userTeamId];
 
-  const userTeam = tempGameState.teams[tempGameState.userTeamId];
-
-  // Get former staff from the temp game state coaches record
+  // Get former staff from the pending game state coaches record
   const formerStaff: Coach[] = formerStaffIds
-    .map((id: string) => tempGameState.coaches[id])
+    .map((id: string) => pendingNewGame.coaches[id])
     .filter((c): c is Coach => c !== undefined);
 
-  // Default staff budget
   const staffBudget = userTeam?.staffHierarchy.staffBudget || 30000000;
 
   const handleComplete = useCallback(
@@ -521,23 +533,24 @@ export function StaffHiringScreenWrapper({
 
         // Add new coaches to the coaches record
         const updatedCoaches: Record<string, Coach> = {
-          ...tempGameState.coaches,
+          ...pendingNewGame.coaches,
           [headCoach.id]: headCoach,
           [offensiveCoordinator.id]: offensiveCoordinator,
           [defensiveCoordinator.id]: defensiveCoordinator,
         };
 
         const finalGameState: GameState = {
-          ...tempGameState,
+          ...pendingNewGame,
           teams: {
-            ...tempGameState.teams,
-            [tempGameState.userTeamId]: updatedUserTeam,
+            ...pendingNewGame.teams,
+            [pendingNewGame.userTeamId]: updatedUserTeam,
           },
           coaches: updatedCoaches,
         };
 
         await gameStorage.save(saveSlot as SaveSlot, finalGameState);
         setGameState(finalGameState);
+        clearPendingNewGame();
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
@@ -550,10 +563,19 @@ export function StaffHiringScreenWrapper({
         setIsLoading(false);
       }
     },
-    [navigation, setGameState, setIsLoading, tempGameState, userTeam, saveSlot]
+    [
+      navigation,
+      setGameState,
+      setIsLoading,
+      pendingNewGame,
+      userTeam,
+      saveSlot,
+      clearPendingNewGame,
+    ]
   );
 
   const handleBack = useCallback(() => {
+    // Go back to staff decision (don't clear pending game - user may want to keep staff instead)
     navigation.goBack();
   }, [navigation]);
 
