@@ -32,7 +32,6 @@ export type DashboardAction =
   | 'ownerRelations'
   | 'advanceWeek'
   | 'playWeek'
-  | 'viewWeekSummary'
   | 'settings'
   | 'saveGame'
   | 'mainMenu';
@@ -211,6 +210,10 @@ export function GMDashboardScreen({
     const userOnBye = isUserOnBye(schedule, calendar.currentWeek, gameState.userTeamId);
     const weekLabel = getWeekLabel(calendar.currentWeek, phase);
 
+    // Check if all games for the week are complete
+    const weekGames = schedule.regularSeason?.filter((g) => g.week === calendar.currentWeek) || [];
+    const allGamesComplete = weekGames.length > 0 && weekGames.every((g) => g.isComplete);
+
     // Get opponent info
     let opponentInfo: { name: string; record: string; isHome: boolean } | null = null;
     if (userGame) {
@@ -226,7 +229,21 @@ export function GMDashboardScreen({
       }
     }
 
-    // If on bye
+    // If all games are complete, show advance to next week
+    if (allGamesComplete) {
+      const nextWeek = calendar.currentWeek + 1;
+      const nextWeekLabel =
+        phase === 'playoffs' ? getWeekLabel(nextWeek, phase) : `Week ${nextWeek}`;
+      return {
+        actionText: `Advance to ${nextWeekLabel}`,
+        contextText: `${weekLabel} Complete`,
+        actionType: 'success' as const,
+        targetAction: 'advance_week' as const,
+        isEnabled: true,
+      };
+    }
+
+    // If on bye (and games not complete yet)
     if (userOnBye) {
       return {
         actionText: `Advance ${weekLabel}`,
@@ -252,13 +269,13 @@ export function GMDashboardScreen({
       };
     }
 
-    // If game is complete
+    // If user's game is complete but other games aren't
     if (userGame?.isComplete) {
       return {
-        actionText: 'View Week Summary',
-        contextText: `${weekLabel} Complete`,
-        actionType: 'success' as const,
-        targetAction: 'view_week_summary' as const,
+        actionText: 'Sim Remaining Games',
+        contextText: `Your game complete - sim rest of ${weekLabel}`,
+        actionType: 'secondary' as const,
+        targetAction: 'advance_week' as const,
         isEnabled: true,
       };
     }
@@ -274,9 +291,6 @@ export function GMDashboardScreen({
       case 'view_matchup':
       case 'start_simulation':
         onAction('playWeek');
-        break;
-      case 'view_week_summary':
-        onAction('viewWeekSummary');
         break;
       case 'advance_week':
         onAction('advanceWeek');
