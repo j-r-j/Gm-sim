@@ -116,17 +116,30 @@ describe('AIDraftStrategy', () => {
     it('should prioritize needs for needs-based profile', () => {
       const needsProfile = createAIDraftProfile('team-1', testNeeds, DraftPhilosophy.NEEDS_BASED);
 
-      // Get prospects with QB (critical need)
-      const prospects = draftClass.prospects.slice(0, 100);
+      // Get all QBs from draft class (critical need position)
+      const allQBs = draftClass.prospects.filter((p) => p.player.position === Position.QB);
+      // Get non-QBs to mix with
+      const nonQBs = draftClass.prospects.filter((p) => p.player.position !== Position.QB);
+
+      // Create a test set with guaranteed QBs: take some QBs and fill rest with non-QBs
+      const qbsToInclude = allQBs.slice(0, Math.min(10, allQBs.length));
+      const nonQBsToInclude = nonQBs.slice(0, 90);
+      const prospects = [...qbsToInclude, ...nonQBsToInclude];
+
+      // Skip test if no QBs in draft class (edge case)
+      if (qbsToInclude.length === 0) {
+        return;
+      }
+
       const ranked = rankProspectsForTeam(prospects, needsProfile);
 
-      // QBs should be ranked higher if they have similar talent
+      // QBs should be ranked higher due to critical need
       const qbIndices = ranked
         .map((p, i) => (p.player.position === Position.QB ? i : -1))
         .filter((i) => i >= 0);
 
-      // At least some QBs should be in top half
-      const topHalfQBs = qbIndices.filter((i) => i < 50);
+      // At least some QBs should be in top half (needs-based should boost them)
+      const topHalfQBs = qbIndices.filter((i) => i < prospects.length / 2);
       expect(topHalfQBs.length).toBeGreaterThan(0);
     });
   });

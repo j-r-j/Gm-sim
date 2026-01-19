@@ -15,7 +15,7 @@ import { Team, createTeamFromCity } from '../core/models/team/Team';
 import { FAKE_CITIES, FakeCity, getFullTeamName } from '../core/models/team/FakeCities';
 import { Player } from '../core/models/player/Player';
 import { generateRoster } from '../core/generators/player/PlayerGenerator';
-import { Coach, createDefaultCoach } from '../core/models/staff/Coach';
+import { Coach } from '../core/models/staff/Coach';
 import { Scout, createDefaultScout, createScoutContract } from '../core/models/staff/Scout';
 import { Owner, NetWorth } from '../core/models/owner/Owner';
 import { createDefaultOwnerPersonality } from '../core/models/owner/OwnerPersonality';
@@ -26,7 +26,7 @@ import { generateDraftClass } from '../core/draft/DraftClassGenerator';
 import { Prospect } from '../core/draft/Prospect';
 import { generateSeasonSchedule, PreviousYearStandings } from '../core/season/ScheduleGenerator';
 import { CoachRole } from '../core/models/staff/StaffSalary';
-import { createCoachContract } from '../core/models/staff/CoachContract';
+import { generateCoach } from '../core/coaching/CoachGenerator';
 import { createNewsFeedState } from '../core/news/NewsFeedManager';
 import { createPatienceMeterState } from '../core/career/PatienceMeterManager';
 import { createDefaultTenureStats } from '../core/career/FiringMechanics';
@@ -120,36 +120,15 @@ function createOwnerForTeam(teamId: string): Owner {
 
 /**
  * Creates coaches for a team (Head Coach, OC, DC)
+ * Uses the new coach generator for varied, realistic attributes
  */
-function createCoachesForTeam(teamId: string): Coach[] {
+function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[] {
   const coaches: Coach[] = [];
 
   const coachRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   for (const role of coachRoles) {
-    const { firstName, lastName } = generateFullName();
-    const coachId = generateUUID();
-
-    const coach = createDefaultCoach(coachId, firstName, lastName, role);
-    coach.teamId = teamId;
-    coach.isAvailable = false;
-    coach.attributes = {
-      ...coach.attributes,
-      age: 35 + randomInt(0, 30),
-      yearsExperience: randomInt(3, 25),
-    };
-    const yearsTotal = randomInt(2, 5);
-    coach.contract = createCoachContract({
-      id: generateUUID(),
-      coachId: coachId,
-      teamId: teamId,
-      yearsTotal,
-      salaryPerYear:
-        role === 'headCoach' ? 8000000 + randomInt(0, 10000000) : 2000000 + randomInt(0, 4000000),
-      guaranteedMoney: randomInt(500000, 3000000),
-      startYear: 2025,
-    });
-
+    const coach = generateCoach(role, teamId, startYear);
     coaches.push(coach);
   }
 
@@ -316,7 +295,7 @@ export function createNewGame(options: NewGameOptions): GameState {
   // Create coaches for all teams
   const coaches: Record<string, Coach> = {};
   for (const teamId of teamIds) {
-    const teamCoaches = createCoachesForTeam(teamId);
+    const teamCoaches = createCoachesForTeam(teamId, startYear);
     for (const coach of teamCoaches) {
       coaches[coach.id] = coach;
     }
