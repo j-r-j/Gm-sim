@@ -55,8 +55,6 @@ import {
   CareerLegacyScreenWrapper,
   CombineScreenWrapper,
   StatsScreenWrapper,
-  WeekGamesScreenWrapper,
-  WeekSummaryScreenWrapper,
   WeeklyScheduleScreenWrapper,
   LiveGameSimulationScreenWrapper,
   PostGameSummaryScreenWrapper,
@@ -152,8 +150,6 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="CareerLegacy" component={CareerLegacyScreenWrapper} />
 
       {/* Week/Season Progression */}
-      <Stack.Screen name="WeekGames" component={WeekGamesScreenWrapper} />
-      <Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
       <Stack.Screen name="WeeklySchedule" component={WeeklyScheduleScreenWrapper} />
 
       {/* Enhanced Game Experience */}

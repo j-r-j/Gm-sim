@@ -118,8 +118,6 @@ export type RootStackParamList = {
   Stats: undefined;
 
   // Week/Season Progression
-  WeekGames: undefined;
-  WeekSummary: undefined;
   WeeklySchedule: undefined;
 
   // Enhanced Game Experience
@@ -224,8 +222,6 @@ export const Routes = {
   Stats: 'Stats',
 
   // Week/Season Progression
-  WeekGames: 'WeekGames',
-  WeekSummary: 'WeekSummary',
   WeeklySchedule: 'WeeklySchedule',
 
   // Enhanced Game Experience

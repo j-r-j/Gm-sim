@@ -63,13 +63,6 @@ import { CombineProDayScreen } from '../screens/CombineProDayScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { StaffDecisionScreen } from '../screens/StaffDecisionScreen';
 import { StaffHiringScreen } from '../screens/StaffHiringScreen';
-import { WeekGamesScreen, WeekGameItem } from '../screens/WeekGamesScreen';
-import {
-  WeekSummaryScreen,
-  WeekGameResult,
-  DivisionStandingEntry,
-  PlayoffImplication,
-} from '../screens/WeekSummaryScreen';
 import { WeeklySchedulePopup, WeeklyGame, SimulatedGame } from '../screens/WeeklySchedulePopup';
 import { LiveGameSimulationScreen } from '../screens/LiveGameSimulationScreen';
 import { PostGameSummaryScreen } from '../screens/PostGameSummaryScreen';
@@ -1137,8 +1130,8 @@ export function DashboardScreenWrapper({
     (action: DashboardAction) => {
       switch (action) {
         case 'gamecast':
-          // Navigate to WeekGames first to see all games for the week
-          navigation.navigate('WeekGames');
+          // Navigate to WeeklySchedule to see all games for the week
+          navigation.navigate('WeeklySchedule');
           break;
         case 'depthChart':
           navigation.navigate('DepthChart');
@@ -1199,10 +1192,6 @@ export function DashboardScreenWrapper({
         case 'playWeek':
           // Navigate to the new LiveGameSimulation screen
           navigation.navigate('LiveGameSimulation');
-          break;
-        case 'viewWeekSummary':
-          // Navigate to week summary after game is complete
-          navigation.navigate('WeekSummary');
           break;
         case 'saveGame':
           saveGame();
@@ -2015,8 +2004,8 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
         setGameState(updatedState);
         await saveGameState(updatedState);
 
-        // Navigate to WeekGames to show other games and allow simming
-        navigation.navigate('WeekGames');
+        // Navigate to WeeklySchedule to show other games and allow simming
+        navigation.navigate('WeeklySchedule');
       }}
     />
   );
@@ -5454,340 +5443,6 @@ export function StatsScreenWrapper({ navigation }: ScreenProps<'Stats'>): React.
 }
 
 // ============================================
-// WEEK GAMES SCREEN
-// ============================================
-
-export function WeekGamesScreenWrapper({
-  navigation,
-}: ScreenProps<'WeekGames'>): React.JSX.Element {
-  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
-
-  if (!gameState) {
-    return <LoadingFallback message="Loading week games..." />;
-  }
-
-  const { calendar, schedule } = gameState.league;
-  const week = calendar.currentWeek;
-  const phase = calendar.currentPhase;
-  const userTeamId = gameState.userTeamId;
-
-  // Check if user is on bye
-  const byeWeek = schedule?.byeWeeks?.[userTeamId];
-  const isUserOnBye = byeWeek === week;
-
-  // Get all games for current week
-  const weekGames: WeekGameItem[] = [];
-  const regularSeasonGames = schedule?.regularSeason || [];
-
-  for (const game of regularSeasonGames) {
-    if (game.week !== week) continue;
-
-    const homeTeam = gameState.teams[game.homeTeamId];
-    const awayTeam = gameState.teams[game.awayTeamId];
-
-    if (!homeTeam || !awayTeam) continue;
-
-    const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
-
-    weekGames.push({
-      gameId: game.gameId,
-      homeTeam: {
-        id: game.homeTeamId,
-        name: `${homeTeam.city} ${homeTeam.nickname}`,
-        abbr: homeTeam.abbreviation,
-        record: `${homeTeam.currentRecord.wins}-${homeTeam.currentRecord.losses}`,
-      },
-      awayTeam: {
-        id: game.awayTeamId,
-        name: `${awayTeam.city} ${awayTeam.nickname}`,
-        abbr: awayTeam.abbreviation,
-        record: `${awayTeam.currentRecord.wins}-${awayTeam.currentRecord.losses}`,
-      },
-      isUserGame,
-      isComplete: game.isComplete,
-      homeScore: game.homeScore,
-      awayScore: game.awayScore,
-      timeSlot: game.timeSlot || 'early_sunday',
-      isDivisional: game.isDivisional,
-    });
-  }
-
-  // Sort: user game first, then by time slot
-  const timeSlotOrder = ['thursday', 'early_sunday', 'late_sunday', 'sunday_night', 'monday_night'];
-  weekGames.sort((a, b) => {
-    if (a.isUserGame && !b.isUserGame) return -1;
-    if (!a.isUserGame && b.isUserGame) return 1;
-    return timeSlotOrder.indexOf(a.timeSlot) - timeSlotOrder.indexOf(b.timeSlot);
-  });
-
-  const userGame = weekGames.find((g) => g.isUserGame);
-  // If user is on bye, treat their game as already played so they can sim remaining games
-  const userGamePlayed = isUserOnBye || (userGame?.isComplete ?? false);
-  const allGamesComplete = weekGames.every((g) => g.isComplete);
-
-  const handleSimRemaining = async () => {
-    if (!schedule?.regularSeason) return;
-    setIsLoading(true);
-
-    try {
-      // Use the proper simulateWeek function which uses the game engine
-      // This will track player stats properly
-      const weekResults = simulateWeek(week, schedule, gameState, userTeamId, false);
-
-      // Update schedule with simulated game results
-      const updatedSchedule = { ...schedule };
-      const updatedGames = [...updatedSchedule.regularSeason];
-
-      // Update each simulated game in the schedule
-      for (const simResult of weekResults.games) {
-        const gameIndex = updatedGames.findIndex((g) => g.gameId === simResult.game.gameId);
-        if (gameIndex >= 0) {
-          updatedGames[gameIndex] = simResult.game;
-        }
-      }
-      updatedSchedule.regularSeason = updatedGames;
-
-      // Update team records from simulated games
-      const updatedTeams = { ...gameState.teams };
-      for (const simResult of weekResults.games) {
-        const { result, game } = simResult;
-        const homeTeam = updatedTeams[game.homeTeamId];
-        const awayTeam = updatedTeams[game.awayTeamId];
-
-        if (homeTeam && awayTeam) {
-          const homeWon = result.homeScore > result.awayScore;
-          const awayWon = result.awayScore > result.homeScore;
-          const tie = result.homeScore === result.awayScore;
-
-          updatedTeams[game.homeTeamId] = {
-            ...homeTeam,
-            currentRecord: {
-              ...homeTeam.currentRecord,
-              wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
-              losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
-              ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
-              pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
-              pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
-            },
-          };
-          updatedTeams[game.awayTeamId] = {
-            ...awayTeam,
-            currentRecord: {
-              ...awayTeam.currentRecord,
-              wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
-              losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
-              ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
-              pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
-              pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
-            },
-          };
-        }
-      }
-
-      // Aggregate player stats from all simulated games
-      let updatedSeasonStats = gameState.seasonStats || {};
-      for (const simResult of weekResults.games) {
-        updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, simResult.result);
-      }
-
-      const updatedState: GameState = {
-        ...gameState,
-        league: {
-          ...gameState.league,
-          schedule: updatedSchedule,
-        },
-        teams: updatedTeams,
-        seasonStats: updatedSeasonStats,
-      };
-
-      setGameState(updatedState);
-      await saveGameState(updatedState);
-
-      // Navigate to summary
-      navigation.navigate('WeekSummary');
-    } catch (error) {
-      console.error('Error simulating games:', error);
-      Alert.alert('Error', 'Failed to simulate remaining games');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleViewSummary = () => {
-    navigation.navigate('WeekSummary');
-  };
-
-  return (
-    <WeekGamesScreen
-      week={week}
-      phase={phase}
-      games={weekGames}
-      userGamePlayed={userGamePlayed}
-      allGamesComplete={allGamesComplete}
-      isUserOnBye={isUserOnBye}
-      onSimRemaining={handleSimRemaining}
-      onViewSummary={handleViewSummary}
-      onBack={() => navigation.goBack()}
-    />
-  );
-}
-
-// ============================================
-// WEEK SUMMARY SCREEN
-// ============================================
-
-export function WeekSummaryScreenWrapper({
-  navigation,
-}: ScreenProps<'WeekSummary'>): React.JSX.Element {
-  const { gameState } = useGame();
-
-  if (!gameState) {
-    return <LoadingFallback message="Loading week summary..." />;
-  }
-
-  const { calendar, schedule } = gameState.league;
-  const week = calendar.currentWeek;
-  const phase = calendar.currentPhase;
-  const userTeamId = gameState.userTeamId;
-  const userTeam = gameState.teams[userTeamId];
-
-  // Get all game results for current week
-  const results: WeekGameResult[] = [];
-  const regularSeasonGames = schedule?.regularSeason || [];
-
-  for (const game of regularSeasonGames) {
-    if (game.week !== week || !game.isComplete) continue;
-
-    const homeTeam = gameState.teams[game.homeTeamId];
-    const awayTeam = gameState.teams[game.awayTeamId];
-
-    if (!homeTeam || !awayTeam) continue;
-
-    const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
-
-    results.push({
-      gameId: game.gameId,
-      homeTeam: {
-        id: game.homeTeamId,
-        abbr: homeTeam.abbreviation,
-        name: `${homeTeam.city} ${homeTeam.nickname}`,
-      },
-      awayTeam: {
-        id: game.awayTeamId,
-        abbr: awayTeam.abbreviation,
-        name: `${awayTeam.city} ${awayTeam.nickname}`,
-      },
-      homeScore: game.homeScore ?? 0,
-      awayScore: game.awayScore ?? 0,
-      isUserGame,
-      isUpset: false, // Could calculate based on records
-    });
-  }
-
-  // Find user's game result
-  const userGameResult = results.find((r) => r.isUserGame);
-  let userResult = null;
-  if (userGameResult) {
-    const isHome = userGameResult.homeTeam.id === userTeamId;
-    const userScore = isHome ? userGameResult.homeScore : userGameResult.awayScore;
-    const oppScore = isHome ? userGameResult.awayScore : userGameResult.homeScore;
-    const opponent = isHome ? userGameResult.awayTeam.name : userGameResult.homeTeam.name;
-
-    userResult = {
-      won: userScore > oppScore,
-      score: `${userScore} - ${oppScore}`,
-      opponent,
-      newRecord: `${userTeam.currentRecord.wins}-${userTeam.currentRecord.losses}`,
-    };
-  }
-
-  // Get division standings
-  const divisionTeams = Object.values(gameState.teams).filter(
-    (t) => t.conference === userTeam.conference && t.division === userTeam.division
-  );
-
-  divisionTeams.sort((a, b) => {
-    const aWinPct =
-      a.currentRecord.wins + a.currentRecord.losses > 0
-        ? a.currentRecord.wins / (a.currentRecord.wins + a.currentRecord.losses)
-        : 0;
-    const bWinPct =
-      b.currentRecord.wins + b.currentRecord.losses > 0
-        ? b.currentRecord.wins / (b.currentRecord.wins + b.currentRecord.losses)
-        : 0;
-    if (bWinPct !== aWinPct) return bWinPct - aWinPct;
-    return (
-      b.currentRecord.pointsFor -
-      b.currentRecord.pointsAgainst -
-      (a.currentRecord.pointsFor - a.currentRecord.pointsAgainst)
-    );
-  });
-
-  const leaderWins = divisionTeams[0]?.currentRecord.wins ?? 0;
-  const leaderLosses = divisionTeams[0]?.currentRecord.losses ?? 0;
-
-  const divisionStandings: DivisionStandingEntry[] = divisionTeams.map((team, index) => {
-    const gamesBehind =
-      index === 0
-        ? 0
-        : (leaderWins - team.currentRecord.wins + (team.currentRecord.losses - leaderLosses)) / 2;
-
-    return {
-      teamId: team.id,
-      abbr: team.abbreviation,
-      wins: team.currentRecord.wins,
-      losses: team.currentRecord.losses,
-      isUserTeam: team.id === userTeamId,
-      playoffPosition: index === 0 ? 'leader' : index < 4 ? 'in_hunt' : 'out',
-      gamesBehind: Math.max(0, gamesBehind),
-    };
-  });
-
-  // Playoff implications (simplified)
-  const playoffImplications: PlayoffImplication[] = [];
-  if (week >= 14) {
-    // Check for clinching/elimination scenarios
-    for (const team of Object.values(gameState.teams)) {
-      const minWins = team.currentRecord.wins;
-
-      // Simple clinching logic
-      if (minWins >= 11 && team.conference === userTeam.conference) {
-        playoffImplications.push({
-          teamId: team.id,
-          teamName: `${team.city} ${team.nickname}`,
-          type: 'clinched_playoff',
-          description: 'Clinched playoff berth',
-        });
-      }
-    }
-  }
-
-  // Career record
-  const careerRecord = {
-    wins: gameState.careerStats.totalWins,
-    losses: gameState.careerStats.totalLosses,
-    seasons: gameState.careerStats.seasonsCompleted,
-  };
-
-  return (
-    <WeekSummaryScreen
-      week={week}
-      phase={phase}
-      results={results}
-      userResult={userResult}
-      divisionStandings={divisionStandings}
-      conference={userTeam.conference}
-      division={userTeam.division}
-      playoffImplications={playoffImplications}
-      careerRecord={careerRecord}
-      onViewStandings={() => navigation.navigate('Standings')}
-      onViewBracket={phase === 'playoffs' ? () => navigation.navigate('PlayoffBracket') : undefined}
-      onBack={() => navigation.goBack()}
-    />
-  );
-}
-
-// ============================================
 // WEEKLY SCHEDULE POPUP SCREEN
 // ============================================
 
@@ -6079,9 +5734,82 @@ export function WeeklyScheduleScreenWrapper({
     }
   };
 
-  // Handle completing the week and navigating to summary
-  const handleComplete = async (_results: SimulatedGame[]) => {
-    navigation.navigate('WeekSummary');
+  // Handle advancing to next week
+  const handleAdvanceWeek = async () => {
+    setIsLoading(true);
+    try {
+      let newWeek = calendar.currentWeek + 1;
+      let newPhase = calendar.currentPhase;
+
+      // Handle phase transitions
+      if (newPhase === 'regularSeason' && newWeek > 18) {
+        newWeek = 19;
+        newPhase = 'playoffs';
+      }
+
+      // Process injury recovery using the advanceWeek function
+      const advanceResult = advanceWeek(calendar.currentWeek, gameState);
+      const updatedPlayers = { ...gameState.players };
+
+      for (const recoveredPlayerId of advanceResult.recoveredPlayers) {
+        const player = updatedPlayers[recoveredPlayerId];
+        if (player) {
+          updatedPlayers[recoveredPlayerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              severity: 'none',
+              weeksRemaining: 0,
+            },
+          };
+        }
+      }
+
+      // Decrement weeks remaining for players still injured
+      for (const playerId of Object.keys(updatedPlayers)) {
+        const player = updatedPlayers[playerId];
+        if (
+          player.injuryStatus.weeksRemaining > 0 &&
+          !advanceResult.recoveredPlayers.includes(playerId)
+        ) {
+          updatedPlayers[playerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              weeksRemaining: player.injuryStatus.weeksRemaining - 1,
+            },
+          };
+        }
+      }
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          calendar: {
+            ...calendar,
+            currentWeek: newWeek,
+            currentPhase: newPhase,
+          },
+        },
+        players: updatedPlayers,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+
+      // Navigate appropriately
+      if (newPhase === 'playoffs' && calendar.currentPhase !== 'playoffs') {
+        navigation.navigate('PlayoffBracket');
+      } else {
+        navigation.navigate('Dashboard');
+      }
+    } catch (error) {
+      console.error('Error advancing week:', error);
+      Alert.alert('Error', 'Failed to advance week');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -6094,7 +5822,7 @@ export function WeeklyScheduleScreenWrapper({
       onPlayGame={handlePlayGame}
       onSimUserGame={handleSimUserGame}
       onSimOtherGames={handleSimOtherGames}
-      onComplete={handleComplete}
+      onAdvanceWeek={handleAdvanceWeek}
       onBack={() => navigation.goBack()}
     />
   );
@@ -6328,8 +6056,8 @@ export function PostGameSummaryScreenWrapper({
   };
 
   const handleContinue = () => {
-    // Navigate to week games screen to sim remaining games
-    navigation.navigate('WeekGames');
+    // Navigate to weekly schedule to sim remaining games
+    navigation.navigate('WeeklySchedule');
   };
 
   return (

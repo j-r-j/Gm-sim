@@ -84,8 +84,8 @@ export interface WeeklySchedulePopupProps {
   onSimUserGame: () => Promise<GameResult | null>;
   /** Callback to sim all other games */
   onSimOtherGames: () => Promise<SimulatedGame[]>;
-  /** Callback when all games are done and ready to proceed */
-  onComplete: (results: SimulatedGame[]) => void;
+  /** Callback to advance to next week when all games are done */
+  onAdvanceWeek: () => void;
   /** Callback to go back */
   onBack: () => void;
 }
@@ -608,7 +608,7 @@ export function WeeklySchedulePopup({
   onPlayGame,
   onSimUserGame,
   onSimOtherGames,
-  onComplete,
+  onAdvanceWeek,
   onBack,
 }: WeeklySchedulePopupProps): React.JSX.Element {
   const [simPhase, setSimPhase] = useState<SimPhase>('initial');
@@ -753,12 +753,11 @@ export function WeeklySchedulePopup({
     [simulatedGames]
   );
 
-  // Handle completing the week
-  const handleComplete = useCallback(() => {
+  // Handle advancing to next week
+  const handleAdvanceWeek = useCallback(() => {
     triggerHaptic('medium');
-    const allResults = Array.from(simulatedGames.values());
-    onComplete(allResults);
-  }, [simulatedGames, onComplete]);
+    onAdvanceWeek();
+  }, [onAdvanceWeek]);
 
   // Render game card with current state
   const renderGame = (game: WeeklyGame) => {
@@ -888,10 +887,10 @@ export function WeeklySchedulePopup({
         <View style={styles.actionBar}>
           <TouchableOpacity
             style={[styles.actionButton, styles.continueButton]}
-            onPress={handleComplete}
+            onPress={handleAdvanceWeek}
             activeOpacity={0.8}
           >
-            <Text style={styles.actionButtonText}>CONTINUE TO WEEK SUMMARY</Text>
+            <Text style={styles.actionButtonText}>ADVANCE TO NEXT WEEK</Text>
           </TouchableOpacity>
         </View>
       )}

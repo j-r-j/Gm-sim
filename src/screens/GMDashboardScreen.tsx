@@ -32,7 +32,6 @@ export type DashboardAction =
   | 'ownerRelations'
   | 'advanceWeek'
   | 'playWeek'
-  | 'viewWeekSummary'
   | 'settings'
   | 'saveGame'
   | 'mainMenu';
@@ -292,9 +291,6 @@ export function GMDashboardScreen({
       case 'view_matchup':
       case 'start_simulation':
         onAction('playWeek');
-        break;
-      case 'view_week_summary':
-        onAction('viewWeekSummary');
         break;
       case 'advance_week':
         onAction('advanceWeek');
