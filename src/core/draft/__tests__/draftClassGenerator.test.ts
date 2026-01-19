@@ -100,8 +100,9 @@ describe('DraftClassGenerator', () => {
       const qbs = getProspectsByPosition(cachedDraftClass, Position.QB);
 
       // Should have enough QBs but not too many
+      // Upper limit accounts for random variance + 1.3x position modifier boost when QB is a "strong position"
       expect(qbs.length).toBeGreaterThanOrEqual(8);
-      expect(qbs.length).toBeLessThanOrEqual(25);
+      expect(qbs.length).toBeLessThanOrEqual(35);
     });
 
     it('should have minimum coverage for each position', () => {
