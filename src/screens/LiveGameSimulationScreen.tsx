@@ -200,36 +200,13 @@ export function LiveGameSimulationScreen({
     setIsSimulating(false);
     isSimulatingRef.current = false;
 
-    const finalState = gameRunnerRef.current.getCurrentState();
-    const boxScore = gameRunnerRef.current.getBoxScore();
+    // Get the complete game result with all stats from the runner
+    const result = gameRunnerRef.current.getResult();
 
-    const result: GameResult = {
-      gameId: finalState.gameId,
-      week: gameInfo?.week || 1,
-      homeTeamId: finalState.homeTeam.teamId,
-      awayTeamId: finalState.awayTeam.teamId,
-      homeScore: finalState.score.home,
-      awayScore: finalState.score.away,
-      winnerId:
-        finalState.score.home > finalState.score.away
-          ? finalState.homeTeam.teamId
-          : finalState.score.away > finalState.score.home
-            ? finalState.awayTeam.teamId
-            : '',
-      loserId:
-        finalState.score.home < finalState.score.away
-          ? finalState.homeTeam.teamId
-          : finalState.score.away < finalState.score.home
-            ? finalState.awayTeam.teamId
-            : '',
-      isTie: finalState.score.home === finalState.score.away,
-      homeStats: {} as GameResult['homeStats'],
-      awayStats: {} as GameResult['awayStats'],
-      boxScore,
-      injuries: [],
-      notableEvents: [],
-      keyPlays: [],
-    };
+    // Override week if provided via gameInfo
+    if (gameInfo?.week) {
+      result.week = gameInfo.week;
+    }
 
     setGameResult(result);
     onGameEnd(result);
