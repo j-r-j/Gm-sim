@@ -114,10 +114,14 @@ describe('CombineSimulator', () => {
         const results = simulateCombineForProspect(draftClass.prospects[i], teamIds);
         if (results.participated && results.workoutResults) {
           // At least some workout results should be filled
+          // Check all 6 main drills (each has 10% skip chance, so probability of all null is 0.0001%)
           const hasWorkouts =
             results.workoutResults.fortyYardDash !== null ||
             results.workoutResults.benchPress !== null ||
-            results.workoutResults.verticalJump !== null;
+            results.workoutResults.verticalJump !== null ||
+            results.workoutResults.broadJump !== null ||
+            results.workoutResults.twentyYardShuttle !== null ||
+            results.workoutResults.threeConeDrill !== null;
           expect(hasWorkouts).toBe(true);
           foundParticipant = true;
           break;
