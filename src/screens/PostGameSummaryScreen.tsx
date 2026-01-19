@@ -172,11 +172,6 @@ export function PostGameSummaryScreen({
     return `Week ${week}`;
   };
 
-  // Determine user's team result
-  const userTeam = homeTeam.isUser ? homeTeam : awayTeam;
-  const userScore = homeTeam.isUser ? homeScore : awayScore;
-  const opponentScore = homeTeam.isUser ? awayScore : homeScore;
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}

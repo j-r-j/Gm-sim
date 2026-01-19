@@ -116,7 +116,7 @@ export function LiveGameSimulationScreen({
   gameSetup,
   gameInfo,
   otherGames = [],
-  onOtherGamesUpdate,
+  onOtherGamesUpdate: _onOtherGamesUpdate,
   onGameEnd,
   onBack,
 }: LiveGameSimulationScreenProps): React.JSX.Element {
@@ -491,9 +491,8 @@ export function LiveGameSimulationScreen({
           <View style={styles.tickerContainer}>
             <OtherGamesTicker
               games={otherGames}
-              onGamePress={(game) => {
-                // Could show expanded game details
-                console.log('Game tapped:', game.gameId);
+              onGamePress={(_game) => {
+                // Could show expanded game details in future
               }}
             />
           </View>

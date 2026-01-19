@@ -11,12 +11,7 @@ import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 import { ActionPrompt } from '../components/week-flow';
-import {
-  NextActionPrompt,
-  getNextActionPrompt,
-  createInitialWeekFlowState,
-  getWeekLabel,
-} from '../core/simulation/WeekFlowState';
+import { NextActionPrompt, getWeekLabel } from '../core/simulation/WeekFlowState';
 import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 
 export type DashboardAction =
