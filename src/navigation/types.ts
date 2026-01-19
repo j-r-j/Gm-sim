@@ -13,6 +13,17 @@ export type RootStackParamList = {
   // Pre-game screens
   Start: undefined;
   TeamSelection: undefined;
+  StaffDecision: {
+    teamCity: string; // FakeCity abbreviation
+    gmName: string;
+    saveSlot: number;
+  };
+  StaffHiring: {
+    teamCity: string; // FakeCity abbreviation
+    gmName: string;
+    saveSlot: number;
+    formerStaffIds?: string[];
+  };
   Settings: undefined;
 
   // Main game screens
@@ -134,6 +145,8 @@ export const Routes = {
   // Pre-game
   Start: 'Start',
   TeamSelection: 'TeamSelection',
+  StaffDecision: 'StaffDecision',
+  StaffHiring: 'StaffHiring',
   Settings: 'Settings',
 
   // Main game

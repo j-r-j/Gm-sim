@@ -61,6 +61,8 @@ import { CoachHiringScreen } from '../screens/CoachHiringScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import { CombineProDayScreen } from '../screens/CombineProDayScreen';
 import { StatsScreen } from '../screens/StatsScreen';
+import { StaffDecisionScreen } from '../screens/StaffDecisionScreen';
+import { StaffHiringScreen } from '../screens/StaffHiringScreen';
 import { WeekGamesScreen, WeekGameItem } from '../screens/WeekGamesScreen';
 import {
   WeekSummaryScreen,
@@ -144,7 +146,13 @@ import { NewsFeedCategory } from '../core/news/StoryTemplates';
 import { GameState } from '../core/models/game/GameState';
 import { createNewGame } from '../services/NewGameService';
 import { gameStorage, SaveSlot } from '../services/storage/GameStorage';
-import { FakeCity } from '../core/models/team/FakeCities';
+import { FakeCity, FAKE_CITIES } from '../core/models/team/FakeCities';
+import {
+  HiringCandidate,
+  createCandidateContract,
+} from '../core/coaching/NewGameCandidateGenerator';
+import { Coach } from '../core/models/staff/Coach';
+import { Team } from '../core/models/team/Team';
 import { setupGame, GameConfig } from '../core/game/GameSetup';
 import { simulateWeek, advanceWeek, getUserTeamGame } from '../core/season/WeekSimulator';
 import { updateSeasonStatsFromGame } from '../core/game/SeasonStatsAggregator';
@@ -324,30 +332,16 @@ export function StartScreenWrapper({ navigation }: ScreenProps<'Start'>): React.
 export function TeamSelectionScreenWrapper({
   navigation,
 }: ScreenProps<'TeamSelection'>): React.JSX.Element {
-  const { setGameState, setIsLoading } = useGame();
-
   const handleTeamSelected = useCallback(
-    async (team: FakeCity, gmName: string, saveSlot: SaveSlot) => {
-      setIsLoading(true);
-      try {
-        const newGameState = createNewGame({
-          saveSlot,
-          gmName,
-          selectedTeam: team,
-          startYear: 2025,
-        });
-
-        await gameStorage.save(saveSlot, newGameState);
-        setGameState(newGameState);
-        navigation.navigate('Dashboard');
-      } catch (error) {
-        console.error('Error creating new game:', error);
-        Alert.alert('Error', 'Failed to create new game. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
+    (team: FakeCity, gmName: string, saveSlot: SaveSlot) => {
+      // Navigate to staff decision screen instead of creating game immediately
+      navigation.navigate('StaffDecision', {
+        teamCity: team.abbreviation,
+        gmName,
+        saveSlot,
+      });
     },
-    [navigation, setGameState, setIsLoading]
+    [navigation]
   );
 
   const handleBack = useCallback(() => {
@@ -355,6 +349,224 @@ export function TeamSelectionScreenWrapper({
   }, [navigation]);
 
   return <TeamSelectionScreen onSelectTeam={handleTeamSelected} onBack={handleBack} />;
+}
+
+// ============================================
+// STAFF DECISION SCREEN
+// ============================================
+
+export function StaffDecisionScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'StaffDecision'>): React.JSX.Element {
+  const { setGameState, setIsLoading } = useGame();
+  const { teamCity: teamAbbrev, gmName, saveSlot } = route.params;
+
+  // Find the team by abbreviation
+  const teamCity = FAKE_CITIES.find((c) => c.abbreviation === teamAbbrev);
+
+  if (!teamCity) {
+    return (
+      <SafeAreaView style={styles.fallbackContainer}>
+        <Text>Team not found</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Create a temporary game state to get the generated coaches
+  const tempGameState = createNewGame({
+    saveSlot: saveSlot as SaveSlot,
+    gmName,
+    selectedTeam: teamCity,
+    startYear: 2025,
+  });
+
+  const userTeam = tempGameState.teams[tempGameState.userTeamId];
+
+  // Get coaches from gameState using the staffHierarchy IDs
+  const getCoachesFromHierarchy = (): Coach[] => {
+    if (!userTeam) return [];
+    const coachIds = [
+      userTeam.staffHierarchy.headCoach,
+      userTeam.staffHierarchy.offensiveCoordinator,
+      userTeam.staffHierarchy.defensiveCoordinator,
+    ].filter((id): id is string => id !== null);
+
+    return coachIds
+      .map((id) => tempGameState.coaches[id])
+      .filter((c): c is Coach => c !== undefined);
+  };
+
+  const coaches = getCoachesFromHierarchy();
+
+  // Default staff budget (can be adjusted)
+  const staffBudget = userTeam?.staffHierarchy.staffBudget || 30000000;
+
+  const handleKeepStaff = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Save and proceed with existing staff
+      await gameStorage.save(saveSlot as SaveSlot, tempGameState);
+      setGameState(tempGameState);
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Dashboard' }],
+        })
+      );
+    } catch {
+      Alert.alert('Error', 'Failed to start game. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigation, setGameState, setIsLoading, tempGameState, saveSlot]);
+
+  const handleCleanHouse = useCallback(() => {
+    // Navigate to hiring screen with former staff
+    navigation.navigate('StaffHiring', {
+      teamCity: teamAbbrev,
+      gmName,
+      saveSlot,
+      formerStaffIds: coaches.map((c: Coach) => c.id),
+    });
+  }, [navigation, teamAbbrev, gmName, saveSlot, coaches]);
+
+  const handleBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  return (
+    <StaffDecisionScreen
+      team={userTeam!}
+      teamCity={teamCity}
+      coaches={coaches}
+      staffBudget={staffBudget}
+      currentYear={2025}
+      onKeepStaff={handleKeepStaff}
+      onCleanHouse={handleCleanHouse}
+      onBack={handleBack}
+    />
+  );
+}
+
+// ============================================
+// STAFF HIRING SCREEN
+// ============================================
+
+export function StaffHiringScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'StaffHiring'>): React.JSX.Element {
+  const { setGameState, setIsLoading } = useGame();
+  const { teamCity: teamAbbrev, gmName, saveSlot, formerStaffIds = [] } = route.params;
+
+  // Find the team by abbreviation
+  const teamCity = FAKE_CITIES.find((c) => c.abbreviation === teamAbbrev);
+
+  if (!teamCity) {
+    return (
+      <SafeAreaView style={styles.fallbackContainer}>
+        <Text>Team not found</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Create a temporary game state to get the generated coaches (for former staff)
+  const tempGameState = createNewGame({
+    saveSlot: saveSlot as SaveSlot,
+    gmName,
+    selectedTeam: teamCity,
+    startYear: 2025,
+  });
+
+  const userTeam = tempGameState.teams[tempGameState.userTeamId];
+
+  // Get former staff from the temp game state coaches record
+  const formerStaff: Coach[] = formerStaffIds
+    .map((id: string) => tempGameState.coaches[id])
+    .filter((c): c is Coach => c !== undefined);
+
+  // Default staff budget
+  const staffBudget = userTeam?.staffHierarchy.staffBudget || 30000000;
+
+  const handleComplete = useCallback(
+    async (hiredStaff: { hc: HiringCandidate; oc: HiringCandidate; dc: HiringCandidate }) => {
+      setIsLoading(true);
+      try {
+        // Create coaches with contracts
+        const headCoach = createCandidateContract(hiredStaff.hc, userTeam!.id, 2025);
+        const offensiveCoordinator = createCandidateContract(hiredStaff.oc, userTeam!.id, 2025);
+        const defensiveCoordinator = createCandidateContract(hiredStaff.dc, userTeam!.id, 2025);
+
+        // Update the team's staffHierarchy with new coach IDs
+        const updatedUserTeam: Team = {
+          ...userTeam!,
+          staffHierarchy: {
+            ...userTeam!.staffHierarchy,
+            headCoach: headCoach.id,
+            offensiveCoordinator: offensiveCoordinator.id,
+            defensiveCoordinator: defensiveCoordinator.id,
+            coachingSpend:
+              (headCoach.contract?.salaryPerYear || 0) +
+              (offensiveCoordinator.contract?.salaryPerYear || 0) +
+              (defensiveCoordinator.contract?.salaryPerYear || 0),
+            remainingBudget:
+              userTeam!.staffHierarchy.staffBudget -
+              (headCoach.contract?.salaryPerYear || 0) -
+              (offensiveCoordinator.contract?.salaryPerYear || 0) -
+              (defensiveCoordinator.contract?.salaryPerYear || 0) -
+              userTeam!.staffHierarchy.scoutingSpend,
+          },
+        };
+
+        // Add new coaches to the coaches record
+        const updatedCoaches: Record<string, Coach> = {
+          ...tempGameState.coaches,
+          [headCoach.id]: headCoach,
+          [offensiveCoordinator.id]: offensiveCoordinator,
+          [defensiveCoordinator.id]: defensiveCoordinator,
+        };
+
+        const finalGameState: GameState = {
+          ...tempGameState,
+          teams: {
+            ...tempGameState.teams,
+            [tempGameState.userTeamId]: updatedUserTeam,
+          },
+          coaches: updatedCoaches,
+        };
+
+        await gameStorage.save(saveSlot as SaveSlot, finalGameState);
+        setGameState(finalGameState);
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Dashboard' }],
+          })
+        );
+      } catch {
+        Alert.alert('Error', 'Failed to start game. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [navigation, setGameState, setIsLoading, tempGameState, userTeam, saveSlot]
+  );
+
+  const handleBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  return (
+    <StaffHiringScreen
+      teamCity={teamCity}
+      staffBudget={staffBudget}
+      currentYear={2025}
+      formerStaff={formerStaff}
+      onComplete={handleComplete}
+      onBack={handleBack}
+    />
+  );
 }
 
 // ============================================
