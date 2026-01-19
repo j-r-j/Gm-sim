@@ -434,6 +434,13 @@ export class GameRunner {
   }
 
   /**
+   * Get current game result (can be called at any time, including when game is complete)
+   */
+  getResult(): GameResult {
+    return this.generateResult();
+  }
+
+  /**
    * Generate final game result
    */
   private generateResult(): GameResult {
