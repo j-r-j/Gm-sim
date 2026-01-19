@@ -39,6 +39,8 @@ export interface NewsScreenProps {
   onBack: () => void;
   /** Callback when news item is marked as read */
   onMarkRead?: (newsId: string) => void;
+  /** Callback to navigate to Rumor Mill */
+  onRumorMill?: () => void;
 }
 
 type CategoryFilter = 'all' | NewsItem['category'];
@@ -126,6 +128,7 @@ export function NewsScreen({
   currentYear: _currentYear,
   onBack,
   onMarkRead,
+  onRumorMill,
 }: NewsScreenProps) {
   const [filter, setFilter] = useState<CategoryFilter>('all');
 
@@ -175,7 +178,13 @@ export function NewsScreen({
             </View>
           )}
         </View>
-        <View style={styles.placeholder} />
+        {onRumorMill ? (
+          <TouchableOpacity onPress={onRumorMill} style={styles.rumorsButton}>
+            <Text style={styles.rumorsText}>Rumors</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.placeholder} />
+        )}
       </View>
 
       {/* Filter Tabs */}
@@ -261,6 +270,14 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 60,
+  },
+  rumorsButton: {
+    padding: spacing.xs,
+  },
+  rumorsText: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
   },
   filterContainer: {
     borderBottomWidth: 1,
