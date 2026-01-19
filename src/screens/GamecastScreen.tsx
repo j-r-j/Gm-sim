@@ -378,12 +378,15 @@ ${rushingText}`.trim();
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        {onBack && (
+        {/* Hide back button when game is over to prevent navigation during save */}
+        {onBack && !isGameOver ? (
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={styles.backButton} />
         )}
-        <Text style={styles.headerTitle}>Gamecast</Text>
+        <Text style={styles.headerTitle}>{isGameOver ? 'Final' : 'Gamecast'}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
