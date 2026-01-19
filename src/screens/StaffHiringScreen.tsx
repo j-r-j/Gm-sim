@@ -83,6 +83,15 @@ function formatMoney(value: number): string {
   return `$${value.toFixed(0)}K`;
 }
 
+/**
+ * Converts salary from actual dollars to thousands (budget units).
+ * Coach salaries are stored in actual dollars (e.g., 8_000_000 = $8M)
+ * but the budget system uses thousands (e.g., 30000 = $30M).
+ */
+function salaryToThousands(salary: number): number {
+  return salary / 1000;
+}
+
 // ============================================================================
 // CHEMISTRY SYSTEM (with explainability)
 // ============================================================================
@@ -400,7 +409,7 @@ const CandidateCard = memo(function CandidateCard({
       onPress={disabled ? undefined : onSelect}
       accessibilityRole="button"
       accessibilityState={{ selected: isSelected, disabled }}
-      accessibilityLabel={`${candidate.coach.firstName} ${candidate.coach.lastName}, ${roleConfig.label}, ${getReputationDisplayName(tier)} reputation, ${formatMoney(candidate.expectedSalary)} per year`}
+      accessibilityLabel={`${candidate.coach.firstName} ${candidate.coach.lastName}, ${roleConfig.label}, ${getReputationDisplayName(tier)} reputation, ${formatMoney(salaryToThousands(candidate.expectedSalary))} per year`}
     >
       {/* Disabled Banner */}
       {disabled && disabledReason && (
@@ -471,7 +480,9 @@ const CandidateCard = memo(function CandidateCard({
       <View style={styles.costRow}>
         <View style={styles.salaryBlock}>
           <Text style={styles.salaryLabel}>Salary</Text>
-          <Text style={styles.salaryValue}>{formatMoney(candidate.expectedSalary)}/yr</Text>
+          <Text style={styles.salaryValue}>
+            {formatMoney(salaryToThousands(candidate.expectedSalary))}/yr
+          </Text>
         </View>
         <View style={styles.contractBlock}>
           <Text style={styles.contractLabel}>Contract</Text>
@@ -480,7 +491,7 @@ const CandidateCard = memo(function CandidateCard({
         <View style={styles.totalBlock}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>
-            {formatMoney(candidate.expectedSalary * candidate.expectedYears)}
+            {formatMoney(salaryToThousands(candidate.expectedSalary * candidate.expectedYears))}
           </Text>
         </View>
       </View>
@@ -627,7 +638,9 @@ const ReviewCard = memo(function ReviewCard({
           </View>
         </View>
         <View style={styles.reviewSalary}>
-          <Text style={styles.reviewSalaryValue}>{formatMoney(candidate.expectedSalary)}</Text>
+          <Text style={styles.reviewSalaryValue}>
+            {formatMoney(salaryToThousands(candidate.expectedSalary))}
+          </Text>
           <Text style={styles.reviewSalaryLabel}>per year</Text>
         </View>
       </TouchableOpacity>
@@ -693,26 +706,30 @@ export function StaffHiringScreen({
     [formerStaff, currentYear]
   );
 
-  // Budget calculations
+  // Budget calculations - convert salaries to thousands to match budget units
   const usedBudget =
-    (selectedHC?.expectedSalary || 0) +
-    (selectedOC?.expectedSalary || 0) +
-    (selectedDC?.expectedSalary || 0);
+    salaryToThousands(selectedHC?.expectedSalary || 0) +
+    salaryToThousands(selectedOC?.expectedSalary || 0) +
+    salaryToThousands(selectedDC?.expectedSalary || 0);
   const remainingBudget = staffBudget - usedBudget;
 
   const getRemainingHires = useCallback((): { role: CoachRole; minCost: number }[] => {
     const hires: { role: CoachRole; minCost: number }[] = [];
+    // Convert min costs to thousands to match budget units
     if (!selectedHC && step !== 'headCoach')
-      hires.push({ role: 'headCoach', minCost: COACH_SALARY_RANGES.headCoach.min });
+      hires.push({
+        role: 'headCoach',
+        minCost: salaryToThousands(COACH_SALARY_RANGES.headCoach.min),
+      });
     if (!selectedOC && step !== 'offensiveCoordinator')
       hires.push({
         role: 'offensiveCoordinator',
-        minCost: COACH_SALARY_RANGES.offensiveCoordinator.min,
+        minCost: salaryToThousands(COACH_SALARY_RANGES.offensiveCoordinator.min),
       });
     if (!selectedDC && step !== 'defensiveCoordinator')
       hires.push({
         role: 'defensiveCoordinator',
-        minCost: COACH_SALARY_RANGES.defensiveCoordinator.min,
+        minCost: salaryToThousands(COACH_SALARY_RANGES.defensiveCoordinator.min),
       });
     return hires;
   }, [selectedHC, selectedOC, selectedDC, step]);
@@ -721,7 +738,8 @@ export function StaffHiringScreen({
     (candidate: HiringCandidate) => {
       const remainingHires = getRemainingHires();
       const minNeeded = remainingHires.reduce((sum, h) => sum + h.minCost, 0);
-      return candidate.expectedSalary <= remainingBudget - minNeeded;
+      // Convert candidate salary to thousands for comparison with budget
+      return salaryToThousands(candidate.expectedSalary) <= remainingBudget - minNeeded;
     },
     [remainingBudget, getRemainingHires]
   );
@@ -905,7 +923,11 @@ export function StaffHiringScreen({
 
       const getDisabledReason = (): string | undefined => {
         if (item.affordable) return undefined;
-        const overBudget = item.candidate.expectedSalary - remainingBudget;
+        // Convert salary to thousands for comparison with remainingBudget (which is in thousands)
+        const salaryInThousands = salaryToThousands(item.candidate.expectedSalary);
+        const remainingHires = getRemainingHires();
+        const minNeeded = remainingHires.reduce((sum, h) => sum + h.minCost, 0);
+        const overBudget = salaryInThousands - (remainingBudget - minNeeded);
         return `Over budget by ${formatMoney(Math.max(0, overBudget))}`;
       };
 
@@ -923,7 +945,7 @@ export function StaffHiringScreen({
         />
       );
     },
-    [getCurrentSelection, step, selectedHC, remainingBudget, setCurrentSelection]
+    [getCurrentSelection, step, selectedHC, remainingBudget, setCurrentSelection, getRemainingHires]
   );
 
   // Review screen
