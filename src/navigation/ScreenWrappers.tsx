@@ -533,9 +533,11 @@ export function StaffHiringScreenWrapper({
           },
         };
 
-        // Add new coaches to the coaches record
+        // Remove former staff (if clean house was used) and add new coaches
         const updatedCoaches: Record<string, Coach> = {
-          ...pendingNewGame.coaches,
+          ...Object.fromEntries(
+            Object.entries(pendingNewGame.coaches).filter(([id]) => !formerStaffIds.includes(id))
+          ),
           [headCoach.id]: headCoach,
           [offensiveCoordinator.id]: offensiveCoordinator,
           [defensiveCoordinator.id]: defensiveCoordinator,
@@ -573,6 +575,7 @@ export function StaffHiringScreenWrapper({
       userTeam,
       saveSlot,
       clearPendingNewGame,
+      formerStaffIds,
     ]
   );
 
