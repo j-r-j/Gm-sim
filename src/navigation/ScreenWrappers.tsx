@@ -69,6 +69,8 @@ import {
   PlayoffImplication,
 } from '../screens/WeekSummaryScreen';
 import { WeeklySchedulePopup, WeeklyGame, SimulatedGame } from '../screens/WeeklySchedulePopup';
+import { LiveGameSimulationScreen } from '../screens/LiveGameSimulationScreen';
+import { PostGameSummaryScreen } from '../screens/PostGameSummaryScreen';
 import {
   CombineResults,
   CombineGrade,
@@ -951,6 +953,14 @@ export function DashboardScreenWrapper({
           break;
         case 'advanceWeek':
           handleAdvanceWeek();
+          break;
+        case 'playWeek':
+          // Navigate to the new LiveGameSimulation screen
+          navigation.navigate('LiveGameSimulation');
+          break;
+        case 'viewWeekSummary':
+          // Navigate to week summary after game is complete
+          navigation.navigate('WeekSummary');
           break;
         case 'saveGame':
           saveGame();
@@ -5937,7 +5947,263 @@ export function WeeklyScheduleScreenWrapper({
 }
 
 // ============================================
-// LOADING FALLBACK
+// LIVE GAME SIMULATION SCREEN
+// ============================================
+
+export function LiveGameSimulationScreenWrapper({
+  navigation,
+}: ScreenProps<'LiveGameSimulation'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading game simulation..." />;
+  }
+
+  const { calendar, schedule } = gameState.league;
+  const week = calendar.currentWeek;
+  const userTeamId = gameState.userTeamId;
+
+  // Guard: need schedule
+  if (!schedule) {
+    Alert.alert('Error', 'No schedule available');
+    navigation.goBack();
+    return <LoadingFallback message="No schedule available..." />;
+  }
+
+  // Get user's game for this week
+  const userGame = getUserTeamGame(schedule, week, userTeamId);
+
+  if (!userGame) {
+    Alert.alert('Error', 'No game found for this week');
+    navigation.goBack();
+    return <LoadingFallback message="No game found..." />;
+  }
+
+  // Set up game
+  const homeTeam = gameState.teams[userGame.homeTeamId];
+  const awayTeam = gameState.teams[userGame.awayTeamId];
+
+  if (!homeTeam || !awayTeam) {
+    Alert.alert('Error', 'Teams not found');
+    navigation.goBack();
+    return <LoadingFallback message="Teams not found..." />;
+  }
+
+  // Build game setup
+  const gameConfig: GameConfig = {
+    homeTeamId: userGame.homeTeamId,
+    awayTeamId: userGame.awayTeamId,
+    week: week,
+    isPlayoff: calendar.currentPhase === 'playoffs',
+  };
+
+  const gameSetup = setupGame(
+    gameConfig,
+    new Map(Object.entries(gameState.teams)),
+    new Map(Object.entries(gameState.players)),
+    new Map(Object.entries(gameState.coaches))
+  );
+
+  // Handle game end - save result and navigate to post game
+  const handleGameEnd = async (result: import('../core/game/GameRunner').GameResult) => {
+    setIsLoading(true);
+
+    try {
+      // Update schedule with game result
+      const updatedGames = [...(schedule.regularSeason || [])];
+
+      const gameIndex = updatedGames.findIndex((g) => g.gameId === userGame.gameId);
+      if (gameIndex >= 0) {
+        updatedGames[gameIndex] = {
+          ...updatedGames[gameIndex],
+          isComplete: true,
+          homeScore: result.homeScore,
+          awayScore: result.awayScore,
+        };
+      }
+
+      const updatedSchedule = {
+        ...schedule,
+        regularSeason: updatedGames,
+      };
+
+      // Update team records
+      const updatedTeams = { ...gameState.teams };
+      const homeWon = result.homeScore > result.awayScore;
+      const awayWon = result.awayScore > result.homeScore;
+      const tie = result.homeScore === result.awayScore;
+
+      updatedTeams[userGame.homeTeamId] = {
+        ...homeTeam,
+        currentRecord: {
+          ...homeTeam.currentRecord,
+          wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+          losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+          ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+          pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
+          pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
+        },
+      };
+      updatedTeams[userGame.awayTeamId] = {
+        ...awayTeam,
+        currentRecord: {
+          ...awayTeam.currentRecord,
+          wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+          losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+          ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+          pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
+          pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
+        },
+      };
+
+      // Update season stats
+      const updatedSeasonStats = updateSeasonStatsFromGame(gameState.seasonStats || {}, result);
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+        seasonStats: updatedSeasonStats,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+
+      // Navigate to post game summary
+      navigation.navigate('PostGameSummary');
+    } catch (error) {
+      console.error('Error saving game result:', error);
+      Alert.alert('Error', 'Failed to save game result');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <LiveGameSimulationScreen
+      gameSetup={gameSetup}
+      gameInfo={{
+        week: week,
+        date: new Date().toISOString().split('T')[0],
+      }}
+      onGameEnd={handleGameEnd}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// POST GAME SUMMARY SCREEN
+// ============================================
+
+export function PostGameSummaryScreenWrapper({
+  navigation,
+}: ScreenProps<'PostGameSummary'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading game summary..." />;
+  }
+
+  const { calendar, schedule } = gameState.league;
+  const week = calendar.currentWeek;
+  const phase = calendar.currentPhase;
+  const userTeamId = gameState.userTeamId;
+
+  // Guard: need schedule
+  if (!schedule) {
+    navigation.goBack();
+    return <LoadingFallback message="No schedule available..." />;
+  }
+
+  // Get user's completed game for this week
+  const userGame = getUserTeamGame(schedule, week, userTeamId);
+
+  if (!userGame || !userGame.isComplete) {
+    // If no completed game, go back
+    navigation.goBack();
+    return <LoadingFallback message="No completed game found..." />;
+  }
+
+  const isHome = userGame.homeTeamId === userTeamId;
+  const homeTeam = gameState.teams[userGame.homeTeamId];
+  const awayTeam = gameState.teams[userGame.awayTeamId];
+
+  if (!homeTeam || !awayTeam) {
+    navigation.goBack();
+    return <LoadingFallback message="Teams not found..." />;
+  }
+
+  // Determine if user won
+  const userScore = isHome ? userGame.homeScore! : userGame.awayScore!;
+  const opponentScore = isHome ? userGame.awayScore! : userGame.homeScore!;
+  const isWin = userScore > opponentScore;
+
+  // Create a basic box score structure (simplified since we don't have full stats stored)
+  const boxScore: import('../core/game/BoxScoreGenerator').BoxScore = {
+    gameId: userGame.gameId,
+    date: new Date().toISOString().split('T')[0],
+    week: week,
+    homeTeam: {
+      id: userGame.homeTeamId,
+      name: `${homeTeam.city} ${homeTeam.nickname}`,
+      abbreviation: homeTeam.abbreviation,
+      score: userGame.homeScore!,
+      scoreByQuarter: [],
+    },
+    awayTeam: {
+      id: userGame.awayTeamId,
+      name: `${awayTeam.city} ${awayTeam.nickname}`,
+      abbreviation: awayTeam.abbreviation,
+      score: userGame.awayScore!,
+      scoreByQuarter: [],
+    },
+    scoringSummary: [],
+    passingLeaders: [],
+    rushingLeaders: [],
+    receivingLeaders: [],
+    defensiveLeaders: [],
+    teamComparison: [
+      { category: 'Final Score', home: userGame.homeScore!, away: userGame.awayScore! },
+    ],
+    homePlayerStats: [],
+    awayPlayerStats: [],
+  };
+
+  const handleContinue = () => {
+    // Navigate to week games screen to sim remaining games
+    navigation.navigate('WeekGames');
+  };
+
+  return (
+    <PostGameSummaryScreen
+      isWin={isWin}
+      homeScore={userGame.homeScore!}
+      awayScore={userGame.awayScore!}
+      homeTeam={{
+        name: `${homeTeam.city} ${homeTeam.nickname}`,
+        abbr: homeTeam.abbreviation,
+        record: `${homeTeam.currentRecord.wins}-${homeTeam.currentRecord.losses}`,
+        isUser: homeTeam.id === userTeamId,
+      }}
+      awayTeam={{
+        name: `${awayTeam.city} ${awayTeam.nickname}`,
+        abbr: awayTeam.abbreviation,
+        record: `${awayTeam.currentRecord.wins}-${awayTeam.currentRecord.losses}`,
+        isUser: awayTeam.id === userTeamId,
+      }}
+      boxScore={boxScore}
+      week={week}
+      phase={phase}
+      onContinue={handleContinue}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
 // ============================================
 
 function LoadingFallback({ message }: { message: string }): React.JSX.Element {

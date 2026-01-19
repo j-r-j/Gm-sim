@@ -3,13 +3,21 @@
  * Main hub for managing your team - access all game features from here
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
+import { ActionPrompt } from '../components/week-flow';
+import {
+  NextActionPrompt,
+  getNextActionPrompt,
+  createInitialWeekFlowState,
+  getWeekLabel,
+} from '../core/simulation/WeekFlowState';
+import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 
 export type DashboardAction =
   | 'roster'
@@ -28,6 +36,8 @@ export type DashboardAction =
   | 'offseason'
   | 'ownerRelations'
   | 'advanceWeek'
+  | 'playWeek'
+  | 'viewWeekSummary'
   | 'settings'
   | 'saveGame'
   | 'mainMenu';
@@ -193,6 +203,94 @@ export function GMDashboardScreen({
     ? createPatienceViewModel(gameState.patienceMeter)
     : null;
 
+  // Generate action prompt for week advancement
+  const actionPrompt: NextActionPrompt | null = useMemo(() => {
+    // Only show action prompt during regular season or playoffs
+    if (isOffseason) return null;
+
+    const schedule = gameState.league.schedule;
+    if (!schedule) return null;
+
+    // Check if user has a game this week
+    const userGame = getUserTeamGame(schedule, calendar.currentWeek, gameState.userTeamId);
+    const userOnBye = isUserOnBye(schedule, calendar.currentWeek, gameState.userTeamId);
+    const weekLabel = getWeekLabel(calendar.currentWeek, phase);
+
+    // Get opponent info
+    let opponentInfo: { name: string; record: string; isHome: boolean } | null = null;
+    if (userGame) {
+      const isHome = userGame.homeTeamId === gameState.userTeamId;
+      const opponentId = isHome ? userGame.awayTeamId : userGame.homeTeamId;
+      const opponent = gameState.teams[opponentId];
+      if (opponent) {
+        opponentInfo = {
+          name: opponent.nickname,
+          record: getRecordString(opponent.currentRecord),
+          isHome,
+        };
+      }
+    }
+
+    // If on bye
+    if (userOnBye) {
+      return {
+        actionText: `Advance ${weekLabel}`,
+        contextText: 'Your team has a bye - sim league games',
+        actionType: 'secondary' as const,
+        targetAction: 'advance_week' as const,
+        isEnabled: true,
+      };
+    }
+
+    // If has game to play
+    if (userGame && !userGame.isComplete) {
+      const matchupText = opponentInfo
+        ? `${opponentInfo.isHome ? 'vs' : '@'} ${opponentInfo.name} (${opponentInfo.record})`
+        : 'View your matchup';
+
+      return {
+        actionText: `Play ${weekLabel}`,
+        contextText: matchupText,
+        actionType: 'primary' as const,
+        targetAction: 'view_matchup' as const,
+        isEnabled: true,
+      };
+    }
+
+    // If game is complete
+    if (userGame?.isComplete) {
+      return {
+        actionText: 'View Week Summary',
+        contextText: `${weekLabel} Complete`,
+        actionType: 'success' as const,
+        targetAction: 'view_week_summary' as const,
+        isEnabled: true,
+      };
+    }
+
+    return null;
+  }, [gameState, calendar.currentWeek, phase, isOffseason]);
+
+  // Handle action prompt press
+  const handleActionPromptPress = () => {
+    if (!actionPrompt) return;
+
+    switch (actionPrompt.targetAction) {
+      case 'view_matchup':
+      case 'start_simulation':
+        onAction('playWeek');
+        break;
+      case 'view_week_summary':
+        onAction('viewWeekSummary');
+        break;
+      case 'advance_week':
+        onAction('advanceWeek');
+        break;
+      default:
+        onAction('gamecast');
+    }
+  };
+
   // Calculate division standing
   const divisionTeams = Object.values(gameState.teams).filter(
     (t) => t.conference === userTeam.conference && t.division === userTeam.division
@@ -356,6 +454,15 @@ export function GMDashboardScreen({
             </>
           )}
         </TouchableOpacity>
+      )}
+
+      {/* Action Prompt - What to do next */}
+      {actionPrompt && !isOffseason && (
+        <ActionPrompt
+          prompt={actionPrompt}
+          onPress={handleActionPromptPress}
+          showPulse={actionPrompt.actionType === 'success'}
+        />
       )}
 
       {/* Main Menu Grid */}
