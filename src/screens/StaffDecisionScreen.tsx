@@ -92,13 +92,13 @@ function getReputationColor(tier: ReputationTier): string {
 }
 
 /**
- * Format money for display
+ * Format money for display (values are stored in thousands, e.g., 30000 = $30 million)
  */
 function formatMoney(value: number): string {
-  if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(1)}M`;
   }
-  return `$${(value / 1000).toFixed(0)}K`;
+  return `$${value.toFixed(0)}K`;
 }
 
 /**

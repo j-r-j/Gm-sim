@@ -76,10 +76,11 @@ const ROLE_CONFIG: Record<CoachRole, { color: string; abbrev: string; label: str
 };
 
 function formatMoney(value: number): string {
-  if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`;
+  // Values are stored in thousands (e.g., 30000 = $30 million)
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(1)}M`;
   }
-  return `$${(value / 1000).toFixed(0)}K`;
+  return `$${value.toFixed(0)}K`;
 }
 
 // ============================================================================
