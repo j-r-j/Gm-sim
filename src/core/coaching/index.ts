@@ -281,3 +281,44 @@ export {
   getExtensionEligibleCoaches,
   getExpiringContractCoaches,
 } from './CoachManagementActions';
+
+// Coach Generator
+export {
+  // Types
+  CoachGenerationConfig,
+  // Functions
+  generateRandomReputationTier,
+  generateCoachAttributes,
+  generateCoachingTree,
+  generateCoachPersonality,
+  getSchemeForRole,
+  generateCoach,
+  generateCoachingStaff,
+} from './CoachGenerator';
+
+// Coach Writeup Generator
+export {
+  // Functions
+  generateCoachWriteup,
+  generateCoachSummary,
+  generateCoachStrengths,
+  generateCoachWeaknesses,
+  getSchemeDisplayName as getCoachSchemeDisplayName,
+  getTreeDisplayName,
+  getPersonalityDisplayName,
+  getReputationDisplayName,
+} from './CoachWriteupGenerator';
+
+// New Game Candidate Generator
+export {
+  // Types
+  HiringCandidate,
+  CandidateGenerationOptions,
+  // Functions
+  generateHiringCandidates,
+  createCandidateContract,
+  calculateTotalStaffSalary,
+  candidateFitsInBudget,
+  getMinimumSalaryForRole,
+  getMinimumTotalBudget,
+} from './NewGameCandidateGenerator';
