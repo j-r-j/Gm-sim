@@ -10,7 +10,7 @@
  * This allows incremental migration - screens can be updated one at a time.
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Alert, View, Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 import { useGame } from './GameContext';
@@ -5210,6 +5210,10 @@ export function WeekGamesScreenWrapper({
   const phase = calendar.currentPhase;
   const userTeamId = gameState.userTeamId;
 
+  // Check if user is on bye
+  const byeWeek = schedule?.byeWeeks?.[userTeamId];
+  const isUserOnBye = byeWeek === week;
+
   // Get all games for current week
   const weekGames: WeekGameItem[] = [];
   const regularSeasonGames = schedule?.regularSeason || [];
@@ -5256,7 +5260,8 @@ export function WeekGamesScreenWrapper({
   });
 
   const userGame = weekGames.find((g) => g.isUserGame);
-  const userGamePlayed = userGame?.isComplete ?? false;
+  // If user is on bye, treat their game as already played so they can sim remaining games
+  const userGamePlayed = isUserOnBye || (userGame?.isComplete ?? false);
   const allGamesComplete = weekGames.every((g) => g.isComplete);
 
   const handlePlayGame = () => {
@@ -5362,6 +5367,7 @@ export function WeekGamesScreenWrapper({
       games={weekGames}
       userGamePlayed={userGamePlayed}
       allGamesComplete={allGamesComplete}
+      isUserOnBye={isUserOnBye}
       onPlayGame={handlePlayGame}
       onSimRemaining={handleSimRemaining}
       onViewSummary={handleViewSummary}
@@ -5617,9 +5623,16 @@ export function WeeklyScheduleScreenWrapper({
 }: ScreenProps<'WeeklySchedule'>): React.JSX.Element {
   const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
 
+  // Ref to track the latest state for use in async callbacks
+  // This fixes the race condition where handleSimOtherGames uses stale state
+  const latestStateRef = useRef<GameState | null>(null);
+
   if (!gameState) {
     return <LoadingFallback message="Loading weekly schedule..." />;
   }
+
+  // Keep ref updated with current state
+  latestStateRef.current = gameState;
 
   const { calendar, schedule } = gameState.league;
   const week = calendar.currentWeek;
@@ -5754,6 +5767,9 @@ export function WeeklyScheduleScreenWrapper({
         seasonStats: updatedSeasonStats,
       };
 
+      // Update ref synchronously before state update so handleSimOtherGames can access it
+      latestStateRef.current = updatedState;
+
       setGameState(updatedState);
       await saveGameState(updatedState);
       setIsLoading(false);
@@ -5768,14 +5784,18 @@ export function WeeklyScheduleScreenWrapper({
 
   // Handle simulating all other games
   const handleSimOtherGames = async (): Promise<SimulatedGame[]> => {
-    if (!schedule?.regularSeason) return [];
+    // Use ref to get the latest state (fixes race condition after user game simulation)
+    const currentState = latestStateRef.current || gameState;
+    const currentSchedule = currentState.league.schedule;
+
+    if (!currentSchedule?.regularSeason) return [];
     setIsLoading(true);
 
     try {
-      const weekResults = simulateWeek(week, schedule, gameState, userTeamId, false);
+      const weekResults = simulateWeek(week, currentSchedule, currentState, userTeamId, false);
 
       // Update schedule with simulated game results
-      const updatedSchedule = { ...schedule };
+      const updatedSchedule = { ...currentSchedule };
       const updatedGames = [...updatedSchedule.regularSeason];
 
       for (const simResult of weekResults.games) {
@@ -5786,8 +5806,8 @@ export function WeeklyScheduleScreenWrapper({
       }
       updatedSchedule.regularSeason = updatedGames;
 
-      // Update team records
-      const updatedTeams = { ...gameState.teams };
+      // Update team records - use currentState to preserve user's game result
+      const updatedTeams = { ...currentState.teams };
       for (const simResult of weekResults.games) {
         const { result, game } = simResult;
         const homeTeam = updatedTeams[game.homeTeamId];
@@ -5823,21 +5843,24 @@ export function WeeklyScheduleScreenWrapper({
         }
       }
 
-      // Aggregate player stats
-      let updatedSeasonStats = gameState.seasonStats || {};
+      // Aggregate player stats - use currentState to preserve previous updates
+      let updatedSeasonStats = currentState.seasonStats || {};
       for (const simResult of weekResults.games) {
         updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, simResult.result);
       }
 
       const updatedState: GameState = {
-        ...gameState,
+        ...currentState,
         league: {
-          ...gameState.league,
+          ...currentState.league,
           schedule: updatedSchedule,
         },
         teams: updatedTeams,
         seasonStats: updatedSeasonStats,
       };
+
+      // Update ref with the final state
+      latestStateRef.current = updatedState;
 
       setGameState(updatedState);
       await saveGameState(updatedState);
@@ -5845,8 +5868,8 @@ export function WeeklyScheduleScreenWrapper({
 
       // Convert to SimulatedGame format
       const simulatedGames: SimulatedGame[] = weekResults.games.map((simResult) => {
-        const homeTeam = gameState.teams[simResult.game.homeTeamId];
-        const awayTeam = gameState.teams[simResult.game.awayTeamId];
+        const homeTeam = currentState.teams[simResult.game.homeTeamId];
+        const awayTeam = currentState.teams[simResult.game.awayTeamId];
 
         return {
           gameId: simResult.game.gameId,

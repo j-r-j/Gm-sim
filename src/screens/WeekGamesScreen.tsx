@@ -47,6 +47,8 @@ export interface WeekGamesScreenProps {
   userGamePlayed: boolean;
   /** Whether all games are complete */
   allGamesComplete: boolean;
+  /** Whether user's team is on bye this week */
+  isUserOnBye?: boolean;
   /** Callback to play user's game */
   onPlayGame: () => void;
   /** Callback to simulate remaining games */
@@ -177,6 +179,7 @@ export function WeekGamesScreen({
   games,
   userGamePlayed,
   allGamesComplete,
+  isUserOnBye = false,
   onPlayGame,
   onSimRemaining,
   onViewSummary,
@@ -185,6 +188,8 @@ export function WeekGamesScreen({
   const completedCount = games.filter((g) => g.isComplete).length;
   const totalCount = games.length;
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
+  // Determine if we have a user game to play (not on bye and game exists)
+  const hasUserGame = !isUserOnBye && games.some((g) => g.isUserGame && !g.isComplete);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -232,7 +237,15 @@ export function WeekGamesScreen({
 
       {/* Action Buttons */}
       <View style={styles.actionBar}>
-        {!userGamePlayed && (
+        {/* Show bye week notice */}
+        {isUserOnBye && !allGamesComplete && (
+          <View style={styles.byeWeekNotice}>
+            <Text style={styles.byeWeekText}>Your team has a bye this week</Text>
+          </View>
+        )}
+
+        {/* Show Play Your Game button only if user has a game to play */}
+        {hasUserGame && !userGamePlayed && (
           <TouchableOpacity style={styles.actionButton} onPress={onPlayGame} activeOpacity={0.8}>
             <Text style={styles.actionButtonText}>Play Your Game</Text>
           </TouchableOpacity>
@@ -460,6 +473,19 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
+  },
+  byeWeekNotice: {
+    backgroundColor: colors.primaryLight,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    alignItems: 'center',
+  },
+  byeWeekText: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
   },
 });
 
