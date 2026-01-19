@@ -20,7 +20,6 @@ import {
   TouchableOpacity,
   FlatList,
   Pressable,
-  AccessibilityInfo,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -169,12 +168,10 @@ const ChemistryIndicator = memo(function ChemistryIndicator({
   breakdown,
   expanded,
   onToggle,
-  compact = false,
 }: {
   breakdown: ChemistryBreakdown;
   expanded?: boolean;
   onToggle?: () => void;
-  compact?: boolean;
 }) {
   const ratingLabels = { excellent: 'Excellent', good: 'Good', fair: 'Fair', poor: 'Poor' };
 
@@ -271,11 +268,9 @@ const BestFitBadge = memo(function BestFitBadge({
 const SortControls = memo(function SortControls({
   currentSort,
   onSortChange,
-  showChemistry,
 }: {
   currentSort: SortOption;
   onSortChange: (sort: SortOption) => void;
-  showChemistry: boolean;
 }) {
   const options: { key: SortOption; label: string; show: boolean }[] = [
     { key: 'recommended', label: 'Recommended', show: true },
@@ -1049,11 +1044,7 @@ export function StaffHiringScreen({
           </View>
 
           {/* Sort Controls */}
-          <SortControls
-            currentSort={sortOption}
-            onSortChange={setSortOption}
-            showChemistry={step !== 'headCoach'}
-          />
+          <SortControls currentSort={sortOption} onSortChange={setSortOption} />
 
           {/* Candidate List */}
           <FlatList
