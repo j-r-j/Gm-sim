@@ -49,8 +49,6 @@ export interface WeekGamesScreenProps {
   allGamesComplete: boolean;
   /** Whether user's team is on bye this week */
   isUserOnBye?: boolean;
-  /** Callback to play user's game */
-  onPlayGame: () => void;
   /** Callback to simulate remaining games */
   onSimRemaining: () => void;
   /** Callback to view week summary */
@@ -91,13 +89,7 @@ function getPlayoffRoundName(week: number): string {
 /**
  * Single game card component
  */
-function GameCard({
-  game,
-  onPlay,
-}: {
-  game: WeekGameItem;
-  onPlay?: () => void;
-}): React.JSX.Element {
+function GameCard({ game }: { game: WeekGameItem }): React.JSX.Element {
   const getResultBadge = () => {
     if (!game.isComplete) return null;
     return (
@@ -162,13 +154,6 @@ function GameCard({
           )}
         </View>
       </View>
-
-      {/* Play button for user's game */}
-      {game.isUserGame && !game.isComplete && onPlay && (
-        <TouchableOpacity style={styles.playButton} onPress={onPlay} activeOpacity={0.8}>
-          <Text style={styles.playButtonText}>PLAY GAME</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -180,7 +165,6 @@ export function WeekGamesScreen({
   userGamePlayed,
   allGamesComplete,
   isUserOnBye = false,
-  onPlayGame,
   onSimRemaining,
   onViewSummary,
   onBack,
@@ -188,8 +172,6 @@ export function WeekGamesScreen({
   const completedCount = games.filter((g) => g.isComplete).length;
   const totalCount = games.length;
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
-  // Determine if we have a user game to play (not on bye and game exists)
-  const hasUserGame = !isUserOnBye && games.some((g) => g.isUserGame && !g.isComplete);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -220,12 +202,7 @@ export function WeekGamesScreen({
       <FlatList
         data={games}
         keyExtractor={(item) => item.gameId}
-        renderItem={({ item }) => (
-          <GameCard
-            game={item}
-            onPlay={item.isUserGame && !item.isComplete ? onPlayGame : undefined}
-          />
-        )}
+        renderItem={({ item }) => <GameCard game={item} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -242,13 +219,6 @@ export function WeekGamesScreen({
           <View style={styles.byeWeekNotice}>
             <Text style={styles.byeWeekText}>Your team has a bye this week</Text>
           </View>
-        )}
-
-        {/* Show Play Your Game button only if user has a game to play */}
-        {hasUserGame && !userGamePlayed && (
-          <TouchableOpacity style={styles.actionButton} onPress={onPlayGame} activeOpacity={0.8}>
-            <Text style={styles.actionButtonText}>Play Your Game</Text>
-          </TouchableOpacity>
         )}
 
         {userGamePlayed && !allGamesComplete && (
@@ -431,16 +401,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: spacing.xxs,
-  },
-  playButton: {
-    backgroundColor: colors.secondary,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  playButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
   },
   actionBar: {
     padding: spacing.md,

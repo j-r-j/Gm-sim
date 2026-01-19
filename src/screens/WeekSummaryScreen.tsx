@@ -83,8 +83,6 @@ export interface WeekSummaryScreenProps {
     losses: number;
     seasons: number;
   };
-  /** Callback to advance to next week */
-  onAdvanceWeek: () => void;
   /** Callback to view full standings */
   onViewStandings: () => void;
   /** Callback to view playoff bracket (if in playoffs) */
@@ -182,7 +180,6 @@ export function WeekSummaryScreen({
   division,
   playoffImplications,
   careerRecord,
-  onAdvanceWeek,
   onViewStandings,
   onViewBracket,
   onBack,
@@ -304,15 +301,6 @@ export function WeekSummaryScreen({
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      {/* Advance Button */}
-      <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.advanceButton} onPress={onAdvanceWeek} activeOpacity={0.8}>
-          <Text style={styles.advanceButtonText}>
-            {isPlayoffs && week >= 22 ? 'End Season' : 'Advance to Next Week'}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -600,24 +588,6 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: spacing.xl,
-  },
-  actionBar: {
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  advanceButton: {
-    backgroundColor: colors.success,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  advanceButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
   },
 });
 

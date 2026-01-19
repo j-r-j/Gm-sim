@@ -5517,10 +5517,6 @@ export function WeekGamesScreenWrapper({
   const userGamePlayed = isUserOnBye || (userGame?.isComplete ?? false);
   const allGamesComplete = weekGames.every((g) => g.isComplete);
 
-  const handlePlayGame = () => {
-    navigation.navigate('Gamecast');
-  };
-
   const handleSimRemaining = async () => {
     if (!schedule?.regularSeason) return;
     setIsLoading(true);
@@ -5621,7 +5617,6 @@ export function WeekGamesScreenWrapper({
       userGamePlayed={userGamePlayed}
       allGamesComplete={allGamesComplete}
       isUserOnBye={isUserOnBye}
-      onPlayGame={handlePlayGame}
       onSimRemaining={handleSimRemaining}
       onViewSummary={handleViewSummary}
       onBack={() => navigation.goBack()}
@@ -5636,7 +5631,7 @@ export function WeekGamesScreenWrapper({
 export function WeekSummaryScreenWrapper({
   navigation,
 }: ScreenProps<'WeekSummary'>): React.JSX.Element {
-  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
+  const { gameState } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading week summary..." />;
@@ -5766,88 +5761,6 @@ export function WeekSummaryScreenWrapper({
     seasons: gameState.careerStats.seasonsCompleted,
   };
 
-  const handleAdvanceWeek = async () => {
-    setIsLoading(true);
-    try {
-      let newWeek = calendar.currentWeek + 1;
-      let newPhase = calendar.currentPhase;
-
-      // Handle phase transitions
-      if (newPhase === 'regularSeason' && newWeek > 18) {
-        newWeek = 19;
-        newPhase = 'playoffs';
-      }
-
-      // Process injury recovery using the advanceWeek function
-      const advanceResult = advanceWeek(calendar.currentWeek, gameState);
-      const updatedPlayers = { ...gameState.players };
-
-      for (const recoveredPlayerId of advanceResult.recoveredPlayers) {
-        const player = updatedPlayers[recoveredPlayerId];
-        if (player) {
-          updatedPlayers[recoveredPlayerId] = {
-            ...player,
-            injuryStatus: {
-              ...player.injuryStatus,
-              severity: 'none',
-              weeksRemaining: 0,
-            },
-          };
-        }
-      }
-
-      // Also decrement weeks remaining for players still injured
-      for (const playerId of Object.keys(updatedPlayers)) {
-        const player = updatedPlayers[playerId];
-        if (
-          player.injuryStatus.weeksRemaining > 0 &&
-          !advanceResult.recoveredPlayers.includes(playerId)
-        ) {
-          updatedPlayers[playerId] = {
-            ...player,
-            injuryStatus: {
-              ...player.injuryStatus,
-              weeksRemaining: player.injuryStatus.weeksRemaining - 1,
-            },
-          };
-        }
-      }
-
-      const updatedState: GameState = {
-        ...gameState,
-        league: {
-          ...gameState.league,
-          calendar: {
-            ...calendar,
-            currentWeek: newWeek,
-            currentPhase: newPhase,
-          },
-        },
-        players: updatedPlayers,
-        careerStats: {
-          ...gameState.careerStats,
-          totalWins: gameState.careerStats.totalWins + (userResult?.won ? 1 : 0),
-          totalLosses: gameState.careerStats.totalLosses + (userResult && !userResult.won ? 1 : 0),
-        },
-      };
-
-      setGameState(updatedState);
-      await saveGameState(updatedState);
-
-      // Navigate appropriately
-      if (newPhase === 'playoffs') {
-        navigation.navigate('PlayoffBracket');
-      } else {
-        navigation.navigate('Dashboard');
-      }
-    } catch (error) {
-      console.error('Error advancing week:', error);
-      Alert.alert('Error', 'Failed to advance week');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <WeekSummaryScreen
       week={week}
@@ -5859,7 +5772,6 @@ export function WeekSummaryScreenWrapper({
       division={userTeam.division}
       playoffImplications={playoffImplications}
       careerRecord={careerRecord}
-      onAdvanceWeek={handleAdvanceWeek}
       onViewStandings={() => navigation.navigate('Standings')}
       onViewBracket={phase === 'playoffs' ? () => navigation.navigate('PlayoffBracket') : undefined}
       onBack={() => navigation.goBack()}
