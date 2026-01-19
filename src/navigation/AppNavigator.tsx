@@ -12,6 +12,8 @@ import { RootStackParamList } from './types';
 import {
   StartScreenWrapper,
   TeamSelectionScreenWrapper,
+  StaffDecisionScreenWrapper,
+  StaffHiringScreenWrapper,
   SettingsScreenWrapper,
   DashboardScreenWrapper,
   RosterScreenWrapper,
@@ -81,6 +83,8 @@ export function AppNavigator(): React.JSX.Element {
       {/* Pre-game screens */}
       <Stack.Screen name="Start" component={StartScreenWrapper} />
       <Stack.Screen name="TeamSelection" component={TeamSelectionScreenWrapper} />
+      <Stack.Screen name="StaffDecision" component={StaffDecisionScreenWrapper} />
+      <Stack.Screen name="StaffHiring" component={StaffHiringScreenWrapper} />
       <Stack.Screen name="Settings" component={SettingsScreenWrapper} />
 
       {/* Main game screens */}
