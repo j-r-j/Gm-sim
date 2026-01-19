@@ -671,13 +671,21 @@ export function DashboardScreenWrapper({
       return;
     }
 
-    // For regular season and playoffs, navigate to WeeklySchedule to show games popup
+    // For regular season and playoffs, check if we need to show games popup or directly advance
     if (
       (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') &&
       schedule.regularSeason
     ) {
-      navigation.navigate('WeeklySchedule');
-      return;
+      // Check if all games for current week are complete
+      const weekGames = schedule.regularSeason.filter((g) => g.week === calendar.currentWeek);
+      const allGamesComplete = weekGames.length > 0 && weekGames.every((g) => g.isComplete);
+
+      // If games still need to be played/simulated, go to WeeklySchedule
+      if (!allGamesComplete) {
+        navigation.navigate('WeeklySchedule');
+        return;
+      }
+      // Otherwise, fall through to advance the week directly
     }
 
     // For other phases (offseason, preseason), use the original direct advance logic
