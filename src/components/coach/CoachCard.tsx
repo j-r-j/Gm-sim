@@ -22,10 +22,14 @@ import {
   getPersonalityDescription,
 } from '../../core/models/staff/CoachPersonality';
 import { TreeName } from '../../core/models/staff/CoachingTree';
-import { getReputationTier, ReputationTier } from '../../core/models/staff/CoachAttributes';
 import { getTendenciesDescription } from '../../core/models/staff/CoordinatorTendencies';
 import { getTotalContractValue, isContractExpiring } from '../../core/models/staff/CoachContract';
 import { OffensiveScheme, DefensiveScheme } from '../../core/models/player/SchemeFit';
+import {
+  generateCoachScoutingReport,
+  getConfidenceColor,
+  getAttributeRangeColor,
+} from '../../core/coaching/CoachScoutingReport';
 
 type TabType = 'profile' | 'career' | 'contract';
 
@@ -105,24 +109,6 @@ function getPersonalityDisplayName(type: PersonalityType): string {
 }
 
 /**
- * Get color for reputation tier
- */
-function getReputationColor(tier: ReputationTier): string {
-  switch (tier) {
-    case 'legendary':
-      return colors.warning;
-    case 'elite':
-      return colors.success;
-    case 'established':
-      return colors.info;
-    case 'rising':
-      return colors.primary;
-    default:
-      return colors.textSecondary;
-  }
-}
-
-/**
  * Format scheme name for display
  */
 function formatSchemeName(scheme: OffensiveScheme | DefensiveScheme): string {
@@ -157,11 +143,11 @@ function formatMoney(value: number): string {
 }
 
 /**
- * Profile Tab Content
+ * Profile Tab Content - Shows scouting report with uncertainty
  */
 function ProfileTab({ coach }: { coach: Coach }): React.JSX.Element {
-  const reputationTier = getReputationTier(coach.attributes.reputation);
   const roleColor = getRoleColor(coach.role);
+  const scoutingReport = generateCoachScoutingReport(coach);
 
   return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -190,13 +176,75 @@ function ProfileTab({ coach }: { coach: Coach }): React.JSX.Element {
         </View>
       </View>
 
-      {/* Reputation */}
+      {/* Scouting Assessment */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Reputation</Text>
-        <View style={[styles.reputationBadge, { borderColor: getReputationColor(reputationTier) }]}>
-          <Text style={[styles.reputationText, { color: getReputationColor(reputationTier) }]}>
-            {reputationTier.charAt(0).toUpperCase() + reputationTier.slice(1)}
+        <View style={styles.scoutingHeader}>
+          <Text style={styles.sectionTitle}>Scout Assessment</Text>
+          <View
+            style={[
+              styles.confidenceBadge,
+              {
+                backgroundColor: getConfidenceColor(scoutingReport.perceivedReputation.confidence),
+              },
+            ]}
+          >
+            <Text style={styles.confidenceText}>
+              {scoutingReport.perceivedReputation.confidence.toUpperCase()} CONFIDENCE
+            </Text>
+          </View>
+        </View>
+        <View style={styles.assessmentContainer}>
+          <Text style={styles.assessmentText}>
+            {scoutingReport.perceivedReputation.narrativeAssessment}
           </Text>
+        </View>
+        <Text style={styles.overallAssessmentText}>{scoutingReport.overallAssessment}</Text>
+      </View>
+
+      {/* Perceived Attributes */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Ability Estimates</Text>
+        <Text style={styles.disclaimerText}>
+          Ranges reflect uncertainty - actual ability may differ
+        </Text>
+        {Object.values(scoutingReport.attributes).map((attr) => (
+          <View key={attr.name} style={styles.attributeRow}>
+            <View style={styles.attributeInfo}>
+              <Text style={styles.attributeName}>{attr.displayName}</Text>
+              <Text style={styles.attributeAssessment}>{attr.assessment}</Text>
+            </View>
+            <View style={styles.attributeRangeContainer}>
+              <View style={styles.attributeBarBg}>
+                <View
+                  style={[
+                    styles.attributeBarFill,
+                    {
+                      left: `${attr.perceived.min}%`,
+                      width: `${attr.perceived.max - attr.perceived.min}%`,
+                      backgroundColor: getAttributeRangeColor(attr.perceived),
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.attributeRangeText}>
+                {attr.perceived.min}-{attr.perceived.max}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* Upside & Risk */}
+      <View style={styles.section}>
+        <View style={styles.upsideRiskContainer}>
+          <View style={styles.upsideBox}>
+            <Text style={styles.upsideLabel}>Potential Upside</Text>
+            <Text style={styles.upsideText}>{scoutingReport.upside}</Text>
+          </View>
+          <View style={styles.riskBox}>
+            <Text style={styles.riskLabel}>Risk Factors</Text>
+            <Text style={styles.riskText}>{scoutingReport.risk}</Text>
+          </View>
         </View>
       </View>
 
@@ -591,10 +639,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: '90%',
+    minHeight: 400,
     ...shadows.lg,
   },
   container: {
     flex: 1,
+    minHeight: 350,
   },
   header: {
     flexDirection: 'row',
@@ -1035,6 +1085,127 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
+  },
+  // Scouting Report Styles
+  scoutingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  confidenceBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+  },
+  confidenceText: {
+    fontSize: 9,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  assessmentContainer: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  assessmentText: {
+    fontSize: fontSize.md,
+    color: colors.text,
+    fontStyle: 'italic',
+  },
+  overallAssessmentText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: fontSize.sm * 1.5,
+  },
+  disclaimerText: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
+  },
+  attributeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  attributeInfo: {
+    flex: 1,
+  },
+  attributeName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+  },
+  attributeAssessment: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  attributeRangeContainer: {
+    width: 100,
+    alignItems: 'flex-end',
+  },
+  attributeBarBg: {
+    width: '100%',
+    height: 8,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    marginBottom: spacing.xxs,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  attributeBarFill: {
+    position: 'absolute',
+    height: '100%',
+    borderRadius: 4,
+  },
+  attributeRangeText: {
+    fontSize: 10,
+    color: colors.textLight,
+  },
+  upsideRiskContainer: {
+    gap: spacing.sm,
+  },
+  upsideBox: {
+    backgroundColor: colors.success + '15',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.success,
+  },
+  upsideLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.success,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  upsideText: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+  },
+  riskBox: {
+    backgroundColor: colors.error + '15',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.error,
+  },
+  riskLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.error,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  riskText: {
+    fontSize: fontSize.sm,
+    color: colors.text,
   },
 });
 
