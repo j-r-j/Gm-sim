@@ -144,14 +144,14 @@ function formatSchemeName(scheme: OffensiveScheme | DefensiveScheme): string {
 }
 
 /**
- * Format money for display
+ * Format money for display (values are stored in thousands, e.g., 15200 = $15.2 million)
  */
 function formatMoney(value: number): string {
-  if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`;
-  }
   if (value >= 1000) {
-    return `$${(value / 1000).toFixed(0)}K`;
+    return `$${(value / 1000).toFixed(1)}M`;
+  }
+  if (value >= 1) {
+    return `$${value.toFixed(0)}K`;
   }
   return `$${value}`;
 }

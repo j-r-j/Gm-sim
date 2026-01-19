@@ -37,14 +37,14 @@ export interface FinancesScreenProps {
 }
 
 /**
- * Format currency
+ * Format currency (values are stored in thousands, e.g., 30000 = $30 million)
  */
 function formatCurrency(amount: number): string {
-  if (amount >= 1000000) {
-    return `$${(amount / 1000000).toFixed(1)}M`;
-  }
   if (amount >= 1000) {
-    return `$${(amount / 1000).toFixed(0)}K`;
+    return `$${(amount / 1000).toFixed(1)}M`;
+  }
+  if (amount >= 1) {
+    return `$${amount.toFixed(0)}K`;
   }
   return `$${amount}`;
 }
