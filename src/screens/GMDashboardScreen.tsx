@@ -28,6 +28,8 @@ export type DashboardAction =
   | 'contracts'
   | 'gamecast'
   | 'news'
+  | 'weeklyDigest'
+  | 'careerLegacy'
   | 'offseason'
   | 'ownerRelations'
   | 'advanceWeek'
@@ -565,6 +567,14 @@ export function GMDashboardScreen({
           onPress={() => onAction('news')}
         />
 
+        <MenuCard
+          title="Weekly Digest"
+          subtitle="Week summary & rumors"
+          icon="📋"
+          color={colors.warning}
+          onPress={() => onAction('weeklyDigest')}
+        />
+
         {/* Offseason Actions */}
         <Text style={styles.sectionTitle}>{isOffseason ? 'Offseason' : 'Player Acquisition'}</Text>
 
@@ -641,9 +651,16 @@ export function GMDashboardScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Career Stats */}
-        <View style={styles.careerSection}>
-          <Text style={styles.careerTitle}>Career Stats</Text>
+        {/* Career Stats - tap to see full career legacy */}
+        <TouchableOpacity
+          style={styles.careerSection}
+          onPress={() => onAction('careerLegacy')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.careerHeader}>
+            <Text style={styles.careerTitle}>Career Stats</Text>
+            <Text style={styles.careerViewMore}>View Legacy →</Text>
+          </View>
           <View style={styles.careerStats}>
             <View style={styles.careerStat}>
               <Text style={styles.careerStatValue}>{gameState.careerStats.seasonsCompleted}</Text>
@@ -664,7 +681,7 @@ export function GMDashboardScreen({
               <Text style={styles.careerStatLabel}>Titles</Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -997,12 +1014,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary + '30',
   },
+  careerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   careerTitle: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.primary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
+  },
+  careerViewMore: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
   },
   careerStats: {
     flexDirection: 'row',

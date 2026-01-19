@@ -1186,6 +1186,12 @@ export function DashboardScreenWrapper({
         case 'news':
           navigation.navigate('News');
           break;
+        case 'weeklyDigest':
+          navigation.navigate('WeeklyDigest');
+          break;
+        case 'careerLegacy':
+          navigation.navigate('CareerLegacy');
+          break;
         case 'offseason':
           navigation.navigate('Offseason');
           break;
@@ -1828,6 +1834,7 @@ export function NewsScreenWrapper({ navigation }: ScreenProps<'News'>): React.JS
       currentWeek={currentWeek}
       currentYear={currentYear}
       onBack={() => navigation.goBack()}
+      onRumorMill={() => navigation.navigate('RumorMill')}
       onMarkRead={async (newsId) => {
         const updatedState: GameState = {
           ...gameState,
@@ -3441,25 +3448,8 @@ export function FiredScreenWrapper({ navigation }: ScreenProps<'Fired'>): React.
       firingRecord={firingRecord}
       teamName={teamName}
       onContinue={() => {
-        Alert.alert(
-          'Looking for New Job',
-          'Job market feature coming soon. For now, you can start a new career.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setGameState(null);
-                setFiringRecord(null);
-                navigation.dispatch(
-                  CommonActions.reset({
-                    index: 0,
-                    routes: [{ name: 'Start' }],
-                  })
-                );
-              },
-            },
-          ]
-        );
+        // Navigate to JobMarket to find a new position
+        navigation.navigate('JobMarket');
       }}
       onMainMenu={() => {
         setGameState(null);
