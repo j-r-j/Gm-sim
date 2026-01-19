@@ -121,6 +121,10 @@ export type RootStackParamList = {
   WeekGames: undefined;
   WeekSummary: undefined;
   WeeklySchedule: undefined;
+
+  // Enhanced Game Experience
+  LiveGameSimulation: undefined;
+  PostGameSummary: undefined;
 };
 
 /**
@@ -223,4 +227,8 @@ export const Routes = {
   WeekGames: 'WeekGames',
   WeekSummary: 'WeekSummary',
   WeeklySchedule: 'WeeklySchedule',
+
+  // Enhanced Game Experience
+  LiveGameSimulation: 'LiveGameSimulation',
+  PostGameSummary: 'PostGameSummary',
 } as const;
