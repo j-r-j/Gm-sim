@@ -41,7 +41,7 @@ import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { SeasonRecapScreen } from '../screens/SeasonRecapScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
 import { CoachProfileScreen } from '../screens/CoachProfileScreen';
-import { DepthChartScreen } from '../screens/DepthChartScreen';
+import { DepthChartScreenV2 } from '../screens/DepthChartScreenV2';
 import { OwnerRelationsScreen } from '../screens/OwnerRelationsScreen';
 import { ContractManagementScreen } from '../screens/ContractManagementScreen';
 import { OTAsScreen } from '../screens/OTAsScreen';
@@ -89,7 +89,7 @@ import {
   conductInterview,
 } from '../core/career/InterviewSystem';
 import { createCareerRecord } from '../core/career/CareerRecordTracker';
-import { generateDepthChart, DepthChart } from '../core/roster/DepthChartManager';
+import { generateDepthChartV2, DepthChartV2, migrateLegacyDepthChart } from '../core/roster';
 import { createOwnerViewModel } from '../core/models/owner';
 import { createPatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PlayerContract } from '../core/contracts';
@@ -1069,21 +1069,30 @@ export function DepthChartScreenWrapper({
     return <LoadingFallback message="Loading depth chart..." />;
   }
 
-  // Get or generate depth chart for user's team
+  // Get or generate depth chart for user's team (V2 format)
   const userTeamId = gameState.userTeamId;
-  const existingDepthChart = gameState.depthCharts?.[userTeamId];
+  const existingV2DepthChart = (gameState as { depthChartsV2?: Record<string, DepthChartV2> })
+    .depthChartsV2?.[userTeamId];
+  const existingLegacyDepthChart = gameState.depthCharts?.[userTeamId];
 
-  // Use existing or generate new depth chart
-  const depthChart: DepthChart = existingDepthChart || generateDepthChart(gameState, userTeamId);
+  // Migrate legacy to V2 or generate new V2 depth chart
+  let depthChart: DepthChartV2;
+  if (existingV2DepthChart) {
+    depthChart = existingV2DepthChart;
+  } else if (existingLegacyDepthChart) {
+    depthChart = migrateLegacyDepthChart(existingLegacyDepthChart, gameState);
+  } else {
+    depthChart = generateDepthChartV2(gameState, userTeamId).depthChart;
+  }
 
-  const handleDepthChartChange = async (newDepthChart: DepthChart) => {
-    const updatedState: GameState = {
+  const handleDepthChartChange = async (newDepthChart: DepthChartV2) => {
+    const updatedState = {
       ...gameState,
-      depthCharts: {
-        ...gameState.depthCharts,
+      depthChartsV2: {
+        ...(gameState as { depthChartsV2?: Record<string, DepthChartV2> }).depthChartsV2,
         [userTeamId]: newDepthChart,
       },
-    };
+    } as GameState;
     setGameState(updatedState);
     await saveGameState(updatedState);
   };
@@ -1093,7 +1102,7 @@ export function DepthChartScreenWrapper({
   };
 
   return (
-    <DepthChartScreen
+    <DepthChartScreenV2
       gameState={gameState}
       depthChart={depthChart}
       onBack={() => navigation.goBack()}
