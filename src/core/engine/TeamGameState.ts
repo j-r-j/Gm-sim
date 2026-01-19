@@ -289,6 +289,7 @@ export function validateTeamGameState(state: TeamGameState): boolean {
 
 /**
  * Get all players involved in a play by type
+ * NOW INCLUDES ALL RBs for rotation support and proper stat distribution
  */
 export function getPlayersForPlayType(
   state: TeamGameState,
@@ -296,14 +297,17 @@ export function getPlayersForPlayType(
   playType: string
 ): Player[] {
   if (isOffense) {
-    if (playType.startsWith('run') || playType === 'qb_sneak') {
-      return [state.offense.qb, state.offense.rb[0], ...state.offense.ol];
+    if (playType.startsWith('run') || playType === 'qb_sneak' || playType === 'qb_scramble') {
+      // Include ALL running backs for rotation selection
+      return [state.offense.qb, ...state.offense.rb, ...state.offense.ol].filter(Boolean);
     }
     if (playType.includes('pass') || playType.includes('action')) {
+      // Include ALL receivers, TEs, and RBs for target distribution
       return [
         state.offense.qb,
         ...state.offense.wr,
-        state.offense.te[0],
+        ...state.offense.te,
+        ...state.offense.rb, // RBs can catch passes
         ...state.offense.ol,
       ].filter(Boolean);
     }
@@ -317,6 +321,7 @@ export function getPlayersForPlayType(
     return getActiveOffensivePlayers(state.offense);
   }
 
-  // Defense - return all active defensive players
-  return getActiveDefensivePlayers(state.defense);
+  // Defense - return all active defensive players (reordered for better tackle distribution)
+  // LBs first since they lead in tackles, then DB, then DL
+  return [...state.defense.lb, ...state.defense.db, ...state.defense.dl].filter(Boolean);
 }
