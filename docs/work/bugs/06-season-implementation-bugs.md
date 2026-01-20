@@ -109,17 +109,17 @@ This is correct - ties count as 0.5 wins for win percentage calculation.
 
 ## Implementation Tasks
 
-- [ ] **ScheduleScreen.tsx**
-  - [ ] Add `tie` property to game result object
-  - [ ] Update UI to show "T" for ties with neutral color
-  - [ ] Include ties in opponent record display
-  - [ ] Add clear bye week indication
+- [x] **ScheduleScreen.tsx**
+  - [x] Add `tie` property to game result object
+  - [x] Update UI to show "T" for ties with warning color
+  - [x] Include ties in opponent record display
+  - [x] Bye weeks already clearly indicated with "BYE WEEK" text
 
-- [ ] **GamecastScreen.tsx**
+- [ ] **GamecastScreen.tsx** (MEDIUM - deferred)
   - [ ] Add tie result styling
   - [ ] Update result display logic for ties
 
-- [ ] **LiveGameSimulationScreen.tsx**
+- [ ] **LiveGameSimulationScreen.tsx** (MEDIUM - deferred)
   - [ ] Add tie handling in game result display
 
 ---

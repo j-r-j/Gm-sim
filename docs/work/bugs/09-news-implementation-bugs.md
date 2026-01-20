@@ -117,14 +117,14 @@ _currentYear,
 
 ## Implementation Tasks
 
-- [ ] **NewsScreen.tsx**
-  - [ ] Fix style precedence for breaking vs unread cards
-  - [ ] Add `position: 'relative'` to parent card for breaking badge
-  - [ ] Use `date` field in sorting for same-week news
-  - [ ] Add year to date display
-  - [ ] Use currentWeek/currentYear for relative date formatting
+- [x] **NewsScreen.tsx**
+  - [x] Fix style precedence for breaking vs unread cards
+  - [x] Add `position: 'relative'` to parent card for breaking badge
+  - [x] Use `date` field in sorting for same-week news
+  - [ ] Add year to date display (LOW - deferred)
+  - [ ] Use currentWeek/currentYear for relative date formatting (LOW - deferred)
 
-- [ ] **StatsScreen.tsx**
+- [ ] **StatsScreen.tsx** (MEDIUM - deferred)
   - [ ] Clarify defensive stat labels (e.g., "PPG Allowed" vs "PPG")
   - [ ] Reset filter state properly on scope change
 

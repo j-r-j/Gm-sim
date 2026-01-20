@@ -149,18 +149,18 @@ Injury-related data may be displayed in:
 
 ## Implementation Tasks
 
-- [ ] **DepthChartManager.ts**
-  - [ ] Add default case to `getDepthLabel()` returning "Unknown" or throwing error
+- [x] **DepthChartManager.ts**
+  - [x] Add default case to `getDepthLabel()` returning "Reserve"
 
-- [ ] **RosterScreen.tsx**
-  - [ ] Add empty state message when roster is empty
-  - [ ] Add warning/logging for missing player data instead of silent filtering
+- [x] **RosterScreen.tsx**
+  - [x] Add empty state message when roster is empty
+  - [ ] Add warning/logging for missing player data instead of silent filtering (MEDIUM - deferred)
 
-- [ ] **DepthChartScreen.tsx**
-  - [ ] Add empty state message when depth chart is empty
-  - [ ] Review key strategy for FlatList items
+- [x] **DepthChartScreen.tsx**
+  - [x] Add empty state message when depth chart is empty
+  - [ ] Review key strategy for FlatList items (LOW - deferred)
 
-- [ ] **PlayerProfileScreen.tsx**
+- [ ] **PlayerProfileScreen.tsx** (MEDIUM - deferred)
   - [ ] Handle unknown positions gracefully (show warning or generic skills)
   - [ ] Show indicator for missing skills instead of silent filtering
   - [ ] Use stable keys for trait badges instead of index

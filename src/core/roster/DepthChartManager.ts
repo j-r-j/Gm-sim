@@ -369,6 +369,8 @@ export function getDepthLabel(depth: DepthSlot): string {
       return 'Backup';
     case 3:
       return '3rd String';
+    default:
+      return 'Reserve';
   }
 }
 

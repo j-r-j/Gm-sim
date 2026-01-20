@@ -170,30 +170,30 @@ Math.random()
 
 ## Implementation Tasks
 
-- [ ] **FinancesScreen.tsx**
-  - [ ] Replace hardcoded `deadMoney = 0` with `team.finances.deadMoney`
-  - [ ] Use `getCurrentCapHit()` for cap hit calculations
-  - [ ] Use actual contract `yearsRemaining` data
+- [x] **FinancesScreen.tsx**
+  - [x] Replace hardcoded `deadMoney = 0` with `team.finances.deadMoney`
+  - [ ] Use `getCurrentCapHit()` for cap hit calculations (HIGH - architectural change)
+  - [ ] Use actual contract `yearsRemaining` data (HIGH - architectural change)
 
-- [ ] **ContractManagementScreen.tsx**
-  - [ ] Add empty array check before division
-  - [ ] Add null check for `yearlyBreakdown[0]`
+- [x] **ContractManagementScreen.tsx**
+  - [x] Add empty array check before division
+  - [x] Add null check for `yearlyBreakdown[0]` (already has fallback)
 
-- [ ] **TradeScreen.tsx**
+- [ ] **TradeScreen.tsx** (MEDIUM - deferred)
   - [ ] Replace `Math.random()` with deterministic trade value calculation
   - [ ] Add asset existence validation before trade
 
-- [ ] **FreeAgencyScreen.tsx**
+- [ ] **FreeAgencyScreen.tsx** (MEDIUM - deferred)
   - [ ] Validate cap space for full contract duration
   - [ ] Fix unit conversion consistency
 
-- [ ] **RFAScreen.tsx**
+- [ ] **RFAScreen.tsx** (MEDIUM - deferred)
   - [ ] Use `calculateTenderValue()` instead of hardcoded values
   - [ ] Add type validation for castings
   - [ ] Add date validation before calculation
   - [ ] Add string length check before slicing
 
-- [ ] **JobMarketScreen.tsx**
+- [ ] **JobMarketScreen.tsx** (LOW - deferred)
   - [ ] Standardize currency formatting
 
 ---

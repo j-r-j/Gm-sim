@@ -113,6 +113,13 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// Default settings fallback
+const DEFAULT_SETTINGS: GameSettings = {
+  simulationSpeed: 'normal',
+  autoSaveEnabled: true,
+  notificationsEnabled: true,
+};
+
 export function SettingsScreen({
   settings,
   onUpdateSettings,
@@ -120,6 +127,9 @@ export function SettingsScreen({
   onClearData,
   version = '1.0.0',
 }: SettingsScreenProps) {
+  // Use fallback for safety if settings is undefined
+  const safeSettings = settings ?? DEFAULT_SETTINGS;
+
   const handleClearData = () => {
     Alert.alert(
       'Clear Save Data',
@@ -161,19 +171,19 @@ export function SettingsScreen({
               { label: 'Normal', value: 'normal' },
               { label: 'Fast', value: 'fast' },
             ]}
-            value={settings.simulationSpeed}
+            value={safeSettings.simulationSpeed}
             onChange={(value) => onUpdateSettings({ simulationSpeed: value as SimulationSpeed })}
           />
           <ToggleSetting
             label="Auto-Save"
             description="Automatically save after each week"
-            value={settings.autoSaveEnabled}
+            value={safeSettings.autoSaveEnabled}
             onChange={(value) => onUpdateSettings({ autoSaveEnabled: value })}
           />
           <ToggleSetting
             label="Notifications"
             description="Show in-game notifications"
-            value={settings.notificationsEnabled}
+            value={safeSettings.notificationsEnabled}
             onChange={(value) => onUpdateSettings({ notificationsEnabled: value })}
           />
         </View>

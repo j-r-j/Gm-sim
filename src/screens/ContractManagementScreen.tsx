@@ -337,8 +337,10 @@ export function ContractManagementScreen({
         break;
       case 'highCap':
         const avgCapHit =
-          contracts.reduce((sum, c) => sum + (c.yearlyBreakdown[0]?.capHit || 0), 0) /
-          contracts.length;
+          contracts.length > 0
+            ? contracts.reduce((sum, c) => sum + (c.yearlyBreakdown[0]?.capHit || 0), 0) /
+              contracts.length
+            : 0;
         filtered = filtered.filter((c) => (c.yearlyBreakdown[0]?.capHit || 0) > avgCapHit);
         break;
       case 'rookie':

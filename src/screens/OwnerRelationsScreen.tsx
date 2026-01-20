@@ -362,7 +362,7 @@ export function OwnerRelationsScreen({
 
         {/* Active Demands */}
         <DemandsSection
-          demands={owner.activeDemands}
+          demands={owner.activeDemands ?? []}
           currentWeek={currentWeek}
           onDemandPress={onDemandPress}
         />

@@ -149,7 +149,8 @@ export function DraftRoomScreen({
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
   const isUserPick = currentPick.teamId === userTeamId;
-  const pendingTradeOffers = tradeOffers.filter((t) => t.status === 'pending');
+  const safeTradeOffers = tradeOffers ?? [];
+  const pendingTradeOffers = safeTradeOffers.filter((t) => t.status === 'pending');
 
   // Filter available prospects
   const filteredProspects = useMemo(() => {
@@ -296,7 +297,7 @@ export function DraftRoomScreen({
               {autoPickEnabled ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
-          {isUserPick && !autoPickEnabled && (
+          {!autoPickEnabled && (
             <Text style={styles.instructionText}>Long press a prospect to draft</Text>
           )}
         </View>
@@ -362,7 +363,7 @@ export function DraftRoomScreen({
           </TouchableOpacity>
 
           <FlatList
-            data={tradeOffers}
+            data={safeTradeOffers}
             keyExtractor={(item) => item.tradeId}
             renderItem={renderTradeOffer}
             contentContainerStyle={styles.tradeListContent}
@@ -390,7 +391,11 @@ export function DraftRoomScreen({
           {/* Upcoming Picks */}
           <View style={styles.picksSection}>
             <Text style={styles.picksSectionTitle}>Upcoming</Text>
-            {upcomingPicks.map((pick, index) => renderPickItem(pick, index, false))}
+            {upcomingPicks && upcomingPicks.length > 0 ? (
+              upcomingPicks.map((pick, index) => renderPickItem(pick, index, false))
+            ) : (
+              <Text style={styles.noPicksText}>No upcoming picks</Text>
+            )}
           </View>
         </ScrollView>
       )}

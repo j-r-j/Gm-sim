@@ -216,31 +216,31 @@ if (selectedHC && selectedOC && selectedDC) { onComplete(...) }
 
 ## Implementation Tasks
 
-- [ ] **StaffScreen.tsx**
-  - [ ] Add null check for scout before ScoutAccuracyBadge
-  - [ ] Add null/undefined checks for coaches and scouts arrays
-  - [ ] Change avatar context from "coach" to "scout" for scouts
-  - [ ] Display coach schemes and tendencies in list view
+- [x] **StaffScreen.tsx**
+  - [x] Add null check for scout before ScoutAccuracyBadge (not needed - FlatList guarantees item exists)
+  - [x] Add null/undefined checks for coaches and scouts arrays (required props with FlatList handling)
+  - [x] Avatar context verified - "scout" not a valid AvatarContext type, using "coach" with accent color is correct
+  - [ ] Display coach schemes and tendencies in list view (MEDIUM - deferred)
 
-- [ ] **CoachProfileScreen.tsx**
+- [ ] **CoachProfileScreen.tsx** (MEDIUM - deferred)
   - [ ] Display personality synergies and conflicts
   - [ ] Add explanation for coaching tree effects
 
-- [ ] **OwnerRelationsScreen.tsx**
-  - [ ] Add null check for patienceView and its properties
-  - [ ] Add null check for owner.activeDemands
-  - [ ] Display all owner personality traits
-  - [ ] Add financial expectations section
+- [x] **OwnerRelationsScreen.tsx**
+  - [x] patienceView already properly checked with optional chaining
+  - [x] Add null check for owner.activeDemands
+  - [ ] Display all owner personality traits (MEDIUM - deferred)
+  - [ ] Add financial expectations section (MEDIUM - deferred)
 
-- [ ] **CoachHiringScreen.tsx**
-  - [ ] Complete role mapping for all positions
-  - [ ] Add personality and weakness info to candidate display
+- [x] **CoachHiringScreen.tsx**
+  - [x] Role mapping is complete - CoachRole only has 3 values (headCoach, OC, DC)
+  - [ ] Add personality and weakness info to candidate display (MEDIUM - deferred)
 
-- [ ] **StaffHiringScreen.tsx**
-  - [ ] Add null check for viewingCoach in modal
-  - [ ] Add budget validation before completion
+- [x] **StaffHiringScreen.tsx**
+  - [x] viewingCoach already has null check: `{viewingCoach && (`
+  - [ ] Add budget validation before completion (MEDIUM - deferred)
 
-- [ ] **ScoutingReportsScreen.tsx**
+- [ ] **ScoutingReportsScreen.tsx** (MEDIUM - deferred)
   - [ ] Add scout experience and accuracy to report display
 
 ---

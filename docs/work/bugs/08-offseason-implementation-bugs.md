@@ -187,25 +187,24 @@ const getValidationInfo = (task: OffSeasonTask): string | undefined => {
 
 ## Implementation Tasks
 
-- [ ] **FinalCutsScreen.tsx**
+- [ ] **FinalCutsScreen.tsx** (MEDIUM - deferred)
   - [ ] Implement full cut players list with details (salary, dead cap, reason)
   - [ ] Fix Practice Squad card button logic (remove or repurpose "Sign to PS")
   - [ ] Add warning when practice squad is at capacity
 
-- [ ] **OTAsScreen.tsx**
-  - [ ] Include ALL roster players in attendance tracking (not just standouts/concerns)
+- [ ] **OTAsScreen.tsx** (HIGH - architectural change required)
+  - [ ] Include ALL roster players in attendance tracking (requires OTASummary to include allReports)
   - [ ] Show full participation status for entire roster
 
-- [ ] **TrainingCampScreen.tsx**
-  - [ ] Show both positive AND negative development reveals on overview
-  - [ ] Or add indicator that negative developments exist
+- [x] **TrainingCampScreen.tsx**
+  - [x] Show both positive AND negative development reveals on overview
 
-- [ ] **PreseasonScreen.tsx**
+- [ ] **PreseasonScreen.tsx** (MEDIUM - deferred)
   - [ ] Add roster validation display
   - [ ] Show roster count before preseason
   - [ ] Verify final cuts completed
 
-- [ ] **OffseasonScreen.tsx**
+- [ ] **OffseasonScreen.tsx** (LOW - deferred)
   - [ ] Add validation info for other completion conditions
 
 ---

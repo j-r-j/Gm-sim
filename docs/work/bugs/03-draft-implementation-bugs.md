@@ -161,14 +161,14 @@ marginBottom: 2,
 
 ## Implementation Tasks
 
-- [ ] Add null check for `tradeOffers` array before filtering
-- [ ] Add empty array guard for `upcomingPicks.map()`
-- [ ] Verify optional fields exist before accessing in scout reports
-- [ ] Add defensive fallback for `draftProjection.roundMin` sorting
-- [ ] Validate skill properties exist before passing to display component
-- [ ] Remove redundant `isUserPick` check
-- [ ] Add UI indication when prospect list is truncated
-- [ ] Handle null `overallRank` explicitly instead of using high fallback
+- [x] Add null check for `tradeOffers` array before filtering
+- [x] Add empty array guard for `upcomingPicks.map()`
+- [ ] Verify optional fields exist before accessing in scout reports (MEDIUM - deferred)
+- [ ] Add defensive fallback for `draftProjection.roundMin` sorting (MEDIUM - deferred)
+- [ ] Validate skill properties exist before passing to display component (MEDIUM - deferred)
+- [x] Remove redundant `isUserPick` check
+- [ ] Add UI indication when prospect list is truncated (MEDIUM - UX enhancement)
+- [ ] Handle null `overallRank` explicitly instead of using high fallback (MEDIUM - deferred)
 
 ---
 

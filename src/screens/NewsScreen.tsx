@@ -77,7 +77,7 @@ function NewsCard({ item, onPress }: { item: NewsItem; onPress?: () => void }) {
       style={[
         styles.newsCard,
         item.priority === 'breaking' && styles.breakingCard,
-        !item.isRead && styles.unreadCard,
+        !item.isRead && item.priority !== 'breaking' && styles.unreadCard,
       ]}
       onPress={() => {
         setExpanded(!expanded);
@@ -147,6 +147,8 @@ export function NewsScreen({
       if (a.week !== b.week) return b.week - a.week;
       if (a.priority === 'breaking' && b.priority !== 'breaking') return -1;
       if (b.priority === 'breaking' && a.priority !== 'breaking') return 1;
+      // Use date field for same-week sorting
+      if (a.date && b.date) return b.date.localeCompare(a.date);
       return 0;
     });
   }, [news, filter]);
@@ -313,6 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
+    position: 'relative',
   },
   breakingCard: {
     borderLeftWidth: 4,

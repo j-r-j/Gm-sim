@@ -115,7 +115,7 @@ export function FinancesScreen({
     // Get contracts from roster
     const contracts: ContractSummary[] = [];
     let totalSpending = 0;
-    const deadMoney = 0; // Would come from team.deadMoney
+    const deadMoney = team.finances?.deadMoney ?? 0;
 
     for (const playerId of team.rosterPlayerIds) {
       const player = players[playerId];

@@ -157,15 +157,15 @@ onClearData?.();
 
 ## Implementation Tasks
 
-- [ ] Add null checks for `userTeam` in GMDashboardScreen
-- [ ] Add null checks for `opponent` lookup
-- [ ] Add empty array check for `divisionTeams`
-- [ ] Add null coalescing for `PHASE_NAMES` lookup
-- [ ] Add existence check for `careerStats`
-- [ ] Add null check for `league` destructuring
-- [ ] Add settings prop validation
-- [ ] Add fallback text for save slot summary
-- [ ] Add user feedback when no saved games exist
+- [x] Add null checks for `userTeam` in GMDashboardScreen
+- [x] Add null checks for `opponent` lookup
+- [x] Add empty array check for `divisionTeams`
+- [x] Add null coalescing for `PHASE_NAMES` lookup
+- [x] Add existence check for `careerStats`
+- [x] Add null check for `league` destructuring
+- [x] Add settings prop validation
+- [x] Add fallback text for save slot summary
+- [ ] Add user feedback when no saved games exist (LOW - deferred)
 
 ---
 
