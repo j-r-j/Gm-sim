@@ -4377,12 +4377,6 @@ export function ProspectDetailScreenWrapper({
     );
   };
 
-  // Note: Lock functionality uses flagged property since Prospect type doesn't have separate isLocked
-  const handleToggleLock = async () => {
-    // For now, lock toggle is a no-op since the Prospect type doesn't support isLocked
-    // The flagged property is used separately for user flags
-  };
-
   const handleToggleFlag = async () => {
     const updatedState: GameState = {
       ...gameState,
