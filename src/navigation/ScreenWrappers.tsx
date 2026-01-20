@@ -36,7 +36,7 @@ import { DraftRoomScreen, DraftRoomProspect } from '../screens/DraftRoomScreen';
 import { FreeAgencyScreen, FreeAgent } from '../screens/FreeAgencyScreen';
 import { PlayerProfileScreen } from '../screens/PlayerProfileScreen';
 import { PlayerDetailCard } from '../components/player';
-import { ProspectDetailScreen } from '../screens/ProspectDetailScreen';
+import { SinglePlayerCardScreen } from '../screens/SinglePlayerCardScreen';
 import { OffseasonScreen } from '../screens/OffseasonScreen';
 import { SeasonRecapScreen } from '../screens/SeasonRecapScreen';
 import { CareerSummaryScreen } from '../screens/CareerSummaryScreen';
@@ -4377,7 +4377,7 @@ export function ProspectDetailScreenWrapper({
     );
   };
 
-  const handleToggleLock = async () => {
+  const handleToggleFlag = async () => {
     const updatedState: GameState = {
       ...gameState,
       prospects: {
@@ -4393,24 +4393,74 @@ export function ProspectDetailScreenWrapper({
     await saveGameState(updatedState);
   };
 
+  const handleUpdateNotes = async (notes: string) => {
+    const updatedState: GameState = {
+      ...gameState,
+      prospects: {
+        ...gameState.prospects,
+        [prospectId]: {
+          ...prospect,
+          userNotes: notes,
+        },
+      },
+    };
+
+    setGameState(updatedState);
+    await saveGameState(updatedState);
+  };
+
+  const handleUpdateTier = async (newTier: string | null) => {
+    const updatedState: GameState = {
+      ...gameState,
+      prospects: {
+        ...gameState.prospects,
+        [prospectId]: {
+          ...prospect,
+          userTier: newTier,
+        },
+      },
+    };
+
+    setGameState(updatedState);
+    await saveGameState(updatedState);
+  };
+
+  // Calculate projected pick range
+  const projectedPickRange = prospect.consensusProjection?.projectedPickRange || {
+    min: (projectedRound - 1) * 32 + 1,
+    max: projectedRound * 32,
+  };
+
   return (
-    <ProspectDetailScreen
-      prospectId={prospectId}
-      prospectName={`${prospect.player.firstName} ${prospect.player.lastName}`}
+    <SinglePlayerCardScreen
+      playerId={prospectId}
+      firstName={prospect.player.firstName}
+      lastName={prospect.player.lastName}
       position={prospect.player.position}
-      college={prospect.collegeName || 'Unknown'}
+      age={prospect.player.age}
+      collegeName={prospect.collegeName || 'Unknown'}
       height={height}
       weight={weight}
+      skills={prospect.player.skills}
+      physical={prospect.player.physical}
+      physicalsRevealed={prospect.physicalsRevealed ?? false}
+      hiddenTraits={prospect.player.hiddenTraits}
+      tier={tier}
+      projectedRound={projectedRound}
+      projectedPickRange={projectedPickRange}
+      userTier={prospect.userTier || null}
+      userNotes={prospect.userNotes || ''}
+      flagged={prospect.flagged || false}
       reports={scoutReports}
       focusProgress={focusProgress}
       assignedScout={assignedScout}
       availableScouts={teamScouts}
-      tier={tier}
-      userNotes={prospect.userNotes || ''}
-      isLocked={prospect.flagged || false}
+      isLocked={false}
       onBack={() => navigation.goBack()}
       onAssignScout={handleAssignScout}
-      onToggleLock={handleToggleLock}
+      onToggleFlag={handleToggleFlag}
+      onUpdateNotes={handleUpdateNotes}
+      onUpdateTier={handleUpdateTier}
     />
   );
 }

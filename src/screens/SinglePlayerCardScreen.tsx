@@ -1,13 +1,31 @@
 /**
- * ProspectDetailScreen
- * Comprehensive prospect view with scouting reports and actions
+ * SinglePlayerCardScreen
+ * A single comprehensive view for draftable player/prospect details.
+ * Consolidates all prospect information into one scrollable screen.
+ *
+ * BRAND GUIDELINES:
+ * - Skills ALWAYS shown as ranges (perceivedMin to perceivedMax)
+ * - NO overall rating anywhere
+ * - Traits shown with revealed/unknown distinction
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
+import { SkillValue, SKILL_NAMES_BY_POSITION } from '../core/models/player/TechnicalSkills';
+import { PhysicalAttributes } from '../core/models/player/PhysicalAttributes';
+import { HiddenTraits } from '../core/models/player/HiddenTraits';
+import { SkillRangeDisplay, TraitBadges, PhysicalAttributesDisplay } from '../components/player';
 import { Scout } from '../core/models/staff/Scout';
 import { ScoutReport } from '../core/scouting/ScoutReportGenerator';
 import { FocusScoutingProgress } from '../core/scouting/FocusPlayerSystem';
@@ -16,26 +34,67 @@ import { ScoutingStatusCard } from '../components/scouting/ScoutingStatusCard';
 import { AssignScoutModal } from '../components/scouting/AssignScoutModal';
 
 /**
- * Props for ProspectDetailScreen
+ * Props for SinglePlayerCardScreen
  */
-export interface ProspectDetailScreenProps {
-  prospectId: string;
-  prospectName: string;
+export interface SinglePlayerCardScreenProps {
+  /** Player/Prospect ID */
+  playerId: string;
+  /** First name */
+  firstName: string;
+  /** Last name */
+  lastName: string;
+  /** Position */
   position: Position;
-  college: string;
+  /** Age */
+  age: number;
+  /** College name */
+  collegeName: string;
+  /** Height display string (e.g., "6'2\"") */
   height: string;
+  /** Weight in pounds */
   weight: number;
-  reports: ScoutReport[];
-  focusProgress: FocusScoutingProgress | null;
-  assignedScout: Scout | null;
-  availableScouts: Scout[];
+  /** Technical skills */
+  skills: Record<string, SkillValue>;
+  /** Physical attributes */
+  physical: PhysicalAttributes;
+  /** Whether physicals have been revealed through scouting */
+  physicalsRevealed: boolean;
+  /** Hidden traits */
+  hiddenTraits: HiddenTraits;
+  /** Draft tier from scouting */
   tier: DraftTier | null;
+  /** Projected round (1-7, null for unknown) */
+  projectedRound: number | null;
+  /** Projected pick range */
+  projectedPickRange: { min: number; max: number } | null;
+  /** User-assigned tier */
+  userTier: string | null;
+  /** User notes */
   userNotes: string;
+  /** Whether player is flagged */
+  flagged: boolean;
+  /** Scouting reports */
+  reports: ScoutReport[];
+  /** Focus scouting progress */
+  focusProgress: FocusScoutingProgress | null;
+  /** Currently assigned scout */
+  assignedScout: Scout | null;
+  /** Available scouts for assignment */
+  availableScouts: Scout[];
+  /** Whether player board position is locked */
   isLocked: boolean;
+  /** Callback to go back */
   onBack: () => void;
+  /** Callback when a scout is assigned */
   onAssignScout: (scoutId: string) => void;
+  /** Callback to toggle lock status */
   onToggleLock?: () => void;
+  /** Callback to toggle flag */
+  onToggleFlag?: () => void;
+  /** Callback when user notes are updated */
   onUpdateNotes?: (notes: string) => void;
+  /** Callback when user tier is updated */
+  onUpdateTier?: (tier: string | null) => void;
 }
 
 /**
@@ -73,20 +132,65 @@ function getTierColor(tier: DraftTier | null): string {
 }
 
 /**
- * Section header component
+ * Get position group for skill display
  */
-function SectionHeader({ title }: { title: string }) {
+function getPositionGroup(position: Position): keyof typeof SKILL_NAMES_BY_POSITION {
+  switch (position) {
+    case Position.QB:
+      return 'QB';
+    case Position.RB:
+      return 'RB';
+    case Position.WR:
+      return 'WR';
+    case Position.TE:
+      return 'TE';
+    case Position.LT:
+    case Position.LG:
+    case Position.C:
+    case Position.RG:
+    case Position.RT:
+      return 'OL';
+    case Position.DE:
+    case Position.DT:
+      return 'DL';
+    case Position.OLB:
+    case Position.ILB:
+      return 'LB';
+    case Position.CB:
+    case Position.FS:
+    case Position.SS:
+      return 'DB';
+    case Position.K:
+      return 'K';
+    case Position.P:
+      return 'P';
+    default:
+      return 'QB';
+  }
+}
+
+/**
+ * Section component for grouping content
+ */
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
   return (
-    <View style={styles.sectionHeader}>
+    <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionContent}>{children}</View>
     </View>
   );
 }
 
 /**
- * Report card component
+ * Expandable report card component
  */
-function ReportCard({ report }: { report: ScoutReport }) {
+function ReportCard({ report }: { report: ScoutReport }): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const isFocus = report.reportType === 'focus';
 
@@ -213,7 +317,7 @@ function ReportCard({ report }: { report: ScoutReport }) {
                     <View style={styles.notesContainer}>
                       {report.characterAssessment.notes.map((note, index) => (
                         <Text key={index} style={styles.noteText}>
-                          • {note}
+                          - {note}
                         </Text>
                       ))}
                     </View>
@@ -236,7 +340,7 @@ function ReportCard({ report }: { report: ScoutReport }) {
                       <Text style={styles.flagsLabel}>Red Flags:</Text>
                       {report.medicalAssessment.redFlags.map((flag, index) => (
                         <Text key={index} style={styles.redFlagText}>
-                          • {flag}
+                          - {flag}
                         </Text>
                       ))}
                     </View>
@@ -246,7 +350,7 @@ function ReportCard({ report }: { report: ScoutReport }) {
                       <Text style={styles.clearancesLabel}>Clearances:</Text>
                       {report.medicalAssessment.clearances.map((clearance, index) => (
                         <Text key={index} style={styles.clearanceText}>
-                          • {clearance}
+                          - {clearance}
                         </Text>
                       ))}
                     </View>
@@ -350,7 +454,7 @@ function ReportCard({ report }: { report: ScoutReport }) {
                       },
                     ]}
                   >
-                    {factor.impact === 'positive' ? '+' : factor.impact === 'negative' ? '-' : '○'}
+                    {factor.impact === 'positive' ? '+' : factor.impact === 'negative' ? '-' : 'o'}
                   </Text>
                 </View>
                 <View style={styles.factorContent}>
@@ -369,39 +473,52 @@ function ReportCard({ report }: { report: ScoutReport }) {
 }
 
 /**
- * ProspectDetailScreen Component
+ * User tier selection buttons
  */
-export function ProspectDetailScreen({
-  prospectId,
-  prospectName,
+const USER_TIERS = ['Must Have', 'Like', 'OK', 'Avoid'];
+
+/**
+ * SinglePlayerCardScreen Component
+ */
+export function SinglePlayerCardScreen({
+  playerId,
+  firstName,
+  lastName,
   position,
-  college,
+  age,
+  collegeName,
   height,
   weight,
+  skills,
+  physical,
+  physicalsRevealed,
+  hiddenTraits,
+  tier,
+  projectedRound,
+  projectedPickRange,
+  userTier,
+  userNotes,
+  flagged = false,
   reports,
   focusProgress,
   assignedScout,
   availableScouts,
-  tier,
   isLocked,
   onBack,
   onAssignScout,
   onToggleLock,
-}: ProspectDetailScreenProps): React.JSX.Element {
+  onToggleFlag,
+  onUpdateNotes,
+  onUpdateTier,
+}: SinglePlayerCardScreenProps): React.JSX.Element {
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState(userNotes);
 
+  const fullName = `${firstName} ${lastName}`;
+  const positionGroup = getPositionGroup(position);
+  const skillNames = SKILL_NAMES_BY_POSITION[positionGroup] || [];
   const sortedReports = [...reports].sort((a, b) => b.generatedAt - a.generatedAt);
-
-  // Get aggregated stats
-  const latestReport = sortedReports[0];
-  const avgOverallMin =
-    reports.length > 0
-      ? Math.round(reports.reduce((sum, r) => sum + r.skillRanges.overall.min, 0) / reports.length)
-      : 0;
-  const avgOverallMax =
-    reports.length > 0
-      ? Math.round(reports.reduce((sum, r) => sum + r.skillRanges.overall.max, 0) / reports.length)
-      : 0;
 
   const handleRequestFocus = () => {
     setShowAssignModal(true);
@@ -412,31 +529,48 @@ export function ProspectDetailScreen({
     setShowAssignModal(false);
   };
 
+  const handleSaveNotes = () => {
+    if (onUpdateNotes) {
+      onUpdateNotes(notesValue);
+    }
+    setEditingNotes(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Prospect Profile</Text>
         <View style={styles.headerActions}>
           {onToggleLock && (
-            <TouchableOpacity onPress={onToggleLock} style={styles.lockButton}>
-              <Text style={styles.lockText}>{isLocked ? '🔒' : '🔓'}</Text>
+            <TouchableOpacity onPress={onToggleLock} style={styles.actionButton}>
+              <Text style={styles.actionText}>{isLocked ? 'Locked' : 'Unlocked'}</Text>
+            </TouchableOpacity>
+          )}
+          {onToggleFlag && (
+            <TouchableOpacity
+              onPress={onToggleFlag}
+              style={[styles.actionButton, flagged && styles.actionButtonActive]}
+            >
+              <Text style={[styles.actionText, flagged && styles.actionTextActive]}>
+                {flagged ? 'Flagged' : 'Flag'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Prospect Header Card */}
-        <View style={styles.prospectCard}>
-          <View style={styles.prospectHeader}>
-            <Avatar id={prospectId} size="lg" context="prospect" />
-            <View style={styles.prospectInfo}>
-              <Text style={styles.prospectName}>{prospectName}</Text>
-              <View style={styles.prospectMeta}>
+        {/* Player Header Card */}
+        <View style={styles.playerCard}>
+          <View style={styles.playerHeader}>
+            <Avatar id={playerId} size="xl" context="prospect" />
+            <View style={styles.playerInfo}>
+              <Text style={styles.playerName}>{fullName}</Text>
+              <View style={styles.playerMeta}>
                 <View style={styles.positionBadge}>
                   <Text style={styles.positionText}>{position}</Text>
                 </View>
@@ -446,61 +580,167 @@ export function ProspectDetailScreen({
                   </Text>
                 </View>
               </View>
-              <Text style={styles.collegeText}>{college}</Text>
+              <Text style={styles.collegeText}>{collegeName}</Text>
             </View>
           </View>
 
-          {/* Physical Measurements */}
-          <View style={styles.measurementsRow}>
-            <View style={styles.measurementItem}>
-              <Text style={styles.measurementLabel}>Height</Text>
-              <Text style={styles.measurementValue}>{height}</Text>
+          {/* Quick Info Row */}
+          <View style={styles.quickInfoRow}>
+            <View style={styles.quickInfoItem}>
+              <Text style={styles.quickInfoLabel}>Age</Text>
+              <Text style={styles.quickInfoValue}>{age}</Text>
             </View>
-            <View style={styles.measurementItem}>
-              <Text style={styles.measurementLabel}>Weight</Text>
-              <Text style={styles.measurementValue}>{weight} lbs</Text>
+            <View style={styles.quickInfoDivider} />
+            <View style={styles.quickInfoItem}>
+              <Text style={styles.quickInfoLabel}>Height</Text>
+              <Text style={styles.quickInfoValue}>{height}</Text>
             </View>
-            {latestReport && (
-              <>
-                <View style={styles.measurementItem}>
-                  <Text style={styles.measurementLabel}>OVR Range</Text>
-                  <Text style={styles.measurementValue}>
-                    {avgOverallMin}-{avgOverallMax}
-                  </Text>
-                </View>
-                <View style={styles.measurementItem}>
-                  <Text style={styles.measurementLabel}>Round</Text>
-                  <Text style={styles.measurementValue}>
-                    {latestReport.draftProjection.roundMin}-{latestReport.draftProjection.roundMax}
-                  </Text>
-                </View>
-              </>
-            )}
+            <View style={styles.quickInfoDivider} />
+            <View style={styles.quickInfoItem}>
+              <Text style={styles.quickInfoLabel}>Weight</Text>
+              <Text style={styles.quickInfoValue}>{weight} lbs</Text>
+            </View>
+            <View style={styles.quickInfoDivider} />
+            <View style={styles.quickInfoItem}>
+              <Text style={styles.quickInfoLabel}>Proj. Round</Text>
+              <Text style={styles.quickInfoValue}>
+                {projectedRound ? `Rd ${projectedRound}` : '?'}
+              </Text>
+            </View>
           </View>
+
+          {/* Projected Pick Range */}
+          {projectedPickRange && (
+            <View style={styles.pickRangeRow}>
+              <Text style={styles.pickRangeLabel}>Projected Pick Range:</Text>
+              <Text style={styles.pickRangeValue}>
+                #{projectedPickRange.min} - #{projectedPickRange.max}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Scouting Status */}
-        <SectionHeader title="Scouting Status" />
-        <ScoutingStatusCard
-          prospectId={prospectId}
-          reports={reports}
-          focusProgress={focusProgress}
-          assignedScout={assignedScout}
-          onRequestFocus={handleRequestFocus}
-        />
-
-        {/* Scout Reports */}
-        <SectionHeader title={`Scout Reports (${reports.length})`} />
-        {sortedReports.length > 0 ? (
-          sortedReports.map((report) => <ReportCard key={report.id} report={report} />)
-        ) : (
-          <View style={styles.emptyReports}>
-            <Text style={styles.emptyReportsText}>No scout reports yet</Text>
-            <Text style={styles.emptyReportsSubtext}>
-              Request focus scouting to evaluate this prospect
-            </Text>
-          </View>
+        {/* User Tier Selection */}
+        {onUpdateTier && (
+          <Section title="Your Evaluation">
+            <View style={styles.userTierRow}>
+              {USER_TIERS.map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.userTierButton, userTier === t && styles.userTierButtonActive]}
+                  onPress={() => onUpdateTier(userTier === t ? null : t)}
+                >
+                  <Text style={[styles.userTierText, userTier === t && styles.userTierTextActive]}>
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Section>
         )}
+
+        {/* User Notes */}
+        {onUpdateNotes && (
+          <Section title="Your Notes">
+            {editingNotes ? (
+              <View style={styles.notesEditContainer}>
+                <TextInput
+                  style={styles.notesInput}
+                  value={notesValue}
+                  onChangeText={setNotesValue}
+                  placeholder="Add your notes about this prospect..."
+                  placeholderTextColor={colors.textLight}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+                <View style={styles.notesActions}>
+                  <TouchableOpacity
+                    style={styles.notesCancelButton}
+                    onPress={() => {
+                      setNotesValue(userNotes);
+                      setEditingNotes(false);
+                    }}
+                  >
+                    <Text style={styles.notesCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.notesSaveButton} onPress={handleSaveNotes}>
+                    <Text style={styles.notesSaveText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.notesDisplay} onPress={() => setEditingNotes(true)}>
+                <Text style={userNotes ? styles.notesText : styles.notesPlaceholder}>
+                  {userNotes || 'Tap to add notes...'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </Section>
+        )}
+
+        {/* Skills */}
+        <Section title="Technical Skills">
+          <Text style={styles.skillsNote}>
+            Skills shown as scouting ranges. Ranges narrow as players mature.
+          </Text>
+          {skillNames.map((skillName) => {
+            const skill = skills[skillName];
+            if (!skill) return null;
+            return (
+              <SkillRangeDisplay
+                key={skillName}
+                skillName={skillName}
+                perceivedMin={skill.perceivedMin}
+                perceivedMax={skill.perceivedMax}
+                playerAge={age}
+                maturityAge={skill.maturityAge}
+              />
+            );
+          })}
+        </Section>
+
+        {/* Physical Attributes */}
+        <Section title="Physical Attributes">
+          <PhysicalAttributesDisplay
+            physical={physical}
+            position={position}
+            revealed={physicalsRevealed}
+          />
+        </Section>
+
+        {/* Traits */}
+        <Section title="Character & Traits">
+          <Text style={styles.traitsNote}>
+            Traits are revealed through scouting and evaluation.
+          </Text>
+          <TraitBadges hiddenTraits={hiddenTraits} maxUnknownPlaceholders={3} />
+        </Section>
+
+        {/* Scouting Status */}
+        <Section title="Scouting Status">
+          <ScoutingStatusCard
+            prospectId={playerId}
+            reports={reports}
+            focusProgress={focusProgress}
+            assignedScout={assignedScout}
+            onRequestFocus={handleRequestFocus}
+          />
+        </Section>
+
+        {/* Scouting Reports */}
+        <Section title={`Scout Reports (${reports.length})`}>
+          {sortedReports.length > 0 ? (
+            sortedReports.map((report) => <ReportCard key={report.id} report={report} />)
+          ) : (
+            <View style={styles.emptyReports}>
+              <Text style={styles.emptyReportsText}>No scout reports yet</Text>
+              <Text style={styles.emptyReportsSubtext}>
+                Request focus scouting to evaluate this prospect
+              </Text>
+            </View>
+          )}
+        </Section>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -508,8 +748,8 @@ export function ProspectDetailScreen({
       {/* Assign Scout Modal */}
       <AssignScoutModal
         visible={showAssignModal}
-        prospectId={prospectId}
-        prospectName={prospectName}
+        prospectId={playerId}
+        prospectName={fullName}
         prospectPosition={position}
         scouts={availableScouts}
         onAssign={handleAssignScout}
@@ -530,57 +770,70 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.primary,
+    ...shadows.md,
   },
   backButton: {
     padding: spacing.xs,
   },
   backText: {
     fontSize: fontSize.md,
-    color: colors.primary,
+    color: colors.textOnPrimary,
     fontWeight: fontWeight.medium,
   },
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: colors.text,
+    color: colors.textOnPrimary,
   },
   headerActions: {
     flexDirection: 'row',
-    width: 60,
-    justifyContent: 'flex-end',
+    gap: spacing.sm,
   },
-  lockButton: {
-    padding: spacing.xs,
+  actionButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.textOnPrimary + '20',
   },
-  lockText: {
-    fontSize: fontSize.lg,
+  actionButtonActive: {
+    backgroundColor: colors.secondary,
+  },
+  actionText: {
+    fontSize: fontSize.sm,
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.medium,
+  },
+  actionTextActive: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
   },
   content: {
     flex: 1,
   },
-  prospectCard: {
+  playerCard: {
     backgroundColor: colors.surface,
     margin: spacing.md,
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
+    ...shadows.sm,
   },
-  prospectHeader: {
+  playerHeader: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  prospectInfo: {
+  playerInfo: {
     flex: 1,
     marginLeft: spacing.md,
+    justifyContent: 'center',
   },
-  prospectName: {
-    fontSize: fontSize.xl,
+  playerName: {
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  prospectMeta: {
+  playerMeta: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.xs,
@@ -609,41 +862,166 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textSecondary,
   },
-  measurementsRow: {
+  quickInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.md,
   },
-  measurementItem: {
+  quickInfoItem: {
     alignItems: 'center',
+    flex: 1,
   },
-  measurementLabel: {
+  quickInfoDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.border,
+  },
+  quickInfoLabel: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     marginBottom: spacing.xxs,
   },
-  measurementValue: {
+  quickInfoValue: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.text,
   },
-  sectionHeader: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  pickRangeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  pickRangeLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginRight: spacing.sm,
+  },
+  pickRangeValue: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  section: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  sectionContent: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  userTierRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  userTierButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  userTierButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  userTierText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.textSecondary,
+  },
+  userTierTextActive: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+  },
+  notesEditContainer: {
+    gap: spacing.sm,
+  },
+  notesInput: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fontSize.md,
+    color: colors.text,
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  notesActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+  },
+  notesCancelButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  notesCancelText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  notesSaveButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  notesSaveText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  notesDisplay: {
+    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    minHeight: 60,
+  },
+  notesText: {
+    fontSize: fontSize.md,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  notesPlaceholder: {
+    fontSize: fontSize.md,
+    color: colors.textLight,
+    fontStyle: 'italic',
+  },
+  skillsNote: {
+    fontSize: fontSize.sm,
+    color: colors.textLight,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
+  },
+  traitsNote: {
+    fontSize: fontSize.sm,
+    color: colors.textLight,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
   },
   reportCard: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.md,
+    backgroundColor: colors.background,
     marginBottom: spacing.sm,
     borderRadius: borderRadius.md,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   reportHeader: {
     flexDirection: 'row',
@@ -679,7 +1057,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginBottom: spacing.sm,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceLight,
     borderRadius: borderRadius.sm,
   },
   skillItem: {
@@ -852,10 +1230,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   emptyReports: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.md,
     padding: spacing.xl,
-    borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   emptyReportsText: {
@@ -870,8 +1245,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bottomPadding: {
-    height: spacing.xl,
+    height: spacing.xxl,
   },
 });
 
-export default ProspectDetailScreen;
+export default SinglePlayerCardScreen;
