@@ -5,12 +5,22 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 import { ActionPrompt } from '../components/week-flow';
+import { Button, LoadingScreen, PrimaryActionCard } from '../components';
 import { NextActionPrompt, getWeekLabel } from '../core/simulation/WeekFlowState';
 import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 
@@ -93,6 +103,28 @@ function getJobSecurityLabel(status: PatienceViewModel['status']): string {
   }
 }
 
+/**
+ * Job security status icon - accessibility requirement (icon + text, not just color)
+ */
+function getJobSecurityIcon(
+  status: PatienceViewModel['status']
+): keyof typeof Ionicons.glyphMap {
+  switch (status) {
+    case 'secure':
+      return 'shield-checkmark';
+    case 'stable':
+      return 'checkmark-circle';
+    case 'warm seat':
+      return 'alert-circle';
+    case 'hot seat':
+      return 'flame';
+    case 'danger':
+      return 'warning';
+    default:
+      return 'help-circle';
+  }
+}
+
 function MenuCard({
   title,
   subtitle,
@@ -108,6 +140,11 @@ function MenuCard({
       onPress={onPress}
       activeOpacity={0.7}
       disabled={disabled}
+      accessibilityLabel={`${title}. ${subtitle}${badge ? `. ${badge}` : ''}`}
+      accessibilityRole="button"
+      accessibilityHint={`Navigate to ${title}`}
+      accessibilityState={{ disabled: !!disabled }}
+      hitSlop={accessibility.hitSlop}
     >
       <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
         <Text style={styles.icon}>{icon}</Text>
@@ -180,13 +217,7 @@ export function GMDashboardScreen({
 
   // Early return if critical data is missing
   if (!userTeam || !league) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading team data...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <LoadingScreen message="Loading team data..." hint="Preparing your dashboard" />;
   }
 
   const { calendar } = league;
@@ -406,25 +437,36 @@ export function GMDashboardScreen({
           ]}
           onPress={() => onAction('ownerRelations')}
           activeOpacity={0.7}
+          accessibilityLabel={`Job security: ${getJobSecurityLabel(patienceViewModel.status)}. ${patienceViewModel.trendDescription}`}
+          accessibilityRole="button"
+          accessibilityHint="View owner relations and job security details"
+          hitSlop={accessibility.hitSlop}
         >
           <View style={styles.jobSecurityLeft}>
-            <Text
-              style={[
-                styles.jobSecurityStatus,
-                { color: getJobSecurityColor(patienceViewModel.status) },
-              ]}
-            >
-              {getJobSecurityLabel(patienceViewModel.status)}
-            </Text>
+            <View style={styles.jobSecurityStatusRow}>
+              <Ionicons
+                name={getJobSecurityIcon(patienceViewModel.status)}
+                size={18}
+                color={getJobSecurityColor(patienceViewModel.status)}
+              />
+              <Text
+                style={[
+                  styles.jobSecurityStatus,
+                  { color: getJobSecurityColor(patienceViewModel.status) },
+                ]}
+              >
+                {getJobSecurityLabel(patienceViewModel.status)}
+              </Text>
+            </View>
             <Text style={styles.jobSecurityTrend}>{patienceViewModel.trendDescription}</Text>
           </View>
           <View style={styles.jobSecurityRight}>
             {patienceViewModel.isAtRisk && (
               <View style={styles.jobSecurityWarning}>
-                <Text style={styles.jobSecurityWarningText}>!</Text>
+                <Ionicons name="warning" size={14} color={colors.textOnPrimary} />
               </View>
             )}
-            <Text style={styles.jobSecurityArrow}>→</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </View>
         </TouchableOpacity>
       )}
@@ -630,36 +672,62 @@ export function GMDashboardScreen({
 
         {/* Advance Button */}
         <View style={styles.advanceSection}>
-          <TouchableOpacity
-            style={styles.advanceButton}
+          <Button
+            label={isOffseason ? 'Advance Phase' : 'Advance Week'}
             onPress={() => onAction('advanceWeek')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.advanceButtonText}>
-              {isOffseason ? 'Advance Phase' : 'Advance Week'}
-            </Text>
-            <Text style={styles.advanceButtonSubtext}>
-              {isOffseason ? `Current: ${getOffseasonPhaseDisplay()}` : 'Simulate to next week'}
-            </Text>
-          </TouchableOpacity>
+            variant="success"
+            size="lg"
+            fullWidth
+            accessibilityHint={
+              isOffseason
+                ? `Advance from ${getOffseasonPhaseDisplay()} to the next phase`
+                : 'Simulate all remaining games and advance to next week'
+            }
+          />
+          <Text style={styles.advanceButtonSubtext}>
+            {isOffseason ? `Current: ${getOffseasonPhaseDisplay()}` : 'Simulate to next week'}
+          </Text>
         </View>
 
         {/* System Actions */}
-        <Text style={styles.sectionTitle}>System</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          System
+        </Text>
 
         <View style={styles.systemButtons}>
-          <TouchableOpacity style={styles.systemButton} onPress={() => onAction('saveGame')}>
-            <Text style={styles.systemButtonIcon}>💾</Text>
+          <TouchableOpacity
+            style={styles.systemButton}
+            onPress={() => onAction('saveGame')}
+            accessibilityLabel="Save game"
+            accessibilityRole="button"
+            accessibilityHint="Save your current progress"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="save" size={24} color={colors.primary} />
             <Text style={styles.systemButtonText}>Save</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.systemButton} onPress={() => onAction('settings')}>
-            <Text style={styles.systemButtonIcon}>⚙️</Text>
+          <TouchableOpacity
+            style={styles.systemButton}
+            onPress={() => onAction('settings')}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+            accessibilityHint="Open game settings"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="settings" size={24} color={colors.primary} />
             <Text style={styles.systemButtonText}>Settings</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.systemButton} onPress={() => onAction('mainMenu')}>
-            <Text style={styles.systemButtonIcon}>🏠</Text>
+          <TouchableOpacity
+            style={styles.systemButton}
+            onPress={() => onAction('mainMenu')}
+            accessibilityLabel="Main menu"
+            accessibilityRole="button"
+            accessibilityHint="Return to the main menu"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="home" size={24} color={colors.primary} />
             <Text style={styles.systemButtonText}>Menu</Text>
           </TouchableOpacity>
         </View>
@@ -803,6 +871,11 @@ const styles = StyleSheet.create({
   jobSecurityArrow: {
     fontSize: fontSize.lg,
     color: colors.textSecondary,
+  },
+  jobSecurityStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   jobSecurityStatus: {
     fontSize: fontSize.sm,

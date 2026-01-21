@@ -10,7 +10,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows, accessibility } from '../styles';
 import { Position } from '../core/models/player/Position';
 import { SkillValue, SKILL_NAMES_BY_POSITION } from '../core/models/player/TechnicalSkills';
 import { PhysicalAttributes } from '../core/models/player/PhysicalAttributes';
@@ -186,7 +187,14 @@ export function PlayerProfileScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBack}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.textOnPrimary} />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         )}
@@ -198,14 +206,27 @@ export function PlayerProfileScreen({
             context={isProspect ? 'prospect' : 'player'}
             accentColor={colors.secondary}
           />
-          <Text style={styles.playerName}>{fullName}</Text>
+          <Text style={styles.playerName} accessibilityRole="header">
+            {fullName}
+          </Text>
           <View style={styles.positionBadge}>
             <Text style={styles.positionText}>{position}</Text>
           </View>
         </View>
         {onToggleFlag && (
-          <TouchableOpacity style={styles.flagButton} onPress={onToggleFlag}>
-            <Text style={[styles.flagIcon, flagged && styles.flagIconActive]}>*</Text>
+          <TouchableOpacity
+            style={styles.flagButton}
+            onPress={onToggleFlag}
+            accessibilityLabel={flagged ? 'Remove from favorites' : 'Add to favorites'}
+            accessibilityRole="button"
+            accessibilityState={{ checked: flagged }}
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons
+              name={flagged ? 'star' : 'star-outline'}
+              size={24}
+              color={flagged ? colors.secondary : colors.textOnPrimary + '40'}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -272,10 +293,14 @@ export function PlayerProfileScreen({
         )}
 
         {/* Tab Navigation */}
-        <View style={styles.tabContainer}>
+        <View style={styles.tabContainer} accessibilityRole="tablist">
           <TouchableOpacity
             style={[styles.tab, activeTab === 'skills' && styles.tabActive]}
             onPress={() => setActiveTab('skills')}
+            accessibilityLabel="Technical skills"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'skills' }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === 'skills' && styles.tabTextActive]}>
               Skills
@@ -284,6 +309,10 @@ export function PlayerProfileScreen({
           <TouchableOpacity
             style={[styles.tab, activeTab === 'physical' && styles.tabActive]}
             onPress={() => setActiveTab('physical')}
+            accessibilityLabel="Physical attributes"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'physical' }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === 'physical' && styles.tabTextActive]}>
               Physical
@@ -292,6 +321,10 @@ export function PlayerProfileScreen({
           <TouchableOpacity
             style={[styles.tab, activeTab === 'traits' && styles.tabActive]}
             onPress={() => setActiveTab('traits')}
+            accessibilityLabel="Character traits"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'traits' }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === 'traits' && styles.tabTextActive]}>
               Traits
@@ -301,6 +334,10 @@ export function PlayerProfileScreen({
             <TouchableOpacity
               style={[styles.tab, activeTab === 'scouting' && styles.tabActive]}
               onPress={() => setActiveTab('scouting')}
+              accessibilityLabel="Scouting reports"
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === 'scouting' }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text style={[styles.tabText, activeTab === 'scouting' && styles.tabTextActive]}>
                 Scouting
@@ -550,8 +587,11 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   backButtonText: {
     color: colors.textOnPrimary,
@@ -583,14 +623,10 @@ const styles = StyleSheet.create({
   flagButton: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-  },
-  flagIcon: {
-    fontSize: fontSize.xxl,
-    color: colors.textOnPrimary + '40',
-    fontWeight: fontWeight.bold,
-  },
-  flagIconActive: {
-    color: colors.secondary,
+    minWidth: accessibility.minTouchTarget,
+    minHeight: accessibility.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
@@ -686,6 +722,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: 'center',
     borderRadius: borderRadius.md,
+    minHeight: accessibility.minTouchTarget,
+    justifyContent: 'center',
   },
   tabActive: {
     backgroundColor: colors.primary,

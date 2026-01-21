@@ -14,7 +14,9 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows, accessibility } from '../styles';
+import { ScreenHeader, Button } from '../components';
 import { Player } from '../core/models/player/Player';
 import {
   OFFENSIVE_POSITIONS,
@@ -130,11 +132,27 @@ function RosterPlayerCard({
       {showActions && (
         <View style={styles.actionsOverlay}>
           {canExtend && (
-            <TouchableOpacity style={styles.extendButton} onPress={onExtend}>
+            <TouchableOpacity
+              style={styles.extendButton}
+              onPress={onExtend}
+              accessibilityLabel={`Extend ${player.firstName} ${player.lastName}`}
+              accessibilityRole="button"
+              accessibilityHint="Opens contract extension negotiation"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Ionicons name="document-text" size={14} color={colors.textOnPrimary} />
               <Text style={styles.extendButtonText}>Extend</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.cutButton} onPress={onCut}>
+          <TouchableOpacity
+            style={styles.cutButton}
+            onPress={onCut}
+            accessibilityLabel={`Cut ${player.firstName} ${player.lastName}`}
+            accessibilityRole="button"
+            accessibilityHint="Opens release confirmation"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="close-circle" size={14} color={colors.textOnPrimary} />
             <Text style={styles.cutButtonText}>Cut</Text>
           </TouchableOpacity>
         </View>
@@ -184,12 +202,21 @@ function CutModal({
           <Text style={styles.recommendation}>{preview.recommendation}</Text>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmCutButton} onPress={onConfirm}>
-              <Text style={styles.confirmCutButtonText}>Confirm Cut</Text>
-            </TouchableOpacity>
+            <Button
+              label="Cancel"
+              onPress={onCancel}
+              variant="ghost"
+              style={styles.modalButtonFlex}
+              testID="cut-cancel-button"
+            />
+            <Button
+              label="Confirm Cut"
+              onPress={onConfirm}
+              variant="danger"
+              style={styles.modalButtonFlex}
+              accessibilityHint="Releases the player from the roster"
+              testID="cut-confirm-button"
+            />
           </View>
         </View>
       </View>
@@ -295,12 +322,21 @@ function ExtensionModal({
           </View>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>Submit Offer</Text>
-            </TouchableOpacity>
+            <Button
+              label="Cancel"
+              onPress={onCancel}
+              variant="ghost"
+              style={styles.modalButtonFlex}
+              testID="extension-cancel-button"
+            />
+            <Button
+              label="Submit Offer"
+              onPress={handleSubmit}
+              variant="primary"
+              style={styles.modalButtonFlex}
+              accessibilityHint="Submits the contract extension offer to the player"
+              testID="extension-submit-button"
+            />
           </View>
         </View>
       </View>
@@ -454,19 +490,20 @@ export function RosterScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Roster</Text>
-        {onTrade ? (
-          <TouchableOpacity onPress={onTrade} style={styles.tradeButton}>
-            <Text style={styles.tradeButtonText}>Trade</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
-        )}
-      </View>
+      <ScreenHeader
+        title="Roster"
+        onBack={onBack}
+        rightAction={
+          onTrade
+            ? {
+                icon: 'swap-horizontal',
+                onPress: onTrade,
+                accessibilityLabel: 'Trade players',
+              }
+            : undefined
+        }
+        testID="roster-header"
+      />
 
       {/* Roster Summary */}
       <View style={styles.summary}>
@@ -487,24 +524,41 @@ export function RosterScreen({
       </View>
 
       {/* Position Filter */}
-      <View style={styles.filterContainer}>
-        {(['all', 'offense', 'defense', 'special'] as PositionFilter[]).map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterButton, filter === f && styles.filterActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === 'all'
-                ? `All (${counts.total})`
-                : f === 'offense'
-                  ? `OFF (${counts.offense})`
-                  : f === 'defense'
-                    ? `DEF (${counts.defense})`
-                    : `ST (${counts.special})`}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.filterContainer} accessibilityRole="tablist">
+        {(['all', 'offense', 'defense', 'special'] as PositionFilter[]).map((f) => {
+          const label =
+            f === 'all'
+              ? `All (${counts.total})`
+              : f === 'offense'
+                ? `Offense (${counts.offense})`
+                : f === 'defense'
+                  ? `Defense (${counts.defense})`
+                  : `Special Teams (${counts.special})`;
+          const shortLabel =
+            f === 'all'
+              ? `All (${counts.total})`
+              : f === 'offense'
+                ? `OFF (${counts.offense})`
+                : f === 'defense'
+                  ? `DEF (${counts.defense})`
+                  : `ST (${counts.special})`;
+
+          return (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterButton, filter === f && styles.filterActive]}
+              onPress={() => setFilter(f)}
+              accessibilityLabel={label}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: filter === f }}
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {shortLabel}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Player List */}
@@ -705,10 +759,14 @@ const styles = StyleSheet.create({
   },
   // Action buttons
   extendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   extendButtonText: {
     color: colors.textOnPrimary,
@@ -716,10 +774,14 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   cutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.error,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   cutButtonText: {
     color: colors.textOnPrimary,
@@ -849,40 +911,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  cancelButton: {
+  modalButtonFlex: {
     flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  confirmCutButton: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.error,
-    alignItems: 'center',
-  },
-  confirmCutButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textOnPrimary,
-  },
-  submitButton: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textOnPrimary,
   },
 });
 
