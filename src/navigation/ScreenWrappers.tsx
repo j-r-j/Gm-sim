@@ -148,7 +148,6 @@ import {
 } from '../core/coaching/NewGameCandidateGenerator';
 import { Coach } from '../core/models/staff/Coach';
 import { Team } from '../core/models/team/Team';
-import { setupGame, GameConfig } from '../core/game/GameSetup';
 import { simulateWeek, advanceWeek, getUserTeamGame } from '../core/season/WeekSimulator';
 import { updateSeasonStatsFromGame } from '../core/game/SeasonStatsAggregator';
 import {

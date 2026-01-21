@@ -9,7 +9,6 @@
  */
 
 import { GameState } from '../models/game/GameState';
-import { GameResult } from '../game/GameRunner';
 import { SeasonSchedule } from '../season/ScheduleGenerator';
 import { GameDayFlow, createGameDayFlow } from './GameDayFlow';
 import {
@@ -414,7 +413,7 @@ export class GameFlowManager {
     this.setLoading(true);
 
     try {
-      const { updatedWeekFlow, updatedGameState, results } = this.weekService.simulateOtherGames(
+      const { updatedWeekFlow, updatedGameState } = this.weekService.simulateOtherGames(
         this.state.weekFlow,
         this.gameState,
         this.userTeamId

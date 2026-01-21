@@ -315,7 +315,7 @@ describe('WeekProgressionService', () => {
     it('should advance to next week', () => {
       const gameState = createMockGameState();
 
-      const { result, updatedGameState } = service.advanceWeek(5, 'regularSeason', gameState);
+      const { result } = service.advanceWeek(5, 'regularSeason', gameState);
 
       expect(result.newWeek).toBe(6);
       expect(result.seasonPhase).toBe('regularSeason');

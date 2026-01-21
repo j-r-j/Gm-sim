@@ -12,7 +12,6 @@ import { setupGame, GameConfig } from '../game/GameSetup';
 import { ScheduledGame } from '../season/ScheduleGenerator';
 import { GameSimulationEngine, createGameEngine } from './GameSimulationEngine';
 import {
-  GameDayPhase,
   GameDayFlowState,
   PreGameInfo,
   PostGameInfo,
@@ -22,7 +21,6 @@ import {
   GameOutcome,
   SimulationSpeed,
   GamePrediction,
-  HalftimeInfo,
 } from './types';
 import { GameFlowEventBus, gameFlowEventBus } from './events';
 
@@ -227,7 +225,7 @@ export class GameDayFlow {
       return;
     }
 
-    const { userTeam, opponent, isUserHome, weather, stakes } = this.state.preGameInfo;
+    const { userTeam, opponent, isUserHome, stakes } = this.state.preGameInfo;
 
     // Create game config
     const gameConfig: GameConfig = {
@@ -510,7 +508,7 @@ export class GameDayFlow {
   /**
    * Generate key matchup description
    */
-  private generateKeyMatchup(userTeam: Team, opponent: Team): string {
+  private generateKeyMatchup(_userTeam: Team, _opponent: Team): string {
     const matchups = [
       `Your offense vs their defense`,
       `Your offensive line vs their pass rush`,

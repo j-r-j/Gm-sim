@@ -6,11 +6,9 @@
  */
 
 import { Team } from '../models/team/Team';
-import { Player } from '../models/player/Player';
 import { GameResult } from '../game/GameRunner';
 import { ScheduledGame } from '../season/ScheduleGenerator';
 import { WeatherCondition, GameStakes } from '../engine/EffectiveRatingCalculator';
-import { PlayResult } from '../engine/PlayResolver';
 
 // ============================================================================
 // GAME DAY FLOW TYPES

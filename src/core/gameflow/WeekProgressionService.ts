@@ -276,7 +276,7 @@ export class WeekProgressionService {
    */
   private updatePlayerStats(
     players: Record<string, Player>,
-    result: GameResult
+    _result: GameResult
   ): Record<string, Player> {
     // For now, just return players as-is
     // Full implementation would aggregate game stats to season stats
@@ -317,7 +317,7 @@ export class WeekProgressionService {
   simulateOtherGames(
     state: WeekFlowState,
     gameState: GameState,
-    userTeamId: string
+    _userTeamId: string
   ): {
     updatedWeekFlow: WeekFlowState;
     updatedGameState: GameState;

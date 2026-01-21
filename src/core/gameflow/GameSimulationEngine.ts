@@ -338,7 +338,7 @@ export class GameSimulationEngine {
         this.playCount++;
 
         // Process and emit
-        const playDisplay = this.processPlay(play, state);
+        this.processPlay(play, state);
         const gameDisplay = this.createGameDisplay(state);
 
         if (this.onStateUpdate) {

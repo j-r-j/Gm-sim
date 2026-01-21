@@ -20,7 +20,6 @@ import {
   SafeAreaView,
   Text,
   TouchableOpacity,
-  Animated,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,9 +27,7 @@ import {
   Scoreboard,
   PlayByPlayFeed,
   FieldVisualization,
-  SimControls,
   type PlayItem,
-  type SimulationMode,
 } from '../components/gamecast';
 import { LoadingScreen } from '../components';
 import {
@@ -51,7 +48,6 @@ import {
   LiveGameDisplay,
   SimulationSpeed,
   GamePrediction,
-  PlayDisplay,
 } from '../core/gameflow';
 import { GameState } from '../core/models/game/GameState';
 import { ScheduledGame } from '../core/season/ScheduleGenerator';
@@ -273,7 +269,7 @@ function LiveGamePhase({
   isSimulating,
   onSpeedChange,
   onPause,
-  onResume,
+  _onResume,
   onSkip,
   onWatchPlay,
 }: {
@@ -284,7 +280,7 @@ function LiveGamePhase({
   isSimulating: boolean;
   onSpeedChange: (s: SimulationSpeed) => void;
   onPause: () => void;
-  onResume: () => void;
+  _onResume: () => void;
   onSkip: () => void;
   onWatchPlay: () => void;
 }) {
@@ -396,17 +392,8 @@ function PostGamePhase({
   postGameInfo: PostGameInfo;
   onContinue: () => void;
 }) {
-  const {
-    result,
-    userTeam,
-    opponent,
-    userWon,
-    newUserRecord,
-    mvp,
-    keyPlays,
-    newInjuries,
-    predictionCorrect,
-  } = postGameInfo;
+  const { result, userWon, newUserRecord, mvp, keyPlays, newInjuries, predictionCorrect } =
+    postGameInfo;
 
   return (
     <ScrollView style={styles.phaseContainer} contentContainerStyle={styles.phaseContent}>
@@ -632,7 +619,7 @@ export function GameDayScreen({
             isSimulating={isSimulating}
             onSpeedChange={handleSpeedChange}
             onPause={handlePause}
-            onResume={handleResume}
+            _onResume={handleResume}
             onSkip={handleSkip}
             onWatchPlay={handleWatchPlay}
           />

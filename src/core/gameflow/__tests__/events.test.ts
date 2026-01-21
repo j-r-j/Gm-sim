@@ -10,7 +10,6 @@ import {
   createPlayCompleteEvent,
   createScoreChangeEvent,
   checkLeadChange,
-  GameFlowEvent,
   PlayDisplay,
 } from '../events';
 
