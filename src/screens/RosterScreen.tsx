@@ -530,9 +530,7 @@ export function RosterScreen({
             <Text style={styles.emptyStateIcon}>👥</Text>
             <Text style={styles.emptyStateTitle}>No Players</Text>
             <Text style={styles.emptyStateText}>
-              {filter === 'all'
-                ? 'Your roster is empty'
-                : `No ${filter} players on roster`}
+              {filter === 'all' ? 'Your roster is empty' : `No ${filter} players on roster`}
             </Text>
           </View>
         }

@@ -262,9 +262,7 @@ export function DepthChartScreen({
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateIcon}>📊</Text>
             <Text style={styles.emptyStateTitle}>No Depth Chart Data</Text>
-            <Text style={styles.emptyStateText}>
-              No positions available for {activeTab}
-            </Text>
+            <Text style={styles.emptyStateText}>No positions available for {activeTab}</Text>
           </View>
         ) : (
           positionDepths.map((positionDepth) => (
