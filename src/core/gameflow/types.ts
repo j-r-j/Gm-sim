@@ -259,11 +259,7 @@ export type WeekFlowPhase =
 /**
  * Season phase
  */
-export type SeasonPhase =
-  | 'preseason'
-  | 'regularSeason'
-  | 'playoffs'
-  | 'offseason';
+export type SeasonPhase = 'preseason' | 'regularSeason' | 'playoffs' | 'offseason';
 
 /**
  * Week flow state

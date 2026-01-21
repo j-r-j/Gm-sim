@@ -4,10 +4,7 @@
  * Tests for week advancement, injury recovery, and other games simulation.
  */
 
-import {
-  WeekProgressionService,
-  createWeekProgressionService,
-} from '../WeekProgressionService';
+import { WeekProgressionService, createWeekProgressionService } from '../WeekProgressionService';
 import { GameFlowEventBus } from '../events';
 import { GameState } from '../../models/game/GameState';
 import { Team } from '../../models/team/Team';
@@ -205,12 +202,7 @@ describe('WeekProgressionService', () => {
     it('should update team records after game', () => {
       const gameState = createMockGameState();
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       const mockResult = {
         gameId: 'game1',
@@ -258,12 +250,7 @@ describe('WeekProgressionService', () => {
 
       const gameState = createMockGameState();
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       const mockResult = {
         gameId: 'game1',
@@ -286,12 +273,7 @@ describe('WeekProgressionService', () => {
     it('should simulate other games in the week', () => {
       const gameState = createMockGameState();
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       const { updatedWeekFlow, results } = service.simulateOtherGames(
         weekFlowState,
@@ -310,12 +292,7 @@ describe('WeekProgressionService', () => {
 
       const gameState = createMockGameState();
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       service.simulateOtherGames(weekFlowState, gameState, 'user-team');
 
@@ -325,18 +302,9 @@ describe('WeekProgressionService', () => {
     it('should generate headlines for notable games', () => {
       const gameState = createMockGameState();
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
-      const { results } = service.simulateOtherGames(
-        weekFlowState,
-        gameState,
-        'user-team'
-      );
+      const { results } = service.simulateOtherGames(weekFlowState, gameState, 'user-team');
 
       // Headlines might or might not be generated based on random scores
       expect(Array.isArray(results.headlines)).toBe(true);
@@ -347,11 +315,7 @@ describe('WeekProgressionService', () => {
     it('should advance to next week', () => {
       const gameState = createMockGameState();
 
-      const { result, updatedGameState } = service.advanceWeek(
-        5,
-        'regularSeason',
-        gameState
-      );
+      const { result, updatedGameState } = service.advanceWeek(5, 'regularSeason', gameState);
 
       expect(result.newWeek).toBe(6);
       expect(result.seasonPhase).toBe('regularSeason');
@@ -369,11 +333,7 @@ describe('WeekProgressionService', () => {
       if (injuredPlayer) {
         injuredPlayer.injuryStatus.weeksRemaining = 1;
 
-        const { result, updatedGameState } = service.advanceWeek(
-          5,
-          'regularSeason',
-          gameState
-        );
+        const { result, updatedGameState } = service.advanceWeek(5, 'regularSeason', gameState);
 
         expect(result.recoveredPlayers.length).toBeGreaterThanOrEqual(0);
 
@@ -417,12 +377,7 @@ describe('WeekProgressionService', () => {
   describe('canAdvanceWeek', () => {
     it('should allow advance when all conditions met', () => {
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       // Complete all requirements
       weekFlowState.userGameCompleted = true;
@@ -436,12 +391,7 @@ describe('WeekProgressionService', () => {
 
     it('should block advance if game not completed', () => {
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       const { canAdvance, reason } = service.canAdvanceWeek(weekFlowState);
 
@@ -451,12 +401,7 @@ describe('WeekProgressionService', () => {
 
     it('should block advance if result not viewed', () => {
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       weekFlowState.userGameCompleted = true;
 
@@ -470,12 +415,7 @@ describe('WeekProgressionService', () => {
       const schedule = createMockSchedule('user-team');
       schedule.byeWeeks['user-team'] = 5;
 
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       // For bye week, only need other games and summary
       weekFlowState.otherGamesCompleted = weekFlowState.otherGames.length;
@@ -490,12 +430,7 @@ describe('WeekProgressionService', () => {
     it('should generate week summary', () => {
       const gameState = createMockGameState();
       const schedule = createMockSchedule('user-team');
-      const weekFlowState = service.createWeekFlowState(
-        5,
-        'regularSeason',
-        'user-team',
-        schedule
-      );
+      const weekFlowState = service.createWeekFlowState(5, 'regularSeason', 'user-team', schedule);
 
       weekFlowState.userGameResult = {
         homeTeamId: 'user-team',

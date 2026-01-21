@@ -92,7 +92,17 @@ function PreGamePhase({
   onSetPrediction: (p: GamePrediction) => void;
   onStartGame: () => void;
 }) {
-  const { userTeam, opponent, isUserHome, weather, userInjuries, opponentInjuries, keyMatchup, userForm, opponentForm } = preGameInfo;
+  const {
+    userTeam,
+    opponent,
+    isUserHome,
+    weather,
+    userInjuries,
+    opponentInjuries,
+    keyMatchup,
+    userForm,
+    opponentForm,
+  } = preGameInfo;
 
   return (
     <ScrollView style={styles.phaseContainer} contentContainerStyle={styles.phaseContent}>
@@ -110,10 +120,7 @@ function PreGamePhase({
               {userForm.slice(0, 3).map((g, i) => (
                 <View
                   key={i}
-                  style={[
-                    styles.formBadge,
-                    g.result === 'W' ? styles.formWin : styles.formLoss,
-                  ]}
+                  style={[styles.formBadge, g.result === 'W' ? styles.formWin : styles.formLoss]}
                 >
                   <Text style={styles.formText}>{g.result}</Text>
                 </View>
@@ -135,10 +142,7 @@ function PreGamePhase({
               {opponentForm.slice(0, 3).map((g, i) => (
                 <View
                   key={i}
-                  style={[
-                    styles.formBadge,
-                    g.result === 'W' ? styles.formWin : styles.formLoss,
-                  ]}
+                  style={[styles.formBadge, g.result === 'W' ? styles.formWin : styles.formLoss]}
                 >
                   <Text style={styles.formText}>{g.result}</Text>
                 </View>
@@ -343,21 +347,13 @@ function LiveGamePhase({
             {(['slow', 'normal', 'fast'] as SimulationSpeed[]).map((s) => (
               <TouchableOpacity
                 key={s}
-                style={[
-                  styles.speedButton,
-                  speed === s && styles.speedButtonActive,
-                ]}
+                style={[styles.speedButton, speed === s && styles.speedButtonActive]}
                 onPress={() => onSpeedChange(s)}
                 accessibilityLabel={`${s} speed`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: speed === s }}
               >
-                <Text
-                  style={[
-                    styles.speedButtonText,
-                    speed === s && styles.speedButtonTextActive,
-                  ]}
-                >
+                <Text style={[styles.speedButtonText, speed === s && styles.speedButtonTextActive]}>
                   {s === 'slow' ? '1x' : s === 'normal' ? '2x' : '4x'}
                 </Text>
               </TouchableOpacity>
@@ -400,7 +396,17 @@ function PostGamePhase({
   postGameInfo: PostGameInfo;
   onContinue: () => void;
 }) {
-  const { result, userTeam, opponent, userWon, newUserRecord, mvp, keyPlays, newInjuries, predictionCorrect } = postGameInfo;
+  const {
+    result,
+    userTeam,
+    opponent,
+    userWon,
+    newUserRecord,
+    mvp,
+    keyPlays,
+    newInjuries,
+    predictionCorrect,
+  } = postGameInfo;
 
   return (
     <ScrollView style={styles.phaseContainer} contentContainerStyle={styles.phaseContent}>
@@ -445,7 +451,9 @@ function PostGamePhase({
           <Text style={styles.sectionTitle}>Key Plays</Text>
           {keyPlays.slice(0, 5).map((play) => (
             <View key={play.id} style={styles.keyPlayItem}>
-              <Text style={styles.keyPlayTime}>Q{play.quarter} {play.time}</Text>
+              <Text style={styles.keyPlayTime}>
+                Q{play.quarter} {play.time}
+              </Text>
               <Text style={styles.keyPlayDescription}>{play.description}</Text>
             </View>
           ))}
@@ -632,12 +640,7 @@ export function GameDayScreen({
 
       case 'post_game':
         if (!flowState.postGameInfo) return null;
-        return (
-          <PostGamePhase
-            postGameInfo={flowState.postGameInfo}
-            onContinue={handleContinue}
-          />
-        );
+        return <PostGamePhase postGameInfo={flowState.postGameInfo} onContinue={handleContinue} />;
 
       default:
         return null;

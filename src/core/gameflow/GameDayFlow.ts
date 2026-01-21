@@ -110,11 +110,7 @@ export class GameDayFlow {
   /**
    * Initialize game day with a scheduled game
    */
-  initializeGameDay(
-    game: ScheduledGame,
-    gameState: GameState,
-    userTeamId: string
-  ): PreGameInfo {
+  initializeGameDay(game: ScheduledGame, gameState: GameState, userTeamId: string): PreGameInfo {
     this.gameState = gameState;
     this.userTeamId = userTeamId;
     this.scheduledGame = game;
@@ -184,8 +180,7 @@ export class GameDayFlow {
       return;
     }
 
-    const { userTeam, opponent, isUserHome, weather, stakes } =
-      this.state.preGameInfo;
+    const { userTeam, opponent, isUserHome, weather, stakes } = this.state.preGameInfo;
 
     // Create game config
     const gameConfig: GameConfig = {
@@ -330,15 +325,12 @@ export class GameDayFlow {
 
     // Check prediction
     const predictionCorrect =
-      this.state.prediction !== null
-        ? (this.state.prediction === 'win') === userWon
-        : null;
+      this.state.prediction !== null ? (this.state.prediction === 'win') === userWon : null;
 
     // Get key plays
     const liveGame = this.engine.getCurrentState();
-    const keyPlays = liveGame?.recentPlays.filter(
-      (p) => p.isScoring || p.isTurnover || p.isBigPlay
-    ) || [];
+    const keyPlays =
+      liveGame?.recentPlays.filter((p) => p.isScoring || p.isTurnover || p.isBigPlay) || [];
 
     // Get MVP (simplified - would need stat analysis)
     const mvp = this.determineMVP(result);
@@ -383,9 +375,7 @@ export class GameDayFlow {
   /**
    * Determine game MVP (simplified)
    */
-  private determineMVP(
-    result: GameResult
-  ): PostGameInfo['mvp'] {
+  private determineMVP(result: GameResult): PostGameInfo['mvp'] {
     // Simplified - would analyze box score
     const boxScore = result.boxScore;
     if (boxScore.passingLeaders.length > 0) {
@@ -421,10 +411,7 @@ export class GameDayFlow {
   /**
    * Get team injuries for pre-game display
    */
-  private getTeamInjuries(
-    gameState: GameState,
-    teamId: string
-  ): InjuryStatus[] {
+  private getTeamInjuries(gameState: GameState, teamId: string): InjuryStatus[] {
     const injuries: InjuryStatus[] = [];
     const team = gameState.teams[teamId];
 
@@ -500,8 +487,6 @@ export class GameDayFlow {
 /**
  * Create a new game day flow service
  */
-export function createGameDayFlow(
-  config: Partial<GameDayFlowConfig> = {}
-): GameDayFlow {
+export function createGameDayFlow(config: Partial<GameDayFlowConfig> = {}): GameDayFlow {
   return new GameDayFlow(config);
 }

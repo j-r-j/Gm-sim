@@ -98,14 +98,33 @@ function createTestPlayer(id: string, position: Position): Player {
 function createTestTeamState(teamId: string): TeamGameState {
   const positions: Position[] = [
     Position.QB,
-    Position.RB, Position.RB,
-    Position.WR, Position.WR, Position.WR,
-    Position.TE, Position.TE,
-    Position.LT, Position.LG, Position.C, Position.RG, Position.RT,
-    Position.DE, Position.DE, Position.DT, Position.DT,
-    Position.OLB, Position.OLB, Position.ILB, Position.ILB,
-    Position.CB, Position.CB, Position.CB, Position.FS, Position.SS,
-    Position.K, Position.P,
+    Position.RB,
+    Position.RB,
+    Position.WR,
+    Position.WR,
+    Position.WR,
+    Position.TE,
+    Position.TE,
+    Position.LT,
+    Position.LG,
+    Position.C,
+    Position.RG,
+    Position.RT,
+    Position.DE,
+    Position.DE,
+    Position.DT,
+    Position.DT,
+    Position.OLB,
+    Position.OLB,
+    Position.ILB,
+    Position.ILB,
+    Position.CB,
+    Position.CB,
+    Position.CB,
+    Position.FS,
+    Position.SS,
+    Position.K,
+    Position.P,
   ];
 
   const players: Player[] = positions.map((pos, i) =>
@@ -120,7 +139,9 @@ function createTestTeamState(teamId: string): TeamGameState {
   const wrs = players.filter((p) => p.position === Position.WR);
   const tes = players.filter((p) => p.position === Position.TE);
   const ol = players.filter((p) =>
-    [Position.LT, Position.LG, Position.C, Position.RG, Position.RT].includes(p.position as Position)
+    [Position.LT, Position.LG, Position.C, Position.RG, Position.RT].includes(
+      p.position as Position
+    )
   );
   const dl = players.filter((p) => [Position.DE, Position.DT].includes(p.position as Position));
   const lb = players.filter((p) => [Position.OLB, Position.ILB].includes(p.position as Position));
@@ -138,8 +159,18 @@ function createTestTeamState(teamId: string): TeamGameState {
     specialTeams: { k, p, returner: wrs[0] },
     allPlayers,
     coaches: {
-      offensiveCoordinator: createDefaultCoach(`oc-${teamId}`, 'OC', 'Test', 'offensiveCoordinator'),
-      defensiveCoordinator: createDefaultCoach(`dc-${teamId}`, 'DC', 'Test', 'defensiveCoordinator'),
+      offensiveCoordinator: createDefaultCoach(
+        `oc-${teamId}`,
+        'OC',
+        'Test',
+        'offensiveCoordinator'
+      ),
+      defensiveCoordinator: createDefaultCoach(
+        `dc-${teamId}`,
+        'DC',
+        'Test',
+        'defensiveCoordinator'
+      ),
       positionCoaches: new Map(),
     },
     offensiveScheme: 'westCoast',
@@ -381,10 +412,10 @@ describe('GameSimulationEngine', () => {
       // Should contain game-related events like PLAY_COMPLETE, QUARTER_END, or GAME_END
       expect(
         eventTypes.includes('GAME_END') ||
-        eventTypes.includes('PLAY_COMPLETE') ||
-        eventTypes.includes('QUARTER_END') ||
-        eventTypes.includes('TOUCHDOWN') ||
-        eventTypes.includes('TURNOVER')
+          eventTypes.includes('PLAY_COMPLETE') ||
+          eventTypes.includes('QUARTER_END') ||
+          eventTypes.includes('TOUCHDOWN') ||
+          eventTypes.includes('TURNOVER')
       ).toBe(true);
     });
   });

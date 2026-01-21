@@ -362,13 +362,12 @@ export class GameFlowManager {
     if (!result || !this.gameState) return;
 
     // Record result
-    const { updatedWeekFlow, updatedGameState } =
-      this.weekService.recordUserGameResult(
-        this.state.weekFlow,
-        result,
-        this.gameState,
-        this.userTeamId
-      );
+    const { updatedWeekFlow, updatedGameState } = this.weekService.recordUserGameResult(
+      this.state.weekFlow,
+      result,
+      this.gameState,
+      this.userTeamId
+    );
 
     this.gameState = updatedGameState;
 
@@ -415,12 +414,11 @@ export class GameFlowManager {
     this.setLoading(true);
 
     try {
-      const { updatedWeekFlow, updatedGameState, results } =
-        this.weekService.simulateOtherGames(
-          this.state.weekFlow,
-          this.gameState,
-          this.userTeamId
-        );
+      const { updatedWeekFlow, updatedGameState, results } = this.weekService.simulateOtherGames(
+        this.state.weekFlow,
+        this.gameState,
+        this.userTeamId
+      );
 
       this.gameState = updatedGameState;
 

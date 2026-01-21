@@ -265,9 +265,10 @@ export class GameFlowEventBus {
     eventType: T,
     limit?: number
   ): Extract<GameFlowEvent, { type: T }>[] {
-    const events = this.eventHistory.filter(
-      (e) => e.type === eventType
-    ) as Extract<GameFlowEvent, { type: T }>[];
+    const events = this.eventHistory.filter((e) => e.type === eventType) as Extract<
+      GameFlowEvent,
+      { type: T }
+    >[];
     return limit ? events.slice(-limit) : events;
   }
 
@@ -350,9 +351,7 @@ export function createScoreChangeEvent(
 ): ScoreEvent {
   const scoringTeam = homeScore !== previousHomeScore ? 'home' : 'away';
   const points =
-    scoringTeam === 'home'
-      ? homeScore - previousHomeScore
-      : awayScore - previousAwayScore;
+    scoringTeam === 'home' ? homeScore - previousHomeScore : awayScore - previousAwayScore;
 
   return {
     type: 'SCORE_CHANGE',

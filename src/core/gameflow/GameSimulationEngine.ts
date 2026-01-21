@@ -218,8 +218,7 @@ export class GameSimulationEngine {
           type: 'SIMULATION_PAUSED',
           payload: {
             gameId: state.gameId,
-            currentQuarter:
-              typeof state.clock.quarter === 'number' ? state.clock.quarter : 5,
+            currentQuarter: typeof state.clock.quarter === 'number' ? state.clock.quarter : 5,
             timeRemaining: state.clock.timeRemaining,
             homeScore: state.score.home,
             awayScore: state.score.away,
@@ -242,8 +241,7 @@ export class GameSimulationEngine {
           type: 'SIMULATION_RESUMED',
           payload: {
             gameId: state.gameId,
-            currentQuarter:
-              typeof state.clock.quarter === 'number' ? state.clock.quarter : 5,
+            currentQuarter: typeof state.clock.quarter === 'number' ? state.clock.quarter : 5,
             timeRemaining: state.clock.timeRemaining,
             homeScore: state.score.home,
             awayScore: state.score.away,
@@ -317,9 +315,7 @@ export class GameSimulationEngine {
   /**
    * Run simulation continuously until complete or stopped
    */
-  async runToCompletion(
-    includeDelays: boolean = true
-  ): Promise<GameResult | null> {
+  async runToCompletion(includeDelays: boolean = true): Promise<GameResult | null> {
     if (!this.runner) {
       console.error('Engine not initialized');
       return null;
@@ -402,8 +398,7 @@ export class GameSimulationEngine {
    * Process a play result and emit events
    */
   private processPlay(play: PlayResult, state: LiveGameState): PlayDisplay {
-    const quarter =
-      typeof state.clock.quarter === 'number' ? state.clock.quarter : 5;
+    const quarter = typeof state.clock.quarter === 'number' ? state.clock.quarter : 5;
     const timeStr = this.formatTime(state.clock.timeRemaining);
     const offenseTeam =
       state.field.possession === 'home'
@@ -473,8 +468,7 @@ export class GameSimulationEngine {
       }
 
       // Quarter change events
-      const newQuarter =
-        typeof state.clock.quarter === 'number' ? state.clock.quarter : 5;
+      const newQuarter = typeof state.clock.quarter === 'number' ? state.clock.quarter : 5;
       if (newQuarter !== this.currentQuarter) {
         this.eventBus.emit({
           type: 'QUARTER_END',
@@ -526,8 +520,7 @@ export class GameSimulationEngine {
         plays: 0,
         yards: 0,
         startTime: state.clock.timeRemaining,
-        startQuarter:
-          typeof state.clock.quarter === 'number' ? state.clock.quarter : 1,
+        startQuarter: typeof state.clock.quarter === 'number' ? state.clock.quarter : 1,
       };
     }
 
@@ -541,8 +534,7 @@ export class GameSimulationEngine {
   private checkHalftime(state: LiveGameState): void {
     if (this.hasReachedHalftime) return;
 
-    const quarter =
-      typeof state.clock.quarter === 'number' ? state.clock.quarter : 0;
+    const quarter = typeof state.clock.quarter === 'number' ? state.clock.quarter : 0;
     if (quarter >= 3 && !this.hasReachedHalftime) {
       this.hasReachedHalftime = true;
 
@@ -574,10 +566,7 @@ export class GameSimulationEngine {
   /**
    * Calculate half stats (simplified)
    */
-  private calculateHalfStats(
-    _team: 'home' | 'away',
-    _state: LiveGameState
-  ): HalfStats {
+  private calculateHalfStats(_team: 'home' | 'away', _state: LiveGameState): HalfStats {
     // Simplified - would need full stat tracking
     return {
       totalYards: 0,
@@ -651,8 +640,7 @@ export class GameSimulationEngine {
         ? {
             plays: this.currentDrive.plays,
             yards: this.currentDrive.yards,
-            timeOfPossession:
-              this.currentDrive.startTime - state.clock.timeRemaining,
+            timeOfPossession: this.currentDrive.startTime - state.clock.timeRemaining,
           }
         : { plays: 0, yards: 0, timeOfPossession: 0 },
       recentPlays: [...this.recentPlays],
@@ -680,8 +668,6 @@ export class GameSimulationEngine {
 /**
  * Create a new game simulation engine
  */
-export function createGameEngine(
-  config: Partial<EngineConfig> = {}
-): GameSimulationEngine {
+export function createGameEngine(config: Partial<EngineConfig> = {}): GameSimulationEngine {
   return new GameSimulationEngine(config);
 }

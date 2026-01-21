@@ -165,35 +165,23 @@ export class WeekProgressionService {
   /**
    * Get user's game for a week
    */
-  getUserGame(
-    schedule: SeasonSchedule,
-    week: number,
-    userTeamId: string
-  ): ScheduledGame | null {
+  getUserGame(schedule: SeasonSchedule, week: number, userTeamId: string): ScheduledGame | null {
     if (isOnBye(userTeamId, week, schedule.byeWeeks)) {
       return null;
     }
 
     const weekGames = getWeekGames(schedule, week);
     return (
-      weekGames.find(
-        (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
-      ) || null
+      weekGames.find((g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId) || null
     );
   }
 
   /**
    * Get other games (non-user) for a week
    */
-  getOtherGames(
-    schedule: SeasonSchedule,
-    week: number,
-    userTeamId: string
-  ): ScheduledGame[] {
+  getOtherGames(schedule: SeasonSchedule, week: number, userTeamId: string): ScheduledGame[] {
     const weekGames = getWeekGames(schedule, week);
-    return weekGames.filter(
-      (g) => g.homeTeamId !== userTeamId && g.awayTeamId !== userTeamId
-    );
+    return weekGames.filter((g) => g.homeTeamId !== userTeamId && g.awayTeamId !== userTeamId);
   }
 
   /**
@@ -209,20 +197,13 @@ export class WeekProgressionService {
     updatedGameState: GameState;
   } {
     // Update team records
-    const updatedTeams = this.updateTeamRecords(
-      gameState.teams,
-      result,
-      userTeamId
-    );
+    const updatedTeams = this.updateTeamRecords(gameState.teams, result, userTeamId);
 
     // Update player season stats
     const updatedPlayers = this.updatePlayerStats(gameState.players, result);
 
     // Apply injuries from game
-    const playersWithInjuries = this.applyGameInjuries(
-      updatedPlayers,
-      result.injuries
-    );
+    const playersWithInjuries = this.applyGameInjuries(updatedPlayers, result.injuries);
 
     const updatedGameState: GameState = {
       ...gameState,
@@ -353,11 +334,7 @@ export class WeekProgressionService {
       const homeScore = this.generateRealisticScore();
       const awayScore = this.generateRealisticScore();
       const winnerId =
-        homeScore > awayScore
-          ? game.homeTeamId
-          : awayScore > homeScore
-            ? game.awayTeamId
-            : '';
+        homeScore > awayScore ? game.homeTeamId : awayScore > homeScore ? game.awayTeamId : '';
 
       results.push({
         game,
@@ -403,10 +380,7 @@ export class WeekProgressionService {
     const standings = calculateStandings([], teamsArray);
 
     // Generate playoff implications
-    const playoffImplications = this.generatePlayoffImplications(
-      standings,
-      state.weekNumber
-    );
+    const playoffImplications = this.generatePlayoffImplications(standings, state.weekNumber);
 
     // Generate headlines
     const headlines = this.generateHeadlines(results, updatedTeams);
@@ -568,8 +542,8 @@ export class WeekProgressionService {
         };
 
         if (newWeeksRemaining === 0) {
-          const team = Object.values(gameState.teams).find(
-            (t) => t.rosterPlayerIds?.some((p) => p === playerId)
+          const team = Object.values(gameState.teams).find((t) =>
+            t.rosterPlayerIds?.some((p) => p === playerId)
           );
           recoveredPlayers.push({
             playerId,
@@ -594,10 +568,7 @@ export class WeekProgressionService {
     let playoffsStart = false;
     let seasonEnded = false;
 
-    if (
-      seasonPhase === 'regularSeason' &&
-      currentWeek >= this.config.regularSeasonWeeks
-    ) {
+    if (seasonPhase === 'regularSeason' && currentWeek >= this.config.regularSeasonWeeks) {
       newSeasonPhase = 'playoffs';
       playoffsStart = true;
     } else if (
@@ -660,17 +631,14 @@ export class WeekProgressionService {
     // User's result
     let userResultSummary = null;
     if (userResult && userTeam) {
-      const opponent = gameState.teams[
-        userResult.homeTeamId === userTeamId
-          ? userResult.awayTeamId
-          : userResult.homeTeamId
-      ];
+      const opponent =
+        gameState.teams[
+          userResult.homeTeamId === userTeamId ? userResult.awayTeamId : userResult.homeTeamId
+        ];
       userResultSummary = {
         won:
-          (userResult.homeTeamId === userTeamId &&
-            userResult.homeScore > userResult.awayScore) ||
-          (userResult.awayTeamId === userTeamId &&
-            userResult.awayScore > userResult.homeScore),
+          (userResult.homeTeamId === userTeamId && userResult.homeScore > userResult.awayScore) ||
+          (userResult.awayTeamId === userTeamId && userResult.awayScore > userResult.homeScore),
         score:
           userResult.homeTeamId === userTeamId
             ? `${userResult.homeScore}-${userResult.awayScore}`
@@ -722,10 +690,7 @@ export class WeekProgressionService {
     }
 
     // Playoff implications
-    const playoffImplications = this.generatePlayoffImplications(
-      standings,
-      weekFlow.weekNumber
-    );
+    const playoffImplications = this.generatePlayoffImplications(standings, weekFlow.weekNumber);
 
     // Injury updates
     const injuryUpdates: InjuryUpdate[] = [];
