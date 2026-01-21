@@ -153,14 +153,18 @@ export function StartScreen({
                 >
                   <View style={styles.saveSlotHeader}>
                     <Text style={styles.saveSlotTitle}>Slot {slotInfo.slot + 1}</Text>
-                    <Text style={styles.saveSlotTeam}>{slotInfo.summary?.teamName}</Text>
+                    <Text style={styles.saveSlotTeam}>
+                      {slotInfo.summary?.teamName ?? 'Unknown Team'}
+                    </Text>
                   </View>
                   <View style={styles.saveSlotInfo}>
                     <Text style={styles.saveSlotDetail}>
-                      {slotInfo.summary?.userName} • Year {slotInfo.summary?.year}
+                      {slotInfo.summary?.userName ?? 'Unknown'} • Year{' '}
+                      {slotInfo.summary?.year ?? '?'}
                     </Text>
                     <Text style={styles.saveSlotDetail}>
-                      Record: {slotInfo.summary?.record} • {slotInfo.summary?.phase}
+                      Record: {slotInfo.summary?.record ?? '0-0'} •{' '}
+                      {slotInfo.summary?.phase ?? 'Unknown'}
                     </Text>
                   </View>
                 </TouchableOpacity>

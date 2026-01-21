@@ -175,8 +175,21 @@ export function GMDashboardScreen({
   gameState,
   onAction,
 }: GMDashboardScreenProps): React.JSX.Element {
-  const userTeam: Team = gameState.teams[gameState.userTeamId];
-  const { calendar } = gameState.league;
+  const userTeam: Team | undefined = gameState.teams[gameState.userTeamId];
+  const league = gameState.league;
+
+  // Early return if critical data is missing
+  if (!userTeam || !league) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading team data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const { calendar } = league;
   const phase = calendar.currentPhase;
   const isOffseason = phase === 'offseason';
 
@@ -189,7 +202,7 @@ export function GMDashboardScreen({
   // Get display name for current offseason phase
   const getOffseasonPhaseDisplay = (): string => {
     if (offseasonPhase) {
-      return PHASE_NAMES[offseasonPhase];
+      return PHASE_NAMES[offseasonPhase] ?? 'Offseason';
     }
     return 'Offseason';
   };
@@ -323,9 +336,9 @@ export function GMDashboardScreen({
     );
   });
   const divisionPosition = divisionTeams.findIndex((t) => t.id === userTeam.id) + 1;
-  const divisionLeader = divisionTeams[0];
+  const divisionLeader = divisionTeams.length > 0 ? divisionTeams[0] : null;
   const gamesBehindLeader =
-    divisionPosition === 1
+    divisionPosition === 1 || !divisionLeader
       ? 0
       : (divisionLeader.currentRecord.wins -
           userTeam.currentRecord.wins +
@@ -652,36 +665,40 @@ export function GMDashboardScreen({
         </View>
 
         {/* Career Stats - tap to see full career legacy */}
-        <TouchableOpacity
-          style={styles.careerSection}
-          onPress={() => onAction('careerLegacy')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.careerHeader}>
-            <Text style={styles.careerTitle}>Career Stats</Text>
-            <Text style={styles.careerViewMore}>View Legacy →</Text>
-          </View>
-          <View style={styles.careerStats}>
-            <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>{gameState.careerStats.seasonsCompleted}</Text>
-              <Text style={styles.careerStatLabel}>Seasons</Text>
+        {gameState.careerStats && (
+          <TouchableOpacity
+            style={styles.careerSection}
+            onPress={() => onAction('careerLegacy')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.careerHeader}>
+              <Text style={styles.careerTitle}>Career Stats</Text>
+              <Text style={styles.careerViewMore}>View Legacy →</Text>
             </View>
-            <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>
-                {gameState.careerStats.totalWins}-{gameState.careerStats.totalLosses}
-              </Text>
-              <Text style={styles.careerStatLabel}>Record</Text>
+            <View style={styles.careerStats}>
+              <View style={styles.careerStat}>
+                <Text style={styles.careerStatValue}>{gameState.careerStats.seasonsCompleted}</Text>
+                <Text style={styles.careerStatLabel}>Seasons</Text>
+              </View>
+              <View style={styles.careerStat}>
+                <Text style={styles.careerStatValue}>
+                  {gameState.careerStats.totalWins}-{gameState.careerStats.totalLosses}
+                </Text>
+                <Text style={styles.careerStatLabel}>Record</Text>
+              </View>
+              <View style={styles.careerStat}>
+                <Text style={styles.careerStatValue}>
+                  {gameState.careerStats.playoffAppearances}
+                </Text>
+                <Text style={styles.careerStatLabel}>Playoffs</Text>
+              </View>
+              <View style={styles.careerStat}>
+                <Text style={styles.careerStatValue}>{gameState.careerStats.championships}</Text>
+                <Text style={styles.careerStatLabel}>Titles</Text>
+              </View>
             </View>
-            <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>{gameState.careerStats.playoffAppearances}</Text>
-              <Text style={styles.careerStatLabel}>Playoffs</Text>
-            </View>
-            <View style={styles.careerStat}>
-              <Text style={styles.careerStatValue}>{gameState.careerStats.championships}</Text>
-              <Text style={styles.careerStatLabel}>Titles</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -691,6 +708,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: fontSize.lg,
+    color: colors.textSecondary,
   },
   header: {
     backgroundColor: colors.primary,

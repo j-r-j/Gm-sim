@@ -520,8 +520,20 @@ export function RosterScreen({
             canExtend={isExtensionEligible?.(item.id) ?? false}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          filteredPlayers.length === 0 && styles.emptyListContent,
+        ]}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>👥</Text>
+            <Text style={styles.emptyStateTitle}>No Players</Text>
+            <Text style={styles.emptyStateText}>
+              {filter === 'all' ? 'Your roster is empty' : `No ${filter} players on roster`}
+            </Text>
+          </View>
+        }
       />
 
       {/* Cut Modal */}
@@ -630,6 +642,29 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  emptyStateTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  emptyStateText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   rosterCardContainer: {
     position: 'relative',

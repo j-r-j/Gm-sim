@@ -46,6 +46,7 @@ interface DisplayGame {
     userScore: number;
     opponentScore: number;
     won: boolean;
+    tie: boolean;
   };
   isBye: boolean;
   isPast: boolean;
@@ -77,7 +78,8 @@ function GameCard({ game, onPress }: { game: DisplayGame; onPress?: () => void }
         styles.gameCard,
         game.isCurrent && styles.currentGameCard,
         game.result?.won && styles.winCard,
-        game.result && !game.result.won && styles.lossCard,
+        game.result?.tie && styles.tieCard,
+        game.result && !game.result.won && !game.result.tie && styles.lossCard,
       ]}
       onPress={onPress}
       disabled={!onPress || game.isPast}
@@ -96,8 +98,15 @@ function GameCard({ game, onPress }: { game: DisplayGame; onPress?: () => void }
       <View style={styles.resultColumn}>
         {game.result ? (
           <>
-            <Text style={[styles.resultText, game.result.won ? styles.winText : styles.lossText]}>
-              {game.result.won ? 'W' : 'L'}
+            <Text
+              style={[
+                styles.resultText,
+                game.result.won && styles.winText,
+                game.result.tie && styles.tieText,
+                !game.result.won && !game.result.tie && styles.lossText,
+              ]}
+            >
+              {game.result.tie ? 'T' : game.result.won ? 'W' : 'L'}
             </Text>
             <Text style={styles.scoreText}>{resultText}</Text>
           </>
@@ -163,7 +172,7 @@ export function ScheduleScreen({
           name: opponent ? `${opponent.city} ${opponent.nickname}` : 'Unknown',
           abbr: opponent?.abbreviation || '???',
           record: opponent
-            ? `${opponent.currentRecord.wins}-${opponent.currentRecord.losses}`
+            ? `${opponent.currentRecord.wins}-${opponent.currentRecord.losses}${opponent.currentRecord.ties > 0 ? `-${opponent.currentRecord.ties}` : ''}`
             : '0-0',
         },
         isHome,
@@ -182,6 +191,7 @@ export function ScheduleScreen({
           userScore,
           opponentScore,
           won: userScore > opponentScore,
+          tie: userScore === opponentScore,
         };
       }
 
@@ -322,6 +332,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: colors.error,
   },
+  tieCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
+  },
   byeCard: {
     justifyContent: 'center',
     opacity: 0.6,
@@ -383,6 +397,9 @@ const styles = StyleSheet.create({
   },
   lossText: {
     color: colors.error,
+  },
+  tieText: {
+    color: colors.warning,
   },
   scoreText: {
     fontSize: fontSize.xs,

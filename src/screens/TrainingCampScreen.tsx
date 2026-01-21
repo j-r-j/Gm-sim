@@ -497,6 +497,22 @@ export function TrainingCampScreen({
                   ))}
               </>
             )}
+
+            {summary.developmentReveals.filter((r) => r.impact === 'negative').length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Development Concerns</Text>
+                {summary.developmentReveals
+                  .filter((r) => r.impact === 'negative')
+                  .slice(0, 3)
+                  .map((reveal, i) => (
+                    <DevelopmentCard
+                      key={`neg-${i}`}
+                      reveal={reveal}
+                      onPlayerPress={handlePlayerPress}
+                    />
+                  ))}
+              </>
+            )}
           </>
         )}
 
