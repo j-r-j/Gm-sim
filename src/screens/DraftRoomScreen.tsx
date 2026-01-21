@@ -18,7 +18,17 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { Button } from '../components';
 import { Position } from '../core/models/player/Position';
 import {
   DraftPickCard,
@@ -252,16 +262,31 @@ export function DraftRoomScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBack}
+            accessibilityLabel="Exit draft room"
+            accessibilityRole="button"
+            accessibilityHint="Returns to the previous screen"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="close" size={24} color={colors.textOnPrimary} />
             <Text style={styles.backButtonText}>Exit</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>Draft Room</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          Draft Room
+        </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[styles.pauseButton, isPaused && styles.pauseButtonActive]}
             onPress={onTogglePause}
+            accessibilityLabel={isPaused ? 'Resume draft' : 'Pause draft'}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: !isPaused }}
+            hitSlop={accessibility.hitSlop}
           >
+            <Ionicons name={isPaused ? 'play' : 'pause'} size={16} color={colors.textOnPrimary} />
             <Text style={styles.pauseButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
           </TouchableOpacity>
         </View>
@@ -287,6 +312,11 @@ export function DraftRoomScreen({
           <TouchableOpacity
             style={[styles.autoPickToggle, autoPickEnabled && styles.autoPickToggleActive]}
             onPress={onToggleAutoPick}
+            accessibilityLabel={`Auto-pick ${autoPickEnabled ? 'enabled' : 'disabled'}`}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: autoPickEnabled }}
+            accessibilityHint="Toggle automatic player selection"
+            hitSlop={accessibility.hitSlop}
           >
             <Text
               style={[
@@ -304,17 +334,35 @@ export function DraftRoomScreen({
       )}
 
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <View style={styles.tabContainer} accessibilityRole="tablist">
         <TouchableOpacity
           style={[styles.tab, activeTab === 'board' && styles.tabActive]}
           onPress={() => setActiveTab('board')}
+          accessibilityLabel="Draft board"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'board' }}
+          hitSlop={accessibility.hitSlop}
         >
+          <Ionicons
+            name="list"
+            size={16}
+            color={activeTab === 'board' ? colors.textOnPrimary : colors.textSecondary}
+          />
           <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>Board</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'trades' && styles.tabActive]}
           onPress={() => setActiveTab('trades')}
+          accessibilityLabel={`Trades${pendingTradeOffers.length > 0 ? `, ${pendingTradeOffers.length} pending` : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'trades' }}
+          hitSlop={accessibility.hitSlop}
         >
+          <Ionicons
+            name="swap-horizontal"
+            size={16}
+            color={activeTab === 'trades' ? colors.textOnPrimary : colors.textSecondary}
+          />
           <Text style={[styles.tabText, activeTab === 'trades' && styles.tabTextActive]}>
             Trades {pendingTradeOffers.length > 0 && `(${pendingTradeOffers.length})`}
           </Text>
@@ -322,7 +370,16 @@ export function DraftRoomScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'picks' && styles.tabActive]}
           onPress={() => setActiveTab('picks')}
+          accessibilityLabel="Pick history"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'picks' }}
+          hitSlop={accessibility.hitSlop}
         >
+          <Ionicons
+            name="time"
+            size={16}
+            color={activeTab === 'picks' ? colors.textOnPrimary : colors.textSecondary}
+          />
           <Text style={[styles.tabText, activeTab === 'picks' && styles.tabTextActive]}>Picks</Text>
         </TouchableOpacity>
       </View>
@@ -335,9 +392,18 @@ export function DraftRoomScreen({
             <TouchableOpacity
               style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
               onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
+              accessibilityLabel={`Show ${showFlaggedOnly ? 'all prospects' : 'flagged only'}`}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: showFlaggedOnly }}
+              hitSlop={accessibility.hitSlop}
             >
+              <Ionicons
+                name={showFlaggedOnly ? 'star' : 'star-outline'}
+                size={16}
+                color={showFlaggedOnly ? colors.secondary : colors.textSecondary}
+              />
               <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
-                * Flagged Only
+                Flagged Only
               </Text>
             </TouchableOpacity>
             <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
@@ -358,9 +424,16 @@ export function DraftRoomScreen({
 
       {activeTab === 'trades' && (
         <View style={styles.tabContent}>
-          <TouchableOpacity style={styles.proposeTradeButton} onPress={onProposeTrade}>
-            <Text style={styles.proposeTradeButtonText}>Propose Trade</Text>
-          </TouchableOpacity>
+          <View style={styles.proposeTradeContainer}>
+            <Button
+              label="Propose Trade"
+              onPress={onProposeTrade}
+              variant="primary"
+              leftIcon={<Ionicons name="add-circle" size={18} color={colors.textOnPrimary} />}
+              accessibilityHint="Opens trade proposal interface"
+              testID="propose-trade-button"
+            />
+          </View>
 
           <FlatList
             data={safeTradeOffers}
@@ -418,8 +491,12 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   backButtonText: {
     color: colors.textOnPrimary,
@@ -436,10 +513,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pauseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.primaryLight,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   pauseButtonActive: {
     backgroundColor: colors.warning,
@@ -496,9 +577,13 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
     paddingVertical: spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: borderRadius.md,
+    minHeight: accessibility.minTouchTarget,
   },
   tabActive: {
     backgroundColor: colors.primary,
@@ -526,9 +611,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   flagFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   flagFilterButtonActive: {
     backgroundColor: colors.secondary + '20',
@@ -545,18 +634,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textLight,
   },
-  proposeTradeButton: {
-    backgroundColor: colors.info,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-  },
-  proposeTradeButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+  proposeTradeContainer: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   tradeListContent: {
     padding: spacing.md,

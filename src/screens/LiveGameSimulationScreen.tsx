@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   Scoreboard,
   PlayByPlayFeed,
@@ -27,7 +28,16 @@ import {
   type PlayItem,
 } from '../components/gamecast';
 import { OtherGamesTicker } from '../components/week-flow';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { LoadingScreen } from '../components';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { GameRunner, type GameResult } from '../core/game/GameRunner';
 import { type LiveGameState } from '../core/engine/GameStateMachine';
 import { type PlayResult } from '../core/engine/PlayResolver';
@@ -307,11 +317,11 @@ export function LiveGameSimulationScreen({
   // Loading state
   if (!gameState) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Preparing game...</Text>
-        </View>
-      </SafeAreaView>
+      <LoadingScreen
+        message="Preparing game..."
+        hint="Setting up matchups and lineups"
+        testID="game-loading"
+      />
     );
   }
 
@@ -325,16 +335,26 @@ export function LiveGameSimulationScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && !isSimulating ? (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>← Back</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBack}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            accessibilityHint="Leave game simulation and return to previous screen"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.textOnPrimary} />
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.backButton} />
         )}
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{isGameOver ? 'Final' : 'Live Game'}</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">
+            {isGameOver ? 'Final' : 'Live Game'}
+          </Text>
           {!isGameOver && (
-            <View style={styles.liveIndicator}>
+            <View style={styles.liveIndicator} accessibilityLabel="Game is in progress">
               <View style={styles.liveDot} />
               <Text style={styles.liveText}>LIVE</Text>
             </View>
@@ -377,14 +397,23 @@ export function LiveGameSimulationScreen({
 
         {/* Simulation Controls */}
         {!isGameOver && (
-          <View style={styles.controlsContainer}>
+          <View style={styles.controlsContainer} accessibilityRole="toolbar">
             {/* Play/Pause Button */}
             <TouchableOpacity
               style={[styles.mainButton, isSimulating && styles.pauseButton]}
               onPress={toggleSimulation}
               activeOpacity={0.8}
+              accessibilityLabel={isSimulating ? 'Pause game' : 'Play game'}
+              accessibilityRole="button"
+              accessibilityHint={isSimulating ? 'Pauses the simulation' : 'Resumes the simulation'}
+              hitSlop={accessibility.hitSlop}
             >
-              <Text style={styles.mainButtonText}>{isSimulating ? '⏸ Pause' : '▶ Play'}</Text>
+              <Ionicons
+                name={isSimulating ? 'pause' : 'play'}
+                size={20}
+                color={colors.textOnPrimary}
+              />
+              <Text style={styles.mainButtonText}>{isSimulating ? 'Pause' : 'Play'}</Text>
             </TouchableOpacity>
 
             {/* Speed Selector */}
@@ -393,18 +422,25 @@ export function LiveGameSimulationScreen({
                 style={styles.speedButton}
                 onPress={() => setShowSpeedMenu(!showSpeedMenu)}
                 activeOpacity={0.8}
+                accessibilityLabel={`Speed: ${speed}. Tap to change`}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showSpeedMenu }}
+                hitSlop={accessibility.hitSlop}
               >
                 <Text style={styles.speedButtonText}>{speed}</Text>
-                <Text style={styles.speedArrow}>▼</Text>
+                <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
 
               {showSpeedMenu && (
-                <View style={styles.speedMenu}>
+                <View style={styles.speedMenu} accessibilityRole="menu">
                   {(['1x', '2x', '4x', 'instant'] as SimulationSpeed[]).map((s) => (
                     <TouchableOpacity
                       key={s}
                       style={[styles.speedOption, speed === s && styles.speedOptionActive]}
                       onPress={() => handleSpeedChange(s)}
+                      accessibilityLabel={`${s === 'instant' ? 'Skip to end' : `${s} speed`}${speed === s ? ', selected' : ''}`}
+                      accessibilityRole="menuitem"
+                      accessibilityState={{ selected: speed === s }}
                     >
                       <Text
                         style={[
@@ -425,8 +461,13 @@ export function LiveGameSimulationScreen({
               style={styles.skipButton}
               onPress={handleSkipToEnd}
               activeOpacity={0.8}
+              accessibilityLabel="Skip to end of game"
+              accessibilityRole="button"
+              accessibilityHint="Instantly simulates the rest of the game"
+              hitSlop={accessibility.hitSlop}
             >
-              <Text style={styles.skipButtonText}>Skip →|</Text>
+              <Text style={styles.skipButtonText}>Skip</Text>
+              <Ionicons name="play-forward" size={18} color={colors.textOnPrimary} />
             </TouchableOpacity>
           </View>
         )}
@@ -494,9 +535,12 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    width: 60,
+    width: 70,
+    minHeight: accessibility.minTouchTarget,
   },
   backButtonText: {
     color: colors.textOnPrimary,
@@ -560,12 +604,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   mainButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.success,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.lg,
     minWidth: 120,
-    alignItems: 'center',
+    minHeight: accessibility.minTouchTarget,
     ...shadows.md,
   },
   pauseButton: {
@@ -631,10 +679,15 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   skipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.secondary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.lg,
+    minHeight: accessibility.minTouchTarget,
     ...shadows.md,
   },
   skipButtonText: {

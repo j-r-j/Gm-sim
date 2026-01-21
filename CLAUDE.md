@@ -108,3 +108,47 @@ GameStorage wraps AsyncStorage with 3 save slots. NewGameService creates complet
 **Formatting**: Run `npm run format:check` before each push to ensure Prettier formatting passes CI.
 
 **Test Setup**: Tests use Jest with `src/tests/setup.ts` for AsyncStorage mocks. Test files are co-located with source files using `.test.ts` extension.
+
+## Product Specification
+
+See `PRODUCT_SPEC.md` for the complete product specification including:
+- **Single Flow Definitions**: Weekly progression, offseason phases, draft, free agency
+- **Screen Specifications**: Layout templates for all major screens
+- **Design System**: Colors, typography, spacing, accessibility requirements
+- **Production Checklist**: P0-P2 launch requirements
+
+See `IMPLEMENTATION_GUIDE.md` for code patterns including:
+- **Component Standards**: Button, Card, PlayerCard patterns with accessibility
+- **Screen Templates**: Standard screen structure with error handling
+- **State Management**: Immutable update patterns, week/offseason state machines
+- **Navigation**: Single flow navigation service, breadcrumbs
+- **Testing**: Component, flow, and accessibility test patterns
+
+## Core User Flows
+
+### Weekly Progression (Single Flow)
+```
+Dashboard → Pre-Game → Game Simulation → Post-Game → Week Summary → Dashboard
+```
+Each step must be completed before advancing. Use `WeekFlowState` to track progress.
+
+### Offseason (12 Phases)
+```
+Season Recap → Coaching → Contracts → Combine → Free Agency → Draft → UDFA → OTAs → Training Camp → Preseason → Final Cuts → Season Start
+```
+Use `OffseasonPhaseManager` for phase tracking. Some phases can be skipped.
+
+### Draft Flow
+```
+Draft Room Entry → On the Clock → Draft/Trade/Skip → Next Pick → (Repeat 7 rounds) → UDFA
+```
+Timer always visible, trade offers create urgency notifications.
+
+## Accessibility Requirements (P0)
+
+**ALL interactive elements MUST have**:
+- Minimum touch target: 44x44 points
+- `accessibilityLabel` describing the action
+- `accessibilityRole` (button, link, checkbox, etc.)
+- `hitSlop` for additional touch area
+- Status indicators must include icon AND text (never color alone)

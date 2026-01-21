@@ -181,6 +181,40 @@ export const shadows = {
   },
 } as const;
 
+// Accessibility constants - CRITICAL for production
+export const accessibility = {
+  // Minimum touch target size (44x44 per Apple/Google guidelines)
+  minTouchTarget: 44,
+  // Hit slop for additional touch area
+  hitSlop: { top: 10, bottom: 10, left: 10, right: 10 },
+  // Minimum contrast ratio for text (WCAG AA)
+  minContrastRatio: 4.5,
+  // Focus indicator width
+  focusRingWidth: 2,
+  // Animation timing for reduced motion users
+  reducedMotionDuration: 0,
+} as const;
+
+// Animation durations
+export const animation = {
+  fast: 150,
+  normal: 250,
+  slow: 400,
+  // For celebrations, etc.
+  celebration: 1000,
+} as const;
+
+// Z-index layers
+export const zIndex = {
+  base: 0,
+  card: 1,
+  dropdown: 10,
+  sticky: 20,
+  modal: 100,
+  toast: 200,
+  tooltip: 300,
+} as const;
+
 // Common style patterns
 export const commonStyles = {
   card: {
@@ -197,6 +231,35 @@ export const commonStyles = {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
+  // Accessible touch target
+  touchTarget: {
+    minHeight: accessibility.minTouchTarget,
+    minWidth: accessibility.minTouchTarget,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  // Primary action button style
+  primaryButton: {
+    minHeight: accessibility.minTouchTarget,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  // Secondary button style
+  secondaryButton: {
+    minHeight: accessibility.minTouchTarget,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
 } as const;
 
 // Export theme object
@@ -208,9 +271,14 @@ export const theme = {
   borderRadius,
   shadows,
   commonStyles,
+  accessibility,
+  animation,
+  zIndex,
 } as const;
 
 export type Theme = typeof theme;
 export type Colors = keyof typeof colors;
 export type Spacing = keyof typeof spacing;
 export type FontSize = keyof typeof fontSize;
+export type Accessibility = typeof accessibility;
+export type Animation = typeof animation;

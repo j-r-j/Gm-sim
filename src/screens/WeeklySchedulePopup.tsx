@@ -51,6 +51,11 @@ export interface WeeklyGame {
   isUserGame: boolean;
   timeSlot: string;
   isDivisional: boolean;
+  /** Score if game is already complete (e.g., user's game just played) */
+  homeScore?: number;
+  awayScore?: number;
+  /** Whether this game was already completed before reaching this screen */
+  isComplete?: boolean;
 }
 
 /**
@@ -622,6 +627,23 @@ export function WeeklySchedulePopup({
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
   const userGame = games.find((g) => g.isUserGame);
   const otherGames = games.filter((g) => !g.isUserGame);
+
+  // Check if user's game is already complete (e.g., they just played it via Gamecast)
+  const userGameAlreadyComplete = userGame?.isComplete === true;
+
+  // Pre-populate simulatedGames with user's completed game if applicable
+  useEffect(() => {
+    if (userGame && userGameAlreadyComplete && !simulatedGames.has(userGame.gameId)) {
+      const simGame: SimulatedGame = {
+        ...userGame,
+        homeScore: userGame.homeScore ?? 0,
+        awayScore: userGame.awayScore ?? 0,
+        isComplete: true,
+      };
+      setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
+    }
+  }, [userGame, userGameAlreadyComplete]);
+
   const completedCount = simulatedGames.size;
   const totalCount = games.length;
   const allComplete = completedCount === totalCount;
@@ -813,8 +835,8 @@ export function WeeklySchedulePopup({
             <Text style={styles.sectionTitle}>Your Matchup</Text>
             {renderGame(userGame)}
 
-            {/* Action buttons for user's game */}
-            {simPhase === 'initial' && (
+            {/* Action buttons for user's game - only show if game not already complete */}
+            {simPhase === 'initial' && !userGameAlreadyComplete && (
               <View style={styles.userGameActions}>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.playButton]}
@@ -829,6 +851,19 @@ export function WeeklySchedulePopup({
                   activeOpacity={0.8}
                 >
                   <Text style={styles.actionButtonText}>SIM GAME</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* If user's game is complete, show button to sim other games */}
+            {simPhase === 'initial' && userGameAlreadyComplete && otherGames.length > 0 && (
+              <View style={styles.userGameActions}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.simAllButton]}
+                  onPress={simulateOtherGames}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.actionButtonText}>SIM OTHER GAMES</Text>
                 </TouchableOpacity>
               </View>
             )}

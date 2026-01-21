@@ -5,7 +5,16 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import {
   OffSeasonState,
   OffSeasonTask,
@@ -14,12 +23,11 @@ import {
   PHASE_NAMES,
   PHASE_DESCRIPTIONS,
   PHASE_ORDER,
-  PHASE_NUMBERS,
   getCurrentPhaseTasks,
   getProgress,
   getNextPhase,
-  OffSeasonProgress,
 } from '../core/offseason/OffSeasonPhaseManager';
+import { Button, ScreenHeader, OffseasonProgressBar, type OffseasonPhase } from '../components';
 
 /**
  * Phase icons for visual identification
@@ -121,11 +129,21 @@ function TaskCard({
         )}
       </View>
       {!task.isComplete ? (
-        <TouchableOpacity style={buttonStyle} onPress={onAction} disabled={isAutoTask}>
+        <TouchableOpacity
+          style={buttonStyle}
+          onPress={onAction}
+          disabled={isAutoTask}
+          accessibilityLabel={`${task.name}. ${buttonText}`}
+          accessibilityRole="button"
+          accessibilityHint={task.description}
+          accessibilityState={{ disabled: isAutoTask }}
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.completeButtonText}>{buttonText}</Text>
         </TouchableOpacity>
       ) : (
-        <View style={styles.checkmark}>
+        <View style={styles.checkmark} accessibilityLabel={`${task.name} completed`}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           <Text style={styles.checkmarkText}>Done</Text>
         </View>
       )}
@@ -133,85 +151,7 @@ function TaskCard({
   );
 }
 
-/**
- * Phase Timeline - shows all 12 phases with current highlighted
- */
-function PhaseTimeline({
-  currentPhase,
-  completedPhases,
-}: {
-  currentPhase: OffSeasonPhaseType;
-  completedPhases: OffSeasonPhaseType[];
-}): React.JSX.Element {
-  return (
-    <View style={styles.timelineContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.timeline}>
-          {PHASE_ORDER.map((phase, index) => {
-            const isComplete = completedPhases.includes(phase);
-            const isCurrent = phase === currentPhase;
-            const phaseNumber = PHASE_NUMBERS[phase];
-
-            return (
-              <View key={phase} style={styles.timelineItem}>
-                <View
-                  style={[
-                    styles.timelineNode,
-                    isComplete && styles.timelineNodeComplete,
-                    isCurrent && styles.timelineNodeCurrent,
-                  ]}
-                >
-                  {isComplete ? (
-                    <Text style={styles.timelineNodeText}>✓</Text>
-                  ) : (
-                    <Text
-                      style={[styles.timelineNodeText, isCurrent && styles.timelineNodeTextCurrent]}
-                    >
-                      {phaseNumber}
-                    </Text>
-                  )}
-                </View>
-                {index < PHASE_ORDER.length - 1 && (
-                  <View
-                    style={[
-                      styles.timelineConnector,
-                      isComplete && styles.timelineConnectorComplete,
-                    ]}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.timelineLabel,
-                    isCurrent && styles.timelineLabelCurrent,
-                    isComplete && styles.timelineLabelComplete,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {PHASE_ICONS[phase]}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-function ProgressBar({ progress }: { progress: OffSeasonProgress }): React.JSX.Element {
-  return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressHeader}>
-        <Text style={styles.progressLabel}>Offseason Progress</Text>
-        <Text style={styles.progressValue}>Phase {progress.currentPhaseNumber} of 12</Text>
-      </View>
-      <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${progress.percentComplete}%` }]} />
-      </View>
-      <Text style={styles.progressPercent}>{progress.percentComplete}% Complete</Text>
-    </View>
-  );
-}
+// PhaseTimeline and ProgressBar functions removed - replaced by OffseasonProgressBar component
 
 export function OffseasonScreen({
   offseasonState,
@@ -276,26 +216,23 @@ export function OffseasonScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{year} Offseason</Text>
-          <Text style={styles.headerSubtitle}>{phaseName}</Text>
-        </View>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader
+        title={`${year} Offseason`}
+        subtitle={phaseName}
+        onBack={onBack}
+        testID="offseason-header"
+      />
 
       <ScrollView style={styles.content}>
-        {/* Phase Timeline */}
-        <PhaseTimeline
-          currentPhase={offseasonState.currentPhase}
-          completedPhases={offseasonState.completedPhases}
-        />
-
-        {/* Progress Bar */}
-        <ProgressBar progress={progress} />
+        {/* Offseason Progress Bar with Phase Timeline */}
+        <View style={styles.progressSection}>
+          <OffseasonProgressBar
+            currentPhaseIndex={PHASE_ORDER.indexOf(offseasonState.currentPhase)}
+            completedPhases={offseasonState.completedPhases as OffseasonPhase[]}
+            compact
+            testID="offseason-progress"
+          />
+        </View>
 
         {/* Phase Info */}
         <View style={styles.phaseInfo}>
@@ -350,17 +287,29 @@ export function OffseasonScreen({
             </View>
           )}
 
-          <TouchableOpacity
-            style={[styles.advanceButton, !progress.canAdvance && styles.advanceButtonDisabled]}
+          <Button
+            label={
+              progress.isComplete ? 'Start Season' : `Continue to ${nextPhaseName || 'Next Phase'}`
+            }
             onPress={onAdvancePhase}
+            variant="success"
+            size="lg"
             disabled={!progress.canAdvance}
-          >
-            <Text style={styles.advanceButtonText}>
-              {progress.isComplete
-                ? '🚀 Start Season'
-                : `Continue to ${nextPhaseName || 'Next Phase'}`}
-            </Text>
-          </TouchableOpacity>
+            rightIcon={
+              <Ionicons
+                name={progress.isComplete ? 'rocket' : 'arrow-forward'}
+                size={20}
+                color={colors.textOnPrimary}
+              />
+            }
+            fullWidth
+            accessibilityHint={
+              progress.canAdvance
+                ? 'Advances to the next offseason phase'
+                : 'Complete all required tasks to advance'
+            }
+            testID="advance-phase-button"
+          />
           {!progress.canAdvance && (
             <Text style={styles.advanceHint}>Complete all required tasks to advance</Text>
           )}
@@ -428,7 +377,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  // Timeline styles
+  progressSection: {
+    padding: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  // Timeline styles (legacy - kept for potential future use)
   timelineContainer: {
     backgroundColor: colors.surface,
     paddingVertical: spacing.md,
