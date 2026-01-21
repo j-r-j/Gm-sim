@@ -302,7 +302,7 @@ function LiveGamePhase({
         awayTeamAbbr={liveGame.awayTeam.abbr}
         homeScore={liveGame.homeScore}
         awayScore={liveGame.awayScore}
-        quarter={liveGame.quarter}
+        quarter={liveGame.quarter === 'Final' ? 4 : liveGame.quarter}
         timeRemaining={liveGame.timeRemaining}
         homeTimeouts={liveGame.homeTeam.timeoutsRemaining}
         awayTimeouts={liveGame.awayTeam.timeoutsRemaining}

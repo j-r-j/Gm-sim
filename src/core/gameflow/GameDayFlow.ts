@@ -10,7 +10,6 @@ import { Team } from '../models/team/Team';
 import { GameResult } from '../game/GameRunner';
 import { setupGame, GameConfig } from '../game/GameSetup';
 import { ScheduledGame } from '../season/ScheduleGenerator';
-import { generateWeather } from '../game/WeatherGenerator';
 import { GameSimulationEngine, createGameEngine } from './GameSimulationEngine';
 import {
   GameDayPhase,
@@ -26,6 +25,52 @@ import {
   HalftimeInfo,
 } from './types';
 import { GameFlowEventBus, gameFlowEventBus } from './events';
+
+/**
+ * Weather condition for pre-game display
+ */
+interface PreGameWeather {
+  temperature: number;
+  condition: string;
+  wind: number;
+  precipitation: 'none' | 'rain' | 'snow';
+  isDome: boolean;
+}
+
+/**
+ * Simple weather generator
+ */
+function generateWeather(week: number, isDome: boolean): PreGameWeather {
+  if (isDome) {
+    return { temperature: 72, condition: 'dome', wind: 0, precipitation: 'none', isDome: true };
+  }
+
+  // Simulate seasonal weather
+  const isLateSeasonOrPlayoffs = week > 14;
+  const baseTemp = isLateSeasonOrPlayoffs ? 35 : 65;
+  const tempVariance = Math.floor(Math.random() * 20) - 10;
+  const temperature = baseTemp + tempVariance;
+
+  const wind = Math.floor(Math.random() * 20);
+
+  // Determine precipitation
+  let precipitation: 'none' | 'rain' | 'snow' = 'none';
+  const precipChance = Math.random();
+  if (precipChance < 0.2) {
+    precipitation = temperature < 35 ? 'snow' : 'rain';
+  }
+
+  const conditions =
+    precipitation === 'snow'
+      ? 'snow'
+      : precipitation === 'rain'
+        ? 'rain'
+        : isLateSeasonOrPlayoffs
+          ? ['clear', 'cloudy', 'cold'][Math.floor(Math.random() * 3)]
+          : ['clear', 'sunny', 'cloudy'][Math.floor(Math.random() * 3)];
+
+  return { temperature, condition: conditions, wind, precipitation, isDome: false };
+}
 
 /**
  * Configuration for game day flow
@@ -120,8 +165,10 @@ export class GameDayFlow {
     const opponentId = isUserHome ? game.awayTeamId : game.homeTeamId;
     const opponent = gameState.teams[opponentId];
 
-    // Generate weather
-    const weather = generateWeather(game.week, userTeam.stadiumType === 'dome');
+    // Generate weather (check if dome stadium)
+    const isDome =
+      userTeam.stadium?.type === 'domeFixed' || userTeam.stadium?.type === 'domeRetractable';
+    const weather = generateWeather(game.week, isDome);
 
     // Get injuries
     const userInjuries = this.getTeamInjuries(gameState, userTeamId);
@@ -415,9 +462,9 @@ export class GameDayFlow {
     const injuries: InjuryStatus[] = [];
     const team = gameState.teams[teamId];
 
-    if (!team || !team.roster) return injuries;
+    if (!team || !team.rosterPlayerIds) return injuries;
 
-    for (const playerId of team.roster) {
+    for (const playerId of team.rosterPlayerIds) {
       const player = gameState.players[playerId];
       if (player && player.injuryStatus.weeksRemaining > 0) {
         let status: InjuryStatus['status'] = 'out';
