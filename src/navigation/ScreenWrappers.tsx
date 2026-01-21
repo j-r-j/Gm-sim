@@ -5521,15 +5521,17 @@ export function WeeklyScheduleScreenWrapper({
   for (const game of regularSeasonGames) {
     if (game.week !== week) continue;
 
-    // Skip already-complete games - they shouldn't appear in the simulation popup
-    if (game.isComplete) continue;
-
     const homeTeam = gameState.teams[game.homeTeamId];
     const awayTeam = gameState.teams[game.awayTeamId];
 
     if (!homeTeam || !awayTeam) continue;
 
     const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
+
+    // Skip already-complete games EXCEPT for the user's game
+    // The user's completed game should still appear so they can see their result
+    // and the screen knows to show the "Advance Week" button
+    if (game.isComplete && !isUserGame) continue;
 
     weeklyGames.push({
       gameId: game.gameId,
@@ -5550,6 +5552,12 @@ export function WeeklyScheduleScreenWrapper({
       isUserGame,
       timeSlot: game.timeSlot || 'early_sunday',
       isDivisional: game.isDivisional,
+      // Include scores if game is complete (for user's game that was just played)
+      ...(game.isComplete && {
+        homeScore: game.homeScore ?? undefined,
+        awayScore: game.awayScore ?? undefined,
+        isComplete: true,
+      }),
     });
   }
 
