@@ -2,6 +2,14 @@
  * GamecastScreen
  * Main screen for live game viewing with play-by-play simulation.
  *
+ * @deprecated This screen is deprecated. Use GameDayScreen instead which provides:
+ * - Unified pre-game, live game, and post-game experience
+ * - Event-driven architecture via GameSimulationEngine
+ * - Better state management with GameFlowManager
+ * - Consistent UI across all game phases
+ *
+ * Migration: Replace GamecastScreen with GameDayScreen from './GameDayScreen'
+ *
  * This screen integrates all gamecast components and manages game state
  * through the GameRunner from the core simulation engine.
  *

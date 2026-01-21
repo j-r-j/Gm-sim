@@ -2,6 +2,14 @@
  * LiveGameSimulationScreen
  * Enhanced game simulation screen with live score updates and other games ticker
  *
+ * @deprecated This screen is deprecated. Use GameDayScreen instead which provides:
+ * - Unified pre-game, live game, and post-game experience
+ * - Event-driven architecture via GameSimulationEngine
+ * - Better state management with GameFlowManager
+ * - Consistent UI across all game phases
+ *
+ * Migration: Replace LiveGameSimulationScreen with GameDayScreen from './GameDayScreen'
+ *
  * Features:
  * - Live scoreboard with animated score changes
  * - Play-by-play feed with auto-scroll
