@@ -20,7 +20,7 @@ import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 import { ActionPrompt } from '../components/week-flow';
-import { Button, LoadingScreen, PrimaryActionCard } from '../components';
+import { Button, LoadingScreen } from '../components';
 import { NextActionPrompt, getWeekLabel } from '../core/simulation/WeekFlowState';
 import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 
@@ -106,9 +106,7 @@ function getJobSecurityLabel(status: PatienceViewModel['status']): string {
 /**
  * Job security status icon - accessibility requirement (icon + text, not just color)
  */
-function getJobSecurityIcon(
-  status: PatienceViewModel['status']
-): keyof typeof Ionicons.glyphMap {
+function getJobSecurityIcon(status: PatienceViewModel['status']): keyof typeof Ionicons.glyphMap {
   switch (status) {
     case 'secure':
       return 'shield-checkmark';

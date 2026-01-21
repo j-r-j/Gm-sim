@@ -6,7 +6,15 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows, accessibility } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import {
   OffSeasonState,
   OffSeasonTask,
@@ -18,15 +26,8 @@ import {
   getCurrentPhaseTasks,
   getProgress,
   getNextPhase,
-  OffSeasonProgress,
 } from '../core/offseason/OffSeasonPhaseManager';
-import {
-  Button,
-  ScreenHeader,
-  OffseasonProgressBar,
-  OFFSEASON_PHASES,
-  type OffseasonPhase,
-} from '../components';
+import { Button, ScreenHeader, OffseasonProgressBar, type OffseasonPhase } from '../components';
 
 /**
  * Phase icons for visual identification
@@ -288,9 +289,7 @@ export function OffseasonScreen({
 
           <Button
             label={
-              progress.isComplete
-                ? 'Start Season'
-                : `Continue to ${nextPhaseName || 'Next Phase'}`
+              progress.isComplete ? 'Start Season' : `Continue to ${nextPhaseName || 'Next Phase'}`
             }
             onPress={onAdvancePhase}
             variant="success"

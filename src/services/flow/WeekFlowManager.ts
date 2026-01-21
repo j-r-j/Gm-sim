@@ -15,11 +15,11 @@ import { SeasonPhase } from '../../core/models/league/League';
  * Phases of the weekly flow
  */
 export type WeekFlowPhase =
-  | 'pre_game'       // User needs to view matchup
-  | 'simulating'     // Game is running
-  | 'post_game'      // User needs to view results
-  | 'sim_other'      // Simulating other league games
-  | 'week_summary'   // User needs to view week summary
+  | 'pre_game' // User needs to view matchup
+  | 'simulating' // Game is running
+  | 'post_game' // User needs to view results
+  | 'sim_other' // Simulating other league games
+  | 'week_summary' // User needs to view week summary
   | 'ready_to_advance'; // All steps complete, can move to next week
 
 /**
@@ -86,7 +86,8 @@ export function getWeekFlowState(gameState: GameState): WeekFlowState {
   const team = gameState.teams[gameState.userTeamId];
 
   // Get week flags (use defaults if not present)
-  const flags: WeekFlowFlags = (gameState as GameState & { weekFlags?: WeekFlowFlags }).weekFlags ?? DEFAULT_WEEK_FLAGS;
+  const flags: WeekFlowFlags =
+    (gameState as GameState & { weekFlags?: WeekFlowFlags }).weekFlags ?? DEFAULT_WEEK_FLAGS;
 
   // Determine current phase based on flags
   const phase = determinePhase(flags);
@@ -254,11 +255,9 @@ function formatGameTime(game: { dayOfWeek?: string; timeSlot?: string }): string
 /**
  * Update week flow flags immutably
  */
-export function updateWeekFlags(
-  gameState: GameState,
-  updates: Partial<WeekFlowFlags>
-): GameState {
-  const currentFlags = (gameState as GameState & { weekFlags?: WeekFlowFlags }).weekFlags ?? DEFAULT_WEEK_FLAGS;
+export function updateWeekFlags(gameState: GameState, updates: Partial<WeekFlowFlags>): GameState {
+  const currentFlags =
+    (gameState as GameState & { weekFlags?: WeekFlowFlags }).weekFlags ?? DEFAULT_WEEK_FLAGS;
 
   return {
     ...gameState,
@@ -350,9 +349,7 @@ export function isUserByeWeek(gameState: GameState): boolean {
   const weekGames = allGames.filter((g) => g.week === calendar.currentWeek);
 
   return !weekGames.some(
-    (g) =>
-      g.homeTeamId === gameState.userTeamId ||
-      g.awayTeamId === gameState.userTeamId
+    (g) => g.homeTeamId === gameState.userTeamId || g.awayTeamId === gameState.userTeamId
   );
 }
 

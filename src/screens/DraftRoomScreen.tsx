@@ -19,7 +19,15 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows, accessibility } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { Button } from '../components';
 import { Position } from '../core/models/player/Position';
 import {
@@ -278,11 +286,7 @@ export function DraftRoomScreen({
             accessibilityState={{ expanded: !isPaused }}
             hitSlop={accessibility.hitSlop}
           >
-            <Ionicons
-              name={isPaused ? 'play' : 'pause'}
-              size={16}
-              color={colors.textOnPrimary}
-            />
+            <Ionicons name={isPaused ? 'play' : 'pause'} size={16} color={colors.textOnPrimary} />
             <Text style={styles.pauseButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
           </TouchableOpacity>
         </View>
