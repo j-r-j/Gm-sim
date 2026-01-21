@@ -6,7 +6,10 @@
 export { StartScreen } from './StartScreen';
 export { TeamSelectionScreen } from './TeamSelectionScreen';
 export { GMDashboardScreen, type DashboardAction } from './GMDashboardScreen';
-export { GamecastScreen, type GamecastScreenProps } from './GamecastScreen';
+
+// Unified game day screen
+export { GameDayScreen, type GameDayScreenProps } from './GameDayScreen';
+
 export {
   DraftBoardScreen,
   type DraftBoardScreenProps,

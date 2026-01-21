@@ -28,7 +28,7 @@ import { FinancesScreen } from '../screens/FinancesScreen';
 import { ScheduleScreen } from '../screens/ScheduleScreen';
 import { StandingsScreen } from '../screens/StandingsScreen';
 import { NewsScreen } from '../screens/NewsScreen';
-import { GamecastScreen } from '../screens/GamecastScreen';
+import { GameDayScreen } from '../screens/GameDayScreen';
 import { PlayoffBracketScreen, PlayoffMatchup, PlayoffSeed } from '../screens/PlayoffBracketScreen';
 import { TradeScreen } from '../screens/TradeScreen';
 import { DraftBoardScreen } from '../screens/DraftBoardScreen';
@@ -64,7 +64,7 @@ import { StatsScreen } from '../screens/StatsScreen';
 import { StaffDecisionScreen } from '../screens/StaffDecisionScreen';
 import { StaffHiringScreen } from '../screens/StaffHiringScreen';
 import { WeeklySchedulePopup, WeeklyGame, SimulatedGame } from '../screens/WeeklySchedulePopup';
-import { LiveGameSimulationScreen } from '../screens/LiveGameSimulationScreen';
+// LiveGameSimulationScreen removed - now using GameDayScreen
 import { PostGameSummaryScreen } from '../screens/PostGameSummaryScreen';
 import {
   CombineResults,
@@ -148,7 +148,6 @@ import {
 } from '../core/coaching/NewGameCandidateGenerator';
 import { Coach } from '../core/models/staff/Coach';
 import { Team } from '../core/models/team/Team';
-import { setupGame, GameConfig } from '../core/game/GameSetup';
 import { simulateWeek, advanceWeek, getUserTeamGame } from '../core/season/WeekSimulator';
 import { updateSeasonStatsFromGame } from '../core/game/SeasonStatsAggregator';
 import {
@@ -1851,14 +1850,14 @@ export function NewsScreenWrapper({ navigation }: ScreenProps<'News'>): React.JS
 }
 
 // ============================================
-// GAMECAST SCREEN
+// GAMECAST SCREEN (now using unified GameDayScreen)
 // ============================================
 
 export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): React.JSX.Element {
   const { gameState, setGameState, saveGameState } = useGame();
 
   if (!gameState) {
-    return <LoadingFallback message="Loading gamecast..." />;
+    return <LoadingFallback message="Loading game..." />;
   }
 
   const schedule = gameState.league.schedule;
@@ -1873,144 +1872,13 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
     return <LoadingFallback message="No game scheduled..." />;
   }
 
-  // Determine if user is home or away
-  const userIsHome = userGame.homeTeamId === gameState.userTeamId;
-  const opponentId = userIsHome ? userGame.awayTeamId : userGame.homeTeamId;
-
-  const userTeam = gameState.teams[gameState.userTeamId];
-  const opponentTeam = gameState.teams[opponentId];
-
-  const gameConfig: GameConfig = {
-    homeTeamId: userGame.homeTeamId,
-    awayTeamId: userGame.awayTeamId,
-    week: currentWeek,
-    isPlayoff: gameState.league.calendar.currentPhase === 'playoffs',
-  };
-
-  const teamsMap = new Map(Object.entries(gameState.teams));
-  const playersMap = new Map(Object.entries(gameState.players));
-  const coachesMap = new Map(Object.entries(gameState.coaches));
-
-  let realGameSetup;
-  try {
-    realGameSetup = setupGame(gameConfig, teamsMap, playersMap, coachesMap);
-  } catch (error) {
-    console.error('Error setting up game:', error);
-    Alert.alert('Error', 'Failed to set up game. Please try again.');
-    navigation.goBack();
-    return <LoadingFallback message="Error setting up game..." />;
-  }
-
   return (
-    <GamecastScreen
-      gameSetup={realGameSetup}
-      gameInfo={{
-        week: currentWeek,
-        date: new Date().toISOString().split('T')[0],
-      }}
+    <GameDayScreen
+      game={userGame}
+      gameState={gameState}
+      userTeamId={gameState.userTeamId}
       onBack={() => navigation.goBack()}
-      onGameEnd={async (result) => {
-        // Determine user's outcome based on whether they were home or away
-        const userScore = userIsHome ? result.homeScore : result.awayScore;
-        const opponentScore = userIsHome ? result.awayScore : result.homeScore;
-        const userWon = userScore > opponentScore;
-        const userLost = userScore < opponentScore;
-
-        // Update user team streak
-        const currentStreak = userTeam.currentRecord.streak;
-        const newStreak = userWon
-          ? currentStreak > 0
-            ? currentStreak + 1
-            : 1
-          : userLost
-            ? currentStreak < 0
-              ? currentStreak - 1
-              : -1
-            : 0;
-
-        // Update opponent team streak
-        const oppCurrentStreak = opponentTeam.currentRecord.streak;
-        const oppNewStreak =
-          !userWon && !userLost
-            ? 0
-            : userWon
-              ? oppCurrentStreak < 0
-                ? oppCurrentStreak - 1
-                : -1
-              : oppCurrentStreak > 0
-                ? oppCurrentStreak + 1
-                : 1;
-
-        // Updated user team record
-        const updatedUserTeam = {
-          ...userTeam,
-          currentRecord: {
-            ...userTeam.currentRecord,
-            wins: userTeam.currentRecord.wins + (userWon ? 1 : 0),
-            losses: userTeam.currentRecord.losses + (userLost ? 1 : 0),
-            ties: userTeam.currentRecord.ties + (!userWon && !userLost ? 1 : 0),
-            pointsFor: userTeam.currentRecord.pointsFor + userScore,
-            pointsAgainst: userTeam.currentRecord.pointsAgainst + opponentScore,
-            streak: newStreak,
-          },
-        };
-
-        // Updated opponent team record
-        const updatedOpponentTeam = {
-          ...opponentTeam,
-          currentRecord: {
-            ...opponentTeam.currentRecord,
-            wins: opponentTeam.currentRecord.wins + (userLost ? 1 : 0),
-            losses: opponentTeam.currentRecord.losses + (userWon ? 1 : 0),
-            ties: opponentTeam.currentRecord.ties + (!userWon && !userLost ? 1 : 0),
-            pointsFor: opponentTeam.currentRecord.pointsFor + opponentScore,
-            pointsAgainst: opponentTeam.currentRecord.pointsAgainst + userScore,
-            streak: oppNewStreak,
-          },
-        };
-
-        // Update season stats from game result
-        const updatedSeasonStats = updateSeasonStatsFromGame(gameState.seasonStats || {}, result);
-
-        let updatedState: GameState = {
-          ...gameState,
-          teams: {
-            ...gameState.teams,
-            [userTeam.id]: updatedUserTeam,
-            [opponentTeam.id]: updatedOpponentTeam,
-          },
-          seasonStats: updatedSeasonStats,
-        };
-
-        // Also update the schedule to mark user's game as complete
-        const existingSchedule = gameState.league.schedule;
-
-        if (existingSchedule && existingSchedule.regularSeason) {
-          const updatedGames = existingSchedule.regularSeason.map((game) => {
-            if (game.gameId === userGame.gameId) {
-              return {
-                ...game,
-                isComplete: true,
-                homeScore: result.homeScore,
-                awayScore: result.awayScore,
-                winnerId: result.winnerId,
-              };
-            }
-            return game;
-          });
-
-          updatedState = {
-            ...updatedState,
-            league: {
-              ...updatedState.league,
-              schedule: {
-                ...existingSchedule,
-                regularSeason: updatedGames,
-              },
-            },
-          };
-        }
-
+      onGameComplete={async (result, updatedState) => {
         setGameState(updatedState);
         await saveGameState(updatedState);
 
@@ -5880,13 +5748,13 @@ export function WeeklyScheduleScreenWrapper({
 }
 
 // ============================================
-// LIVE GAME SIMULATION SCREEN
+// LIVE GAME SIMULATION SCREEN (now using unified GameDayScreen)
 // ============================================
 
 export function LiveGameSimulationScreenWrapper({
   navigation,
 }: ScreenProps<'LiveGameSimulation'>): React.JSX.Element {
-  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading game simulation..." />;
@@ -5912,118 +5780,19 @@ export function LiveGameSimulationScreenWrapper({
     return <LoadingFallback message="No game found..." />;
   }
 
-  // Set up game
-  const homeTeam = gameState.teams[userGame.homeTeamId];
-  const awayTeam = gameState.teams[userGame.awayTeamId];
-
-  if (!homeTeam || !awayTeam) {
-    Alert.alert('Error', 'Teams not found');
-    navigation.goBack();
-    return <LoadingFallback message="Teams not found..." />;
-  }
-
-  // Build game setup
-  const gameConfig: GameConfig = {
-    homeTeamId: userGame.homeTeamId,
-    awayTeamId: userGame.awayTeamId,
-    week: week,
-    isPlayoff: calendar.currentPhase === 'playoffs',
-  };
-
-  const gameSetup = setupGame(
-    gameConfig,
-    new Map(Object.entries(gameState.teams)),
-    new Map(Object.entries(gameState.players)),
-    new Map(Object.entries(gameState.coaches))
-  );
-
-  // Handle game end - save result and navigate to post game
-  const handleGameEnd = async (result: import('../core/game/GameRunner').GameResult) => {
-    setIsLoading(true);
-
-    try {
-      // Update schedule with game result
-      const updatedGames = [...(schedule.regularSeason || [])];
-
-      const gameIndex = updatedGames.findIndex((g) => g.gameId === userGame.gameId);
-      if (gameIndex >= 0) {
-        updatedGames[gameIndex] = {
-          ...updatedGames[gameIndex],
-          isComplete: true,
-          homeScore: result.homeScore,
-          awayScore: result.awayScore,
-        };
-      }
-
-      const updatedSchedule = {
-        ...schedule,
-        regularSeason: updatedGames,
-      };
-
-      // Update team records
-      const updatedTeams = { ...gameState.teams };
-      const homeWon = result.homeScore > result.awayScore;
-      const awayWon = result.awayScore > result.homeScore;
-      const tie = result.homeScore === result.awayScore;
-
-      updatedTeams[userGame.homeTeamId] = {
-        ...homeTeam,
-        currentRecord: {
-          ...homeTeam.currentRecord,
-          wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
-          losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
-          ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
-          pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
-          pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
-        },
-      };
-      updatedTeams[userGame.awayTeamId] = {
-        ...awayTeam,
-        currentRecord: {
-          ...awayTeam.currentRecord,
-          wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
-          losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
-          ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
-          pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
-          pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
-        },
-      };
-
-      // Update season stats
-      const updatedSeasonStats = updateSeasonStatsFromGame(gameState.seasonStats || {}, result);
-
-      const updatedState: GameState = {
-        ...gameState,
-        league: {
-          ...gameState.league,
-          schedule: updatedSchedule,
-        },
-        teams: updatedTeams,
-        seasonStats: updatedSeasonStats,
-      };
-
-      setGameState(updatedState);
-      await saveGameState(updatedState);
-
-      // Navigate to post game summary
-      navigation.navigate('PostGameSummary');
-    } catch (error) {
-      console.error('Error saving game result:', error);
-      Alert.alert('Error', 'Failed to save game result');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <LiveGameSimulationScreen
-      gameSetup={gameSetup}
-      gameInfo={{
-        week: week,
-        date: new Date().toISOString().split('T')[0],
-      }}
-      onGameEnd={handleGameEnd}
+    <GameDayScreen
+      game={userGame}
+      gameState={gameState}
+      userTeamId={userTeamId}
       onBack={() => navigation.goBack()}
+      onGameComplete={async (result, updatedState) => {
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+
+        // Navigate to post game summary
+        navigation.navigate('PostGameSummary');
+      }}
     />
   );
 }
