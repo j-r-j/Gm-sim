@@ -18,9 +18,9 @@ import {
 import { GameState } from '../core/models/game/GameState';
 import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
-import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
+import { OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 import { ActionPrompt } from '../components/week-flow';
-import { Button, LoadingScreen } from '../components';
+import { LoadingScreen } from '../components';
 import { NextActionPrompt, getWeekLabel } from '../core/simulation/WeekFlowState';
 import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 
@@ -227,14 +227,6 @@ export function GMDashboardScreen({
   const isDraft = offseasonPhase === 'draft';
   const isFreeAgency = offseasonPhase === 'free_agency';
   const isCombine = offseasonPhase === 'combine';
-
-  // Get display name for current offseason phase
-  const getOffseasonPhaseDisplay = (): string => {
-    if (offseasonPhase) {
-      return PHASE_NAMES[offseasonPhase] ?? 'Offseason';
-    }
-    return 'Offseason';
-  };
 
   // Get job security status
   const patienceViewModel: PatienceViewModel | null = gameState.patienceMeter
@@ -668,25 +660,6 @@ export function GMDashboardScreen({
           badge={isFreeAgency ? 'ACTIVE' : undefined}
         />
 
-        {/* Advance Button */}
-        <View style={styles.advanceSection}>
-          <Button
-            label={isOffseason ? 'Advance Phase' : 'Advance Week'}
-            onPress={() => onAction('advanceWeek')}
-            variant="success"
-            size="lg"
-            fullWidth
-            accessibilityHint={
-              isOffseason
-                ? `Advance from ${getOffseasonPhaseDisplay()} to the next phase`
-                : 'Simulate all remaining games and advance to next week'
-            }
-          />
-          <Text style={styles.advanceButtonSubtext}>
-            {isOffseason ? `Current: ${getOffseasonPhaseDisplay()}` : 'Simulate to next week'}
-          </Text>
-        </View>
-
         {/* System Actions */}
         <Text style={styles.sectionTitle} accessibilityRole="header">
           System
@@ -1060,28 +1033,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.textOnPrimary,
-  },
-  advanceSection: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  advanceButton: {
-    backgroundColor: colors.success,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  advanceButtonText: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textOnPrimary,
-  },
-  advanceButtonSubtext: {
-    fontSize: fontSize.sm,
-    color: colors.textOnPrimary,
-    opacity: 0.8,
-    marginTop: spacing.xxs,
   },
   systemButtons: {
     flexDirection: 'row',
