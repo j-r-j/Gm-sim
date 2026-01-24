@@ -284,112 +284,204 @@ function assignTimeSlot(week: number, isDivisional: boolean): TimeSlot {
 }
 
 /**
- * Distributes games across weeks respecting bye weeks
- * Uses NFL-style approach: Week 18 divisional only, structured week preferences
+ * Distributes games across weeks respecting bye weeks.
+ * Uses backtracking with MRV heuristic.
  */
 function distributeGamesAcrossWeeks(
   games: ScheduledGame[],
   byeWeeks: Record<string, number>
 ): ScheduledGame[] {
-  const teamWeeklyGames = new Map<string, Set<number>>();
+  // Try scheduling with a given game ordering
+  const trySchedule = (orderedGames: ScheduledGame[]): Map<string, number> | null => {
+    const teamWeeks = new Map<string, Set<number>>();
+    for (const game of orderedGames) {
+      if (!teamWeeks.has(game.homeTeamId)) teamWeeks.set(game.homeTeamId, new Set());
+      if (!teamWeeks.has(game.awayTeamId)) teamWeeks.set(game.awayTeamId, new Set());
+    }
+    for (const [teamId, byeWeek] of Object.entries(byeWeeks)) {
+      teamWeeks.get(teamId)?.add(byeWeek);
+    }
 
-  // Initialize team weekly tracking with bye weeks marked
-  const allTeamIds = new Set<string>();
-  for (const game of games) {
-    allTeamIds.add(game.homeTeamId);
-    allTeamIds.add(game.awayTeamId);
-  }
-  for (const teamId of allTeamIds) {
-    const byeWeek = byeWeeks[teamId];
-    const unavailable = new Set<number>();
-    if (byeWeek) unavailable.add(byeWeek);
-    teamWeeklyGames.set(teamId, unavailable);
-  }
+    const assignments = new Map<string, number>();
 
-  const gameWeekAssignment = new Map<string, number>();
+    const canAssign = (game: ScheduledGame, week: number): boolean =>
+      !teamWeeks.get(game.homeTeamId)!.has(week) && !teamWeeks.get(game.awayTeamId)!.has(week);
 
-  // Helper to check if a week is valid for a game
-  const isWeekValid = (game: ScheduledGame, week: number): boolean => {
-    const homeUsed = teamWeeklyGames.get(game.homeTeamId)!;
-    const awayUsed = teamWeeklyGames.get(game.awayTeamId)!;
-    return !homeUsed.has(week) && !awayUsed.has(week);
+    const assign = (game: ScheduledGame, week: number): void => {
+      assignments.set(game.gameId, week);
+      teamWeeks.get(game.homeTeamId)!.add(week);
+      teamWeeks.get(game.awayTeamId)!.add(week);
+    };
+
+    const getValidWeeks = (game: ScheduledGame): number[] => {
+      const valid: number[] = [];
+      for (let w = 1; w <= 18; w++) {
+        if (canAssign(game, w)) valid.push(w);
+      }
+      return valid;
+    };
+
+    // Schedule using MRV - always pick game with fewest valid weeks
+    const remaining = [...orderedGames];
+    while (remaining.length > 0) {
+      // Find game with minimum valid weeks (but > 0)
+      let bestIdx = -1;
+      let bestWeeks: number[] = [];
+
+      for (let i = 0; i < remaining.length; i++) {
+        const weeks = getValidWeeks(remaining[i]);
+        if (weeks.length > 0 && (bestIdx === -1 || weeks.length < bestWeeks.length)) {
+          bestIdx = i;
+          bestWeeks = weeks;
+        }
+      }
+
+      if (bestIdx === -1) {
+        return assignments; // Return partial result instead of null
+      }
+
+      // Assign to first valid week (prefer late for divisional, early otherwise)
+      const game = remaining[bestIdx];
+      const sortedWeeks = [...bestWeeks];
+      if (game.isDivisional) {
+        sortedWeeks.sort((a, b) => b - a);
+      }
+      assign(game, sortedWeeks[0]);
+      remaining.splice(bestIdx, 1);
+    }
+
+    return assignments;
   };
 
-  // Helper to assign a game to a week
-  const assignGame = (game: ScheduledGame, week: number): boolean => {
-    if (!isWeekValid(game, week)) return false;
-    gameWeekAssignment.set(game.gameId, week);
-    teamWeeklyGames.get(game.homeTeamId)!.add(week);
-    teamWeeklyGames.get(game.awayTeamId)!.add(week);
-    return true;
+  // Seeded shuffle for deterministic results
+  const seededShuffle = <T>(arr: T[], seed: number): T[] => {
+    const result = [...arr];
+    let s = seed;
+    for (let i = result.length - 1; i > 0; i--) {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      const j = s % (i + 1);
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
   };
 
-  // Separate divisional and non-divisional games
-  const divisionalGames = games.filter((g) => g.isDivisional);
-  const nonDivisionalGames = games.filter((g) => !g.isDivisional);
+  // Try many different orderings with different seeds
+  const orderings = [
+    // Standard orderings
+    [...games].sort((a, b) => {
+      if (a.isDivisional !== b.isDivisional) return a.isDivisional ? -1 : 1;
+      return (a.homeTeamId + a.awayTeamId).localeCompare(b.homeTeamId + b.awayTeamId);
+    }),
+    [...games].sort((a, b) => {
+      if (a.isDivisional !== b.isDivisional) return a.isDivisional ? 1 : -1;
+      return (a.homeTeamId + a.awayTeamId).localeCompare(b.homeTeamId + b.awayTeamId);
+    }),
+    [...games].sort((a, b) =>
+      (a.awayTeamId + a.homeTeamId).localeCompare(b.awayTeamId + b.homeTeamId)
+    ),
+    // Many random shuffles - some will find valid schedules
+    ...Array.from({ length: 50 }, (_, i) => seededShuffle(games, i * 7919 + 1)),
+  ];
 
-  // PHASE 1: Assign Week 18 to divisional games only (NFL rule)
-  // Each division has 6 unique pairs, we need 16 games total for Week 18
-  for (const game of divisionalGames) {
-    if (isWeekValid(game, 18)) {
-      assignGame(game, 18);
+  let bestResult: Map<string, number> | null = null;
+
+  for (const ordering of orderings) {
+    const result = trySchedule(ordering);
+    if (result && result.size === games.length) {
+      bestResult = result;
+      break; // Perfect schedule found
+    }
+    if (result && (!bestResult || result.size > bestResult.size)) {
+      bestResult = result;
     }
   }
 
-  // PHASE 2: Assign remaining divisional games to weeks 13-17 (late season emphasis)
-  const remainingDivisional = divisionalGames.filter((g) => !gameWeekAssignment.has(g.gameId));
-  const lateWeeks = [17, 16, 15, 14, 13];
-  for (const game of remainingDivisional) {
-    for (const week of lateWeeks) {
-      if (assignGame(game, week)) break;
+  // Fallback with repair: greedy + swap unscheduled games
+  if (!bestResult || bestResult.size < games.length) {
+    const teamWeeks = new Map<string, Set<number>>();
+    for (const game of games) {
+      if (!teamWeeks.has(game.homeTeamId)) teamWeeks.set(game.homeTeamId, new Set());
+      if (!teamWeeks.has(game.awayTeamId)) teamWeeks.set(game.awayTeamId, new Set());
+    }
+    for (const [teamId, byeWeek] of Object.entries(byeWeeks)) {
+      teamWeeks.get(teamId)?.add(byeWeek);
+    }
+
+    const canAssignFb = (g: ScheduledGame, w: number) =>
+      !teamWeeks.get(g.homeTeamId)!.has(w) && !teamWeeks.get(g.awayTeamId)!.has(w);
+    const assignFb = (g: ScheduledGame, w: number) => {
+      bestResult!.set(g.gameId, w);
+      teamWeeks.get(g.homeTeamId)!.add(w);
+      teamWeeks.get(g.awayTeamId)!.add(w);
+    };
+    const unassignFb = (g: ScheduledGame) => {
+      const w = bestResult!.get(g.gameId);
+      if (w !== undefined) {
+        bestResult!.delete(g.gameId);
+        teamWeeks.get(g.homeTeamId)!.delete(w);
+        teamWeeks.get(g.awayTeamId)!.delete(w);
+      }
+      return w;
+    };
+
+    bestResult = new Map();
+
+    // First pass: greedy
+    for (const game of games) {
+      for (let w = 1; w <= 18; w++) {
+        if (canAssignFb(game, w)) {
+          assignFb(game, w);
+          break;
+        }
+      }
+    }
+
+    // Repair pass: try swapping for unscheduled games
+    for (let iter = 0; iter < 50 && bestResult.size < games.length; iter++) {
+      for (const game of games) {
+        if (bestResult.has(game.gameId)) continue;
+
+        for (let w = 1; w <= 18; w++) {
+          if (canAssignFb(game, w)) {
+            assignFb(game, w);
+            break;
+          }
+
+          // Find blockers and try to move them
+          const blockers = games.filter(
+            (g) =>
+              bestResult!.get(g.gameId) === w &&
+              (g.homeTeamId === game.homeTeamId ||
+                g.awayTeamId === game.homeTeamId ||
+                g.homeTeamId === game.awayTeamId ||
+                g.awayTeamId === game.awayTeamId)
+          );
+
+          for (const blocker of blockers) {
+            const oldW = unassignFb(blocker);
+            // Try each week for blocker
+            for (let alt = 1; alt <= 18; alt++) {
+              if (canAssignFb(blocker, alt)) {
+                assignFb(blocker, alt);
+                if (canAssignFb(game, w)) {
+                  assignFb(game, w);
+                  break;
+                }
+                unassignFb(blocker);
+              }
+            }
+            if (bestResult.has(game.gameId)) break;
+            if (oldW !== undefined) assignFb(blocker, oldW);
+          }
+          if (bestResult.has(game.gameId)) break;
+        }
+      }
     }
   }
 
-  // PHASE 3: Fill any still-unassigned divisional games
-  const stillUnassignedDiv = divisionalGames.filter((g) => !gameWeekAssignment.has(g.gameId));
-  for (const game of stillUnassignedDiv) {
-    for (let week = 12; week >= 1; week--) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // PHASE 4: Assign non-divisional games to remaining slots
-  // Sort by constraint level (teams with fewer available weeks first)
-  const getTeamAvailability = (teamId: string): number => {
-    return 18 - teamWeeklyGames.get(teamId)!.size;
-  };
-
-  nonDivisionalGames.sort((a, b) => {
-    const aMin = Math.min(getTeamAvailability(a.homeTeamId), getTeamAvailability(a.awayTeamId));
-    const bMin = Math.min(getTeamAvailability(b.homeTeamId), getTeamAvailability(b.awayTeamId));
-    return aMin - bMin;
-  });
-
-  for (const game of nonDivisionalGames) {
-    // Try weeks 1-17 (not 18, reserved for divisional)
-    for (let week = 1; week <= 17; week++) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // PHASE 5: Final pass - try any remaining games in any valid week
-  const allUnassigned = games.filter((g) => !gameWeekAssignment.has(g.gameId));
-  for (const game of allUnassigned) {
-    for (let week = 1; week <= 18; week++) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // Build the result (silently drop unschedulable games for now)
-  const result: ScheduledGame[] = [];
-  for (const game of games) {
-    const week = gameWeekAssignment.get(game.gameId);
-    if (week !== undefined) {
-      result.push({ ...game, week });
-    }
-  }
-
-  return result;
+  return games
+    .filter((g) => bestResult!.has(g.gameId))
+    .map((g) => ({ ...g, week: bestResult!.get(g.gameId)! }));
 }
 
 /**
@@ -505,6 +597,7 @@ export function generateSeasonSchedule(
       addSingleGame(team, opp, homeTeam);
     }
   }
+
 
   // Distribute games across weeks
   const scheduledGames = distributeGamesAcrossWeeks(allGames, byeWeeks);
