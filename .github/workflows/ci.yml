@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'claude/e2e-full-season-test-hpNxa']
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -48,8 +48,8 @@ jobs:
   e2e-android:
     runs-on: ubuntu-latest
     name: E2E Tests (Android)
-    # Only run on main branch or when manually triggered with run_e2e=true
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.run_e2e)
+    # Run on main branch, e2e test branch, or when manually triggered
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/e2e-full-season-test-hpNxa' || (github.event_name == 'workflow_dispatch' && inputs.run_e2e)
 
     steps:
       - name: Checkout repository
@@ -134,8 +134,8 @@ jobs:
   e2e-ios:
     runs-on: macos-latest
     name: E2E Tests (iOS)
-    # Only run on main branch or when manually triggered with run_e2e=true
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.run_e2e)
+    # Run on main branch, e2e test branch, or when manually triggered
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/e2e-full-season-test-hpNxa' || (github.event_name == 'workflow_dispatch' && inputs.run_e2e)
 
     steps:
       - name: Checkout repository
