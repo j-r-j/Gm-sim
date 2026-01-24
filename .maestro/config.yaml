@@ -1,0 +1,36 @@
+# Maestro Configuration
+# https://maestro.mobile.dev/
+
+# App configuration
+appId: com.nflgmsim.app
+
+# Default timeout for assertions (ms)
+defaultTimeout: 10000
+
+# Extended timeout for long operations (ms)
+extendedTimeout: 60000
+
+# Take screenshots on failure
+takeScreenshotOnFailure: true
+
+# Screenshot output directory
+screenshotDir: .maestro/screenshots
+
+# Test execution settings
+retryCount: 2
+continueOnFailure: false
+
+# Environment variables available in tests
+env:
+  TEST_MODE: "true"
+  SKIP_ANIMATIONS: "true"
+
+# Tags for organizing tests
+tags:
+  smoke:
+    - flows/full-season-flow.yaml
+  full:
+    - flows/full-season-flow.yaml
+    - flows/draft-flow.yaml
+    - flows/roster-management-flow.yaml
+    - flows/offseason-flow.yaml

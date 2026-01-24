@@ -1,0 +1,81 @@
+# Maestro E2E Test: Full Season Flow
+# This tests the complete user journey through the app
+#
+# To run: maestro test .maestro/flows/full-season-flow.yaml
+# To run all: maestro test .maestro/
+
+appId: com.nflgmsim.app
+
+---
+# Test: Complete Season Flow
+# This flow tests selecting a team, playing through weeks, and advancing the season
+
+- launchApp
+
+# === GAME INITIALIZATION ===
+- assertVisible: "New Game"
+- tapOn: "New Game"
+
+# Select a team (tap on first available team)
+- assertVisible: "Select Your Team"
+- scrollUntilVisible:
+    element: "Dallas Cowboys"
+    direction: DOWN
+- tapOn: "Dallas Cowboys"
+
+# Confirm team selection
+- assertVisible: "Confirm"
+- tapOn: "Confirm"
+
+# === DASHBOARD - WEEK 1 ===
+- assertVisible: "Week 1"
+- assertVisible: "Play Week 1"
+
+# Start the weekly flow
+- tapOn: "Play Week 1"
+
+# === PRE-GAME SCREEN ===
+- assertVisible:
+    text: ".*vs.*|.*@.*"
+    regex: true
+- assertVisible: "Simulate Game"
+- tapOn: "Simulate Game"
+
+# === GAME SIMULATION ===
+# Wait for simulation to complete (may take a few seconds)
+- extendedWaitUntil:
+    visible: "Final"
+    timeout: 30000
+
+# === POST-GAME SCREEN ===
+- assertVisible: "View Results"
+- tapOn: "View Results"
+
+# Review game stats
+- assertVisible:
+    text: ".*\\d+-\\d+.*"  # Score format
+    regex: true
+
+# Continue to league results
+- tapOn: "Continue"
+
+# === SIM OTHER GAMES ===
+- assertVisible: "League Results"
+- tapOn: "Simulate All"
+
+# Wait for other games to complete
+- extendedWaitUntil:
+    visible: "All games complete"
+    timeout: 30000
+
+# === WEEK SUMMARY ===
+- tapOn: "Week Summary"
+- assertVisible: "Standings"
+- assertVisible: "News"
+
+# Advance to next week
+- tapOn: "Advance to Week 2"
+
+# === VERIFY WEEK 2 DASHBOARD ===
+- assertVisible: "Week 2"
+- assertVisible: "Play Week 2"
