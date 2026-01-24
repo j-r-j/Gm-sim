@@ -158,13 +158,13 @@ jobs:
       - name: Build iOS app
         run: |
           npx expo prebuild --platform ios --clean
-          cd ios && xcodebuild -workspace nflgmsim.xcworkspace -scheme nflgmsim -configuration Debug -sdk iphonesimulator -derivedDataPath build
+          cd ios && xcodebuild -workspace GMSim.xcworkspace -scheme GMSim -configuration Debug -sdk iphonesimulator -derivedDataPath build
 
       - name: Boot iOS Simulator
         run: |
           DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 15" | head -1 | grep -oE '[0-9A-F-]{36}')
           xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl install "$DEVICE_ID" ios/build/Build/Products/Debug-iphonesimulator/nflgmsim.app
+          xcrun simctl install "$DEVICE_ID" ios/build/Build/Products/Debug-iphonesimulator/GMSim.app
 
       - name: Run Maestro E2E tests
         run: |
