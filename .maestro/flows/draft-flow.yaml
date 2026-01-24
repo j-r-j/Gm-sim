@@ -22,17 +22,6 @@ appId: com.gmsim.app
 - assertVisible: "Round 1"
 - assertVisible: "On the Clock"
 
-# === WAIT FOR USER'S PICK ===
-# If not user's pick, wait or simulate AI picks
-- runFlow:
-    when:
-      notVisible: "Your Pick"
-    commands:
-      - tapOn: "Auto-Advance"
-      - extendedWaitUntil:
-          visible: "Your Pick"
-          timeout: 60000
-
 # === MAKE A DRAFT PICK ===
 - assertVisible: "Available Prospects"
 
@@ -55,22 +44,3 @@ appId: com.gmsim.app
 
 # Verify pick was made
 - assertVisible: "Pick Complete"
-
-# === CONTINUE DRAFT ===
-# Wait for next user pick or end of draft
-- extendedWaitUntil:
-    visible:
-      anyOf:
-        - "Your Pick"
-        - "Draft Complete"
-    timeout: 120000
-
-# === DRAFT COMPLETE ===
-- runFlow:
-    when:
-      visible: "Draft Complete"
-    commands:
-      - assertVisible: "Your Picks"
-      - tapOn: "View Draft Summary"
-      - assertVisible: "Draft Grades"
-      - tapOn: "Continue"

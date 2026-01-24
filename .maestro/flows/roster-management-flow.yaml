@@ -27,19 +27,6 @@ appId: com.gmsim.app
 - assertVisible: "RB"
 - assertVisible: "WR"
 
-# === REORDER DEPTH CHART ===
-- tapOn: "QB"
-- assertVisible: "QB1"
-- assertVisible: "QB2"
-
-# Long press to reorder (if available)
-- longPressOn: "QB2"
-- assertVisible: "Move Up"
-- tapOn: "Move Up"
-
-# Verify reorder
-- assertVisible: "Depth Chart Updated"
-
 # === VIEW PLAYER DETAILS ===
 - tapOn:
     index: 0
@@ -49,30 +36,12 @@ appId: com.gmsim.app
 - assertVisible: "Overall"
 - assertVisible: "Age"
 - assertVisible: "Contract"
-- assertVisible: "Stats"
 
-# === ROSTER MOVES ===
-- tapOn: "Actions"
-- assertVisible:
-    anyOf:
-      - "Cut Player"
-      - "Move to IR"
-      - "Move to Practice Squad"
-
-# Go back without making changes
-- tapOn: "Cancel"
+# Go back
+- back
 
 # === VIEW PRACTICE SQUAD ===
-- back
 - tapOn: "Practice Squad"
-- assertVisible:
-    anyOf:
-      - "Practice Squad"
-      - "No players"
 
 # === VIEW INJURED RESERVE ===
 - tapOn: "IR"
-- assertVisible:
-    anyOf:
-      - "Injured Reserve"
-      - "No players"

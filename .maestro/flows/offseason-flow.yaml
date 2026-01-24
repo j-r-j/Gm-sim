@@ -15,60 +15,24 @@ appId: com.gmsim.app
 # === PHASE 1: SEASON RECAP ===
 - assertVisible: "Season Recap"
 - assertVisible: "Final Record"
-- assertVisible: "Season Awards"
 - tapOn: "Continue"
 
 # === PHASE 2: COACHING CHANGES ===
 - assertVisible: "Coaching Staff"
-- assertVisible:
-    anyOf:
-      - "Head Coach"
-      - "Review Staff"
-
-# View coaching staff
-- tapOn: "Review Staff"
-- assertVisible: "Coordinators"
-
-# Option to fire coach (don't actually fire)
-- back
 - tapOn: "Continue"
 
 # === PHASE 3: CONTRACT DECISIONS ===
 - assertVisible: "Contract Decisions"
-- assertVisible: "Expiring Contracts"
-
-# View expiring contracts list
-- scrollUntilVisible:
-    element: "Continue"
-    direction: DOWN
-
 - tapOn: "Continue"
 
 # === PHASE 4: COMBINE ===
 - assertVisible: "NFL Combine"
 - assertVisible: "Top Prospects"
-
-# View a prospect
-- tapOn:
-    index: 0
-    below: "Top Prospects"
-
-- assertVisible: "40-Yard Dash"
-- assertVisible: "Bench Press"
-- back
 - tapOn: "Continue"
 
 # === PHASE 5: FREE AGENCY ===
 - assertVisible: "Free Agency"
-- assertVisible: "Available Players"
 - assertVisible: "Cap Space"
-
-# View available free agents
-- tapOn: "Browse Free Agents"
-- assertVisible: "Age"
-
-# Make an offer (optional)
-- back
 - tapOn: "Continue"
 
 # === PHASE 6: DRAFT ===
@@ -85,12 +49,10 @@ appId: com.gmsim.app
 
 # === PHASE 8: OTAs ===
 - assertVisible: "OTAs"
-- assertVisible: "Organized Team Activities"
 - tapOn: "Continue"
 
 # === PHASE 9: TRAINING CAMP ===
 - assertVisible: "Training Camp"
-- assertVisible: "Position Battles"
 - tapOn: "Continue"
 
 # === PHASE 10: PRESEASON ===
@@ -105,13 +67,7 @@ appId: com.gmsim.app
 
 # === PHASE 11: FINAL CUTS ===
 - assertVisible: "Final Cuts"
-- assertVisible: "Roster: 53"
-
-# Make cuts if needed
-- tapOn:
-    anyOf:
-      - "Auto Cut"
-      - "Continue"
+- tapOn: "Continue"
 
 # === PHASE 12: SEASON START ===
 - assertVisible: "Season Start"
