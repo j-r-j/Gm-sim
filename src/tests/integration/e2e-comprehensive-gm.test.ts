@@ -106,6 +106,30 @@ import {
 } from '../../core/offseason/OffseasonOrchestrator';
 import { autoCompletePhase } from '../../core/offseason/OffSeasonPhaseManager';
 
+// Week Flow (button/action flow)
+import {
+  getWeekFlowState,
+  updateWeekFlags,
+  markPreGameViewed,
+  markGameSimulated,
+  markPostGameViewed,
+  markOtherGamesSimulated,
+  markWeekSummaryViewed,
+  advanceWeek,
+  resetWeekFlags,
+  getWeekFlowProgress,
+  getRemainingSteps,
+  DEFAULT_WEEK_FLAGS,
+} from '../../services/flow/WeekFlowManager';
+import {
+  createInitialWeekFlowState,
+  getNextActionPrompt,
+  transitionWeekFlowPhase,
+  updateGate,
+  canAdvanceWeek,
+  getAdvancementBlockReason,
+} from '../../core/simulation/WeekFlowState';
+
 // Test constants
 const TEST_GM_NAME = 'Master GM';
 const TEST_TEAM_ABBREV = 'NYG'; // New York Giants
@@ -751,9 +775,303 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 8: SEASON 1 SIMULATION
+  // SECTION 8: WEEK FLOW STATE MACHINE (Button/Action Flow)
   // ============================================================================
-  describe('Section 8: Season 1 Simulation', () => {
+  describe('Section 8: Week Flow State Machine', () => {
+    it('should create initial week flow state', () => {
+      const flowState = createInitialWeekFlowState(1, 'regularSeason');
+
+      expect(flowState.phase).toBe('pre_week');
+      expect(flowState.weekNumber).toBe(1);
+      expect(flowState.seasonPhase).toBe('regularSeason');
+      expect(flowState.gates.preGameAcknowledged).toBe(false);
+      expect(flowState.gates.gameResultSeen).toBe(false);
+      expect(flowState.gates.weekSummarySeen).toBe(false);
+    });
+
+    it('should determine correct next action for pre_game phase', () => {
+      const flowState = createInitialWeekFlowState(1, 'regularSeason');
+      const userTeam = gameState.teams[gameState.userTeamId];
+
+      // Set opponent info
+      const stateWithOpponent = {
+        ...flowState,
+        phase: 'pre_game' as const,
+        opponent: {
+          teamId: 'opp-123',
+          name: 'Cowboys',
+          abbr: 'DAL',
+          record: '0-0',
+          isHome: false,
+        },
+      };
+
+      const prompt = getNextActionPrompt(stateWithOpponent, userTeam);
+
+      expect(prompt.actionText).toContain('Play Week 1');
+      expect(prompt.targetAction).toBe('view_matchup');
+      expect(prompt.isEnabled).toBe(true);
+    });
+
+    it('should transition through week flow phases correctly', () => {
+      let flowState = createInitialWeekFlowState(1, 'regularSeason');
+
+      // pre_week -> pre_game
+      flowState = transitionWeekFlowPhase(flowState, 'pre_game');
+      expect(flowState.phase).toBe('pre_game');
+
+      // pre_game -> simulating
+      flowState = transitionWeekFlowPhase(flowState, 'simulating');
+      expect(flowState.phase).toBe('simulating');
+
+      // simulating -> post_game
+      flowState = transitionWeekFlowPhase(flowState, 'post_game');
+      expect(flowState.phase).toBe('post_game');
+
+      // post_game -> week_summary
+      flowState = transitionWeekFlowPhase(flowState, 'week_summary');
+      expect(flowState.phase).toBe('week_summary');
+
+      // week_summary -> ready_to_advance
+      flowState = transitionWeekFlowPhase(flowState, 'ready_to_advance');
+      expect(flowState.phase).toBe('ready_to_advance');
+    });
+
+    it('should enforce gate completion before advancing', () => {
+      let flowState = createInitialWeekFlowState(1, 'regularSeason');
+      flowState = {
+        ...flowState,
+        userGameComplete: true,
+        gamesComplete: 16,
+        totalGames: 16,
+      };
+
+      // Cannot advance without gates
+      expect(canAdvanceWeek(flowState)).toBe(false);
+
+      // Check block reason
+      const reason = getAdvancementBlockReason(flowState);
+      expect(reason).not.toBeNull();
+
+      // Mark game result seen
+      flowState = updateGate(flowState, 'gameResultSeen', true);
+      expect(canAdvanceWeek(flowState)).toBe(false);
+
+      // Mark week summary seen
+      flowState = updateGate(flowState, 'weekSummarySeen', true);
+      expect(canAdvanceWeek(flowState)).toBe(true);
+    });
+
+    it('should track week flow progress with WeekFlowManager', () => {
+      // Start with fresh game state
+      let testState = { ...gameState };
+
+      // Initial flow state should be pre_game
+      const initialFlow = getWeekFlowState(testState);
+      expect(initialFlow.phase).toBe('pre_game');
+      expect(initialFlow.flags.preGameViewed).toBe(false);
+
+      // Mark pre-game viewed
+      testState = markPreGameViewed(testState);
+      const afterPreGame = getWeekFlowState(testState);
+      expect(afterPreGame.flags.preGameViewed).toBe(true);
+      expect(afterPreGame.phase).toBe('simulating');
+
+      // Mark game simulated
+      testState = markGameSimulated(testState);
+      const afterSim = getWeekFlowState(testState);
+      expect(afterSim.flags.gameSimulated).toBe(true);
+      expect(afterSim.phase).toBe('post_game');
+
+      // Mark post-game viewed
+      testState = markPostGameViewed(testState);
+      const afterPostGame = getWeekFlowState(testState);
+      expect(afterPostGame.flags.postGameViewed).toBe(true);
+      expect(afterPostGame.phase).toBe('sim_other');
+
+      // Mark other games simulated
+      testState = markOtherGamesSimulated(testState);
+      const afterOther = getWeekFlowState(testState);
+      expect(afterOther.flags.otherGamesSimulated).toBe(true);
+      expect(afterOther.phase).toBe('week_summary');
+
+      // Mark week summary viewed
+      testState = markWeekSummaryViewed(testState);
+      const afterSummary = getWeekFlowState(testState);
+      expect(afterSummary.flags.weekSummaryViewed).toBe(true);
+      expect(afterSummary.phase).toBe('ready_to_advance');
+      expect(afterSummary.canAdvanceWeek).toBe(true);
+    });
+
+    it('should calculate week flow progress percentage', () => {
+      // No progress
+      expect(getWeekFlowProgress(DEFAULT_WEEK_FLAGS)).toBe(0);
+
+      // Partial progress
+      expect(
+        getWeekFlowProgress({
+          ...DEFAULT_WEEK_FLAGS,
+          preGameViewed: true,
+          gameSimulated: true,
+        })
+      ).toBe(0.4);
+
+      // Full progress
+      expect(
+        getWeekFlowProgress({
+          preGameViewed: true,
+          gameSimulated: true,
+          postGameViewed: true,
+          otherGamesSimulated: true,
+          weekSummaryViewed: true,
+        })
+      ).toBe(1);
+    });
+
+    it('should list remaining steps', () => {
+      const remaining = getRemainingSteps(DEFAULT_WEEK_FLAGS);
+
+      expect(remaining).toContain('View matchup');
+      expect(remaining).toContain('Simulate game');
+      expect(remaining).toContain('View results');
+      expect(remaining).toContain('Simulate other games');
+      expect(remaining).toContain('Review week summary');
+      expect(remaining.length).toBe(5);
+
+      // After some progress
+      const partialRemaining = getRemainingSteps({
+        ...DEFAULT_WEEK_FLAGS,
+        preGameViewed: true,
+        gameSimulated: true,
+      });
+      expect(partialRemaining).not.toContain('View matchup');
+      expect(partialRemaining).not.toContain('Simulate game');
+      expect(partialRemaining.length).toBe(3);
+    });
+
+    it('should reset week flags for new week', () => {
+      let testState = { ...gameState };
+
+      // Mark all flags
+      testState = markPreGameViewed(testState);
+      testState = markGameSimulated(testState);
+      testState = markPostGameViewed(testState);
+      testState = markOtherGamesSimulated(testState);
+      testState = markWeekSummaryViewed(testState);
+
+      const beforeReset = getWeekFlowState(testState);
+      expect(beforeReset.phase).toBe('ready_to_advance');
+
+      // Reset for new week
+      testState = resetWeekFlags(testState);
+      const afterReset = getWeekFlowState(testState);
+      expect(afterReset.phase).toBe('pre_game');
+      expect(afterReset.flags.preGameViewed).toBe(false);
+    });
+
+    it('should show correct action buttons for each phase', () => {
+      const userTeam = gameState.teams[gameState.userTeamId];
+
+      // Pre-game phase
+      const preGameFlow = {
+        ...createInitialWeekFlowState(1, 'regularSeason'),
+        phase: 'pre_game' as const,
+        opponent: {
+          teamId: 'opp',
+          name: 'Eagles',
+          abbr: 'PHI',
+          record: '1-0',
+          isHome: true,
+        },
+      };
+      const preGamePrompt = getNextActionPrompt(preGameFlow, userTeam);
+      expect(preGamePrompt.targetAction).toBe('view_matchup');
+
+      // Simulating phase
+      const simFlow = { ...preGameFlow, phase: 'simulating' as const };
+      const simPrompt = getNextActionPrompt(simFlow, userTeam);
+      expect(simPrompt.targetAction).toBe('continue_simulation');
+
+      // Post-game phase (result not seen)
+      const postGameFlow = {
+        ...simFlow,
+        phase: 'post_game' as const,
+        userGameComplete: true,
+        userGameResult: { won: true, userScore: 24, opponentScore: 17, userRecord: '1-0' },
+        gates: { preGameAcknowledged: true, gameResultSeen: false, weekSummarySeen: false },
+      };
+      const postGamePrompt = getNextActionPrompt(postGameFlow, userTeam);
+      expect(postGamePrompt.targetAction).toBe('view_game_result');
+
+      // Ready to advance
+      const readyFlow = {
+        ...postGameFlow,
+        phase: 'ready_to_advance' as const,
+        gates: { preGameAcknowledged: true, gameResultSeen: true, weekSummarySeen: true },
+        gamesComplete: 16,
+        totalGames: 16,
+      };
+      const readyPrompt = getNextActionPrompt(readyFlow, userTeam);
+      expect(readyPrompt.targetAction).toBe('advance_week');
+    });
+
+    it('should handle bye week flow correctly', () => {
+      const userTeam = gameState.teams[gameState.userTeamId];
+
+      const byeWeekFlow = {
+        ...createInitialWeekFlowState(7, 'regularSeason'),
+        isUserOnBye: true,
+        gamesComplete: 0,
+        totalGames: 14,
+      };
+
+      // Bye week - should sim other games
+      const byePrompt = getNextActionPrompt(byeWeekFlow, userTeam);
+      expect(byePrompt.targetAction).toBe('sim_other_games');
+      expect(byePrompt.contextText).toContain('bye');
+
+      // Bye week with all games complete
+      const byeCompleteFlow = {
+        ...byeWeekFlow,
+        gamesComplete: 14,
+        gates: { preGameAcknowledged: false, gameResultSeen: false, weekSummarySeen: false },
+      };
+      const byeCompletePrompt = getNextActionPrompt(byeCompleteFlow, userTeam);
+      expect(byeCompletePrompt.targetAction).toBe('view_week_summary');
+    });
+
+    it('should show playoff-specific labels', () => {
+      const userTeam = gameState.teams[gameState.userTeamId];
+
+      // Wild Card week
+      const wildCardFlow = {
+        ...createInitialWeekFlowState(19, 'playoffs'),
+        phase: 'pre_game' as const,
+        opponent: {
+          teamId: 'opp',
+          name: 'Packers',
+          abbr: 'GB',
+          record: '12-5',
+          isHome: true,
+        },
+      };
+      const wildCardPrompt = getNextActionPrompt(wildCardFlow, userTeam);
+      expect(wildCardPrompt.actionText).toContain('Wild Card');
+
+      // Super Bowl
+      const superBowlFlow = {
+        ...wildCardFlow,
+        weekNumber: 22,
+      };
+      const sbPrompt = getNextActionPrompt(superBowlFlow, userTeam);
+      expect(sbPrompt.actionText).toContain('Super Bowl');
+    });
+  });
+
+  // ============================================================================
+  // SECTION 9: SEASON 1 SIMULATION
+  // ============================================================================
+  describe('Section 9: Season 1 Simulation', () => {
     it('should start season at week 1', () => {
       seasonManager.startSeason();
       expect(seasonManager.getCurrentWeek()).toBe(1);
@@ -832,9 +1150,9 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 9: COMPLETE OFFSEASON (ALL 12 PHASES)
+  // SECTION 10: COMPLETE OFFSEASON (ALL 12 PHASES)
   // ============================================================================
-  describe('Section 9: Complete Offseason', () => {
+  describe('Section 10: Complete Offseason', () => {
     const completeAndAdvance = () => {
       const completedState = autoCompletePhase(gameState.offseasonState!);
       gameState = { ...gameState, offseasonState: completedState };
@@ -974,9 +1292,9 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 10: SEASON 2 SIMULATION
+  // SECTION 11: SEASON 2 SIMULATION
   // ============================================================================
-  describe('Section 10: Season 2 Simulation', () => {
+  describe('Section 11: Season 2 Simulation', () => {
     let season2Manager: SeasonManager;
 
     it('should initialize season 2 manager', () => {
@@ -1016,9 +1334,9 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 11: FINAL COMPREHENSIVE ASSERTIONS
+  // SECTION 12: FINAL COMPREHENSIVE ASSERTIONS
   // ============================================================================
-  describe('Section 11: Final Assertions', () => {
+  describe('Section 12: Final Assertions', () => {
     it('should have maintained 32 valid teams', () => {
       expect(Object.keys(gameState.teams).length).toBe(32);
 
@@ -1067,6 +1385,7 @@ describe('E2E: Comprehensive GM Feature Test', () => {
       console.log('  [x] Trade Operations (evaluations, AI decisions)');
       console.log('  [x] Free Agency (phases, offers, signings)');
       console.log('  [x] Roster/Depth Chart (generation, assignments)');
+      console.log('  [x] Week Flow State Machine (button sequencing, gates)');
       console.log('  [x] Season 1 (regular season + playoffs)');
       console.log('  [x] Offseason (all 12 phases)');
       console.log('  [x] Season 2 (initialization + week 1)');
