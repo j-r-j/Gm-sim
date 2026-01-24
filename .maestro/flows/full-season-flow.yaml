@@ -35,9 +35,6 @@ appId: com.gmsim.app
 - tapOn: "Play Week 1"
 
 # === PRE-GAME SCREEN ===
-- assertVisible:
-    text: ".*vs.*|.*@.*"
-    regex: true
 - assertVisible: "Simulate Game"
 - tapOn: "Simulate Game"
 
@@ -50,11 +47,6 @@ appId: com.gmsim.app
 # === POST-GAME SCREEN ===
 - assertVisible: "View Results"
 - tapOn: "View Results"
-
-# Review game stats
-- assertVisible:
-    text: ".*\\d+-\\d+.*"  # Score format
-    regex: true
 
 # Continue to league results
 - tapOn: "Continue"

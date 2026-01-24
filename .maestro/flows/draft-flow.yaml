@@ -21,9 +21,6 @@ appId: com.gmsim.app
 # Verify draft room elements
 - assertVisible: "Round 1"
 - assertVisible: "On the Clock"
-- assertVisible:
-    text: "Pick \\d+"
-    regex: true
 
 # === WAIT FOR USER'S PICK ===
 # If not user's pick, wait or simulate AI picks

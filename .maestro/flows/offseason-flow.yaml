@@ -65,9 +65,7 @@ appId: com.gmsim.app
 
 # View available free agents
 - tapOn: "Browse Free Agents"
-- assertVisible:
-    text: ".*Age.*"
-    regex: true
+- assertVisible: "Age"
 
 # Make an offer (optional)
 - back
