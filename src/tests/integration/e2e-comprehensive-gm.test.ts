@@ -144,10 +144,7 @@ import {
   DraftRoomState,
   DEFAULT_TIMER_CONFIG,
 } from '../../core/draft/DraftRoomSimulator';
-import {
-  createDraftOrderState,
-  getDraftOrder,
-} from '../../core/draft/DraftOrderManager';
+import { createDraftOrderState, getDraftOrder } from '../../core/draft/DraftOrderManager';
 import { generateDraftClass } from '../../core/draft/DraftClassGenerator';
 import { createAIDraftProfile } from '../../core/draft/AIDraftStrategy';
 
