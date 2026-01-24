@@ -4,7 +4,7 @@
 # To run: maestro test .maestro/flows/full-season-flow.yaml
 # To run all: maestro test .maestro/
 
-appId: com.nflgmsim.app
+appId: com.gmsim.app
 
 ---
 # Test: Complete Season Flow

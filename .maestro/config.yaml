@@ -2,7 +2,7 @@
 # https://maestro.mobile.dev/
 
 # App configuration
-appId: com.nflgmsim.app
+appId: com.gmsim.app
 
 # Default timeout for assertions (ms)
 defaultTimeout: 10000

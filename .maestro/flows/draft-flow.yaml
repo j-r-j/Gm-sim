@@ -3,7 +3,7 @@
 #
 # To run: maestro test .maestro/flows/draft-flow.yaml
 
-appId: com.nflgmsim.app
+appId: com.gmsim.app
 
 ---
 # Test: Draft Room Flow
