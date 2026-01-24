@@ -162,7 +162,17 @@ jobs:
 
       - name: Boot iOS Simulator
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 15" | head -1 | grep -oE '[0-9A-F-]{36}')
+          # List available devices for debugging
+          echo "Available devices:"
+          xcrun simctl list devices available
+          # Find any available iPhone simulator (prefer iPhone 16, then 15, then any iPhone)
+          DEVICE_ID=$(xcrun simctl list devices available | grep -E "iPhone (16|15)" | head -1 | grep -oE '[0-9A-F-]{36}' || \
+                      xcrun simctl list devices available | grep "iPhone" | head -1 | grep -oE '[0-9A-F-]{36}')
+          echo "Using device: $DEVICE_ID"
+          if [ -z "$DEVICE_ID" ]; then
+            echo "No iPhone simulator found!"
+            exit 1
+          fi
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl install "$DEVICE_ID" ios/build/Build/Products/Debug-iphonesimulator/GMSim.app
 
