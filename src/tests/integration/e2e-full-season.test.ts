@@ -103,9 +103,7 @@ describe('E2E: Full Season Playthrough', () => {
 
     it('should have coaches for each team (HC, OC, DC)', () => {
       Object.values(gameState.teams).forEach((team) => {
-        const teamCoaches = Object.values(gameState.coaches).filter(
-          (c) => c.teamId === team.id
-        );
+        const teamCoaches = Object.values(gameState.coaches).filter((c) => c.teamId === team.id);
         // Should have at least HC, OC, DC
         expect(teamCoaches.length).toBeGreaterThanOrEqual(3);
 
@@ -118,9 +116,7 @@ describe('E2E: Full Season Playthrough', () => {
 
     it('should have scouts for each team', () => {
       Object.values(gameState.teams).forEach((team) => {
-        const teamScouts = Object.values(gameState.scouts).filter(
-          (s) => s.teamId === team.id
-        );
+        const teamScouts = Object.values(gameState.scouts).filter((s) => s.teamId === team.id);
         expect(teamScouts.length).toBeGreaterThanOrEqual(1);
       });
     });
@@ -221,7 +217,7 @@ describe('E2E: Full Season Playthrough', () => {
         expect(userGame).not.toBeNull();
         expect(
           userGame!.homeTeamId === gameState.userTeamId ||
-          userGame!.awayTeamId === gameState.userTeamId
+            userGame!.awayTeamId === gameState.userTeamId
         ).toBe(true);
       }
     });

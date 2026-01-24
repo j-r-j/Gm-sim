@@ -598,7 +598,6 @@ export function generateSeasonSchedule(
     }
   }
 
-
   // Distribute games across weeks
   const scheduledGames = distributeGamesAcrossWeeks(allGames, byeWeeks);
 
