@@ -133,7 +133,9 @@ export function validateTeam(team: Team): boolean {
   if (!team.id || typeof team.id !== 'string') return false;
   if (!team.city || typeof team.city !== 'string') return false;
   if (!team.nickname || typeof team.nickname !== 'string') return false;
-  if (!team.abbreviation || team.abbreviation.length !== 3) return false;
+  // NFL uses 2-3 character abbreviations (NE, KC, GB, etc. are 2 chars)
+  if (!team.abbreviation || team.abbreviation.length < 2 || team.abbreviation.length > 3)
+    return false;
 
   // League position
   if (team.conference !== 'AFC' && team.conference !== 'NFC') return false;
