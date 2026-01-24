@@ -19,14 +19,11 @@ import { getCityByAbbreviation } from '../../core/models/team/FakeCities';
 import { GameState, validateGameState } from '../../core/models/game/GameState';
 import { createSeasonManager, SeasonManager } from '../../core/season/SeasonManager';
 import { Team } from '../../core/models/team/Team';
-import { Player } from '../../core/models/player/Player';
 import { Position } from '../../core/models/player/Position';
 
 // Coaching Staff
 import {
   createCoachingStaffState,
-  hireCoach,
-  fireCoach,
   getVacancies,
   calculateStaffChemistry,
   getCoachingStaffSummary,
@@ -37,8 +34,6 @@ import { Coach } from '../../core/models/staff/Coach';
 // Scouting
 import {
   createScoutingDepartmentState,
-  hireScout,
-  fireScout,
   getScoutingVacancies,
   getScoutingDepartmentSummary,
   ScoutingDepartmentState,
@@ -50,7 +45,6 @@ import {
   determineMarketTier,
   generatePlayerDemands,
   evaluateOffer,
-  extendContract,
   getExtensionEligible,
 } from '../../core/contracts/ExtensionSystem';
 import {
@@ -58,7 +52,6 @@ import {
   analyzeStandardCut,
   analyzePostJune1Cut,
   rankCutCandidates,
-  executeCut,
 } from '../../core/contracts/CutCalculator';
 
 // Trading
@@ -76,7 +69,6 @@ import {
   createFreeAgencyState,
   addFreeAgent,
   submitOffer,
-  acceptOffer,
   advancePhase,
   getTopFreeAgents,
   getFreeAgencySummary,
@@ -109,13 +101,11 @@ import { autoCompletePhase } from '../../core/offseason/OffSeasonPhaseManager';
 // Week Flow (button/action flow)
 import {
   getWeekFlowState,
-  updateWeekFlags,
   markPreGameViewed,
   markGameSimulated,
   markPostGameViewed,
   markOtherGamesSimulated,
   markWeekSummaryViewed,
-  advanceWeek,
   resetWeekFlags,
   getWeekFlowProgress,
   getRemainingSteps,
@@ -142,12 +132,8 @@ import {
   processAIPick,
   pauseDraft,
   resumeDraft,
-  continueAfterRoundBreak,
-  updateTimer,
   proposeTradeToAI,
   receiveAITradeOffer,
-  acceptTradeOffer,
-  rejectTradeOffer,
   generatePotentialTradeOffers,
   clearExpiredOffers,
   getRoundStatus,
@@ -160,7 +146,6 @@ import {
 } from '../../core/draft/DraftRoomSimulator';
 import {
   createDraftOrderState,
-  getNextPick,
   getDraftOrder,
 } from '../../core/draft/DraftOrderManager';
 import { generateDraftClass } from '../../core/draft/DraftClassGenerator';
@@ -174,7 +159,6 @@ import {
   completeTask,
   canAdvancePhase,
   getProgress as getOffseasonPhaseProgress,
-  simulateRemainingOffSeason,
   OffSeasonPhaseType,
 } from '../../core/offseason/OffSeasonPhaseManager';
 
@@ -379,7 +363,6 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   // ============================================================================
   describe('Section 4: Contract Management', () => {
     it('should have active contracts for roster players', () => {
-      const userTeam = gameState.teams[gameState.userTeamId];
       const teamContracts = Object.values(gameState.contracts).filter(
         (c) => c.teamId === gameState.userTeamId && c.status === 'active'
       );
@@ -1141,7 +1124,6 @@ describe('E2E: Comprehensive GM Feature Test', () => {
     });
 
     it('should initialize game day with scheduled game', () => {
-      const userTeam = gameState.teams[gameState.userTeamId];
       const opponentId = Object.keys(gameState.teams).find((id) => id !== gameState.userTeamId)!;
 
       // Create a mock scheduled game with all required properties
@@ -1391,16 +1373,16 @@ describe('E2E: Comprehensive GM Feature Test', () => {
     });
 
     it('should handle incoming AI trade offers', () => {
-      const mockOffer = {
-        offeringTeamId: Object.keys(gameState.teams).find((id) => id !== gameState.userTeamId)!,
-        targetTeamId: gameState.userTeamId,
-        picksOffered: [],
-        picksRequested: [],
-        targetPick: draftState.currentPick?.pick!,
-        _targetProspect: null,
-      };
-
       if (draftState.currentPick) {
+        const mockOffer = {
+          offeringTeamId: Object.keys(gameState.teams).find((id) => id !== gameState.userTeamId)!,
+          targetTeamId: gameState.userTeamId,
+          picksOffered: [],
+          picksRequested: [],
+          targetPick: draftState.currentPick.pick,
+          _targetProspect: null,
+        };
+
         const stateWithOffer = receiveAITradeOffer(draftState, mockOffer);
         expect(stateWithOffer.pendingTradeOffers.length).toBe(
           draftState.pendingTradeOffers.length + 1
