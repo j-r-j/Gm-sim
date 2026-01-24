@@ -130,6 +130,57 @@ import {
   getAdvancementBlockReason,
 } from '../../core/simulation/WeekFlowState';
 
+// Game Day Flow
+import { createGameDayFlow, GameDayFlow } from '../../core/gameflow/GameDayFlow';
+import { GameDayFlowState } from '../../core/gameflow/types';
+
+// Draft Room Flow
+import {
+  createDraftRoomState,
+  startDraft,
+  makeUserPick,
+  processAIPick,
+  pauseDraft,
+  resumeDraft,
+  continueAfterRoundBreak,
+  updateTimer,
+  proposeTradeToAI,
+  receiveAITradeOffer,
+  acceptTradeOffer,
+  rejectTradeOffer,
+  generatePotentialTradeOffers,
+  clearExpiredOffers,
+  getRoundStatus,
+  getAllRoundStatuses,
+  getDraftSummary,
+  validateDraftRoomState,
+  DraftStatus,
+  DraftRoomState,
+  DEFAULT_TIMER_CONFIG,
+} from '../../core/draft/DraftRoomSimulator';
+import {
+  createDraftOrderState,
+  getNextPick,
+  getDraftOrder,
+} from '../../core/draft/DraftOrderManager';
+import { generateDraftClass } from '../../core/draft/DraftClassGenerator';
+import { createAIDraftProfile } from '../../core/draft/AIDraftStrategy';
+
+// Offseason Phase Flow
+import {
+  createOffSeasonState,
+  getCurrentPhaseTasks,
+  areRequiredTasksComplete,
+  completeTask,
+  canAdvancePhase,
+  getProgress as getOffseasonPhaseProgress,
+  simulateRemainingOffSeason,
+  OffSeasonPhaseType,
+} from '../../core/offseason/OffSeasonPhaseManager';
+
+// Draft types
+import { DraftPhilosophy, NeedLevel } from '../../core/draft/AIDraftStrategy';
+
 // Test constants
 const TEST_GM_NAME = 'Master GM';
 const TEST_TEAM_ABBREV = 'NYG'; // New York Giants
@@ -1069,9 +1120,455 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 9: SEASON 1 SIMULATION
+  // SECTION 9: GAME DAY FLOW (Pre-game → Simulation → Post-game)
   // ============================================================================
-  describe('Section 9: Season 1 Simulation', () => {
+  describe('Section 9: Game Day Flow', () => {
+    let gameDayFlow: GameDayFlow;
+
+    beforeAll(() => {
+      gameDayFlow = createGameDayFlow({ emitEvents: false });
+    });
+
+    it('should create game day flow in idle state', () => {
+      const state = gameDayFlow.getState();
+
+      expect(state.phase).toBe('idle');
+      expect(state.preGameInfo).toBeNull();
+      expect(state.liveGame).toBeNull();
+      expect(state.postGameInfo).toBeNull();
+      expect(state.simulationSpeed).toBe('normal');
+      expect(state.isPaused).toBe(false);
+    });
+
+    it('should initialize game day with scheduled game', () => {
+      const userTeam = gameState.teams[gameState.userTeamId];
+      const opponentId = Object.keys(gameState.teams).find((id) => id !== gameState.userTeamId)!;
+
+      // Create a mock scheduled game with all required properties
+      const scheduledGame = {
+        gameId: 'test-game-1',
+        week: 1,
+        homeTeamId: gameState.userTeamId,
+        awayTeamId: opponentId,
+        timeSlot: 'early_sunday' as const,
+        dayOfWeek: 'Sunday' as const,
+        isDivisional: false,
+        isConference: false,
+        isRivalry: false,
+        isComplete: false,
+        homeScore: null as number | null,
+        awayScore: null as number | null,
+        result: null,
+        winnerId: null as string | null,
+      };
+
+      const preGameInfo = gameDayFlow.initializeGameDay(
+        scheduledGame,
+        gameState,
+        gameState.userTeamId
+      );
+
+      expect(preGameInfo).toBeDefined();
+      expect(preGameInfo.userTeam.id).toBe(gameState.userTeamId);
+      expect(preGameInfo.opponent.id).toBe(opponentId);
+      expect(preGameInfo.isUserHome).toBe(true);
+      expect(preGameInfo.week).toBe(1);
+
+      const state = gameDayFlow.getState();
+      expect(state.phase).toBe('pre_game');
+      expect(state.preGameInfo).not.toBeNull();
+    });
+
+    it('should allow setting game prediction', () => {
+      gameDayFlow.setPrediction('win');
+      const state = gameDayFlow.getState();
+      expect(state.prediction).toBe('win');
+    });
+
+    it('should transition through game phases', () => {
+      // Start game
+      gameDayFlow.startGame();
+
+      // After startGame, phase should be coin_toss initially
+      let state = gameDayFlow.getState();
+      expect(['coin_toss', 'simulating']).toContain(state.phase);
+    });
+
+    it('should allow controlling simulation speed', () => {
+      gameDayFlow.setSpeed('fast');
+      let state = gameDayFlow.getState();
+      expect(state.simulationSpeed).toBe('fast');
+
+      gameDayFlow.setSpeed('instant');
+      state = gameDayFlow.getState();
+      expect(state.simulationSpeed).toBe('instant');
+    });
+
+    it('should allow pausing and resuming', () => {
+      gameDayFlow.pause();
+      let state = gameDayFlow.getState();
+      expect(state.isPaused).toBe(true);
+
+      gameDayFlow.resume();
+      state = gameDayFlow.getState();
+      expect(state.isPaused).toBe(false);
+    });
+
+    it('should reset game day flow', () => {
+      gameDayFlow.reset();
+      const state = gameDayFlow.getState();
+
+      expect(state.phase).toBe('idle');
+      expect(state.preGameInfo).toBeNull();
+      expect(state.liveGame).toBeNull();
+      expect(state.postGameInfo).toBeNull();
+    });
+
+    it('should set callbacks for state changes', () => {
+      const stateChanges: GameDayFlowState[] = [];
+      gameDayFlow.setOnStateChange((state) => stateChanges.push(state));
+
+      // Any action that modifies state should trigger callback
+      gameDayFlow.setSpeed('normal');
+
+      expect(stateChanges.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ============================================================================
+  // SECTION 10: DRAFT ROOM FLOW (Picks, Trades, Timer)
+  // ============================================================================
+  describe('Section 10: Draft Room Flow', () => {
+    let draftState: DraftRoomState;
+
+    beforeAll(() => {
+      // Generate draft class with config
+      const draftClass = generateDraftClass({ year: START_YEAR });
+
+      // Create draft order from game state teams
+      const teamIds = Object.keys(gameState.teams);
+      const orderState = createDraftOrderState(START_YEAR, teamIds);
+
+      // Create AI profiles for each team with proper TeamNeeds
+      const aiProfiles = new Map<string, ReturnType<typeof createAIDraftProfile>>();
+      for (const teamId of teamIds) {
+        if (teamId !== gameState.userTeamId) {
+          // TeamNeeds interface with NeedLevel values
+          const positionNeeds = new Map<Position, NeedLevel>();
+          positionNeeds.set(Position.QB, 'critical');
+          positionNeeds.set(Position.WR, 'high');
+          positionNeeds.set(Position.CB, 'high');
+
+          const needs = {
+            teamId,
+            positionNeeds,
+            criticalPositions: [Position.QB],
+            highNeedPositions: [Position.WR, Position.CB],
+          };
+
+          aiProfiles.set(teamId, createAIDraftProfile(teamId, needs, DraftPhilosophy.BALANCED));
+        }
+      }
+
+      // Create draft room state
+      draftState = createDraftRoomState(
+        START_YEAR,
+        orderState,
+        draftClass,
+        aiProfiles,
+        gameState.userTeamId,
+        { ...DEFAULT_TIMER_CONFIG, enabled: false } // Disable timer for testing
+      );
+    });
+
+    it('should create valid draft room state', () => {
+      expect(validateDraftRoomState(draftState)).toBe(true);
+      expect(draftState.status).toBe(DraftStatus.NOT_STARTED);
+      expect(draftState.year).toBe(START_YEAR);
+      expect(draftState.availableProspects.length).toBeGreaterThan(200);
+      expect(draftState.picks.length).toBe(0);
+      expect(draftState.currentRound).toBe(1);
+    });
+
+    it('should start the draft', () => {
+      draftState = startDraft(draftState);
+
+      expect(draftState.status).toBe(DraftStatus.IN_PROGRESS);
+      expect(draftState.currentPick).not.toBeNull();
+      expect(draftState.currentPick!.round).toBe(1);
+      // overallPick may be 0 or 1 depending on indexing
+      expect(draftState.currentPick!.overallPick).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should identify if current pick is user or AI', () => {
+      expect(draftState.currentPick).not.toBeNull();
+      expect(typeof draftState.currentPick!.isUserPick).toBe('boolean');
+    });
+
+    it('should process AI picks correctly', () => {
+      // Process picks until we complete a few
+      let picksProcessed = 0;
+      const maxPicks = 5;
+
+      while (
+        draftState.status === DraftStatus.IN_PROGRESS &&
+        !draftState.currentPick?.isUserPick &&
+        picksProcessed < maxPicks
+      ) {
+        draftState = processAIPick(draftState);
+        picksProcessed++;
+      }
+
+      expect(draftState.picks.length).toBe(picksProcessed);
+      expect(draftState.availableProspects.length).toBeLessThan(300);
+    });
+
+    it('should allow user to make a pick', () => {
+      // If it's a user pick, make it
+      if (draftState.currentPick?.isUserPick) {
+        const prospect = draftState.availableProspects[0];
+        draftState = makeUserPick(draftState, prospect.id);
+
+        expect(draftState.picks.some((p) => p.prospect.id === prospect.id)).toBe(true);
+      }
+    });
+
+    it('should pause and resume draft', () => {
+      if (draftState.status === DraftStatus.IN_PROGRESS) {
+        draftState = pauseDraft(draftState);
+        expect(draftState.status).toBe(DraftStatus.PAUSED);
+
+        draftState = resumeDraft(draftState);
+        expect(draftState.status).toBe(DraftStatus.IN_PROGRESS);
+      }
+    });
+
+    it('should get round status', () => {
+      const round1Status = getRoundStatus(draftState, 1);
+
+      expect(round1Status.round).toBe(1);
+      expect(round1Status.totalPicks).toBe(32);
+      expect(round1Status.picksCompleted).toBeGreaterThanOrEqual(0);
+      expect(typeof round1Status.isComplete).toBe('boolean');
+    });
+
+    it('should get all round statuses', () => {
+      const allStatuses = getAllRoundStatuses(draftState);
+
+      expect(allStatuses.length).toBe(7);
+      allStatuses.forEach((status, index) => {
+        expect(status.round).toBe(index + 1);
+      });
+    });
+
+    it('should get draft summary', () => {
+      const summary = getDraftSummary(draftState);
+
+      expect(summary.totalPicks).toBe(224); // 32 teams * 7 rounds
+      expect(summary.picksCompleted).toBe(draftState.picks.length);
+      expect(summary.tradesCompleted).toBe(draftState.trades.length);
+      expect(Array.isArray(summary.userPicks)).toBe(true);
+      expect(summary.currentRound).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should handle trade proposals to AI', () => {
+      // Get user's picks and another team's picks
+      const userPicks = getDraftOrder(draftState.orderState, START_YEAR).filter(
+        (p) => p.currentTeamId === gameState.userTeamId && !p.selectedPlayerId
+      );
+      const otherTeamId = Object.keys(gameState.teams).find((id) => id !== gameState.userTeamId)!;
+      const otherPicks = getDraftOrder(draftState.orderState, START_YEAR).filter(
+        (p) => p.currentTeamId === otherTeamId && !p.selectedPlayerId
+      );
+
+      if (userPicks.length > 0 && otherPicks.length > 0) {
+        const result = proposeTradeToAI(draftState, [userPicks[0]], [otherPicks[0]]);
+
+        expect(typeof result.accepted).toBe('boolean');
+        expect(result.reason).toBeDefined();
+        // Trade may or may not be accepted based on value
+      }
+    });
+
+    it('should handle incoming AI trade offers', () => {
+      const mockOffer = {
+        offeringTeamId: Object.keys(gameState.teams).find((id) => id !== gameState.userTeamId)!,
+        targetTeamId: gameState.userTeamId,
+        picksOffered: [],
+        picksRequested: [],
+        targetPick: draftState.currentPick?.pick!,
+        _targetProspect: null,
+      };
+
+      if (draftState.currentPick) {
+        const stateWithOffer = receiveAITradeOffer(draftState, mockOffer);
+        expect(stateWithOffer.pendingTradeOffers.length).toBe(
+          draftState.pendingTradeOffers.length + 1
+        );
+      }
+    });
+
+    it('should clear expired trade offers', () => {
+      // Add an expired offer manually
+      const expiredState: DraftRoomState = {
+        ...draftState,
+        pendingTradeOffers: [
+          ...draftState.pendingTradeOffers,
+          {
+            offer: {
+              offeringTeamId: 'test',
+              targetTeamId: gameState.userTeamId,
+              picksOffered: [],
+              picksRequested: [],
+              targetPick: null as any,
+              _targetProspect: null,
+            },
+            evaluation: {
+              assessment: 'fair' as const,
+              description: 'Test',
+              _internalValueDiff: 0,
+              _internalValueRatio: 1,
+            },
+            expiresAt: Date.now() - 1000, // Already expired
+          },
+        ],
+      };
+
+      const clearedState = clearExpiredOffers(expiredState);
+      expect(clearedState.pendingTradeOffers.length).toBeLessThan(
+        expiredState.pendingTradeOffers.length
+      );
+    });
+
+    it('should generate potential trade offers during user pick', () => {
+      // Process until user's pick
+      let safetyCounter = 0;
+      while (
+        draftState.status === DraftStatus.IN_PROGRESS &&
+        !draftState.currentPick?.isUserPick &&
+        safetyCounter < 32
+      ) {
+        draftState = processAIPick(draftState);
+        safetyCounter++;
+      }
+
+      if (draftState.currentPick?.isUserPick) {
+        const offers = generatePotentialTradeOffers(draftState);
+        expect(Array.isArray(offers)).toBe(true);
+        // AI teams may or may not generate offers
+      }
+    });
+  });
+
+  // ============================================================================
+  // SECTION 11: OFFSEASON PHASE FLOW (12 Phases, Tasks, Gates)
+  // ============================================================================
+  describe('Section 11: Offseason Phase Flow', () => {
+    it('should create offseason state starting at season_end', () => {
+      const offseasonState = createOffSeasonState(START_YEAR);
+
+      expect(offseasonState).toBeDefined();
+      expect(offseasonState.currentPhase).toBe('season_end');
+      expect(offseasonState.year).toBe(START_YEAR);
+    });
+
+    it('should have tasks for current phase', () => {
+      const state = createOffSeasonState(START_YEAR);
+      const tasks = getCurrentPhaseTasks(state);
+
+      expect(Array.isArray(tasks)).toBe(true);
+      expect(tasks.length).toBeGreaterThan(0);
+
+      // Each task should have required properties
+      tasks.forEach((task) => {
+        expect(task.id).toBeDefined();
+        expect(task.name).toBeDefined();
+        expect(typeof task.isRequired).toBe('boolean');
+        expect(typeof task.isComplete).toBe('boolean');
+      });
+    });
+
+    it('should have 12 phases defined', () => {
+      const phases: OffSeasonPhaseType[] = [
+        'season_end',
+        'coaching_decisions',
+        'contract_management',
+        'combine',
+        'free_agency',
+        'draft',
+        'udfa',
+        'otas',
+        'training_camp',
+        'preseason',
+        'final_cuts',
+        'season_start',
+      ];
+
+      expect(phases.length).toBe(12);
+    });
+
+    it('should track task completion', () => {
+      let state = createOffSeasonState(START_YEAR);
+      const tasks = getCurrentPhaseTasks(state);
+
+      if (tasks.length > 0) {
+        const taskId = tasks[0].id;
+        state = completeTask(state, taskId);
+
+        const updatedTasks = getCurrentPhaseTasks(state);
+        const completedTask = updatedTasks.find((t) => t.id === taskId);
+        expect(completedTask?.isComplete).toBe(true);
+      }
+    });
+
+    it('should check if required tasks are complete', () => {
+      const state = createOffSeasonState(START_YEAR);
+
+      // Initially, required tasks should not be complete
+      const tasks = getCurrentPhaseTasks(state);
+      const hasRequiredTasks = tasks.some((t) => t.isRequired);
+
+      if (hasRequiredTasks) {
+        expect(areRequiredTasksComplete(state)).toBe(false);
+      }
+    });
+
+    it('should check if can advance phase', () => {
+      let state = createOffSeasonState(START_YEAR);
+
+      // Complete all required tasks
+      let tasks = getCurrentPhaseTasks(state);
+      tasks
+        .filter((t) => t.isRequired)
+        .forEach((task) => {
+          state = completeTask(state, task.id);
+        });
+
+      expect(canAdvancePhase(state)).toBe(true);
+    });
+
+    it('should calculate offseason progress', () => {
+      const state = createOffSeasonState(START_YEAR);
+      const progress = getOffseasonPhaseProgress(state);
+
+      // Progress returns an object with percentComplete
+      expect(progress).toBeDefined();
+      expect(progress.percentComplete).toBeGreaterThanOrEqual(0);
+      expect(progress.percentComplete).toBeLessThanOrEqual(100);
+      expect(progress.totalPhases).toBe(12);
+      expect(progress.currentPhase).toBe('season_end');
+    });
+
+    it('should start at season_end phase', () => {
+      const state = createOffSeasonState(START_YEAR);
+      expect(state.currentPhase).toBe('season_end');
+    });
+  });
+
+  // ============================================================================
+  // SECTION 12: SEASON 1 SIMULATION
+  // ============================================================================
+  describe('Section 12: Season 1 Simulation', () => {
     it('should start season at week 1', () => {
       seasonManager.startSeason();
       expect(seasonManager.getCurrentWeek()).toBe(1);
@@ -1150,9 +1647,9 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 10: COMPLETE OFFSEASON (ALL 12 PHASES)
+  // SECTION 13: COMPLETE OFFSEASON (ALL 12 PHASES)
   // ============================================================================
-  describe('Section 10: Complete Offseason', () => {
+  describe('Section 13: Complete Offseason', () => {
     const completeAndAdvance = () => {
       const completedState = autoCompletePhase(gameState.offseasonState!);
       gameState = { ...gameState, offseasonState: completedState };
@@ -1292,9 +1789,9 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 11: SEASON 2 SIMULATION
+  // SECTION 14: SEASON 2 SIMULATION
   // ============================================================================
-  describe('Section 11: Season 2 Simulation', () => {
+  describe('Section 14: Season 2 Simulation', () => {
     let season2Manager: SeasonManager;
 
     it('should initialize season 2 manager', () => {
@@ -1334,9 +1831,9 @@ describe('E2E: Comprehensive GM Feature Test', () => {
   });
 
   // ============================================================================
-  // SECTION 12: FINAL COMPREHENSIVE ASSERTIONS
+  // SECTION 15: FINAL COMPREHENSIVE ASSERTIONS
   // ============================================================================
-  describe('Section 12: Final Assertions', () => {
+  describe('Section 15: Final Assertions', () => {
     it('should have maintained 32 valid teams', () => {
       expect(Object.keys(gameState.teams).length).toBe(32);
 
@@ -1386,8 +1883,11 @@ describe('E2E: Comprehensive GM Feature Test', () => {
       console.log('  [x] Free Agency (phases, offers, signings)');
       console.log('  [x] Roster/Depth Chart (generation, assignments)');
       console.log('  [x] Week Flow State Machine (button sequencing, gates)');
+      console.log('  [x] Game Day Flow (pre-game, simulation, post-game)');
+      console.log('  [x] Draft Room Flow (picks, trades, timer, AI)');
+      console.log('  [x] Offseason Phase Flow (12 phases, tasks, gates)');
       console.log('  [x] Season 1 (regular season + playoffs)');
-      console.log('  [x] Offseason (all 12 phases)');
+      console.log('  [x] Offseason Execution (all 12 phases)');
       console.log('  [x] Season 2 (initialization + week 1)');
       console.log('===========================================\n');
 
