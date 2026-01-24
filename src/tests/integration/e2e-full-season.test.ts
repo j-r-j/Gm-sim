@@ -14,7 +14,6 @@ import { createNewGame } from '../../services/NewGameService';
 import { getCityByAbbreviation } from '../../core/models/team/FakeCities';
 import { GameState, validateGameState } from '../../core/models/game/GameState';
 import { createSeasonManager, SeasonManager } from '../../core/season/SeasonManager';
-import { Team } from '../../core/models/team/Team';
 import {
   initializeOffseason,
   enterPhase,
@@ -22,13 +21,8 @@ import {
   processPhaseAction,
   getCurrentPhase,
   getOffseasonProgress,
-  completeOffseason,
 } from '../../core/offseason/OffseasonOrchestrator';
-import {
-  PHASE_ORDER,
-  autoCompletePhase,
-  OffSeasonState,
-} from '../../core/offseason/OffSeasonPhaseManager';
+import { autoCompletePhase } from '../../core/offseason/OffSeasonPhaseManager';
 
 // Test constants
 const TEST_GM_NAME = 'Test GM';
@@ -758,7 +752,7 @@ describe('E2E: Full Season Playthrough', () => {
 
     it('should have 100% offseason progress at completion', () => {
       // Complete final phase
-      const result = completeAndAdvancePhase();
+      completeAndAdvancePhase();
 
       // Offseason should be fully complete
       const progress = getOffseasonProgress(gameState);
@@ -809,12 +803,7 @@ describe('E2E: Full Season Playthrough', () => {
     });
 
     it('should have draft picks for current year', () => {
-      // User should have draft picks for the current year (used same year for season 2 manager)
-      const userPicks = Object.values(gameState.draftPicks).filter(
-        (p) => p.currentTeamId === gameState.userTeamId && p.year === START_YEAR
-      );
-
-      // Should have picks (may have traded some or used in draft)
+      // Should have picks in the system (may have traded some or used in draft)
       // Just verify the structure exists
       expect(Object.keys(gameState.draftPicks).length).toBeGreaterThan(0);
     });
