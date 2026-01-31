@@ -8,6 +8,46 @@ import { DraftBoardProspect } from '../screens/DraftBoardScreen';
 import { SkillValue } from '../core/models/player/TechnicalSkills';
 
 /**
+ * Role ceiling order for sorting prospects (best to worst)
+ */
+const ROLE_CEILING_ORDER = [
+  'franchiseCornerstone',
+  'highEndStarter',
+  'solidStarter',
+  'qualityRotational',
+  'specialist',
+  'depth',
+  'practiceSquad',
+];
+
+/**
+ * Sorts prospects by their talent level (role ceiling + it factor)
+ * This is used to determine prospect rankings when no explicit rankings exist
+ */
+export function sortProspectsByTalent(prospects: Prospect[]): Prospect[] {
+  return [...prospects].sort((a, b) => {
+    const aCeilingIndex = ROLE_CEILING_ORDER.indexOf(a.player.roleFit.ceiling);
+    const bCeilingIndex = ROLE_CEILING_ORDER.indexOf(b.player.roleFit.ceiling);
+
+    // First sort by ceiling
+    if (aCeilingIndex !== bCeilingIndex) {
+      return aCeilingIndex - bCeilingIndex;
+    }
+
+    // Secondary sort by it factor
+    return b.player.itFactor.value - a.player.itFactor.value;
+  });
+}
+
+/**
+ * Gets the rank index for a role ceiling (lower is better)
+ */
+function getRoleCeilingIndex(ceiling: string): number {
+  const index = ROLE_CEILING_ORDER.indexOf(ceiling);
+  return index === -1 ? ROLE_CEILING_ORDER.length : index;
+}
+
+/**
  * Converts a Prospect to DraftBoardProspect format for display
  */
 export function convertToDraftBoardProspect(prospect: Prospect): DraftBoardProspect {

@@ -157,19 +157,65 @@ export function DraftRoomScreen({
 }: DraftRoomScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<DraftRoomTab>('board');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+  const [positionFilter, setPositionFilter] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<'rank' | 'position' | 'projection'>('rank');
 
   const isUserPick = currentPick.teamId === userTeamId;
   const safeTradeOffers = tradeOffers ?? [];
   const pendingTradeOffers = safeTradeOffers.filter((t) => t.status === 'pending');
 
-  // Filter available prospects
+  // Position filter groups
+  const POSITION_GROUPS: Record<string, string[]> = {
+    ALL: [],
+    OFF: ['QB', 'RB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'],
+    DEF: ['DE', 'DT', 'OLB', 'ILB', 'CB', 'FS', 'SS'],
+    QB: ['QB'],
+    RB: ['RB'],
+    WR: ['WR'],
+    TE: ['TE'],
+    OL: ['LT', 'LG', 'C', 'RG', 'RT'],
+    DL: ['DE', 'DT'],
+    LB: ['OLB', 'ILB'],
+    DB: ['CB', 'FS', 'SS'],
+  };
+
+  // Filter and sort available prospects
   const filteredProspects = useMemo(() => {
     let result = availableProspects.filter((p) => !p.isDrafted);
+
+    // Apply flagged filter
     if (showFlaggedOnly) {
       result = result.filter((p) => p.flagged);
     }
-    return result.slice(0, 20); // Limit for performance in draft room
-  }, [availableProspects, showFlaggedOnly]);
+
+    // Apply position filter
+    if (positionFilter !== 'ALL') {
+      const positions = POSITION_GROUPS[positionFilter] || [positionFilter];
+      result = result.filter((p) => positions.includes(p.position));
+    }
+
+    // Sort
+    if (sortBy === 'position') {
+      result = [...result].sort((a, b) => {
+        if (a.position !== b.position) {
+          return a.position.localeCompare(b.position);
+        }
+        return (a.positionRank ?? 999) - (b.positionRank ?? 999);
+      });
+    } else if (sortBy === 'projection') {
+      result = [...result].sort((a, b) => {
+        const aRound = a.projectedRound ?? 8;
+        const bRound = b.projectedRound ?? 8;
+        if (aRound !== bRound) return aRound - bRound;
+        const aMin = a.projectedPickRange?.min ?? 999;
+        const bMin = b.projectedPickRange?.min ?? 999;
+        return aMin - bMin;
+      });
+    }
+    // Default is 'rank' which is already sorted by the wrapper
+
+    return result;
+  }, [availableProspects, showFlaggedOnly, positionFilter, sortBy]);
 
   // Handle draft selection
   const handleDraftPlayer = useCallback(
@@ -389,30 +435,81 @@ export function DraftRoomScreen({
         <View style={styles.tabContent}>
           {/* Filter bar */}
           <View style={styles.boardFilterBar}>
-            <TouchableOpacity
-              style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
-              onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
-              accessibilityLabel={`Show ${showFlaggedOnly ? 'all prospects' : 'flagged only'}`}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: showFlaggedOnly }}
-              hitSlop={accessibility.hitSlop}
-            >
-              <Ionicons
-                name={showFlaggedOnly ? 'star' : 'star-outline'}
-                size={16}
-                color={showFlaggedOnly ? colors.secondary : colors.textSecondary}
-              />
-              <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
-                Flagged Only
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
+            <View style={styles.filterRow}>
+              <TouchableOpacity
+                style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
+                onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
+                accessibilityLabel={`Show ${showFlaggedOnly ? 'all prospects' : 'flagged only'}`}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: showFlaggedOnly }}
+                hitSlop={accessibility.hitSlop}
+              >
+                <Ionicons
+                  name={showFlaggedOnly ? 'star' : 'star-outline'}
+                  size={16}
+                  color={showFlaggedOnly ? colors.secondary : colors.textSecondary}
+                />
+              </TouchableOpacity>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.positionFilterScroll}
+              >
+                {['ALL', 'OFF', 'DEF', 'QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'DB'].map(
+                  (pos) => (
+                    <TouchableOpacity
+                      key={pos}
+                      style={[
+                        styles.positionFilterButton,
+                        positionFilter === pos && styles.positionFilterButtonActive,
+                      ]}
+                      onPress={() => setPositionFilter(pos)}
+                      accessibilityLabel={`Filter by ${pos}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: positionFilter === pos }}
+                    >
+                      <Text
+                        style={[
+                          styles.positionFilterText,
+                          positionFilter === pos && styles.positionFilterTextActive,
+                        ]}
+                      >
+                        {pos}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </ScrollView>
+            </View>
+            <View style={styles.sortRow}>
+              <Text style={styles.sortLabel}>Sort:</Text>
+              {(['rank', 'position', 'projection'] as const).map((sort) => (
+                <TouchableOpacity
+                  key={sort}
+                  style={[styles.sortButton, sortBy === sort && styles.sortButtonActive]}
+                  onPress={() => setSortBy(sort)}
+                  accessibilityLabel={`Sort by ${sort}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: sortBy === sort }}
+                >
+                  <Text
+                    style={[styles.sortButtonText, sortBy === sort && styles.sortButtonTextActive]}
+                  >
+                    {sort === 'rank' ? 'Rank' : sort === 'position' ? 'Position' : 'Projection'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
+            </View>
           </View>
 
           <FlatList
             data={filteredProspects}
             keyExtractor={(item) => item.id}
             renderItem={renderProspect}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+            windowSize={10}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>No prospects available</Text>
@@ -601,14 +698,68 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   boardFilterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    flexDirection: 'column',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: spacing.xs,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  positionFilterScroll: {
+    flex: 1,
+  },
+  positionFilterButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginRight: spacing.xs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.background,
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  positionFilterButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  positionFilterText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  positionFilterTextActive: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  sortLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  sortButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.background,
+  },
+  sortButtonActive: {
+    backgroundColor: colors.primaryLight,
+  },
+  sortButtonText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  sortButtonTextActive: {
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
   },
   flagFilterButton: {
     flexDirection: 'row',
@@ -617,7 +768,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
-    minHeight: accessibility.minTouchTarget,
+    minHeight: 32,
   },
   flagFilterButtonActive: {
     backgroundColor: colors.secondary + '20',
@@ -633,6 +784,7 @@ const styles = StyleSheet.create({
   boardCount: {
     fontSize: fontSize.sm,
     color: colors.textLight,
+    marginLeft: 'auto',
   },
   proposeTradeContainer: {
     paddingHorizontal: spacing.md,

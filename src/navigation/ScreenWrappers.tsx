@@ -2465,6 +2465,52 @@ export function DraftBoardScreenWrapper({
 // DRAFT ROOM SCREEN
 // ============================================
 
+/**
+ * Role ceiling order for sorting prospects (best to worst)
+ */
+const ROLE_CEILING_ORDER = [
+  'franchiseCornerstone',
+  'highEndStarter',
+  'solidStarter',
+  'qualityRotational',
+  'specialist',
+  'depth',
+  'practiceSquad',
+];
+
+/**
+ * Gets draft order based on team records (worst teams pick first, snake order)
+ */
+function getDraftOrderFromRecords(
+  teams: Record<
+    string,
+    {
+      id: string;
+      city: string;
+      nickname: string;
+      abbreviation: string;
+      currentRecord: { wins: number; losses: number; ties: number };
+    }
+  >
+): string[] {
+  // Sort teams by record (worst to best for draft order)
+  const sortedTeams = Object.values(teams).sort((a, b) => {
+    const aWinPct =
+      a.currentRecord.wins /
+      Math.max(1, a.currentRecord.wins + a.currentRecord.losses + a.currentRecord.ties);
+    const bWinPct =
+      b.currentRecord.wins /
+      Math.max(1, b.currentRecord.wins + b.currentRecord.losses + b.currentRecord.ties);
+    // Worst record first (lower win percentage = earlier pick)
+    if (aWinPct !== bWinPct) {
+      return aWinPct - bWinPct;
+    }
+    // Tiebreaker: more losses = earlier pick
+    return b.currentRecord.losses - a.currentRecord.losses;
+  });
+  return sortedTeams.map((t) => t.id);
+}
+
 export function DraftRoomScreenWrapper({
   navigation,
 }: ScreenProps<'DraftRoom'>): React.JSX.Element {
@@ -2478,54 +2524,176 @@ export function DraftRoomScreenWrapper({
     setDraftedProspects,
     setAutoPickEnabled,
     setDraftPaused,
+    setGameState,
+    saveGameState,
   } = useGame();
+
+  // Ref to track if AI pick is in progress
+  const aiPickInProgress = useRef(false);
 
   if (!gameState) {
     return <LoadingFallback message="Loading draft room..." />;
   }
 
-  const teamIds = Object.keys(gameState.teams);
-  const totalPicks = teamIds.length * 7;
+  // Get draft order based on team records (worst teams pick first)
+  const draftOrderByRecord = getDraftOrderFromRecords(gameState.teams);
+  const numTeams = draftOrderByRecord.length;
+  const totalPicks = numTeams * 7;
 
+  // Create the full draft order with snake format (odd rounds normal, even rounds reversed)
   const draftOrder = Array.from({ length: totalPicks }, (_, i) => {
-    const round = Math.floor(i / teamIds.length) + 1;
-    const pickInRound = i % teamIds.length;
-    const teamIndex = round % 2 === 1 ? pickInRound : teamIds.length - 1 - pickInRound;
+    const round = Math.floor(i / numTeams) + 1;
+    const pickInRound = i % numTeams;
+    // Snake draft: odd rounds go 1-32, even rounds go 32-1
+    const teamIndex = round % 2 === 1 ? pickInRound : numTeams - 1 - pickInRound;
+    const teamId = draftOrderByRecord[teamIndex];
+    const team = gameState.teams[teamId];
     return {
       round,
       pickNumber: i + 1,
-      teamId: teamIds[teamIndex],
-      teamName: `${gameState.teams[teamIds[teamIndex]].city} ${gameState.teams[teamIds[teamIndex]].nickname}`,
-      teamAbbr: gameState.teams[teamIds[teamIndex]].abbreviation,
+      teamId,
+      teamName: `${team.city} ${team.nickname}`,
+      teamAbbr: team.abbreviation,
     };
   });
 
   const currentPickInfo = draftOrder[draftCurrentPick - 1] || draftOrder[0];
+  const isUserPick = currentPickInfo.teamId === gameState.userTeamId;
+
+  // Build a list of drafted prospects in order of pick
+  const draftedProspectsList = Object.entries(draftedProspects);
+
+  // Get recent picks with the prospect names
   const recentPicks = draftOrder
     .slice(Math.max(0, draftCurrentPick - 6), draftCurrentPick - 1)
-    .map((pick) => ({
-      ...pick,
-      selectedProspectId: Object.entries(draftedProspects).find(([_, teamId]) =>
-        draftOrder.find((p) => p.pickNumber === pick.pickNumber && p.teamId === teamId)
-      )?.[0],
-    }));
+    .map((pick) => {
+      // Find the prospect that was drafted at this pick number
+      // The draftedProspects is keyed by prospectId with value as teamId
+      // We need to find the prospect drafted by the team at this pick
+      const pickIndex = pick.pickNumber - 1;
+      const prospectEntry = draftedProspectsList[pickIndex];
+      const prospectId = prospectEntry?.[0];
+      const prospect = prospectId ? gameState.prospects[prospectId] : null;
+      return {
+        ...pick,
+        selectedProspectId: prospectId,
+        selectedProspectName: prospect
+          ? `${prospect.player.firstName} ${prospect.player.lastName}`
+          : undefined,
+      };
+    });
+
   const upcomingPicks = draftOrder.slice(draftCurrentPick, draftCurrentPick + 5);
 
-  const availableProspects: DraftRoomProspect[] = Object.values(gameState.prospects)
+  // Sort available prospects by talent (role ceiling + it factor)
+  const sortedProspects = Object.values(gameState.prospects)
     .filter((p) => !draftedProspects[p.id])
-    .map((p, index) => ({
-      id: p.id,
-      name: `${p.player.firstName} ${p.player.lastName}`,
-      position: p.player.position,
-      collegeName: p.collegeName,
-      projectedRound: p.consensusProjection?.projectedRound ?? null,
-      projectedPickRange: p.consensusProjection?.projectedPickRange ?? null,
-      userTier: p.userTier,
-      flagged: p.flagged,
-      positionRank: index + 1,
-      overallRank: index + 1,
-      isDrafted: false,
-    }));
+    .sort((a, b) => {
+      const aCeilingIndex = ROLE_CEILING_ORDER.indexOf(a.player.roleFit.ceiling);
+      const bCeilingIndex = ROLE_CEILING_ORDER.indexOf(b.player.roleFit.ceiling);
+      if (aCeilingIndex !== bCeilingIndex) {
+        return aCeilingIndex - bCeilingIndex;
+      }
+      return b.player.itFactor.value - a.player.itFactor.value;
+    });
+
+  // Calculate position ranks
+  const positionRanks: Record<string, number> = {};
+  sortedProspects.forEach((p) => {
+    const pos = p.player.position;
+    positionRanks[p.id] = (positionRanks[pos] || 0) + 1;
+    positionRanks[pos] = positionRanks[p.id];
+  });
+
+  // Convert to DraftRoomProspect format with proper ranks
+  const availableProspects: DraftRoomProspect[] = sortedProspects.map((p, index) => ({
+    id: p.id,
+    name: `${p.player.firstName} ${p.player.lastName}`,
+    position: p.player.position,
+    collegeName: p.collegeName,
+    projectedRound: p.consensusProjection?.projectedRound ?? null,
+    projectedPickRange: p.consensusProjection?.projectedPickRange ?? null,
+    userTier: p.userTier,
+    flagged: p.flagged,
+    positionRank: positionRanks[p.id] || index + 1,
+    overallRank: index + 1,
+    isDrafted: false,
+  }));
+
+  // Function to make a pick (used for both user and AI)
+  const makePick = useCallback(
+    async (prospectId: string, teamId: string) => {
+      const newDraftedProspects = {
+        ...draftedProspects,
+        [prospectId]: teamId,
+      };
+      setDraftedProspects(newDraftedProspects);
+
+      return newDraftedProspects;
+    },
+    [draftedProspects, setDraftedProspects]
+  );
+
+  // AI pick logic - returns the best available prospect ID
+  const makeAIPick = useCallback(
+    (currentDraftedProspects: Record<string, string>): string | null => {
+      // Get best available prospect for AI (simple BPA strategy)
+      const available = sortedProspects.filter((p) => !currentDraftedProspects[p.id]);
+      if (available.length === 0) return null;
+
+      // AI picks the best available prospect
+      const selectedProspect = available[0];
+      return selectedProspect.id;
+    },
+    [sortedProspects]
+  );
+
+  // Effect to auto-process AI picks
+  useEffect(() => {
+    const processAIPicks = async () => {
+      if (draftPaused || aiPickInProgress.current) return;
+      if (draftCurrentPick > totalPicks) return;
+
+      const currentPick = draftOrder[draftCurrentPick - 1];
+      if (!currentPick) return;
+
+      // If it's the user's pick, don't auto-process
+      if (currentPick.teamId === gameState.userTeamId) return;
+
+      // AI's turn - process the pick
+      aiPickInProgress.current = true;
+
+      // Small delay to simulate AI "thinking"
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const prospectId = makeAIPick(draftedProspects);
+      if (prospectId) {
+        await makePick(prospectId, currentPick.teamId);
+
+        if (draftCurrentPick < totalPicks) {
+          setDraftCurrentPick(draftCurrentPick + 1);
+        } else {
+          Alert.alert('Draft Complete', 'The draft has concluded!');
+          navigation.goBack();
+        }
+      }
+
+      aiPickInProgress.current = false;
+    };
+
+    processAIPicks();
+  }, [
+    draftCurrentPick,
+    draftPaused,
+    draftOrder,
+    gameState.userTeamId,
+    totalPicks,
+    draftedProspects,
+    makeAIPick,
+    makePick,
+    setDraftCurrentPick,
+    navigation,
+  ]);
 
   return (
     <DraftRoomScreen
@@ -2538,11 +2706,7 @@ export function DraftRoomScreenWrapper({
       autoPickEnabled={autoPickEnabled}
       isPaused={draftPaused}
       onSelectProspect={async (prospectId) => {
-        const newDraftedProspects = {
-          ...draftedProspects,
-          [prospectId]: currentPickInfo.teamId,
-        };
-        setDraftedProspects(newDraftedProspects);
+        await makePick(prospectId, currentPickInfo.teamId);
 
         if (draftCurrentPick < totalPicks) {
           setDraftCurrentPick(draftCurrentPick + 1);
@@ -2551,7 +2715,7 @@ export function DraftRoomScreenWrapper({
           navigation.goBack();
         }
       }}
-      onViewProspect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+      onViewProspect={(prospectId) => navigation.navigate('ProspectDetail', { prospectId })}
       onAcceptTrade={(tradeId) => Alert.alert('Trade Accepted', `Trade ${tradeId} accepted`)}
       onRejectTrade={(tradeId) => Alert.alert('Trade Rejected', `Trade ${tradeId} rejected`)}
       onCounterTrade={(tradeId) =>
