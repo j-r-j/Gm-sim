@@ -506,9 +506,10 @@ export function createMinimumContract(
  * Checks if a player can be traded based on their contract's no-trade clause
  * Returns whether the trade is allowed and the reason if blocked
  */
-export function canTradePlayer(
-  contract: PlayerContract | null
-): { canTrade: boolean; reason?: string } {
+export function canTradePlayer(contract: PlayerContract | null): {
+  canTrade: boolean;
+  reason?: string;
+} {
   // No contract means free agent or practice squad - can be moved
   if (!contract) {
     return { canTrade: true };
