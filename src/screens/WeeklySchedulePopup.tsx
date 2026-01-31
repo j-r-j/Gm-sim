@@ -631,6 +631,29 @@ export function WeeklySchedulePopup({
   // Check if user's game is already complete (e.g., they just played it via Gamecast)
   const userGameAlreadyComplete = userGame?.isComplete === true;
 
+  // Track the previous userGameAlreadyComplete value to detect when user returns from playing their game
+  const prevUserGameAlreadyCompleteRef = useRef(userGameAlreadyComplete);
+
+  // Reset simPhase to 'initial' when user returns from playing their game
+  // This handles the case where navigation restores the component with stale state
+  useEffect(() => {
+    const prevComplete = prevUserGameAlreadyCompleteRef.current;
+
+    // If user's game just became complete (user returned from playing)
+    // AND we're not already in a valid state, reset to initial
+    if (userGameAlreadyComplete && !prevComplete) {
+      setSimPhase('initial');
+    }
+
+    // Also reset if we're in 'user_playing' state but the user's game is already complete
+    // This catches the case where navigation restored old state
+    if (userGameAlreadyComplete && simPhase === 'user_playing') {
+      setSimPhase('initial');
+    }
+
+    prevUserGameAlreadyCompleteRef.current = userGameAlreadyComplete;
+  }, [userGameAlreadyComplete, simPhase]);
+
   // Pre-populate simulatedGames with user's completed game if applicable
   useEffect(() => {
     if (userGame && userGameAlreadyComplete && !simulatedGames.has(userGame.gameId)) {

@@ -5791,7 +5791,7 @@ export function WeeklyScheduleScreenWrapper({
 export function LiveGameSimulationScreenWrapper({
   navigation,
 }: ScreenProps<'LiveGameSimulation'>): React.JSX.Element {
-  const { gameState, setGameState, saveGameState } = useGame();
+  const { gameState, setGameState, saveGameState, setLastGameResult } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading game simulation..." />;
@@ -5824,6 +5824,9 @@ export function LiveGameSimulationScreenWrapper({
       userTeamId={userTeamId}
       onBack={() => navigation.goBack()}
       onGameComplete={async (result, updatedState) => {
+        // Store the game result in context for PostGameSummary to access
+        setLastGameResult(result);
+
         setGameState(updatedState);
         await saveGameState(updatedState);
 
@@ -5841,7 +5844,7 @@ export function LiveGameSimulationScreenWrapper({
 export function PostGameSummaryScreenWrapper({
   navigation,
 }: ScreenProps<'PostGameSummary'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, lastGameResult } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading game summary..." />;
@@ -5881,8 +5884,8 @@ export function PostGameSummaryScreenWrapper({
   const opponentScore = isHome ? userGame.awayScore! : userGame.homeScore!;
   const isWin = userScore > opponentScore;
 
-  // Create a basic box score structure (simplified since we don't have full stats stored)
-  const boxScore: import('../core/game/BoxScoreGenerator').BoxScore = {
+  // Use actual box score from game result if available, otherwise create fallback
+  const boxScore: import('../core/game/BoxScoreGenerator').BoxScore = lastGameResult?.boxScore ?? {
     gameId: userGame.gameId,
     date: new Date().toISOString().split('T')[0],
     week: week,
@@ -5935,6 +5938,7 @@ export function PostGameSummaryScreenWrapper({
         isUser: awayTeam.id === userTeamId,
       }}
       boxScore={boxScore}
+      keyPlays={lastGameResult?.keyPlays}
       week={week}
       phase={phase}
       onContinue={handleContinue}
