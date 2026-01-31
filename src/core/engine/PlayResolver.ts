@@ -589,12 +589,18 @@ export function resolvePlay(
   offensivePlayers.forEach((p) => allPlayers.set(p.id, p));
   defensivePlayers.forEach((p) => allPlayers.set(p.id, p));
 
-  // For pass plays, the primary offensive player for stats is the receiver
-  // QB is tracked separately
-  const primaryOffensivePlayerId =
-    primaryPlayers.receiver && !playType.startsWith('run')
-      ? primaryPlayers.receiver
-      : primaryPlayers.offensive;
+  // For pass plays:
+  // - primaryOffensivePlayer = QB (StatisticsTracker credits passing stats here)
+  // - primaryDefensivePlayer = receiver (StatisticsTracker credits receiving stats here)
+  // For run plays:
+  // - primaryOffensivePlayer = ball carrier
+  // - primaryDefensivePlayer = tackler
+  const isPassPlay =
+    !playType.startsWith('run') && playType !== 'qb_sneak' && primaryPlayers.receiver;
+  const primaryOffensivePlayerId = primaryPlayers.offensive;
+  const primaryDefensivePlayerId = isPassPlay
+    ? primaryPlayers.receiver // Receiver for pass plays (StatisticsTracker expects this)
+    : primaryPlayers.defensive; // Tackler for run plays
 
   // Generate description
   const descResult: PlayResultForDescription = {
@@ -602,7 +608,7 @@ export function resolvePlay(
     outcome: roll.outcome,
     yardsGained,
     primaryOffensivePlayer: primaryOffensivePlayerId,
-    primaryDefensivePlayer: primaryPlayers.defensive,
+    primaryDefensivePlayer: primaryDefensivePlayerId,
     turnover,
     touchdown,
     firstDown,
@@ -617,7 +623,7 @@ export function resolvePlay(
     outcome: roll.outcome,
     yardsGained,
     primaryOffensivePlayer: primaryOffensivePlayerId,
-    primaryDefensivePlayer: primaryPlayers.defensive,
+    primaryDefensivePlayer: primaryDefensivePlayerId,
     newDown,
     newDistance,
     newFieldPosition,

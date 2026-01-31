@@ -535,13 +535,45 @@ export function StaffHiringScreenWrapper({
           [defensiveCoordinator.id]: defensiveCoordinator,
         };
 
+        // If clean house was used (formerStaffIds is not empty), also remove scouts
+        // associated with the user's team
+        let updatedScouts = pendingNewGame.scouts;
+        let finalUserTeam = updatedUserTeam;
+
+        if (formerStaffIds.length > 0 && pendingNewGame.scouts) {
+          // Remove scouts that belong to the user's team
+          updatedScouts = Object.fromEntries(
+            Object.entries(pendingNewGame.scouts).filter(
+              ([, scout]) => scout.teamId !== pendingNewGame.userTeamId
+            )
+          );
+
+          // Clear scout references in the staffHierarchy
+          finalUserTeam = {
+            ...updatedUserTeam,
+            staffHierarchy: {
+              ...updatedUserTeam.staffHierarchy,
+              headScout: null,
+              offensiveScout: null,
+              defensiveScout: null,
+              scoutingSpend: 0,
+              remainingBudget:
+                updatedUserTeam.staffHierarchy.staffBudget -
+                (headCoach.contract?.salaryPerYear || 0) -
+                (offensiveCoordinator.contract?.salaryPerYear || 0) -
+                (defensiveCoordinator.contract?.salaryPerYear || 0),
+            },
+          };
+        }
+
         const finalGameState: GameState = {
           ...pendingNewGame,
           teams: {
             ...pendingNewGame.teams,
-            [pendingNewGame.userTeamId]: updatedUserTeam,
+            [pendingNewGame.userTeamId]: finalUserTeam,
           },
           coaches: updatedCoaches,
+          scouts: updatedScouts,
         };
 
         await gameStorage.save(saveSlot as SaveSlot, finalGameState);
@@ -1184,6 +1216,9 @@ export function DashboardScreenWrapper({
           break;
         case 'news':
           navigation.navigate('News');
+          break;
+        case 'rumorMill':
+          navigation.navigate('RumorMill');
           break;
         case 'weeklyDigest':
           navigation.navigate('WeeklyDigest');
@@ -5396,10 +5431,12 @@ export function WeeklyScheduleScreenWrapper({
 
     const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
 
-    // Skip already-complete games EXCEPT for the user's game
-    // The user's completed game should still appear so they can see their result
-    // and the screen knows to show the "Advance Week" button
-    if (game.isComplete && !isUserGame) continue;
+    // Skip already-complete games EXCEPT for:
+    // 1. The user's game (so they can see their result)
+    // 2. When user is on bye (all games must be tracked for completion counting)
+    // Without this, after simulating games on bye week, all complete games get
+    // filtered out causing totalCount=0, which breaks the allComplete check
+    if (game.isComplete && !isUserGame && !isUserOnBye) continue;
 
     weeklyGames.push({
       gameId: game.gameId,

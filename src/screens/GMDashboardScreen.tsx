@@ -38,6 +38,7 @@ export type DashboardAction =
   | 'contracts'
   | 'gamecast'
   | 'news'
+  | 'rumorMill'
   | 'weeklyDigest'
   | 'careerLegacy'
   | 'offseason'
@@ -621,8 +622,16 @@ export function GMDashboardScreen({
         />
 
         <MenuCard
+          title="Rumors"
+          subtitle="Trade talk & free agency buzz"
+          icon="🔥"
+          color={colors.error}
+          onPress={() => onAction('rumorMill')}
+        />
+
+        <MenuCard
           title="Weekly Digest"
-          subtitle="Week summary & rumors"
+          subtitle="Week summary"
           icon="📋"
           color={colors.warning}
           onPress={() => onAction('weeklyDigest')}
