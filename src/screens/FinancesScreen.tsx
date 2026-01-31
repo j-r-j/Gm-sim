@@ -8,6 +8,9 @@ import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
+import { PlayerContract, getCapHitForYear } from '../core/contracts/Contract';
+import { getTeamContracts } from '../core/contracts/ContractGenerator';
+import { SALARY_FLOOR_PERCENTAGE } from '../core/models/team/TeamFinances';
 
 /**
  * Contract summary for display
@@ -28,7 +31,11 @@ export interface FinancesScreenProps {
   team: Team;
   /** All players */
   players: Record<string, Player>;
-  /** Salary cap */
+  /** All contracts */
+  contracts: Record<string, PlayerContract>;
+  /** Current season year */
+  currentYear: number;
+  /** Salary cap (in thousands, e.g., 255000 = $255M) */
   salaryCap: number;
   /** Callback to go back */
   onBack: () => void;
@@ -106,47 +113,65 @@ function ContractRow({ contract, onPress }: { contract: ContractSummary; onPress
 export function FinancesScreen({
   team,
   players,
+  contracts,
+  currentYear,
   salaryCap,
   onBack,
   onSelectPlayer,
 }: FinancesScreenProps) {
-  // Calculate financial summary
+  // Calculate financial summary using actual contract data
   const financials = useMemo(() => {
-    // Get contracts from roster
-    const contracts: ContractSummary[] = [];
+    // Get actual contracts for this team
+    const teamContracts = getTeamContracts(contracts, team.id);
+    const contractSummaries: ContractSummary[] = [];
     let totalSpending = 0;
+
+    // Get actual dead money from team finances
     const deadMoney = team.finances?.deadMoney ?? 0;
 
-    for (const playerId of team.rosterPlayerIds) {
-      const player = players[playerId];
+    for (const contract of teamContracts) {
+      const player = players[contract.playerId];
       if (!player) continue;
 
-      // Estimate cap hit based on player value (simplified)
-      const baseCapHit = 1000000; // $1M base
-      const experienceBonus = player.experience * 500000;
-      const capHit = baseCapHit + experienceBonus;
+      // Get actual cap hit for current year from contract
+      const capHit = getCapHitForYear(contract, currentYear);
 
-      contracts.push({
-        playerId: player.id,
-        playerName: `${player.firstName} ${player.lastName}`,
-        position: player.position,
-        capHit,
-        yearsRemaining: Math.max(1, 4 - player.experience),
-      });
+      if (capHit > 0) {
+        contractSummaries.push({
+          playerId: contract.playerId,
+          playerName: contract.playerName,
+          position: contract.position,
+          capHit,
+          yearsRemaining: contract.yearsRemaining,
+        });
 
-      totalSpending += capHit;
+        totalSpending += capHit;
+      }
     }
 
     // Sort by cap hit descending
-    contracts.sort((a, b) => b.capHit - a.capHit);
+    contractSummaries.sort((a, b) => b.capHit - a.capHit);
+
+    // Use team finances if available, otherwise calculate from contracts
+    const actualCapUsage = team.finances?.currentCapUsage ?? totalSpending;
+    const actualCapSpace = team.finances?.capSpace ?? salaryCap - totalSpending;
 
     return {
-      contracts,
-      totalSpending,
+      contracts: contractSummaries,
+      totalSpending: actualCapUsage,
       deadMoney,
-      capSpace: salaryCap - totalSpending,
+      capSpace: actualCapSpace,
+      // Future commitments from team finances
+      nextYearCommitted: team.finances?.nextYearCommitted ?? 0,
+      twoYearsOutCommitted: team.finances?.twoYearsOutCommitted ?? 0,
+      threeYearsOutCommitted: team.finances?.threeYearsOutCommitted ?? 0,
+      // Staff budget info
+      staffBudget: team.finances?.staffBudget ?? 0,
+      staffSpending: team.finances?.staffSpending ?? 0,
+      // Cap penalties
+      capPenalties: team.finances?.capPenalties ?? [],
     };
-  }, [team, players, salaryCap]);
+  }, [team, players, contracts, currentYear, salaryCap]);
 
   // Group by position
   const positionBreakdown = useMemo(() => {
@@ -159,6 +184,35 @@ export function FinancesScreen({
       .map(([group, amount]) => ({ group, amount }))
       .sort((a, b) => b.amount - a.amount);
   }, [financials.contracts]);
+
+  // Calculate cap status
+  const capUsagePercent = (financials.totalSpending / salaryCap) * 100;
+  const salaryFloor = salaryCap * SALARY_FLOOR_PERCENTAGE;
+  const meetsFloor = financials.totalSpending >= salaryFloor;
+  const isOverCap = financials.capSpace < 0;
+  const capStatus = isOverCap ? 'over' : capUsagePercent > 95 ? 'tight' : 'healthy';
+
+  const getCapStatusColor = () => {
+    switch (capStatus) {
+      case 'over':
+        return colors.error;
+      case 'tight':
+        return colors.warning;
+      default:
+        return colors.success;
+    }
+  };
+
+  const getCapStatusText = () => {
+    switch (capStatus) {
+      case 'over':
+        return 'Over Cap';
+      case 'tight':
+        return 'Cap Tight';
+      default:
+        return 'Healthy';
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -178,6 +232,12 @@ export function FinancesScreen({
             <View style={styles.capOverview}>
               <View style={styles.capHeader}>
                 <Text style={styles.capTitle}>Salary Cap</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getCapStatusColor() }]}>
+                  <Text style={styles.statusText}>{getCapStatusText()}</Text>
+                </View>
+              </View>
+              <View style={styles.capTotalRow}>
+                <Text style={styles.capTotalLabel}>Total Cap:</Text>
                 <Text style={styles.capTotal}>{formatCurrency(salaryCap)}</Text>
               </View>
               <CapBar
@@ -185,7 +245,14 @@ export function FinancesScreen({
                 total={salaryCap}
                 deadMoney={financials.deadMoney}
               />
-              <View style={styles.capSummary}>
+              <View style={styles.capSummaryGrid}>
+                <View style={styles.capSummaryItem}>
+                  <Text style={styles.capSummaryLabel}>Cap Used</Text>
+                  <Text style={styles.capSummaryValue}>
+                    {formatCurrency(financials.totalSpending)}
+                  </Text>
+                  <Text style={styles.capSummaryPercent}>{capUsagePercent.toFixed(1)}%</Text>
+                </View>
                 <View style={styles.capSummaryItem}>
                   <Text style={styles.capSummaryLabel}>Cap Space</Text>
                   <Text
@@ -194,11 +261,115 @@ export function FinancesScreen({
                       financials.capSpace < 0 ? styles.negative : styles.positive,
                     ]}
                   >
-                    {formatCurrency(financials.capSpace)}
+                    {formatCurrency(Math.abs(financials.capSpace))}
+                  </Text>
+                  <Text style={styles.capSummaryPercent}>
+                    {financials.capSpace < 0 ? 'Over' : 'Available'}
+                  </Text>
+                </View>
+                <View style={styles.capSummaryItem}>
+                  <Text style={styles.capSummaryLabel}>Dead Money</Text>
+                  <Text
+                    style={[styles.capSummaryValue, financials.deadMoney > 0 && styles.warning]}
+                  >
+                    {formatCurrency(financials.deadMoney)}
+                  </Text>
+                  <Text style={styles.capSummaryPercent}>
+                    {((financials.deadMoney / salaryCap) * 100).toFixed(1)}%
                   </Text>
                 </View>
               </View>
+              {/* Salary Floor Status */}
+              <View style={styles.floorStatus}>
+                <Text style={styles.floorLabel}>
+                  Salary Floor ({(SALARY_FLOOR_PERCENTAGE * 100).toFixed(0)}%):
+                </Text>
+                <Text style={[styles.floorValue, meetsFloor ? styles.positive : styles.negative]}>
+                  {meetsFloor
+                    ? 'Met'
+                    : `Need ${formatCurrency(salaryFloor - financials.totalSpending)} more`}
+                </Text>
+              </View>
             </View>
+
+            {/* Future Cap Commitments */}
+            {(financials.nextYearCommitted > 0 ||
+              financials.twoYearsOutCommitted > 0 ||
+              financials.threeYearsOutCommitted > 0) && (
+              <View style={styles.breakdownSection}>
+                <Text style={styles.sectionTitle}>Future Cap Commitments</Text>
+                {financials.nextYearCommitted > 0 && (
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Next Year</Text>
+                    <Text style={styles.breakdownValue}>
+                      {formatCurrency(financials.nextYearCommitted)}
+                    </Text>
+                  </View>
+                )}
+                {financials.twoYearsOutCommitted > 0 && (
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>2 Years Out</Text>
+                    <Text style={styles.breakdownValue}>
+                      {formatCurrency(financials.twoYearsOutCommitted)}
+                    </Text>
+                  </View>
+                )}
+                {financials.threeYearsOutCommitted > 0 && (
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>3 Years Out</Text>
+                    <Text style={styles.breakdownValue}>
+                      {formatCurrency(financials.threeYearsOutCommitted)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Dead Money Penalties */}
+            {financials.capPenalties.length > 0 && (
+              <View style={styles.breakdownSection}>
+                <Text style={styles.sectionTitle}>Dead Money Details</Text>
+                {financials.capPenalties.map((penalty) => (
+                  <View key={penalty.id} style={styles.breakdownRow}>
+                    <View style={styles.penaltyInfo}>
+                      <Text style={styles.breakdownLabel}>{penalty.playerName}</Text>
+                      <Text style={styles.penaltyReason}>
+                        ({penalty.reason} - {penalty.yearsRemaining} yr
+                        {penalty.yearsRemaining !== 1 ? 's' : ''} left)
+                      </Text>
+                    </View>
+                    <Text style={[styles.breakdownValue, styles.negative]}>
+                      {formatCurrency(penalty.amount)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Staff Budget */}
+            {financials.staffBudget > 0 && (
+              <View style={styles.breakdownSection}>
+                <Text style={styles.sectionTitle}>Staff Budget</Text>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Total Budget</Text>
+                  <Text style={styles.breakdownValue}>
+                    {formatCurrency(financials.staffBudget)}
+                  </Text>
+                </View>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Current Spending</Text>
+                  <Text style={styles.breakdownValue}>
+                    {formatCurrency(financials.staffSpending)}
+                  </Text>
+                </View>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Remaining</Text>
+                  <Text style={[styles.breakdownValue, styles.positive]}>
+                    {formatCurrency(financials.staffBudget - financials.staffSpending)}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Position Breakdown */}
             <View style={styles.breakdownSection}>
@@ -352,22 +523,81 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.sm,
   },
+  capSummaryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
   capSummaryItem: {
     alignItems: 'center',
+    flex: 1,
   },
   capSummaryLabel: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
   capSummaryValue: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
+  },
+  capSummaryPercent: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  statusText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.background,
+  },
+  capTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  capTotalLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  floorStatus: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  floorLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  floorValue: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  penaltyInfo: {
+    flex: 1,
+  },
+  penaltyReason: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   positive: {
     color: colors.success,
   },
   negative: {
     color: colors.error,
+  },
+  warning: {
+    color: colors.warning,
   },
   breakdownSection: {
     backgroundColor: colors.surface,
