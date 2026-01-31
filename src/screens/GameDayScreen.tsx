@@ -487,12 +487,18 @@ export function GameDayScreen({
   // Game day flow
   const gameDayFlowRef = useRef<GameDayFlow | null>(null);
 
+  // Store initial values in refs to avoid re-initializing when props change
+  // This is critical: we only want to initialize the game flow once
+  const initialGameRef = useRef(game);
+  const initialGameStateRef = useRef(gameState);
+  const initialUserTeamIdRef = useRef(userTeamId);
+
   // State
   const [flowState, setFlowState] = useState<GameDayFlowState | null>(null);
   const [plays, setPlays] = useState<PlayItem[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Initialize game day flow
+  // Initialize game day flow - only runs once on mount
   useEffect(() => {
     const flow = createGameDayFlow();
     gameDayFlowRef.current = flow;
@@ -524,13 +530,19 @@ export function GameDayScreen({
       }
     });
 
-    // Initialize with game
-    flow.initializeGameDay(game, gameState, userTeamId);
+    // Initialize with the initial values captured on mount
+    flow.initializeGameDay(
+      initialGameRef.current,
+      initialGameStateRef.current,
+      initialUserTeamIdRef.current
+    );
 
     return () => {
       // Cleanup
     };
-  }, [game, gameState, userTeamId]);
+    // Empty dependency array - only initialize once on mount
+    // Using refs for initial values ensures we don't re-initialize when props change
+  }, []);
 
   // Handlers
   const handleSetPrediction = useCallback((prediction: GamePrediction) => {
