@@ -74,6 +74,7 @@ function createGameResult(
     homeScore,
     awayScore,
     winnerId: homeScore > awayScore ? homeTeamId : homeScore < awayScore ? awayTeamId : null,
+    component: isDivisional ? 'A' : isConference ? 'B' : 'C',
   };
 }
 

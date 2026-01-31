@@ -91,6 +91,7 @@ function createMockSchedule(userTeamId: string): SeasonSchedule {
       homeScore: null,
       awayScore: null,
       winnerId: null,
+      component: 'B',
     },
     {
       gameId: 'game2',
@@ -105,6 +106,7 @@ function createMockSchedule(userTeamId: string): SeasonSchedule {
       homeScore: null,
       awayScore: null,
       winnerId: null,
+      component: 'C',
     },
     {
       gameId: 'game3',
@@ -119,6 +121,7 @@ function createMockSchedule(userTeamId: string): SeasonSchedule {
       homeScore: null,
       awayScore: null,
       winnerId: null,
+      component: 'B',
     },
   ];
 
