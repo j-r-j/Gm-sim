@@ -39,7 +39,9 @@ import {
 } from '../core/contracts/ContractGenerator';
 import { DEFAULT_SALARY_CAP } from '../core/models/team/TeamFinances';
 
-const SALARY_CAP = 255000000; // $255 million
+// Use DEFAULT_SALARY_CAP which is in thousands (255000 = $255M)
+// Contracts are all in thousands, so this must match
+const SALARY_CAP = DEFAULT_SALARY_CAP;
 
 interface NewGameOptions {
   saveSlot: SaveSlot;

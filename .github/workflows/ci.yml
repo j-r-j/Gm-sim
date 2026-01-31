@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: Unit & Integration Tests
 
     steps:
       - name: Checkout repository

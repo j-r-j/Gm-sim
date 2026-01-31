@@ -15,22 +15,26 @@ export const BYE_WEEK_END = 14;
 export const TOTAL_BYE_WEEKS = BYE_WEEK_END - BYE_WEEK_START + 1;
 
 /**
- * 2025 NFL Bye Week Template
- * Maps division to bye week assignment
- * This ensures balanced distribution and no division has all teams on same bye
+ * NFL Bye Week Template - perfectly balanced distribution
+ * Exactly 4 teams on bye each week from 5-12, 0 teams weeks 13-14
+ * This guarantees 272 games can be scheduled:
+ * - Weeks 1-4: 16 games × 4 = 64
+ * - Weeks 5-12: 14 games × 8 = 112
+ * - Weeks 13-18: 16 games × 6 = 96
+ * - Total: 272 games ✓
  */
 const BYE_WEEK_TEMPLATE: Record<Conference, Record<Division, number[]>> = {
   AFC: {
-    East: [6, 9, 11, 14],
-    North: [5, 7, 10, 13],
-    South: [6, 8, 12, 14],
-    West: [7, 9, 11, 13],
+    East: [5, 6, 7, 8],
+    North: [9, 10, 11, 12],
+    South: [5, 6, 7, 8],
+    West: [9, 10, 11, 12],
   },
   NFC: {
-    East: [5, 8, 10, 12],
-    North: [6, 9, 11, 14],
-    South: [7, 10, 12, 13],
-    West: [5, 8, 11, 14],
+    East: [5, 9, 6, 10],
+    North: [7, 11, 8, 12],
+    South: [5, 9, 6, 10],
+    West: [7, 11, 8, 12],
   },
 };
 

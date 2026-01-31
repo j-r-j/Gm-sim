@@ -75,11 +75,7 @@ describe('ScheduleGenerator', () => {
       expect(Math.max(...weekNumbers)).toBeLessThanOrEqual(18);
     });
 
-    it('should give each team a reasonable number of games', () => {
-      // Note: Perfect 17-game scheduling requires constraint solving (NP-hard).
-      // For simulation purposes, 14-17 games per team is acceptable.
-      // The NFL uses specialized solvers for this; our greedy approach works
-      // well enough for gameplay while maintaining proper divisional matchups.
+    it('should give each team exactly 17 games', () => {
       const teamGameCounts = new Map<string, number>();
 
       for (const game of schedule.regularSeason) {
@@ -91,8 +87,7 @@ describe('ScheduleGenerator', () => {
 
       for (const team of teams) {
         const gameCount = teamGameCounts.get(team.id) || 0;
-        expect(gameCount).toBeGreaterThanOrEqual(14);
-        expect(gameCount).toBeLessThanOrEqual(17);
+        expect(gameCount).toBe(17);
       }
     });
 
@@ -169,9 +164,7 @@ describe('ScheduleGenerator', () => {
   describe('getTeamSchedule', () => {
     it('should return all games for a team', () => {
       const teamSchedule = getTeamSchedule(schedule, teams[0].id);
-      // Accept 14-17 games due to scheduling constraints
-      expect(teamSchedule.length).toBeGreaterThanOrEqual(14);
-      expect(teamSchedule.length).toBeLessThanOrEqual(17);
+      expect(teamSchedule.length).toBe(17);
     });
 
     it('should sort games by week', () => {
