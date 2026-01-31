@@ -8,6 +8,21 @@ import { Alert } from 'react-native';
 import { GameState, updateLastSaved } from '../core/models/game/GameState';
 import { gameStorage } from '../services/storage/GameStorage';
 import { FiringRecord } from '../core/career/FiringMechanics';
+import { GameResult } from '../core/game/GameRunner';
+import { BoxScore } from '../core/game/BoxScoreGenerator';
+
+/**
+ * Simulated game result for other games (non-user games)
+ */
+export interface OtherGameResult {
+  gameId: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore: number;
+  awayScore: number;
+  winnerId: string;
+  boxScore?: BoxScore;
+}
 
 /**
  * Game context value interface
@@ -27,6 +42,10 @@ export interface GameContextValue {
   autoPickEnabled: boolean;
   draftPaused: boolean;
 
+  // Week results state (persists game result data for post-game summary)
+  lastGameResult: GameResult | null;
+  otherGamesResults: OtherGameResult[];
+
   // Actions
   setGameState: (state: GameState | null) => void;
   saveGame: () => Promise<void>;
@@ -44,6 +63,11 @@ export interface GameContextValue {
   setAutoPickEnabled: (enabled: boolean) => void;
   setDraftPaused: (paused: boolean) => void;
   resetDraftState: () => void;
+
+  // Week results actions
+  setLastGameResult: (result: GameResult | null) => void;
+  setOtherGamesResults: (results: OtherGameResult[]) => void;
+  clearWeekResults: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -109,6 +133,16 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
   const [autoPickEnabled, setAutoPickEnabled] = useState(false);
   const [draftPaused, setDraftPaused] = useState(false);
 
+  // Week results state (stores game result data for post-game summary)
+  const [lastGameResult, setLastGameResult] = useState<GameResult | null>(null);
+  const [otherGamesResults, setOtherGamesResults] = useState<OtherGameResult[]>([]);
+
+  // Clear week results
+  const clearWeekResults = useCallback(() => {
+    setLastGameResult(null);
+    setOtherGamesResults([]);
+  }, []);
+
   // Save game state to storage
   const saveGameState = useCallback(async (updatedState: GameState) => {
     try {
@@ -155,6 +189,8 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       draftedProspects,
       autoPickEnabled,
       draftPaused,
+      lastGameResult,
+      otherGamesResults,
       setGameState,
       saveGame,
       saveGameState,
@@ -167,6 +203,9 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       setAutoPickEnabled,
       setDraftPaused,
       resetDraftState,
+      setLastGameResult,
+      setOtherGamesResults,
+      clearWeekResults,
     }),
     [
       gameState,
@@ -177,10 +216,13 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       draftedProspects,
       autoPickEnabled,
       draftPaused,
+      lastGameResult,
+      otherGamesResults,
       saveGame,
       saveGameState,
       clearPendingNewGame,
       resetDraftState,
+      clearWeekResults,
     ]
   );
 
