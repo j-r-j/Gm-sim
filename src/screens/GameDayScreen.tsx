@@ -50,7 +50,7 @@ import {
   GamePrediction,
 } from '../core/gameflow';
 import { GameState } from '../core/models/game/GameState';
-import { ScheduledGame } from '../core/season/ScheduleGenerator';
+import { ScheduledGame, updateGameResult } from '../core/season/ScheduleGenerator';
 import { GameResult } from '../core/game/GameRunner';
 
 // ============================================================================
@@ -388,9 +388,13 @@ function LiveGamePhase({
 function PostGamePhase({
   postGameInfo,
   onContinue,
+  isDisabled,
+  isLoading,
 }: {
   postGameInfo: PostGameInfo;
   onContinue: () => void;
+  isDisabled?: boolean;
+  isLoading?: boolean;
 }) {
   const { result, userWon, newUserRecord, mvp, keyPlays, newInjuries, predictionCorrect } =
     postGameInfo;
@@ -461,13 +465,24 @@ function PostGamePhase({
 
       {/* Continue Button */}
       <TouchableOpacity
-        style={styles.continueButton}
+        style={[styles.continueButton, isDisabled && styles.continueButtonDisabled]}
         onPress={onContinue}
-        accessibilityLabel="Continue"
+        disabled={isDisabled}
+        accessibilityLabel={isLoading ? 'Saving game results' : 'Continue'}
         accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled }}
       >
-        <Text style={styles.continueButtonText}>Continue</Text>
-        <Ionicons name="arrow-forward" size={20} color={colors.textOnPrimary} />
+        {isLoading ? (
+          <>
+            <ActivityIndicator size="small" color={colors.textOnPrimary} />
+            <Text style={styles.continueButtonText}>Saving...</Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.continueButtonText}>Continue</Text>
+            <Ionicons name="arrow-forward" size={20} color={colors.textOnPrimary} />
+          </>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -497,6 +512,7 @@ export function GameDayScreen({
   const [flowState, setFlowState] = useState<GameDayFlowState | null>(null);
   const [plays, setPlays] = useState<PlayItem[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
 
   // Initialize game day flow - only runs once on mount
   useEffect(() => {
@@ -581,11 +597,106 @@ export function GameDayScreen({
   }, []);
 
   const handleContinue = useCallback(() => {
+    // Prevent double-tap
+    if (isContinuing) return;
+
     const result = gameDayFlowRef.current?.getGameResult();
-    if (result) {
-      onGameComplete(result, gameState);
+    if (!result) return;
+
+    // Disable button immediately
+    setIsContinuing(true);
+
+    try {
+      // Get the original game state from when the screen was mounted
+      const originalGameState = initialGameStateRef.current;
+      const schedule = originalGameState.league.schedule;
+
+      if (!schedule) {
+        console.error('No schedule found in game state');
+        setIsContinuing(false);
+        return;
+      }
+
+      // 1. Update the schedule with game result
+      const updatedSchedule = updateGameResult(
+        schedule,
+        game.gameId,
+        result.homeScore,
+        result.awayScore
+      );
+
+      // 2. Update team records
+      const homeTeam = originalGameState.teams[result.homeTeamId];
+      const awayTeam = originalGameState.teams[result.awayTeamId];
+
+      if (!homeTeam || !awayTeam) {
+        console.error('Teams not found');
+        setIsContinuing(false);
+        return;
+      }
+
+      const homeWon = result.homeScore > result.awayScore;
+      const awayWon = result.awayScore > result.homeScore;
+      const isTie = result.homeScore === result.awayScore;
+
+      const updatedTeams = {
+        ...originalGameState.teams,
+        [result.homeTeamId]: {
+          ...homeTeam,
+          currentRecord: {
+            ...homeTeam.currentRecord,
+            wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+            losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+            ties: homeTeam.currentRecord.ties + (isTie ? 1 : 0),
+          },
+        },
+        [result.awayTeamId]: {
+          ...awayTeam,
+          currentRecord: {
+            ...awayTeam.currentRecord,
+            wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+            losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+            ties: awayTeam.currentRecord.ties + (isTie ? 1 : 0),
+          },
+        },
+      };
+
+      // 3. Apply injuries to players
+      let updatedPlayers = { ...originalGameState.players };
+      for (const injury of result.injuries) {
+        const player = updatedPlayers[injury.playerId];
+        if (player && injury.weeksOut > 0) {
+          updatedPlayers[injury.playerId] = {
+            ...player,
+            injuryStatus: {
+              ...player.injuryStatus,
+              severity: injury.weeksOut > 4 ? 'ir' : injury.weeksOut > 1 ? 'out' : 'questionable',
+              type: player.injuryStatus.type || 'other',
+              weeksRemaining: injury.weeksOut,
+              isPublic: true,
+            },
+          };
+        }
+      }
+
+      // 4. Create the updated game state
+      const updatedGameState: GameState = {
+        ...originalGameState,
+        teams: updatedTeams,
+        players: updatedPlayers,
+        league: {
+          ...originalGameState.league,
+          schedule: updatedSchedule,
+        },
+      };
+
+      // 5. Call onGameComplete with the updated state
+      onGameComplete(result, updatedGameState);
+    } catch (error) {
+      console.error('Error processing game result:', error);
+      setIsContinuing(false);
     }
-  }, [gameState, onGameComplete]);
+  }, [isContinuing, game.gameId, onGameComplete]);
 
   // Loading state
   if (!flowState) {
@@ -639,7 +750,14 @@ export function GameDayScreen({
 
       case 'post_game':
         if (!flowState.postGameInfo) return null;
-        return <PostGamePhase postGameInfo={flowState.postGameInfo} onContinue={handleContinue} />;
+        return (
+          <PostGamePhase
+            postGameInfo={flowState.postGameInfo}
+            onContinue={handleContinue}
+            isDisabled={isContinuing}
+            isLoading={isContinuing}
+          />
+        );
 
       default:
         return null;
@@ -1101,6 +1219,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     minHeight: accessibility.minTouchTarget,
     ...shadows.md,
+  },
+  continueButtonDisabled: {
+    opacity: 0.6,
   },
   continueButtonText: {
     color: colors.textOnPrimary,
