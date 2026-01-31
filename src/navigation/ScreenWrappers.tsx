@@ -1208,6 +1208,18 @@ export function DashboardScreenWrapper({
         case 'freeAgency':
           navigation.navigate('FreeAgency');
           break;
+        case 'rfa':
+          navigation.navigate('RFA');
+          break;
+        case 'compPicks':
+          navigation.navigate('CompPickTracker');
+          break;
+        case 'combine':
+          navigation.navigate('Combine');
+          break;
+        case 'careerSummary':
+          navigation.navigate('CareerSummary');
+          break;
         case 'staff':
           navigation.navigate('Staff');
           break;
@@ -3185,6 +3197,7 @@ export function CoachProfileScreenWrapper({
       teamName={teamName}
       onBack={() => navigation.goBack()}
       onManageCoach={isOwnTeam ? handleManageCoach : undefined}
+      onViewCoachingTree={() => navigation.navigate('CoachingTree', { coachId })}
     />
   );
 }

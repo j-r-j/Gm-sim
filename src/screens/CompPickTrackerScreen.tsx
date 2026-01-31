@@ -73,7 +73,7 @@ function DepartureCard({
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{departure.playerName}</Text>
           <Text style={styles.playerDetails}>
-            {departure.position} • Age {departure.age} • {departure.overallRating} OVR
+            {departure.position} • Age {departure.age}
           </Text>
         </View>
         {departure.qualifyingContract ? (
@@ -131,7 +131,7 @@ function AcquisitionCard({
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{acquisition.playerName}</Text>
           <Text style={styles.playerDetails}>
-            {acquisition.position} • Age {acquisition.age} • {acquisition.overallRating} OVR
+            {acquisition.position} • Age {acquisition.age}
           </Text>
         </View>
         {acquisition.qualifyingContract ? (

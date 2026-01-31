@@ -28,6 +28,8 @@ export interface CoachProfileScreenProps {
   onBack: () => void;
   /** Callback for management actions */
   onManageCoach?: (action: 'extend' | 'fire' | 'promote') => void;
+  /** Callback to view coaching tree */
+  onViewCoachingTree?: () => void;
 }
 
 /**
@@ -186,6 +188,7 @@ export function CoachProfileScreen({
   teamName,
   onBack,
   onManageCoach,
+  onViewCoachingTree,
 }: CoachProfileScreenProps): React.JSX.Element {
   // Calculate revelation state based on experience
   const revelation = calculateCoachRevelation(coach, isOwnTeam);
@@ -256,6 +259,15 @@ export function CoachProfileScreen({
 
         {/* Career History */}
         <CareerHistoryCard coach={coach} />
+
+        {/* View Coaching Tree Button */}
+        {onViewCoachingTree && (
+          <View style={styles.section}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={onViewCoachingTree}>
+              <Text style={styles.secondaryButtonText}>View Coaching Tree</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Management Actions (own team only) */}
         {isOwnTeam && onManageCoach && <ManagementActions coach={coach} onAction={onManageCoach} />}
@@ -459,6 +471,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.background,
+  },
+  section: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  secondaryButton: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  secondaryButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   bottomPadding: {
     height: spacing.xl,

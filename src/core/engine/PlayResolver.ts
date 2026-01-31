@@ -382,20 +382,29 @@ function getPrimaryPlayers(
 }
 
 /**
+ * Home field context for play resolution
+ */
+export interface HomeFieldContext {
+  isOffenseHome: boolean;
+  homeFieldAdvantage: number; // Points equivalent (typically 2.5-3.5)
+}
+
+/**
  * Resolve a single play
  *
  * @param offensiveTeam - Offensive team game state
  * @param defensiveTeam - Defensive team game state
  * @param playCall - The offensive and defensive play calls
  * @param context - Play call context (down, distance, etc.)
- * @param weeklyVariances - Pre-calculated weekly variances
+ * @param homeFieldContext - Optional home field advantage context
  * @returns The result of the play
  */
 export function resolvePlay(
   offensiveTeam: TeamGameState,
   defensiveTeam: TeamGameState,
   playCall: { offensive: OffensivePlayCall; defensive: DefensivePlayCall },
-  context: PlayCallContext
+  context: PlayCallContext,
+  homeFieldContext?: HomeFieldContext
 ): PlayResult {
   const { playType, targetPosition } = playCall.offensive;
 
@@ -429,12 +438,23 @@ export function resolvePlay(
   resolvePlayMatchup(offensiveEffectives, defensiveEffectives, playType);
 
   // Calculate average ratings for outcome table
-  const avgOffRating =
+  let avgOffRating =
     offensiveEffectives.reduce((sum, p) => sum + p.effective, 0) /
     (offensiveEffectives.length || 1);
-  const avgDefRating =
+  let avgDefRating =
     defensiveEffectives.reduce((sum, p) => sum + p.effective, 0) /
     (defensiveEffectives.length || 1);
+
+  // Apply home field advantage (converted from points to rating boost)
+  // 2.5 point advantage = ~5 rating point boost (2 rating points per point)
+  if (homeFieldContext) {
+    const ratingBoost = homeFieldContext.homeFieldAdvantage * 2;
+    if (homeFieldContext.isOffenseHome) {
+      avgOffRating += ratingBoost;
+    } else {
+      avgDefRating += ratingBoost;
+    }
+  }
 
   // Generate outcome table and roll
   const situation = {

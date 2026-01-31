@@ -54,7 +54,6 @@ export interface RFAPlayerView {
   position: Position;
   age: number;
   experience: number;
-  overallRating: number;
   draftRound: number;
   currentStatus: 'untokendered' | 'tendered' | 'offer_sheet_received';
   recommendedTender: TenderLevel;
@@ -162,10 +161,6 @@ function EligibleRFACard({
           <Text style={styles.playerDetails}>
             {player.position} • Age {player.age} • {player.experience} yrs exp
           </Text>
-        </View>
-        <View style={styles.ratingBox}>
-          <Text style={styles.ratingValue}>{player.overallRating}</Text>
-          <Text style={styles.ratingLabel}>OVR</Text>
         </View>
       </TouchableOpacity>
 
@@ -703,18 +698,6 @@ const styles = StyleSheet.create({
   },
   playerDetails: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  ratingBox: {
-    alignItems: 'center',
-  },
-  ratingValue: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  ratingLabel: {
-    fontSize: fontSize.xs,
     color: colors.textSecondary,
   },
   statusBadge: {
