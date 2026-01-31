@@ -16,7 +16,11 @@ import {
   validateCompensatoryPick,
   DRAFT_ROUNDS,
 } from '../models/league/DraftPick';
-import { SeasonCalendar, isTradeDeadlinePassed, TRADE_DEADLINE_WEEK } from '../models/league/League';
+import {
+  SeasonCalendar,
+  isTradeDeadlinePassed,
+  TRADE_DEADLINE_WEEK,
+} from '../models/league/League';
 
 /**
  * Maximum years into the future picks can be traded

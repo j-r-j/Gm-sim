@@ -256,9 +256,7 @@ function HeroGameCard({
         <View style={styles.heroMatchup}>
           {/* Away Team */}
           <View style={styles.heroTeam}>
-            <View
-              style={[styles.heroTeamBadge, awayWon && styles.heroTeamBadgeWinner]}
-            >
+            <View style={[styles.heroTeamBadge, awayWon && styles.heroTeamBadgeWinner]}>
               <Text style={[styles.heroTeamAbbr, awayWon && styles.heroTeamAbbrWinner]}>
                 {game.awayTeam.abbr}
               </Text>
@@ -288,9 +286,7 @@ function HeroGameCard({
 
           {/* Home Team */}
           <View style={styles.heroTeam}>
-            <View
-              style={[styles.heroTeamBadge, homeWon && styles.heroTeamBadgeWinner]}
-            >
+            <View style={[styles.heroTeamBadge, homeWon && styles.heroTeamBadgeWinner]}>
               <Text style={[styles.heroTeamAbbr, homeWon && styles.heroTeamAbbrWinner]}>
                 {game.homeTeam.abbr}
               </Text>
@@ -655,9 +651,7 @@ export function WeeklySchedulePopup({
     onAdvanceWeek();
   }, [onAdvanceWeek]);
 
-  const userGameData = userGame
-    ? simulatedGames.get(userGame.gameId) || userGame
-    : null;
+  const userGameData = userGame ? simulatedGames.get(userGame.gameId) || userGame : null;
 
   return (
     <SafeAreaView style={styles.container}>
