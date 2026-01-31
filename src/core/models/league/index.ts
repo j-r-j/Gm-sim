@@ -11,6 +11,8 @@ export {
   OFFSEASON_PHASES,
   REGULAR_SEASON_WEEKS,
   PLAYOFF_WEEKS,
+  TRADE_DEADLINE_WEEK,
+  isTradeDeadlinePassed,
   LeagueSettings,
   DEFAULT_LEAGUE_SETTINGS,
   PlayoffMatchup,

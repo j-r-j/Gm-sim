@@ -16,6 +16,7 @@ import {
   validateCompensatoryPick,
   DRAFT_ROUNDS,
 } from '../models/league/DraftPick';
+import { SeasonCalendar, isTradeDeadlinePassed, TRADE_DEADLINE_WEEK } from '../models/league/League';
 
 /**
  * Maximum years into the future picks can be traded
@@ -167,6 +168,7 @@ export function getPicksByRound(
 
 /**
  * Trades a pick to another team
+ * @param calendar - Optional season calendar for trade deadline enforcement
  */
 export function executeTrade(
   state: DraftOrderState,
@@ -174,8 +176,16 @@ export function executeTrade(
   pickYear: number,
   toTeamId: string,
   tradeId: string,
-  week: number
+  week: number,
+  calendar?: SeasonCalendar
 ): DraftOrderState {
+  // Check trade deadline if calendar is provided
+  if (calendar && isTradeDeadlinePassed(calendar)) {
+    throw new Error(
+      `Trade deadline has passed (Week ${TRADE_DEADLINE_WEEK}). Trades are no longer allowed this season.`
+    );
+  }
+
   const yearState = state.draftYears.get(pickYear);
   if (!yearState) {
     throw new Error(`Draft year ${pickYear} not found`);
@@ -472,13 +482,23 @@ export function getNextPick(
 
 /**
  * Checks if a team can trade a pick
+ * @param calendar - Optional season calendar for trade deadline enforcement
  */
 export function canTradePick(
   state: DraftOrderState,
   pickId: string,
   pickYear: number,
-  teamId: string
+  teamId: string,
+  calendar?: SeasonCalendar
 ): { canTrade: boolean; reason?: string } {
+  // Check trade deadline if calendar is provided
+  if (calendar && isTradeDeadlinePassed(calendar)) {
+    return {
+      canTrade: false,
+      reason: `Trade deadline has passed (Week ${TRADE_DEADLINE_WEEK}). Trades are no longer allowed this season.`,
+    };
+  }
+
   const yearState = state.draftYears.get(pickYear);
   if (!yearState) {
     return { canTrade: false, reason: 'Draft year not found' };

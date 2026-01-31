@@ -185,6 +185,7 @@ export class GameRunner {
     const config = createDefaultGameConfig(`game-${Date.now()}`);
     config.weather = setup.weather;
     config.stakes = setup.stakes;
+    config.homeFieldAdvantage = setup.homeFieldAdvantage;
 
     this.machine = new GameStateMachine(setup.homeTeamState, setup.awayTeamState, config);
 

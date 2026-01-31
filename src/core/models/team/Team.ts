@@ -45,6 +45,45 @@ export const MAX_PRACTICE_SQUAD_SIZE = 16;
 export const MAX_IR_SIZE = 20;
 
 /**
+ * Minimum games a player must spend on IR before returning
+ * NFL rule: Players placed on IR must miss at least 4 games before being activated
+ */
+export const IR_MINIMUM_GAMES = 4;
+
+/**
+ * IR placement record to track when players were placed on IR
+ */
+export interface IRPlacement {
+  playerId: string;
+  weekPlaced: number;
+  yearPlaced: number;
+}
+
+/**
+ * Checks if a player can return from IR based on the minimum games requirement
+ * @param placementWeek - The week the player was placed on IR
+ * @param currentWeek - The current week of the season
+ * @returns Object with canReturn boolean and games remaining
+ */
+export function canReturnFromIR(
+  placementWeek: number,
+  currentWeek: number
+): { canReturn: boolean; gamesRemaining: number; reason?: string } {
+  const weeksOnIR = currentWeek - placementWeek;
+
+  if (weeksOnIR < IR_MINIMUM_GAMES) {
+    const gamesRemaining = IR_MINIMUM_GAMES - weeksOnIR;
+    return {
+      canReturn: false,
+      gamesRemaining,
+      reason: `Player must remain on IR for ${gamesRemaining} more game(s). Minimum ${IR_MINIMUM_GAMES} games required.`,
+    };
+  }
+
+  return { canReturn: true, gamesRemaining: 0 };
+}
+
+/**
  * Complete team entity
  */
 export interface Team {

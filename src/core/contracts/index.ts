@@ -38,6 +38,9 @@ export {
   getOfferTotalValue,
   getOfferGuaranteedMoney,
   createContractOffer,
+  // Trade clause enforcement
+  canTradePlayer,
+  hasNoTradeClauseApproval,
   // Types
   PostJune1DeadMoney,
 } from './Contract';

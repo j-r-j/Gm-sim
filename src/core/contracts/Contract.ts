@@ -503,6 +503,57 @@ export function createMinimumContract(
 }
 
 /**
+ * Checks if a player can be traded based on their contract's no-trade clause
+ * Returns whether the trade is allowed and the reason if blocked
+ */
+export function canTradePlayer(
+  contract: PlayerContract | null
+): { canTrade: boolean; reason?: string } {
+  // No contract means free agent or practice squad - can be moved
+  if (!contract) {
+    return { canTrade: true };
+  }
+
+  // Check for no-trade clause
+  if (contract.hasNoTradeClause) {
+    return {
+      canTrade: false,
+      reason: `${contract.playerName} has a no-trade clause and must approve any trade.`,
+    };
+  }
+
+  // Contract is active and no NTC - trade allowed
+  if (contract.status === 'active') {
+    return { canTrade: true };
+  }
+
+  // Expired or voided contracts shouldn't have tradeable players
+  if (contract.status === 'expired' || contract.status === 'voided') {
+    return {
+      canTrade: false,
+      reason: `${contract.playerName}'s contract is no longer active.`,
+    };
+  }
+
+  return { canTrade: true };
+}
+
+/**
+ * Checks if a player with a no-trade clause has approved the trade
+ * In a full implementation, this would involve negotiation/approval flow
+ * For now, returns true if NTC player has been explicitly approved
+ */
+export function hasNoTradeClauseApproval(
+  contract: PlayerContract,
+  approvedPlayerIds: Set<string>
+): boolean {
+  if (!contract.hasNoTradeClause) {
+    return true; // No NTC, no approval needed
+  }
+  return approvedPlayerIds.has(contract.playerId);
+}
+
+/**
  * Creates a ContractOffer from old-style parameters (for backward compatibility)
  * Converts totalValue/guaranteedMoney style to bonusPerYear/salaryPerYear style
  */

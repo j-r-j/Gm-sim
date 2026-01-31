@@ -5,7 +5,7 @@
  */
 
 import { TeamGameState } from './TeamGameState';
-import { PlayResult, resolvePlay, resolveSpecialTeamsPlay } from './PlayResolver';
+import { PlayResult, resolvePlay, resolveSpecialTeamsPlay, HomeFieldContext } from './PlayResolver';
 import { PlayCallContext, shouldAttemptFieldGoal, shouldPunt } from './PlayCaller';
 import { WeatherCondition, GameStakes } from './EffectiveRatingCalculator';
 import { DriveResult } from './PlayDescriptionGenerator';
@@ -60,6 +60,7 @@ export interface LiveGameState {
   // Game situation
   weather: WeatherCondition;
   stakes: GameStakes;
+  homeFieldAdvantage: number;
 
   // History (for stats, play-by-play)
   plays: PlayResult[];
@@ -81,6 +82,7 @@ export interface GameConfig {
   weather: WeatherCondition;
   stakes: GameStakes;
   quarterLength: number; // Seconds (default 900 = 15 min)
+  homeFieldAdvantage: number; // Points equivalent (typically 2.5-3.5)
 }
 
 /**
@@ -108,6 +110,7 @@ export function createDefaultGameConfig(gameId: string): GameConfig {
     },
     stakes: 'regular',
     quarterLength: 900,
+    homeFieldAdvantage: 2.5,
   };
 }
 
@@ -149,6 +152,7 @@ export class GameStateMachine {
 
       weather: config.weather,
       stakes: config.stakes,
+      homeFieldAdvantage: config.homeFieldAdvantage,
 
       plays: [],
 
@@ -389,6 +393,12 @@ export class GameStateMachine {
       offensiveResult.playCall.formation
     );
 
+    // Create home field context
+    const homeFieldContext: HomeFieldContext = {
+      isOffenseHome: field.possession === 'home',
+      homeFieldAdvantage: this.state.homeFieldAdvantage,
+    };
+
     const result = resolvePlay(
       offensiveTeam,
       defensiveTeam,
@@ -396,7 +406,8 @@ export class GameStateMachine {
         offensive: offensiveResult.playCall,
         defensive: defensiveResult.playCall,
       },
-      context
+      context,
+      homeFieldContext
     );
 
     if (result.touchdown) {
@@ -474,12 +485,19 @@ export class GameStateMachine {
       offensiveResult.playCall.formation
     );
 
+    // Create home field context
+    const homeFieldContext: HomeFieldContext = {
+      isOffenseHome: field.possession === 'home',
+      homeFieldAdvantage: this.state.homeFieldAdvantage,
+    };
+
     // Resolve the play
     const result = resolvePlay(
       offensiveTeam,
       defensiveTeam,
       { offensive: offensiveResult.playCall, defensive: defensiveResult.playCall },
-      context
+      context,
+      homeFieldContext
     );
 
     // Update game state
@@ -750,6 +768,7 @@ export function createGame(
     },
     stakes: config?.stakes || 'regular',
     quarterLength: config?.quarterLength || 900,
+    homeFieldAdvantage: config?.homeFieldAdvantage ?? 2.5,
   };
 
   return new GameStateMachine(homeTeam, awayTeam, fullConfig);
