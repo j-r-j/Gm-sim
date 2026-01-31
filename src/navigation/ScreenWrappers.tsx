@@ -1160,6 +1160,272 @@ export function DashboardScreenWrapper({
     }
   }, [gameState, setGameState, saveGameState, setIsLoading, setFiringRecord, navigation]);
 
+  // Sim entire season handler
+  const handleSimSeason = useCallback(async () => {
+    if (!gameState) return;
+
+    const { calendar, schedule } = gameState.league;
+
+    if (!schedule) {
+      Alert.alert('Error', 'No schedule available');
+      return;
+    }
+
+    // Show confirmation dialog
+    Alert.alert(
+      'Sim Rest of Season',
+      'This will simulate all remaining games through the end of the season (including playoffs). Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sim Season',
+          onPress: async () => {
+            setIsLoading(true);
+
+            try {
+              let currentState = gameState;
+              let currentWeek = calendar.currentWeek;
+              let currentPhase = calendar.currentPhase;
+
+              // Simulate regular season (weeks 1-18)
+              while (currentPhase === 'regularSeason' && currentWeek <= 18) {
+                const stateSchedule = currentState.league.schedule;
+                if (!stateSchedule) break;
+
+                // Simulate the week
+                const weekResults = simulateWeek(
+                  currentWeek,
+                  stateSchedule,
+                  currentState,
+                  currentState.userTeamId,
+                  true // simulate user game
+                );
+
+                // Update team records
+                const updatedTeams = { ...currentState.teams };
+                let updatedSchedule = { ...stateSchedule };
+
+                for (const { game, result } of weekResults.games) {
+                  const homeTeam = updatedTeams[game.homeTeamId];
+                  const awayTeam = updatedTeams[game.awayTeamId];
+
+                  if (homeTeam && awayTeam) {
+                    if (result.isTie) {
+                      updatedTeams[game.homeTeamId] = {
+                        ...homeTeam,
+                        currentRecord: {
+                          ...homeTeam.currentRecord,
+                          ties: homeTeam.currentRecord.ties + 1,
+                        },
+                      };
+                      updatedTeams[game.awayTeamId] = {
+                        ...awayTeam,
+                        currentRecord: {
+                          ...awayTeam.currentRecord,
+                          ties: awayTeam.currentRecord.ties + 1,
+                        },
+                      };
+                    } else if (result.winnerId === game.homeTeamId) {
+                      updatedTeams[game.homeTeamId] = {
+                        ...homeTeam,
+                        currentRecord: {
+                          ...homeTeam.currentRecord,
+                          wins: homeTeam.currentRecord.wins + 1,
+                        },
+                      };
+                      updatedTeams[game.awayTeamId] = {
+                        ...awayTeam,
+                        currentRecord: {
+                          ...awayTeam.currentRecord,
+                          losses: awayTeam.currentRecord.losses + 1,
+                        },
+                      };
+                    } else {
+                      updatedTeams[game.homeTeamId] = {
+                        ...homeTeam,
+                        currentRecord: {
+                          ...homeTeam.currentRecord,
+                          losses: homeTeam.currentRecord.losses + 1,
+                        },
+                      };
+                      updatedTeams[game.awayTeamId] = {
+                        ...awayTeam,
+                        currentRecord: {
+                          ...awayTeam.currentRecord,
+                          wins: awayTeam.currentRecord.wins + 1,
+                        },
+                      };
+                    }
+                  }
+
+                  if (updatedSchedule.regularSeason) {
+                    updatedSchedule.regularSeason = updatedSchedule.regularSeason.map((g) =>
+                      g.gameId === game.gameId ? game : g
+                    );
+                  }
+                }
+
+                // Process injury recovery
+                const advanceResult = advanceWeek(currentWeek, currentState);
+                let updatedPlayers = { ...currentState.players };
+
+                for (const recoveredPlayerId of advanceResult.recoveredPlayers) {
+                  const player = updatedPlayers[recoveredPlayerId];
+                  if (player) {
+                    updatedPlayers[recoveredPlayerId] = {
+                      ...player,
+                      injuryStatus: {
+                        ...player.injuryStatus,
+                        severity: 'none',
+                        weeksRemaining: 0,
+                      },
+                    };
+                  }
+                }
+
+                // Decrement weeks remaining for injured players
+                for (const playerId of Object.keys(updatedPlayers)) {
+                  const player = updatedPlayers[playerId];
+                  if (
+                    player.injuryStatus.weeksRemaining > 0 &&
+                    !advanceResult.recoveredPlayers.includes(playerId)
+                  ) {
+                    updatedPlayers[playerId] = {
+                      ...player,
+                      injuryStatus: {
+                        ...player.injuryStatus,
+                        weeksRemaining: player.injuryStatus.weeksRemaining - 1,
+                      },
+                    };
+                  }
+                }
+
+                // Process new injuries
+                for (const injury of weekResults.injuryReport) {
+                  const player = updatedPlayers[injury.playerId];
+                  if (player) {
+                    updatedPlayers[injury.playerId] = {
+                      ...player,
+                      injuryStatus: {
+                        ...player.injuryStatus,
+                        severity: injury.weeksRemaining > 4 ? 'ir' : 'out',
+                        weeksRemaining: injury.weeksRemaining,
+                      },
+                    };
+                  }
+                }
+
+                // Advance to next week
+                currentWeek++;
+                if (currentWeek > 18) {
+                  currentPhase = 'playoffs';
+                  currentWeek = 19;
+                }
+
+                // Update state for next iteration
+                currentState = {
+                  ...currentState,
+                  league: {
+                    ...currentState.league,
+                    calendar: {
+                      ...currentState.league.calendar,
+                      currentWeek,
+                      currentPhase,
+                    },
+                    schedule: updatedSchedule,
+                  },
+                  teams: updatedTeams,
+                  players: updatedPlayers,
+                };
+              }
+
+              // Simulate playoffs (weeks 19-22)
+              while (currentPhase === 'playoffs' && currentWeek <= 22) {
+                const stateSchedule = currentState.league.schedule;
+                if (!stateSchedule) break;
+
+                // Simulate the playoff week
+                const weekResults = simulateWeek(
+                  currentWeek,
+                  stateSchedule,
+                  currentState,
+                  currentState.userTeamId,
+                  true
+                );
+
+                let updatedSchedule = { ...stateSchedule };
+
+                for (const { game } of weekResults.games) {
+                  if (updatedSchedule.regularSeason) {
+                    updatedSchedule.regularSeason = updatedSchedule.regularSeason.map((g) =>
+                      g.gameId === game.gameId ? game : g
+                    );
+                  }
+                }
+
+                // Advance week
+                currentWeek++;
+                if (currentWeek > 22) {
+                  currentPhase = 'offseason';
+                  currentWeek = 1;
+                }
+
+                currentState = {
+                  ...currentState,
+                  league: {
+                    ...currentState.league,
+                    calendar: {
+                      ...currentState.league.calendar,
+                      currentWeek,
+                      currentPhase,
+                      offseasonPhase: currentPhase === 'offseason' ? 1 : null,
+                    },
+                    schedule: updatedSchedule,
+                  },
+                };
+              }
+
+              // If we ended in offseason, initialize it
+              if (currentPhase === 'offseason' && !currentState.offseasonState) {
+                const initResult = initializeOffseason(currentState);
+                const phaseResult = enterPhase(initResult.gameState, 'season_end');
+                currentState = {
+                  ...phaseResult.gameState,
+                  league: {
+                    ...phaseResult.gameState.league,
+                    calendar: {
+                      ...phaseResult.gameState.league.calendar,
+                      currentWeek: 1,
+                      currentPhase: 'offseason',
+                      offseasonPhase: 1,
+                    },
+                  },
+                };
+              }
+
+              // Save final state
+              setGameState(currentState);
+              await saveGameState(currentState);
+
+              const userTeam = currentState.teams[currentState.userTeamId];
+              const record = `${userTeam.currentRecord.wins}-${userTeam.currentRecord.losses}`;
+
+              Alert.alert(
+                'Season Complete!',
+                `Your final record: ${record}\n\nThe offseason begins now.`
+              );
+            } catch (error) {
+              console.error('Error simulating season:', error);
+              Alert.alert('Error', 'Failed to simulate season');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [gameState, setGameState, saveGameState, setIsLoading]);
+
   const handleAction = useCallback(
     (action: DashboardAction) => {
       switch (action) {
@@ -1248,6 +1514,9 @@ export function DashboardScreenWrapper({
           // Navigate to the new LiveGameSimulation screen
           navigation.navigate('LiveGameSimulation');
           break;
+        case 'simSeason':
+          handleSimSeason();
+          break;
         case 'saveGame':
           saveGame();
           break;
@@ -1273,7 +1542,7 @@ export function DashboardScreenWrapper({
           break;
       }
     },
-    [gameState, navigation, handleAdvanceWeek, saveGame, setGameState]
+    [gameState, navigation, handleAdvanceWeek, handleSimSeason, saveGame, setGameState]
   );
 
   return <GMDashboardScreen gameState={gameState} onAction={handleAction} />;

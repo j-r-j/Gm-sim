@@ -49,6 +49,7 @@ export type DashboardAction =
   | 'ownerRelations'
   | 'advanceWeek'
   | 'playWeek'
+  | 'simSeason'
   | 'settings'
   | 'saveGame'
   | 'mainMenu';
@@ -582,6 +583,17 @@ export function GMDashboardScreen({
             color={colors.secondary}
             onPress={() => onAction('gamecast')}
             badge="PLAY"
+          />
+        )}
+
+        {!isOffseason && (
+          <MenuCard
+            title="Sim Season"
+            subtitle="Simulate rest of season"
+            icon="⏩"
+            color={colors.accent}
+            onPress={() => onAction('simSeason')}
+            badge="SIM"
           />
         )}
 
