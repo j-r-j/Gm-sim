@@ -5786,12 +5786,78 @@ export function LiveGameSimulationScreenWrapper({
       gameState={gameState}
       userTeamId={userTeamId}
       onBack={() => navigation.goBack()}
-      onGameComplete={async (result, updatedState) => {
+      onGameComplete={async (result, _originalState) => {
+        // Apply the game result to the game state
+        // The _originalState passed is just the initial state, we need to update it with results
+
+        // Update schedule with game result
+        const updatedSchedule = { ...schedule };
+        const updatedGames = [...updatedSchedule.regularSeason];
+
+        const gameIndex = updatedGames.findIndex((g) => g.gameId === userGame.gameId);
+        if (gameIndex >= 0) {
+          updatedGames[gameIndex] = {
+            ...updatedGames[gameIndex],
+            isComplete: true,
+            homeScore: result.homeScore,
+            awayScore: result.awayScore,
+          };
+        }
+        updatedSchedule.regularSeason = updatedGames;
+
+        // Update team records
+        const updatedTeams = { ...gameState.teams };
+        const homeTeam = updatedTeams[userGame.homeTeamId];
+        const awayTeam = updatedTeams[userGame.awayTeamId];
+
+        if (homeTeam && awayTeam) {
+          const homeWon = result.homeScore > result.awayScore;
+          const awayWon = result.awayScore > result.homeScore;
+          const tie = result.homeScore === result.awayScore;
+
+          updatedTeams[userGame.homeTeamId] = {
+            ...homeTeam,
+            currentRecord: {
+              ...homeTeam.currentRecord,
+              wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+              losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+              ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
+              pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
+            },
+          };
+          updatedTeams[userGame.awayTeamId] = {
+            ...awayTeam,
+            currentRecord: {
+              ...awayTeam.currentRecord,
+              wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+              losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+              ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
+              pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
+            },
+          };
+        }
+
+        // Update season stats
+        let updatedSeasonStats = gameState.seasonStats || {};
+        updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, result);
+
+        const updatedState: GameState = {
+          ...gameState,
+          league: {
+            ...gameState.league,
+            schedule: updatedSchedule,
+          },
+          teams: updatedTeams,
+          seasonStats: updatedSeasonStats,
+        };
+
         setGameState(updatedState);
         await saveGameState(updatedState);
 
-        // Navigate to post game summary
-        navigation.navigate('PostGameSummary');
+        // Navigate to WeeklySchedule to show league results and sim remaining games
+        navigation.navigate('WeeklySchedule');
       }}
     />
   );

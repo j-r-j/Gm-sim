@@ -20,7 +20,7 @@ import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 import { PHASE_NAMES, OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 import { ActionPrompt } from '../components/week-flow';
-import { Button, LoadingScreen } from '../components';
+import { LoadingScreen } from '../components';
 import { NextActionPrompt, getWeekLabel } from '../core/simulation/WeekFlowState';
 import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 
@@ -334,13 +334,23 @@ export function GMDashboardScreen({
     switch (actionPrompt.targetAction) {
       case 'view_matchup':
       case 'start_simulation':
+      case 'continue_simulation':
+      case 'view_game_result':
         onAction('playWeek');
         break;
       case 'advance_week':
+      case 'sim_other_games':
         onAction('advanceWeek');
         break;
-      default:
-        onAction('gamecast');
+      case 'view_week_summary':
+        onAction('weeklyDigest');
+        break;
+      case 'view_playoff_bracket':
+        onAction('standings');
+        break;
+      case 'enter_offseason':
+        onAction('offseason');
+        break;
     }
   };
 
@@ -577,17 +587,6 @@ export function GMDashboardScreen({
         {/* Season Actions */}
         <Text style={styles.sectionTitle}>Season</Text>
 
-        {!isOffseason && (
-          <MenuCard
-            title="Gamecast"
-            subtitle="Watch your next game"
-            icon="🏈"
-            color={colors.secondary}
-            onPress={() => onAction('gamecast')}
-            badge="PLAY"
-          />
-        )}
-
         <MenuCard
           title="Schedule"
           subtitle="View upcoming games"
@@ -667,25 +666,6 @@ export function GMDashboardScreen({
           onPress={() => onAction('freeAgency')}
           badge={isFreeAgency ? 'ACTIVE' : undefined}
         />
-
-        {/* Advance Button */}
-        <View style={styles.advanceSection}>
-          <Button
-            label={isOffseason ? 'Advance Phase' : 'Advance Week'}
-            onPress={() => onAction('advanceWeek')}
-            variant="success"
-            size="lg"
-            fullWidth
-            accessibilityHint={
-              isOffseason
-                ? `Advance from ${getOffseasonPhaseDisplay()} to the next phase`
-                : 'Simulate all remaining games and advance to next week'
-            }
-          />
-          <Text style={styles.advanceButtonSubtext}>
-            {isOffseason ? `Current: ${getOffseasonPhaseDisplay()}` : 'Simulate to next week'}
-          </Text>
-        </View>
 
         {/* System Actions */}
         <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -1060,28 +1040,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.textOnPrimary,
-  },
-  advanceSection: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  advanceButton: {
-    backgroundColor: colors.success,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  advanceButtonText: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textOnPrimary,
-  },
-  advanceButtonSubtext: {
-    fontSize: fontSize.sm,
-    color: colors.textOnPrimary,
-    opacity: 0.8,
-    marginTop: spacing.xxs,
   },
   systemButtons: {
     flexDirection: 'row',
