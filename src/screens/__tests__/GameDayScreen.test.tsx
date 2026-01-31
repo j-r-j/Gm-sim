@@ -114,6 +114,7 @@ function createMockGame(): ScheduledGame {
     homeScore: null,
     awayScore: null,
     winnerId: null,
+    component: 'A',
   };
 }
 

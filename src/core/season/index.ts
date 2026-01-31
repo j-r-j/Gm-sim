@@ -36,10 +36,33 @@ export {
   getCompletedGameCount,
   isRegularSeasonComplete,
   createDefaultStandings,
+  // Rotation lookup functions
+  getIntraconfOpponentDivision,
+  getInterconfOpponentDivision,
+  get17thGameOpponentDivision,
+  get17thGameHomeConference,
+  // Validation gates
+  validateSchedule,
+  validateGate1GameCountPerTeam,
+  validateGate2TotalLeagueGames,
+  validateGate3HomeAwayBalance,
+  validateGate4DivisionalGames,
+  validateGate5IntraconfRotation,
+  validateGate6InterconfRotation,
+  validateGate7StandingsIntraconf,
+  validateGate8SeventeenthGame,
+  validateGate9NoDuplicates,
+  validateGate10BucketSizes,
+  validateGate11Symmetry,
+  validateGate12SeventeenthGameDivisionSeparation,
+  validateGate13RotationAdvancement,
+  validateGate14HomeConferenceAlternation,
   type TimeSlot,
+  type GameComponent,
   type ScheduledGame,
   type SeasonSchedule,
   type PreviousYearStandings,
+  type ValidationResult,
 } from './ScheduleGenerator';
 
 // Standings Calculation
