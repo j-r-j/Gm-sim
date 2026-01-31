@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
+import { PlayerContract, getCurrentCapHit } from '../core/contracts/Contract';
 
 /**
  * Contract summary for display
@@ -28,6 +29,10 @@ export interface FinancesScreenProps {
   team: Team;
   /** All players */
   players: Record<string, Player>;
+  /** All contracts */
+  contracts: Record<string, PlayerContract>;
+  /** Current year for contract lookups */
+  currentYear: number;
   /** Salary cap */
   salaryCap: number;
   /** Callback to go back */
@@ -106,14 +111,16 @@ function ContractRow({ contract, onPress }: { contract: ContractSummary; onPress
 export function FinancesScreen({
   team,
   players,
+  contracts,
+  currentYear,
   salaryCap,
   onBack,
   onSelectPlayer,
 }: FinancesScreenProps) {
-  // Calculate financial summary
+  // Calculate financial summary using real contract data
   const financials = useMemo(() => {
     // Get contracts from roster
-    const contracts: ContractSummary[] = [];
+    const contractSummaries: ContractSummary[] = [];
     let totalSpending = 0;
     const deadMoney = team.finances?.deadMoney ?? 0;
 
@@ -121,32 +128,54 @@ export function FinancesScreen({
       const player = players[playerId];
       if (!player) continue;
 
-      // Estimate cap hit based on player value (simplified)
-      const baseCapHit = 1000000; // $1M base
-      const experienceBonus = player.experience * 500000;
-      const capHit = baseCapHit + experienceBonus;
+      // Look up actual contract data
+      const contract = player.contractId ? contracts[player.contractId] : null;
 
-      contracts.push({
+      let capHit: number;
+      let yearsRemaining: number;
+
+      if (contract && contract.status === 'active') {
+        // Use real contract data
+        capHit = getCurrentCapHit(contract, currentYear);
+        yearsRemaining = contract.yearsRemaining;
+      } else {
+        // Fallback for players without contracts (shouldn't happen in normal play)
+        // Use veteran minimum based on experience
+        const minSalaries: Record<number, number> = {
+          0: 795,
+          1: 915,
+          2: 990,
+          3: 1065,
+          4: 1145,
+          5: 1215,
+          6: 1215,
+          7: 1215,
+        };
+        capHit = minSalaries[Math.min(player.experience, 7)] ?? 1215;
+        yearsRemaining = 1;
+      }
+
+      contractSummaries.push({
         playerId: player.id,
         playerName: `${player.firstName} ${player.lastName}`,
         position: player.position,
         capHit,
-        yearsRemaining: Math.max(1, 4 - player.experience),
+        yearsRemaining,
       });
 
       totalSpending += capHit;
     }
 
     // Sort by cap hit descending
-    contracts.sort((a, b) => b.capHit - a.capHit);
+    contractSummaries.sort((a, b) => b.capHit - a.capHit);
 
     return {
-      contracts,
+      contracts: contractSummaries,
       totalSpending,
       deadMoney,
       capSpace: salaryCap - totalSpending,
     };
-  }, [team, players, salaryCap]);
+  }, [team, players, contracts, currentYear, salaryCap]);
 
   // Group by position
   const positionBreakdown = useMemo(() => {

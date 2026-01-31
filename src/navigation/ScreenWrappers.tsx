@@ -1998,11 +1998,14 @@ export function FinancesScreenWrapper({ navigation }: ScreenProps<'Finances'>): 
 
   const userTeam = gameState.teams[gameState.userTeamId];
   const salaryCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+  const currentYear = gameState.league.calendar.currentYear;
 
   return (
     <FinancesScreen
       team={userTeam}
       players={gameState.players}
+      contracts={gameState.contracts}
+      currentYear={currentYear}
       salaryCap={salaryCap}
       onBack={() => navigation.goBack()}
       onSelectPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
