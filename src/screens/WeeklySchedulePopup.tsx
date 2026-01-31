@@ -1,14 +1,13 @@
 /**
  * WeeklySchedulePopup
- * Shows all games for the current week when advancing.
- * User can play/sim their game, then watch live results for other games.
+ * Redesigned Week Results screen with a modern, sports-app inspired layout.
  *
- * Premium UX features inspired by Madden, Football Manager, and NBA 2K:
- * - Animated score counters that count up dramatically
- * - Context-based game badges (UPSET, BLOWOUT, THRILLER, OT)
- * - Haptic feedback on score reveals
- * - Animated progress indicator with contextual messages
- * - Momentum-based color shifts for wins/losses
+ * Features:
+ * - Hero card for user's game result with celebration styling
+ * - Compact scoreboard grid for other games
+ * - Clean visual hierarchy and typography
+ * - Smooth animations for score reveals
+ * - Badge system for special games (UPSET, THRILLER, etc.)
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -51,10 +50,8 @@ export interface WeeklyGame {
   isUserGame: boolean;
   timeSlot: string;
   isDivisional: boolean;
-  /** Score if game is already complete (e.g., user's game just played) */
   homeScore?: number;
   awayScore?: number;
-  /** Whether this game was already completed before reaching this screen */
   isComplete?: boolean;
 }
 
@@ -73,38 +70,20 @@ export interface SimulatedGame extends WeeklyGame {
  * Props for WeeklySchedulePopup
  */
 export interface WeeklySchedulePopupProps {
-  /** Current week number */
   week: number;
-  /** Current phase (regularSeason, playoffs, etc.) */
   phase: string;
-  /** All games for this week */
   games: WeeklyGame[];
-  /** User's team ID for highlighting */
   userTeamId: string;
-  /** Whether user is on bye this week */
   isUserOnBye: boolean;
-  /** Callback to play user's game (navigate to gamecast) */
   onPlayGame: () => void;
-  /** Callback to sim user's game */
   onSimUserGame: () => Promise<GameResult | null>;
-  /** Callback to sim all other games */
   onSimOtherGames: () => Promise<SimulatedGame[]>;
-  /** Callback to advance to next week when all games are done */
   onAdvanceWeek: () => void;
-  /** Callback to go back */
   onBack: () => void;
 }
 
-/**
- * Time slot display names
- */
-const TIME_SLOT_NAMES: Record<string, string> = {
-  thursday: 'THU',
-  early_sunday: 'SUN 1PM',
-  late_sunday: 'SUN 4PM',
-  sunday_night: 'SNF',
-  monday_night: 'MNF',
-};
+type SimPhase = 'initial' | 'user_playing' | 'simulating_others' | 'complete';
+type GameBadge = 'UPSET' | 'BLOWOUT' | 'THRILLER' | 'SHUTOUT' | null;
 
 /**
  * Get playoff round name
@@ -125,58 +104,31 @@ function getPlayoffRoundName(week: number): string {
 }
 
 /**
- * Get game context badge based on score differential and game type
+ * Get game context badge
  */
-type GameBadge = 'UPSET' | 'BLOWOUT' | 'THRILLER' | 'SHUTOUT' | null;
-
 function getGameBadge(game: SimulatedGame): GameBadge {
   const scoreDiff = Math.abs(game.homeScore - game.awayScore);
   const totalScore = game.homeScore + game.awayScore;
 
-  // Shutout (one team scored 0)
-  if (game.homeScore === 0 || game.awayScore === 0) {
-    return 'SHUTOUT';
-  }
-
-  // Blowout (21+ point difference)
-  if (scoreDiff >= 21) {
-    return 'BLOWOUT';
-  }
-
-  // Thriller (3 or fewer points difference and high scoring)
-  if (scoreDiff <= 3 && totalScore >= 40) {
-    return 'THRILLER';
-  }
-
-  // Upset detection would require knowing records/rankings
-  // For now, we can mark close games between division rivals as potential upsets
-  if (scoreDiff <= 7 && game.isDivisional) {
-    return 'UPSET';
-  }
-
+  if (game.homeScore === 0 || game.awayScore === 0) return 'SHUTOUT';
+  if (scoreDiff >= 21) return 'BLOWOUT';
+  if (scoreDiff <= 3 && totalScore >= 40) return 'THRILLER';
+  if (scoreDiff <= 7 && game.isDivisional) return 'UPSET';
   return null;
 }
 
 /**
- * Get badge styling based on type
+ * Badge colors
  */
-function getBadgeStyle(badge: GameBadge): { bg: string; text: string } {
-  switch (badge) {
-    case 'UPSET':
-      return { bg: '#f6ad55', text: '#744210' }; // Orange
-    case 'BLOWOUT':
-      return { bg: '#fc8181', text: '#742a2a' }; // Red
-    case 'THRILLER':
-      return { bg: '#68d391', text: '#22543d' }; // Green
-    case 'SHUTOUT':
-      return { bg: '#b794f4', text: '#44337a' }; // Purple
-    default:
-      return { bg: colors.border, text: colors.textSecondary };
-  }
-}
+const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
+  UPSET: { bg: '#FEF3C7', text: '#92400E' },
+  BLOWOUT: { bg: '#FEE2E2', text: '#991B1B' },
+  THRILLER: { bg: '#D1FAE5', text: '#065F46' },
+  SHUTOUT: { bg: '#EDE9FE', text: '#5B21B6' },
+};
 
 /**
- * Trigger haptic feedback (mobile only)
+ * Trigger haptic feedback
  */
 async function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'success' = 'medium') {
   try {
@@ -197,380 +149,280 @@ async function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'success' = 'm
       }
     }
   } catch {
-    // Haptics not available, ignore
+    // Haptics not available
   }
 }
 
 /**
- * Phase indicator for game simulation
+ * Hero Card - User's Game Result
  */
-type SimPhase = 'initial' | 'user_playing' | 'simulating_others' | 'complete';
-
-/**
- * Animated score component that counts up
- */
-function AnimatedScore({
-  value,
-  isWinner,
+function HeroGameCard({
+  game,
+  userTeamId,
+  isComplete,
+  onViewBoxScore,
   isAnimating,
-  delay = 0,
 }: {
-  value: number;
-  isWinner: boolean;
+  game: WeeklyGame | SimulatedGame;
+  userTeamId: string;
+  isComplete: boolean;
+  onViewBoxScore: () => void;
   isAnimating: boolean;
-  delay?: number;
 }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const animatedValue = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const flashAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  const hasScore = isComplete && game.homeScore !== undefined;
+  const homeWon = hasScore && (game.homeScore ?? 0) > (game.awayScore ?? 0);
+  const awayWon = hasScore && (game.awayScore ?? 0) > (game.homeScore ?? 0);
+  const isTie = hasScore && game.homeScore === game.awayScore;
+
+  const isUserHome = game.homeTeam.id === userTeamId;
+  const userWon = (isUserHome && homeWon) || (!isUserHome && awayWon);
+  const userLost = (isUserHome && awayWon) || (!isUserHome && homeWon);
 
   useEffect(() => {
-    if (isAnimating) {
-      // Reset values
-      animatedValue.setValue(0);
-      setDisplayValue(0);
+    if (isAnimating && hasScore) {
+      // Celebration pulse animation
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.02,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-      // Start animation after delay
-      const timeout = setTimeout(() => {
-        // Count up animation
-        Animated.timing(animatedValue, {
-          toValue: value,
-          duration: 600,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }).start();
-
-        // Scale pop animation
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.3,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        // Flash animation for winner
-        if (isWinner) {
+      if (userWon) {
+        Animated.loop(
           Animated.sequence([
-            Animated.timing(flashAnim, {
+            Animated.timing(pulseAnim, {
               toValue: 1,
-              duration: 150,
-              useNativeDriver: false,
+              duration: 1000,
+              useNativeDriver: true,
             }),
-            Animated.timing(flashAnim, {
+            Animated.timing(pulseAnim, {
               toValue: 0,
-              duration: 300,
-              useNativeDriver: false,
+              duration: 1000,
+              useNativeDriver: true,
             }),
-          ]).start();
-        }
-      }, delay);
-
-      // Listen to animated value changes
-      const listener = animatedValue.addListener(({ value: v }) => {
-        setDisplayValue(Math.round(v));
-      });
-
-      return () => {
-        clearTimeout(timeout);
-        animatedValue.removeListener(listener);
-      };
-    } else {
-      setDisplayValue(value);
+          ]),
+          { iterations: 2 }
+        ).start();
+      }
     }
-  }, [isAnimating, value, delay, animatedValue, scaleAnim, flashAnim, isWinner]);
+  }, [isAnimating, hasScore, userWon, scaleAnim, pulseAnim]);
 
-  const backgroundColor = flashAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['transparent', isWinner ? 'rgba(56, 161, 105, 0.3)' : 'transparent'],
-  });
+  const getBgColor = () => {
+    if (!hasScore) return colors.surface;
+    if (userWon) return '#ECFDF5'; // Light green
+    if (userLost) return '#FEF2F2'; // Light red
+    return '#FFFBEB'; // Light yellow for tie
+  };
+
+  const getBorderColor = () => {
+    if (!hasScore) return colors.border;
+    if (userWon) return colors.success;
+    if (userLost) return colors.error;
+    return colors.warning;
+  };
+
+  const getResultText = () => {
+    if (!hasScore) return 'UPCOMING';
+    if (isTie) return 'TIE';
+    return userWon ? 'VICTORY' : 'DEFEAT';
+  };
+
+  const getResultColor = () => {
+    if (!hasScore) return colors.textSecondary;
+    if (userWon) return colors.success;
+    if (userLost) return colors.error;
+    return colors.warning;
+  };
 
   return (
-    <Animated.View
-      style={[
-        styles.scoreContainer,
-        {
-          transform: [{ scale: scaleAnim }],
-          backgroundColor,
-        },
-      ]}
-    >
-      <Text style={[styles.score, isWinner && styles.winnerText]}>{displayValue}</Text>
+    <Animated.View style={[styles.heroCard, { transform: [{ scale: scaleAnim }] }]}>
+      {/* Result Banner */}
+      <View style={[styles.heroBanner, { backgroundColor: getBorderColor() }]}>
+        <Text style={styles.heroBannerText}>{getResultText()}</Text>
+      </View>
+
+      <View style={[styles.heroContent, { backgroundColor: getBgColor() }]}>
+        {/* Matchup */}
+        <View style={styles.heroMatchup}>
+          {/* Away Team */}
+          <View style={styles.heroTeam}>
+            <View
+              style={[styles.heroTeamBadge, awayWon && styles.heroTeamBadgeWinner]}
+            >
+              <Text style={[styles.heroTeamAbbr, awayWon && styles.heroTeamAbbrWinner]}>
+                {game.awayTeam.abbr}
+              </Text>
+            </View>
+            <Text style={styles.heroTeamName} numberOfLines={1}>
+              {game.awayTeam.nickname}
+            </Text>
+            <Text style={styles.heroTeamRecord}>{game.awayTeam.record}</Text>
+            {hasScore && (
+              <Text
+                style={[
+                  styles.heroScore,
+                  awayWon && styles.heroScoreWinner,
+                  awayWon && { color: getResultColor() },
+                ]}
+              >
+                {game.awayScore}
+              </Text>
+            )}
+          </View>
+
+          {/* VS Divider */}
+          <View style={styles.heroVsDivider}>
+            <Text style={styles.heroVsText}>@</Text>
+            {hasScore && <Text style={styles.heroFinalText}>FINAL</Text>}
+          </View>
+
+          {/* Home Team */}
+          <View style={styles.heroTeam}>
+            <View
+              style={[styles.heroTeamBadge, homeWon && styles.heroTeamBadgeWinner]}
+            >
+              <Text style={[styles.heroTeamAbbr, homeWon && styles.heroTeamAbbrWinner]}>
+                {game.homeTeam.abbr}
+              </Text>
+            </View>
+            <Text style={styles.heroTeamName} numberOfLines={1}>
+              {game.homeTeam.nickname}
+            </Text>
+            <Text style={styles.heroTeamRecord}>{game.homeTeam.record}</Text>
+            {hasScore && (
+              <Text
+                style={[
+                  styles.heroScore,
+                  homeWon && styles.heroScoreWinner,
+                  homeWon && { color: getResultColor() },
+                ]}
+              >
+                {game.homeScore}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Box Score Button */}
+        {hasScore && (
+          <TouchableOpacity
+            style={styles.heroBoxScoreBtn}
+            onPress={onViewBoxScore}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.heroBoxScoreText}>View Box Score</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </Animated.View>
   );
 }
 
 /**
- * Animated progress dots
+ * Compact Scoreboard Card for other games
  */
-function LoadingDots() {
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animate = () => {
-      Animated.loop(
-        Animated.stagger(200, [
-          Animated.sequence([
-            Animated.timing(dot1, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(dot1, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.sequence([
-            Animated.timing(dot2, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(dot2, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.sequence([
-            Animated.timing(dot3, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(dot3, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      ).start();
-    };
-    animate();
-  }, [dot1, dot2, dot3]);
-
-  return (
-    <View style={styles.dotsContainer}>
-      {[dot1, dot2, dot3].map((dot, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.dot,
-            {
-              transform: [
-                {
-                  translateY: dot.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, -8],
-                  }),
-                },
-              ],
-              opacity: dot.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.4, 1],
-              }),
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
-
-/**
- * Single game card for the schedule
- */
-function GameCard({
+function ScoreboardCard({
   game,
-  isSimulated,
-  isAnimating,
   onPress,
-  userTeamId,
+  isAnimating,
 }: {
   game: WeeklyGame | SimulatedGame;
-  isSimulated: boolean;
-  isAnimating: boolean;
   onPress: () => void;
-  userTeamId: string;
-}): React.JSX.Element {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(isSimulated ? 0 : 20)).current;
-  const opacityAnim = useRef(new Animated.Value(isSimulated ? 1 : 0)).current;
+  isAnimating: boolean;
+}) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const hasScore = game.isComplete && game.homeScore !== undefined;
+  const homeWon = hasScore && (game.homeScore ?? 0) > (game.awayScore ?? 0);
+  const awayWon = hasScore && (game.awayScore ?? 0) > (game.homeScore ?? 0);
+  const badge = hasScore ? getGameBadge(game as SimulatedGame) : null;
 
   useEffect(() => {
     if (isAnimating) {
-      // Slide in and fade animation
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.out(Easing.back(1.5)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        // Scale pop
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.03,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-
-      // Trigger haptic on score reveal
-      triggerHaptic('medium');
-    } else if (isSimulated) {
-      slideAnim.setValue(0);
-      opacityAnim.setValue(1);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else if (hasScore) {
+      fadeAnim.setValue(1);
     }
-  }, [isAnimating, isSimulated, slideAnim, opacityAnim, scaleAnim]);
-
-  const simulatedGame = game as SimulatedGame;
-  const hasScore = isSimulated && simulatedGame.homeScore !== undefined;
-  const homeWon = hasScore && simulatedGame.homeScore > simulatedGame.awayScore;
-  const awayWon = hasScore && simulatedGame.awayScore > simulatedGame.homeScore;
-
-  // Check if user's team won/lost for this game
-  const isUserHome = game.homeTeam.id === userTeamId;
-  const isUserAway = game.awayTeam.id === userTeamId;
-  const userWon = (isUserHome && homeWon) || (isUserAway && awayWon);
-  const userLost = (isUserHome && awayWon) || (isUserAway && homeWon);
-
-  // Get game badge for completed games
-  const badge = hasScore ? getGameBadge(simulatedGame) : null;
-  const badgeStyle = badge ? getBadgeStyle(badge) : null;
-
-  // Dynamic border color based on user's game result
-  const getBorderStyle = () => {
-    if (game.isUserGame && isSimulated) {
-      if (userWon) return styles.userWonCard;
-      if (userLost) return styles.userLostCard;
-    }
-    if (game.isUserGame) return styles.userGameCard;
-    if (isSimulated) return styles.completedGameCard;
-    return {};
-  };
+  }, [isAnimating, hasScore, fadeAnim]);
 
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onPress} disabled={!isSimulated}>
+    <TouchableOpacity
+      activeOpacity={hasScore ? 0.7 : 1}
+      onPress={hasScore ? onPress : undefined}
+      disabled={!hasScore}
+    >
       <Animated.View
         style={[
-          styles.gameCard,
-          getBorderStyle(),
-          {
-            transform: [{ scale: scaleAnim }, { translateX: slideAnim }],
-            opacity: isSimulated ? 1 : opacityAnim,
-          },
+          styles.scoreCard,
+          hasScore && styles.scoreCardComplete,
+          { opacity: hasScore ? fadeAnim : 0.5 },
         ]}
       >
-        {game.isUserGame && (
-          <View
-            style={[
-              styles.yourGameBanner,
-              userWon && styles.yourGameBannerWin,
-              userLost && styles.yourGameBannerLoss,
-            ]}
-          >
-            <Text style={styles.yourGameText}>
-              {isSimulated
-                ? userWon
-                  ? 'VICTORY!'
-                  : userLost
-                    ? 'DEFEAT'
-                    : 'YOUR GAME'
-                : 'YOUR GAME'}
+        {/* Badge */}
+        {badge && (
+          <View style={[styles.scoreBadge, { backgroundColor: BADGE_COLORS[badge].bg }]}>
+            <Text style={[styles.scoreBadgeText, { color: BADGE_COLORS[badge].text }]}>
+              {badge}
             </Text>
           </View>
         )}
 
-        <View style={styles.gameContent}>
-          {/* Time slot / Status / Badge */}
-          <View style={styles.gameStatus}>
-            <View style={styles.statusLeft}>
-              {isSimulated ? (
-                <Text style={styles.finalText}>FINAL</Text>
-              ) : (
-                <Text style={styles.timeSlotText}>
-                  {TIME_SLOT_NAMES[game.timeSlot] || game.timeSlot}
-                </Text>
-              )}
-            </View>
-            <View style={styles.badgesContainer}>
-              {badge && badgeStyle && (
-                <View style={[styles.gameBadge, { backgroundColor: badgeStyle.bg }]}>
-                  <Text style={[styles.gameBadgeText, { color: badgeStyle.text }]}>{badge}</Text>
-                </View>
-              )}
-              {game.isDivisional && <Text style={styles.divBadge}>DIV</Text>}
-            </View>
-          </View>
+        {/* Away Team Row */}
+        <View style={styles.scoreTeamRow}>
+          <Text style={[styles.scoreTeamAbbr, awayWon && styles.scoreTeamWinner]}>
+            {game.awayTeam.abbr}
+          </Text>
+          <Text style={styles.scoreTeamName} numberOfLines={1}>
+            {game.awayTeam.nickname}
+          </Text>
+          {hasScore ? (
+            <Text style={[styles.scoreValue, awayWon && styles.scoreValueWinner]}>
+              {game.awayScore}
+            </Text>
+          ) : (
+            <Text style={styles.scoreTeamRecord}>{game.awayTeam.record}</Text>
+          )}
+        </View>
 
-          {/* Matchup */}
-          <View style={styles.matchup}>
-            {/* Away Team */}
-            <View style={styles.teamRow}>
-              <Text style={[styles.teamAbbr, awayWon && styles.winnerText]}>
-                {game.awayTeam.abbr}
-              </Text>
-              <Text style={styles.teamName} numberOfLines={1}>
-                {game.awayTeam.nickname}
-              </Text>
-              <Text style={styles.record}>({game.awayTeam.record})</Text>
-              {hasScore && (
-                <AnimatedScore
-                  value={simulatedGame.awayScore}
-                  isWinner={awayWon}
-                  isAnimating={isAnimating}
-                  delay={0}
-                />
-              )}
-            </View>
+        {/* Home Team Row */}
+        <View style={styles.scoreTeamRow}>
+          <Text style={[styles.scoreTeamAbbr, homeWon && styles.scoreTeamWinner]}>
+            {game.homeTeam.abbr}
+          </Text>
+          <Text style={styles.scoreTeamName} numberOfLines={1}>
+            {game.homeTeam.nickname}
+          </Text>
+          {hasScore ? (
+            <Text style={[styles.scoreValue, homeWon && styles.scoreValueWinner]}>
+              {game.homeScore}
+            </Text>
+          ) : (
+            <Text style={styles.scoreTeamRecord}>{game.homeTeam.record}</Text>
+          )}
+        </View>
 
-            <Text style={styles.atSymbol}>@</Text>
-
-            {/* Home Team */}
-            <View style={styles.teamRow}>
-              <Text style={[styles.teamAbbr, homeWon && styles.winnerText]}>
-                {game.homeTeam.abbr}
-              </Text>
-              <Text style={styles.teamName} numberOfLines={1}>
-                {game.homeTeam.nickname}
-              </Text>
-              <Text style={styles.record}>({game.homeTeam.record})</Text>
-              {hasScore && (
-                <AnimatedScore
-                  value={simulatedGame.homeScore}
-                  isWinner={homeWon}
-                  isAnimating={isAnimating}
-                  delay={100}
-                />
-              )}
-            </View>
-          </View>
-
-          {/* Tap hint for completed games */}
-          {isSimulated && <Text style={styles.tapHint}>Tap for box score</Text>}
+        {/* Status */}
+        <View style={styles.scoreStatus}>
+          {hasScore ? (
+            <Text style={styles.scoreStatusFinal}>FINAL</Text>
+          ) : (
+            <Text style={styles.scoreStatusPending}>Pending</Text>
+          )}
         </View>
       </Animated.View>
     </TouchableOpacity>
@@ -578,32 +430,57 @@ function GameCard({
 }
 
 /**
- * Animated progress bar
+ * Bye Week Card
  */
-function AnimatedProgressBar({ progress }: { progress: number }) {
-  const widthAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(widthAnim, {
-      toValue: progress,
-      duration: 400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [progress, widthAnim]);
-
-  const width = widthAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
-
+function ByeWeekCard() {
   return (
-    <View style={styles.progressBar}>
-      <Animated.View style={[styles.progressFill, { width }]} />
+    <View style={styles.byeCard}>
+      <View style={styles.byeIconContainer}>
+        <Text style={styles.byeIcon}>🏖️</Text>
+      </View>
+      <Text style={styles.byeTitle}>Bye Week</Text>
+      <Text style={styles.byeSubtitle}>
+        Your team has the week off. Check out the other games around the league.
+      </Text>
     </View>
   );
 }
 
+/**
+ * Loading Indicator
+ */
+function SimulatingIndicator({ current, total }: { current: number; total: number }) {
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [spinAnim]);
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={styles.simIndicator}>
+      <Animated.View style={[styles.simSpinner, { transform: [{ rotate: spin }] }]} />
+      <Text style={styles.simText}>
+        Simulating games... {current}/{total}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Main Component
+ */
 export function WeeklySchedulePopup({
   week,
   phase,
@@ -627,34 +504,22 @@ export function WeeklySchedulePopup({
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
   const userGame = games.find((g) => g.isUserGame);
   const otherGames = games.filter((g) => !g.isUserGame);
-
-  // Check if user's game is already complete (e.g., they just played it via Gamecast)
   const userGameAlreadyComplete = userGame?.isComplete === true;
 
-  // Track the previous userGameAlreadyComplete value to detect when user returns from playing their game
-  const prevUserGameAlreadyCompleteRef = useRef(userGameAlreadyComplete);
+  const prevUserGameCompleteRef = useRef(userGameAlreadyComplete);
 
-  // Reset simPhase to 'initial' when user returns from playing their game
-  // This handles the case where navigation restores the component with stale state
+  // Reset state when returning from playing
   useEffect(() => {
-    const prevComplete = prevUserGameAlreadyCompleteRef.current;
-
-    // If user's game just became complete (user returned from playing)
-    // AND we're not already in a valid state, reset to initial
-    if (userGameAlreadyComplete && !prevComplete) {
+    if (userGameAlreadyComplete && !prevUserGameCompleteRef.current) {
       setSimPhase('initial');
     }
-
-    // Also reset if we're in 'user_playing' state but the user's game is already complete
-    // This catches the case where navigation restored old state
     if (userGameAlreadyComplete && simPhase === 'user_playing') {
       setSimPhase('initial');
     }
-
-    prevUserGameAlreadyCompleteRef.current = userGameAlreadyComplete;
+    prevUserGameCompleteRef.current = userGameAlreadyComplete;
   }, [userGameAlreadyComplete, simPhase]);
 
-  // Pre-populate simulatedGames with user's completed game if applicable
+  // Pre-populate user's completed game
   useEffect(() => {
     if (userGame && userGameAlreadyComplete && !simulatedGames.has(userGame.gameId)) {
       const simGame: SimulatedGame = {
@@ -665,20 +530,19 @@ export function WeeklySchedulePopup({
       };
       setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
     }
-  }, [userGame, userGameAlreadyComplete]);
+  }, [userGame, userGameAlreadyComplete, simulatedGames]);
 
   const completedCount = simulatedGames.size;
   const totalCount = games.length;
   const allComplete = completedCount === totalCount;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // Handle playing user's game (navigates to gamecast)
+  // Play user's game
   const handlePlayGame = useCallback(() => {
     setSimPhase('user_playing');
     onPlayGame();
   }, [onPlayGame]);
 
-  // Handle simming user's game
+  // Sim user's game
   const handleSimUserGame = useCallback(async () => {
     setSimPhase('user_playing');
     triggerHaptic('light');
@@ -696,25 +560,18 @@ export function WeeklySchedulePopup({
       setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
       setAnimatingGameId(userGame.gameId);
 
-      // Check if user won for celebration haptic
       const isUserHome = userGame.homeTeam.id === userTeamId;
       const userWon = isUserHome
         ? result.homeScore > result.awayScore
         : result.awayScore > result.homeScore;
 
-      if (userWon) {
-        triggerHaptic('success');
-      } else {
-        triggerHaptic('heavy');
-      }
-
+      triggerHaptic(userWon ? 'success' : 'heavy');
       setTimeout(() => setAnimatingGameId(null), 800);
     }
-    // Auto-proceed to simulating other games
     simulateOtherGames();
   }, [onSimUserGame, userGame, userTeamId]);
 
-  // Simulate other games with animation
+  // Simulate other games
   const simulateOtherGames = useCallback(async () => {
     setSimPhase('simulating_others');
     triggerHaptic('light');
@@ -722,28 +579,25 @@ export function WeeklySchedulePopup({
     const results = await onSimOtherGames();
     setTotalSimGames(results.length);
 
-    // Animate each game result one by one with dramatic pacing
     for (let i = 0; i < results.length; i++) {
       const game = results[i];
       setCurrentSimGame(i + 1);
 
       await new Promise<void>((resolve) => {
-        // Variable delay based on game type for drama
-        const isCloserGame =
+        const isClose =
           game.homeScore !== undefined &&
           game.awayScore !== undefined &&
           Math.abs(game.homeScore - game.awayScore) <= 7;
-        const delay = isCloserGame ? 500 : 350; // Longer pause for close games
+        const delay = isClose ? 400 : 250;
 
         setTimeout(() => {
           setAnimatingGameId(game.gameId);
           setSimulatedGames((prev) => new Map(prev).set(game.gameId, game));
           triggerHaptic('light');
-
           setTimeout(() => {
             setAnimatingGameId(null);
             resolve();
-          }, 600); // Animation duration
+          }, 400);
         }, delay);
       });
     }
@@ -752,7 +606,7 @@ export function WeeklySchedulePopup({
     triggerHaptic('success');
   }, [onSimOtherGames]);
 
-  // Handle user returning from gamecast with result
+  // Handle user game complete callback
   const handleUserGameComplete = useCallback(
     (result: GameResult) => {
       if (userGame) {
@@ -767,17 +621,14 @@ export function WeeklySchedulePopup({
         setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
         setAnimatingGameId(userGame.gameId);
         setTimeout(() => setAnimatingGameId(null), 800);
-
-        // Auto-proceed to simulating other games
         simulateOtherGames();
       }
     },
     [userGame, simulateOtherGames]
   );
 
-  // Expose the callback for external use
+  // Expose callback
   useEffect(() => {
-    // Store reference for external access
     (globalThis as Record<string, unknown>).__weeklyScheduleHandleUserGameComplete =
       handleUserGameComplete;
     return () => {
@@ -785,7 +636,7 @@ export function WeeklySchedulePopup({
     };
   }, [handleUserGameComplete]);
 
-  // Handle clicking a completed game to see box score
+  // Handle box score view
   const handleGamePress = useCallback(
     (gameId: string) => {
       const game = simulatedGames.get(gameId);
@@ -798,157 +649,149 @@ export function WeeklySchedulePopup({
     [simulatedGames]
   );
 
-  // Handle advancing to next week
+  // Advance week
   const handleAdvanceWeek = useCallback(() => {
     triggerHaptic('medium');
     onAdvanceWeek();
   }, [onAdvanceWeek]);
 
-  // Render game card with current state
-  const renderGame = (game: WeeklyGame) => {
-    const simulated = simulatedGames.get(game.gameId);
-    const isSimulated = !!simulated;
-    const isAnimating = animatingGameId === game.gameId;
-
-    return (
-      <GameCard
-        key={game.gameId}
-        game={simulated || game}
-        isSimulated={isSimulated}
-        isAnimating={isAnimating}
-        onPress={() => handleGamePress(game.gameId)}
-        userTeamId={userTeamId}
-      />
-    );
-  };
-
-  // Get simulation status message
-  const getSimStatusMessage = () => {
-    if (simPhase === 'simulating_others' && totalSimGames > 0) {
-      return `Simulating game ${currentSimGame} of ${totalSimGames}...`;
-    }
-    return 'Simulating games...';
-  };
+  const userGameData = userGame
+    ? simulatedGames.get(userGame.gameId) || userGame
+    : null;
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
+
         <View style={styles.headerCenter}>
-          <Text style={styles.title}>{weekTitle}</Text>
-          <Text style={styles.subtitle}>
-            {completedCount}/{totalCount} Games Complete
-          </Text>
+          <Text style={styles.headerTitle}>{weekTitle}</Text>
+          <View style={styles.progressPill}>
+            <View
+              style={[
+                styles.progressPillFill,
+                { width: `${(completedCount / totalCount) * 100}%` },
+              ]}
+            />
+            <Text style={styles.progressPillText}>
+              {completedCount}/{totalCount} Complete
+            </Text>
+          </View>
         </View>
-        <View style={styles.placeholder} />
+
+        <View style={styles.headerRight} />
       </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <AnimatedProgressBar progress={progress} />
-      </View>
-
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* User's Game Section */}
-        {!isUserOnBye && userGame && (
+        {!isUserOnBye && userGameData && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Matchup</Text>
-            {renderGame(userGame)}
+            <Text style={styles.sectionLabel}>YOUR GAME</Text>
+            <HeroGameCard
+              game={userGameData}
+              userTeamId={userTeamId}
+              isComplete={simulatedGames.has(userGame!.gameId)}
+              onViewBoxScore={() => handleGamePress(userGame!.gameId)}
+              isAnimating={animatingGameId === userGame!.gameId}
+            />
 
-            {/* Action buttons for user's game - only show if game not already complete */}
+            {/* Action Buttons */}
             {simPhase === 'initial' && !userGameAlreadyComplete && (
-              <View style={styles.userGameActions}>
+              <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.playButton]}
+                  style={styles.primaryBtn}
                   onPress={handlePlayGame}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.actionButtonText}>PLAY GAME</Text>
+                  <Text style={styles.primaryBtnText}>Play Game</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.simButton]}
+                  style={styles.secondaryBtn}
                   onPress={handleSimUserGame}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.actionButtonText}>SIM GAME</Text>
+                  <Text style={styles.secondaryBtnText}>Simulate</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* If user's game is complete, show button to sim other games */}
             {simPhase === 'initial' && userGameAlreadyComplete && otherGames.length > 0 && (
-              <View style={styles.userGameActions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.simAllButton]}
-                  onPress={simulateOtherGames}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.actionButtonText}>SIM OTHER GAMES</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Bye Week Notice */}
-        {isUserOnBye && (
-          <View style={styles.byeWeekCard}>
-            <Text style={styles.byeWeekTitle}>BYE WEEK</Text>
-            <Text style={styles.byeWeekText}>
-              Your team has the week off. Watch the other games around the league.
-            </Text>
-            {simPhase === 'initial' && (
               <TouchableOpacity
-                style={[styles.actionButton, styles.simAllButton]}
+                style={styles.fullWidthBtn}
                 onPress={simulateOtherGames}
                 activeOpacity={0.8}
               >
-                <Text style={styles.actionButtonText}>SIM ALL GAMES</Text>
+                <Text style={styles.fullWidthBtnText}>Simulate League Games</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* Other Games Section */}
-        {otherGames.length > 0 && (
+        {/* Bye Week */}
+        {isUserOnBye && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Around the League</Text>
-            {simPhase === 'simulating_others' && (
-              <View style={styles.simulatingBanner}>
-                <View style={styles.simulatingContent}>
-                  <LoadingDots />
-                  <Text style={styles.simulatingText}>{getSimStatusMessage()}</Text>
-                </View>
-                <View style={styles.miniProgressBar}>
-                  <View
-                    style={[
-                      styles.miniProgressFill,
-                      { width: `${(currentSimGame / Math.max(totalSimGames, 1)) * 100}%` },
-                    ]}
-                  />
-                </View>
-              </View>
+            <ByeWeekCard />
+            {simPhase === 'initial' && (
+              <TouchableOpacity
+                style={styles.fullWidthBtn}
+                onPress={simulateOtherGames}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.fullWidthBtnText}>Simulate All Games</Text>
+              </TouchableOpacity>
             )}
-            {otherGames.map(renderGame)}
           </View>
         )}
 
-        {/* Spacer for action bar */}
+        {/* Simulating Indicator */}
+        {simPhase === 'simulating_others' && (
+          <SimulatingIndicator current={currentSimGame} total={totalSimGames} />
+        )}
+
+        {/* Other Games Scoreboard */}
+        {otherGames.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>AROUND THE LEAGUE</Text>
+            <View style={styles.scoreboardGrid}>
+              {otherGames.map((game) => {
+                const simulated = simulatedGames.get(game.gameId);
+                return (
+                  <ScoreboardCard
+                    key={game.gameId}
+                    game={simulated || game}
+                    onPress={() => handleGamePress(game.gameId)}
+                    isAnimating={animatingGameId === game.gameId}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Bottom Action Bar */}
+      {/* Bottom Action */}
       {allComplete && (
-        <View style={styles.actionBar}>
+        <View style={styles.bottomBar}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.continueButton]}
+            style={styles.advanceBtn}
             onPress={handleAdvanceWeek}
             activeOpacity={0.8}
           >
-            <Text style={styles.actionButtonText}>ADVANCE TO NEXT WEEK</Text>
+            <Text style={styles.advanceBtnText}>Continue to Next Week</Text>
+            <Text style={styles.advanceBtnArrow}>→</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -966,308 +809,402 @@ export function WeeklySchedulePopup({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     backgroundColor: colors.primary,
   },
-  backButton: {
-    padding: spacing.xs,
-    width: 60,
-  },
-  backText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-  },
-  headerCenter: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textOnPrimary,
-  },
-  subtitle: {
-    fontSize: fontSize.sm,
-    color: colors.textOnPrimary,
-    opacity: 0.8,
-  },
-  placeholder: {
-    width: 60,
-  },
-  progressContainer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.success,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  section: {
-    padding: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  gameCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.sm,
-    overflow: 'hidden',
-    ...shadows.sm,
-  },
-  userGameCard: {
-    borderWidth: 2,
-    borderColor: colors.secondary,
-  },
-  userWonCard: {
-    borderWidth: 3,
-    borderColor: colors.success,
-  },
-  userLostCard: {
-    borderWidth: 2,
-    borderColor: colors.error,
-  },
-  completedGameCard: {
-    borderWidth: 1,
-    borderColor: colors.success,
-  },
-  yourGameBanner: {
-    backgroundColor: colors.secondary,
-    paddingVertical: spacing.xxs,
-    paddingHorizontal: spacing.sm,
-  },
-  yourGameBannerWin: {
-    backgroundColor: colors.success,
-  },
-  yourGameBannerLoss: {
-    backgroundColor: colors.error,
-  },
-  yourGameText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    textAlign: 'center',
-  },
-  gameContent: {
-    padding: spacing.md,
-  },
-  gameStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  statusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  badgesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  timeSlotText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  finalText: {
-    fontSize: fontSize.xs,
-    color: colors.success,
-    fontWeight: fontWeight.bold,
-  },
-  gameBadge: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  gameBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-  },
-  divBadge: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.bold,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-  },
-  matchup: {
-    gap: spacing.xxs,
-  },
-  teamRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.xxs,
-  },
-  teamAbbr: {
-    width: 40,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-  },
-  teamName: {
-    flex: 1,
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  record: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginRight: spacing.md,
-  },
-  scoreContainer: {
-    minWidth: 36,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
+  backBtn: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  score: {
+  backBtnText: {
+    fontSize: 24,
+    color: colors.textOnPrimary,
+    fontWeight: fontWeight.bold,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    marginBottom: spacing.xs,
+  },
+  progressPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    overflow: 'hidden',
+    minWidth: 140,
+  },
+  progressPillFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.success,
+    borderRadius: borderRadius.full,
+  },
+  progressPillText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 44,
+  },
+
+  // Scroll
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing.md,
+  },
+
+  // Sections
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+
+  // Hero Card
+  heroCard: {
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    ...shadows.lg,
+  },
+  heroBanner: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  heroBannerText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    letterSpacing: 2,
+  },
+  heroContent: {
+    padding: spacing.lg,
+  },
+  heroMatchup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroTeam: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  heroTeamBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  heroTeamBadgeWinner: {
+    backgroundColor: colors.primary,
+  },
+  heroTeamAbbr: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.text,
-    textAlign: 'right',
   },
-  winnerText: {
-    color: colors.success,
+  heroTeamAbbrWinner: {
+    color: colors.textOnPrimary,
   },
-  atSymbol: {
+  heroTeamName: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginLeft: 16,
-  },
-  tapHint: {
-    fontSize: fontSize.xs,
-    color: colors.textLight,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+    marginBottom: spacing.xxs,
     textAlign: 'center',
-    marginTop: spacing.xs,
-    fontStyle: 'italic',
   },
-  userGameActions: {
+  heroTeamRecord: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  heroScore: {
+    fontSize: fontSize.display,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  heroScoreWinner: {
+    fontWeight: fontWeight.bold,
+  },
+  heroVsDivider: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  heroVsText: {
+    fontSize: fontSize.lg,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  heroFinalText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.bold,
+    marginTop: spacing.xs,
+  },
+  heroBoxScoreBtn: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  heroBoxScoreText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
+  },
+
+  // Action Buttons
+  actionRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
-  actionButton: {
+  primaryBtn: {
     flex: 1,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
     ...shadows.md,
   },
-  playButton: {
-    backgroundColor: colors.primary,
-  },
-  simButton: {
-    backgroundColor: colors.secondary,
-  },
-  simAllButton: {
-    backgroundColor: colors.primary,
-    marginTop: spacing.md,
-  },
-  continueButton: {
-    backgroundColor: colors.success,
-  },
-  actionButtonText: {
-    color: colors.textOnPrimary,
+  primaryBtnText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
   },
-  byeWeekCard: {
-    backgroundColor: colors.surfaceLight,
+  secondaryBtn: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    margin: spacing.md,
     alignItems: 'center',
-    ...shadows.sm,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
-  byeWeekTitle: {
-    fontSize: fontSize.xl,
+  secondaryBtnText: {
+    fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.primary,
+  },
+  fullWidthBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    ...shadows.md,
+  },
+  fullWidthBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+
+  // Bye Card
+  byeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    ...shadows.md,
+  },
+  byeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.full,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  byeIcon: {
+    fontSize: 32,
+  },
+  byeTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
     marginBottom: spacing.xs,
   },
-  byeWeekText: {
-    fontSize: fontSize.md,
+  byeSubtitle: {
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 20,
   },
-  simulatingBanner: {
-    backgroundColor: colors.primaryLight,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-  },
-  simulatingContent: {
+
+  // Simulating Indicator
+  simIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    backgroundColor: colors.primaryLight,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.lg,
+    alignSelf: 'center',
   },
-  simulatingText: {
-    color: colors.primary,
+  simSpinner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.textOnPrimary,
+    borderTopColor: 'transparent',
+    marginRight: spacing.sm,
+  },
+  simText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
-    textAlign: 'center',
+    color: colors.textOnPrimary,
   },
-  miniProgressBar: {
-    height: 3,
-    backgroundColor: 'rgba(26, 54, 93, 0.2)',
-    borderRadius: 2,
-    marginTop: spacing.xs,
-    overflow: 'hidden',
+
+  // Scoreboard Grid
+  scoreboardGrid: {
+    gap: spacing.sm,
   },
-  miniProgressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
-    height: 20,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-  },
-  actionBar: {
-    padding: spacing.md,
+
+  // Score Card
+  scoreCard: {
     backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  scoreCardComplete: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.success,
+  },
+  scoreBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  scoreBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+  },
+  scoreTeamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  scoreTeamAbbr: {
+    width: 40,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  scoreTeamWinner: {
+    color: colors.success,
+  },
+  scoreTeamName: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.text,
+    marginRight: spacing.sm,
+  },
+  scoreTeamRecord: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  scoreValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    minWidth: 32,
+    textAlign: 'right',
+  },
+  scoreValueWinner: {
+    color: colors.success,
+  },
+  scoreStatus: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
   },
+  scoreStatusFinal: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.success,
+    textAlign: 'center',
+  },
+  scoreStatusPending: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  // Bottom
   bottomSpacer: {
-    height: spacing.xxxl,
+    height: 100,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    ...shadows.lg,
+  },
+  advanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    ...shadows.md,
+  },
+  advanceBtnText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    marginRight: spacing.sm,
+  },
+  advanceBtnArrow: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
   },
 });
 
