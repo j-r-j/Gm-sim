@@ -515,18 +515,27 @@ export function WeeklySchedulePopup({
     prevUserGameCompleteRef.current = userGameAlreadyComplete;
   }, [userGameAlreadyComplete, simPhase]);
 
-  // Pre-populate user's completed game
+  // Pre-populate ALL completed games (user's and other teams')
+  // This ensures progress tracking works correctly when returning to this screen
   useEffect(() => {
-    if (userGame && userGameAlreadyComplete && !simulatedGames.has(userGame.gameId)) {
-      const simGame: SimulatedGame = {
-        ...userGame,
-        homeScore: userGame.homeScore ?? 0,
-        awayScore: userGame.awayScore ?? 0,
-        isComplete: true,
-      };
-      setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
+    const completedGames = games.filter((g) => g.isComplete);
+    if (completedGames.length > 0) {
+      setSimulatedGames((prev) => {
+        const newMap = new Map(prev);
+        for (const game of completedGames) {
+          if (!newMap.has(game.gameId)) {
+            newMap.set(game.gameId, {
+              ...game,
+              homeScore: game.homeScore ?? 0,
+              awayScore: game.awayScore ?? 0,
+              isComplete: true,
+            });
+          }
+        }
+        return newMap;
+      });
     }
-  }, [userGame, userGameAlreadyComplete, simulatedGames]);
+  }, [games]);
 
   const completedCount = simulatedGames.size;
   const totalCount = games.length;

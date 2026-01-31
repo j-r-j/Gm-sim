@@ -5444,12 +5444,10 @@ export function WeeklyScheduleScreenWrapper({
 
     const isUserGame = game.homeTeamId === userTeamId || game.awayTeamId === userTeamId;
 
-    // Skip already-complete games EXCEPT for:
-    // 1. The user's game (so they can see their result)
-    // 2. When user is on bye (all games must be tracked for completion counting)
-    // Without this, after simulating games on bye week, all complete games get
-    // filtered out causing totalCount=0, which breaks the allComplete check
-    if (game.isComplete && !isUserGame && !isUserOnBye) continue;
+    // Include ALL games for the week - completed games are needed for:
+    // 1. Accurate progress tracking (totalCount must include all games)
+    // 2. Showing final scores after simulation
+    // 3. Proper allComplete detection for "Continue to Next Week" button
 
     weeklyGames.push({
       gameId: game.gameId,
