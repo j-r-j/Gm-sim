@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ci-checks.sh",
+            "timeout": 300,
+            "statusMessage": "Running CI checks (lint, test, format)..."
+          }
+        ]
+      }
+    ]
+  }
+}
