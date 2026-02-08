@@ -4,6 +4,7 @@
  * Tests the complete NFL scheduling formula with all 14 validation gates.
  * Validates rotation tables, component generation, and multi-season consistency.
  */
+/* eslint-disable no-console */
 
 import {
   generateSeasonSchedule,
@@ -40,13 +41,6 @@ import { createDefaultStadium } from '../../models/team/Stadium';
 import { createDefaultTeamFinances } from '../../models/team/TeamFinances';
 import { createEmptyStaffHierarchy } from '../../models/staff/StaffHierarchy';
 
-// Division index mapping for tests
-const DIVISION_INDICES: Record<Division, number> = {
-  East: 0,
-  North: 1,
-  South: 2,
-  West: 3,
-};
 const INDEX_TO_DIVISION: Division[] = ['East', 'North', 'South', 'West'];
 
 // Helper to create test teams
@@ -479,7 +473,6 @@ describe('NFL Schedule Generator', () => {
       // At mod 0: East plays South ✓
 
       const afcEastTeams = teams.filter((t) => t.conference === 'AFC' && t.division === 'East');
-      const afcSouthTeams = teams.filter((t) => t.conference === 'AFC' && t.division === 'South');
 
       for (const eastTeam of afcEastTeams) {
         const componentBGames = schedule.regularSeason.filter(

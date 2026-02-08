@@ -249,29 +249,10 @@ function getTeamsInDivision(teams: Team[], conference: Conference, division: Div
 }
 
 /**
- * Gets teams in a specific division by index
- */
-function getTeamsInDivisionByIndex(
-  teams: Team[],
-  conference: Conference,
-  divisionIndex: number
-): Team[] {
-  const division = INDEX_TO_DIVISION[divisionIndex];
-  return getTeamsInDivision(teams, conference, division);
-}
-
-/**
  * Gets a team by ID
  */
 function getTeamById(teams: Team[], teamId: string): Team | undefined {
   return teams.find((t) => t.id === teamId);
-}
-
-/**
- * Gets the opponent conference
- */
-function getOppositeConference(conference: Conference): Conference {
-  return conference === 'AFC' ? 'NFC' : 'AFC';
 }
 
 /**
