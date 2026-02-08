@@ -277,6 +277,9 @@ function ExtensionModal({
                   key={y}
                   style={[styles.yearOption, years === y && styles.yearOptionActive]}
                   onPress={() => setYears(y)}
+                  accessibilityLabel={`${y} year${y > 1 ? 's' : ''}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: years === y }}
                 >
                   <Text style={[styles.yearOptionText, years === y && styles.yearOptionTextActive]}>
                     {y}
@@ -290,13 +293,22 @@ function ExtensionModal({
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setTotalValue(Math.max(1, totalValue - 5))}
+                accessibilityLabel="Decrease total value by 5 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>-5M</Text>
               </TouchableOpacity>
-              <Text style={styles.sliderValue}>{formatMoney(totalValue * 1000000)}</Text>
+              <Text
+                style={styles.sliderValue}
+                accessibilityLabel={`Total value ${formatMoney(totalValue * 1000000)}`}
+              >
+                {formatMoney(totalValue * 1000000)}
+              </Text>
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setTotalValue(totalValue + 5)}
+                accessibilityLabel="Increase total value by 5 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>+5M</Text>
               </TouchableOpacity>
@@ -307,13 +319,22 @@ function ExtensionModal({
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setGuaranteed(Math.max(0, guaranteed - 2))}
+                accessibilityLabel="Decrease guaranteed by 2 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>-2M</Text>
               </TouchableOpacity>
-              <Text style={styles.sliderValue}>{formatMoney(guaranteed * 1000000)}</Text>
+              <Text
+                style={styles.sliderValue}
+                accessibilityLabel={`Guaranteed ${formatMoney(guaranteed * 1000000)}`}
+              >
+                {formatMoney(guaranteed * 1000000)}
+              </Text>
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setGuaranteed(Math.min(totalValue, guaranteed + 2))}
+                accessibilityLabel="Increase guaranteed by 2 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>+2M</Text>
               </TouchableOpacity>

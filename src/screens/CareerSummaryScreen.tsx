@@ -5,7 +5,15 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { FiringRecord, getLegacyDescription } from '../core/career/FiringMechanics';
 
 interface CareerSummaryScreenProps {
@@ -34,7 +42,9 @@ export function CareerSummaryScreen({
 
         {/* Public Statement */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Official Statement</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Official Statement
+          </Text>
           <View style={styles.statementBox}>
             <Text style={styles.statementText}>"{reason.publicStatement}"</Text>
           </View>
@@ -42,7 +52,9 @@ export function CareerSummaryScreen({
 
         {/* Internal Reason */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>The Real Reason</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            The Real Reason
+          </Text>
           <View style={[styles.statementBox, styles.internalBox]}>
             <Text style={styles.internalReason}>{reason.primaryReason}</Text>
             {reason.secondaryReasons.map((r, i) => (
@@ -55,7 +67,9 @@ export function CareerSummaryScreen({
 
         {/* Tenure Stats */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Tenure</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Your Tenure
+          </Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{tenure.totalSeasons}</Text>
@@ -88,7 +102,9 @@ export function CareerSummaryScreen({
 
         {/* Legacy */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Legacy</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Your Legacy
+          </Text>
           <View style={[styles.legacyBox, { borderColor: getLegacyColor(legacy.overall) }]}>
             <Text style={[styles.legacyRating, { color: getLegacyColor(legacy.overall) }]}>
               {legacy.overall.toUpperCase()}
@@ -122,7 +138,9 @@ export function CareerSummaryScreen({
 
         {/* Severance */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Severance Package</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Severance Package
+          </Text>
           <View style={styles.severanceBox}>
             <Text style={styles.severanceAmount}>
               ${(severance.totalValue / 1000000).toFixed(1)}M
@@ -133,10 +151,23 @@ export function CareerSummaryScreen({
 
         {/* Actions */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.continueButton} onPress={onContinue}>
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={onContinue}
+            accessibilityLabel="Find a new job"
+            accessibilityRole="button"
+            accessibilityHint="Browse available GM positions"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.continueButtonText}>Find New Job</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.mainMenuButton} onPress={onMainMenu}>
+          <TouchableOpacity
+            style={styles.mainMenuButton}
+            onPress={onMainMenu}
+            accessibilityLabel="Return to main menu"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.mainMenuButtonText}>Main Menu</Text>
           </TouchableOpacity>
         </View>

@@ -269,7 +269,7 @@ function LiveGamePhase({
   isSimulating,
   onSpeedChange,
   onPause,
-  _onResume,
+  onResume: _onResume,
   onSkip,
   onWatchPlay,
 }: {
@@ -280,7 +280,7 @@ function LiveGamePhase({
   isSimulating: boolean;
   onSpeedChange: (s: SimulationSpeed) => void;
   onPause: () => void;
-  _onResume: () => void;
+  onResume: () => void;
   onSkip: () => void;
   onWatchPlay: () => void;
 }) {
@@ -399,16 +399,28 @@ function PostGamePhase({
   const { result, userWon, newUserRecord, mvp, keyPlays, newInjuries, predictionCorrect } =
     postGameInfo;
 
+  const isTie = result.homeScore === result.awayScore;
+
   return (
     <ScrollView style={styles.phaseContainer} contentContainerStyle={styles.phaseContent}>
       {/* Final Score Card */}
-      <View style={[styles.finalScoreCard, userWon ? styles.winCard : styles.lossCard]}>
+      <View
+        style={[
+          styles.finalScoreCard,
+          isTie ? styles.tieCard : userWon ? styles.winCard : styles.lossCard,
+        ]}
+      >
         <Text style={styles.finalLabel}>FINAL</Text>
         <Text style={styles.finalScore}>
           {result.homeScore} - {result.awayScore}
         </Text>
-        <Text style={[styles.resultText, userWon ? styles.winText : styles.lossText]}>
-          {userWon ? 'VICTORY!' : 'DEFEAT'}
+        <Text
+          style={[
+            styles.resultText,
+            isTie ? styles.tieText : userWon ? styles.winText : styles.lossText,
+          ]}
+        >
+          {isTie ? 'TIE GAME' : userWon ? 'VICTORY!' : 'DEFEAT'}
         </Text>
         <Text style={styles.newRecord}>Record: {newUserRecord}</Text>
 
@@ -742,7 +754,7 @@ export function GameDayScreen({
             isSimulating={isSimulating}
             onSpeedChange={handleSpeedChange}
             onPause={handlePause}
-            _onResume={handleResume}
+            onResume={handleResume}
             onSkip={handleSkip}
             onWatchPlay={handleWatchPlay}
           />
@@ -1113,6 +1125,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.error,
   },
+  tieCard: {
+    backgroundColor: colors.warning + '20',
+    borderWidth: 2,
+    borderColor: colors.warning,
+  },
   finalLabel: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
@@ -1134,6 +1151,9 @@ const styles = StyleSheet.create({
   },
   lossText: {
     color: colors.error,
+  },
+  tieText: {
+    color: colors.warning,
   },
   newRecord: {
     fontSize: fontSize.md,

@@ -12,7 +12,16 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { BoxScore, PlayerStatLine } from '../core/game/BoxScoreGenerator';
 import { PlayResult } from '../core/engine/PlayResolver';
 
@@ -67,10 +76,16 @@ function StatLeaderCard({
   }
 
   return (
-    <View style={styles.statCard}>
-      <Text style={styles.statCardTitle}>{title}</Text>
+    <View style={styles.statCard} accessibilityLabel={`${title} leaders`}>
+      <Text style={styles.statCardTitle} accessibilityRole="header">
+        {title}
+      </Text>
       {leaders.slice(0, 2).map((leader, index) => (
-        <View key={`${leader.playerId}-${index}`} style={styles.leaderRow}>
+        <View
+          key={`${leader.playerId}-${index}`}
+          style={styles.leaderRow}
+          accessibilityLabel={`${leader.playerName}, ${leader.position}, ${leader.statLine}`}
+        >
           <View style={styles.leaderInfo}>
             <Text style={styles.leaderName}>{leader.playerName}</Text>
             <Text style={styles.leaderTeam}>{leader.position}</Text>
@@ -100,7 +115,10 @@ function ComparisonRow({
   const awayWins = awayNum > homeNum;
 
   return (
-    <View style={styles.comparisonRow}>
+    <View
+      style={styles.comparisonRow}
+      accessibilityLabel={`${label}: Home ${homeValue}, Away ${awayValue}`}
+    >
       <Text style={[styles.comparisonValue, homeWins && styles.comparisonWinner]}>{homeValue}</Text>
       <Text style={styles.comparisonLabel}>{label}</Text>
       <Text style={[styles.comparisonValue, awayWins && styles.comparisonWinner]}>{awayValue}</Text>
@@ -175,15 +193,11 @@ export function PostGameSummaryScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>{getWeekLabel()} - Final</Text>
-        {onBack && <View style={styles.placeholder} />}
-      </View>
+      <ScreenHeader
+        title={`${getWeekLabel()} - Final`}
+        onBack={onBack}
+        testID="post-game-summary-header"
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Result Banner */}
