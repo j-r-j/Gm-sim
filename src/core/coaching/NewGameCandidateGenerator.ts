@@ -24,6 +24,19 @@ import {
 } from './CoachWriteupGenerator';
 import { generateUUID } from '../generators/utils/RandomUtils';
 import { createCoachContract } from '../models/staff/CoachContract';
+import { COMPATIBLE_TREES, CONFLICTING_TREES, TreeName } from '../models/staff/CoachingTree';
+
+/**
+ * Narrative tag describing a notable trait about a coaching candidate
+ */
+export interface CandidateTag {
+  /** Short label for display */
+  label: string;
+  /** Longer description */
+  description: string;
+  /** Visual sentiment */
+  sentiment: 'positive' | 'neutral' | 'negative' | 'warning';
+}
 
 /**
  * Extended coach candidate with additional hiring info
@@ -53,6 +66,8 @@ export interface HiringCandidate {
   isFormerStaff: boolean;
   /** Interest level in the position */
   interestLevel: 'high' | 'medium' | 'low';
+  /** Narrative tags (e.g. "First-Time Coordinator", "Coaching Tree Connection") */
+  tags: CandidateTag[];
 }
 
 /**
@@ -65,6 +80,10 @@ export interface CandidateGenerationOptions {
   existingStaff?: Coach[];
   /** Year for contract purposes */
   currentYear?: number;
+  /** Current coaches on the team's staff (for tag generation) */
+  currentTeamCoaches?: Coach[];
+  /** Coaching budget remaining (for affordability tagging) */
+  coachingBudgetRemaining?: number;
 }
 
 /**
@@ -131,6 +150,187 @@ function ensureSchemesCovered(
 }
 
 /**
+ * Generates narrative tags for a candidate based on context
+ */
+export function generateCandidateTags(
+  candidate: Coach,
+  role: CoachRole,
+  currentTeamCoaches: Coach[],
+  coachingBudgetRemaining?: number,
+  expectedSalary?: number
+): CandidateTag[] {
+  const tags: CandidateTag[] = [];
+  const tier = getReputationTier(candidate.attributes.reputation);
+
+  // --- Experience-based tags ---
+
+  if (role === 'offensiveCoordinator' || role === 'defensiveCoordinator') {
+    // First-time coordinator: never held coordinator role before
+    const hasCoordinatorHistory = candidate.careerHistory.some(
+      (h) => h.role === 'offensiveCoordinator' || h.role === 'defensiveCoordinator'
+    );
+    if (!hasCoordinatorHistory && candidate.attributes.yearsExperience <= 5) {
+      tags.push({
+        label: 'First-Time Coordinator',
+        description: 'Has never held a coordinator role before. High upside, but unproven.',
+        sentiment: 'warning',
+      });
+    }
+  }
+
+  if (role === 'headCoach') {
+    const hasHCHistory = candidate.careerHistory.some((h) => h.role === 'headCoach');
+    if (!hasHCHistory) {
+      tags.push({
+        label: 'First-Time Head Coach',
+        description: 'Has never been a head coach before. Fresh perspective, but untested.',
+        sentiment: 'warning',
+      });
+    } else {
+      // Check if they were fired (short tenure or bad record)
+      const hcHistory = candidate.careerHistory.filter((h) => h.role === 'headCoach');
+      const lastHC = hcHistory[hcHistory.length - 1];
+      if (lastHC) {
+        const totalGames = lastHC.wins + lastHC.losses;
+        const winPct = totalGames > 0 ? lastHC.wins / totalGames : 0;
+        if (winPct < 0.4) {
+          tags.push({
+            label: 'Retread',
+            description: `Previously fired as HC with a ${lastHC.wins}-${lastHC.losses} record. Looking for a second chance.`,
+            sentiment: 'negative',
+          });
+        }
+      }
+    }
+  }
+
+  // Veteran coach
+  if (candidate.attributes.yearsExperience >= 20) {
+    tags.push({
+      label: 'Veteran Leader',
+      description: `${candidate.attributes.yearsExperience} years of coaching experience.`,
+      sentiment: 'positive',
+    });
+  }
+
+  // Rising star
+  if (tier === 'rising' || tier === 'unknown') {
+    if (candidate.attributes.yearsExperience <= 6 && candidate.attributes.age <= 42) {
+      tags.push({
+        label: 'Rising Star',
+        description: 'Young coach generating buzz around the league.',
+        sentiment: 'positive',
+      });
+    }
+  }
+
+  // --- Coaching tree relationship tags ---
+
+  for (const existingCoach of currentTeamCoaches) {
+    // Same coaching tree
+    if (candidate.tree.treeName === existingCoach.tree.treeName) {
+      const genDiff = Math.abs(candidate.tree.generation - existingCoach.tree.generation);
+      if (genDiff <= 1) {
+        tags.push({
+          label: 'Coaching Tree Connection',
+          description: `Same ${getTreeDisplayName(candidate.tree.treeName)} coaching tree as ${existingCoach.firstName} ${existingCoach.lastName}. Should work well together.`,
+          sentiment: 'positive',
+        });
+        break; // Only one tree connection tag
+      }
+    }
+
+    // Compatible trees
+    if (COMPATIBLE_TREES[candidate.tree.treeName]?.includes(existingCoach.tree.treeName)) {
+      tags.push({
+        label: 'Compatible Philosophy',
+        description: `Philosophy aligns well with ${existingCoach.firstName} ${existingCoach.lastName}'s approach.`,
+        sentiment: 'positive',
+      });
+      break;
+    }
+
+    // Conflicting trees
+    if (CONFLICTING_TREES[candidate.tree.treeName]?.includes(existingCoach.tree.treeName)) {
+      tags.push({
+        label: 'Philosophy Clash',
+        description: `Coaching philosophy may conflict with ${existingCoach.firstName} ${existingCoach.lastName}'s approach.`,
+        sentiment: 'negative',
+      });
+      break;
+    }
+  }
+
+  // --- Personality tags ---
+
+  if (candidate.personality.ego >= 75) {
+    tags.push({
+      label: 'Big Ego',
+      description: 'Strong personality that may cause friction with staff.',
+      sentiment: 'warning',
+    });
+  }
+
+  // --- Career achievement tags ---
+
+  const totalChampionships = candidate.careerHistory.reduce((s, h) => s + h.championships, 0);
+  if (totalChampionships > 0) {
+    tags.push({
+      label: 'Championship Pedigree',
+      description: `Has ${totalChampionships} championship${totalChampionships > 1 ? 's' : ''} on their resume.`,
+      sentiment: 'positive',
+    });
+  }
+
+  const totalPlayoffs = candidate.careerHistory.reduce((s, h) => s + h.playoffAppearances, 0);
+  if (totalPlayoffs >= 3 && totalChampionships === 0) {
+    tags.push({
+      label: 'Playoff Experience',
+      description: `${totalPlayoffs} career playoff appearances.`,
+      sentiment: 'positive',
+    });
+  }
+
+  // --- In-demand tag ---
+  if (candidate.interviewRequests.length >= 3) {
+    tags.push({
+      label: 'Hot Commodity',
+      description: `Interviewing with ${candidate.interviewRequests.length} teams. May be hard to land.`,
+      sentiment: 'warning',
+    });
+  }
+
+  // --- Budget tag ---
+  if (coachingBudgetRemaining !== undefined && expectedSalary !== undefined) {
+    if (expectedSalary > coachingBudgetRemaining) {
+      tags.push({
+        label: 'Over Budget',
+        description: `Asking salary exceeds your remaining coaching budget by $${formatBudgetAmount(expectedSalary - coachingBudgetRemaining)}.`,
+        sentiment: 'negative',
+      });
+    } else if (expectedSalary > coachingBudgetRemaining * 0.8) {
+      tags.push({
+        label: 'Budget Stretch',
+        description: 'Would consume most of your remaining coaching budget.',
+        sentiment: 'warning',
+      });
+    }
+  }
+
+  return tags;
+}
+
+/**
+ * Formats a dollar amount for display in tags
+ */
+function formatBudgetAmount(amount: number): string {
+  if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(1)}M`;
+  }
+  return `${Math.round(amount / 1000)}K`;
+}
+
+/**
  * Generates a single hiring candidate
  */
 function generateSingleCandidate(
@@ -194,6 +394,7 @@ function generateSingleCandidate(
     expectedYears,
     isFormerStaff: false,
     interestLevel,
+    tags: [], // Tags populated after generation with team context
   };
 }
 
@@ -234,6 +435,15 @@ function coachToCandidate(
     expectedYears,
     isFormerStaff,
     interestLevel: isFormerStaff ? 'high' : 'medium',
+    tags: isFormerStaff
+      ? [
+          {
+            label: 'Former Staff',
+            description: 'Previously on your coaching staff.',
+            sentiment: 'neutral' as const,
+          },
+        ]
+      : [],
   };
 }
 
@@ -245,7 +455,13 @@ export function generateHiringCandidates(
   role: CoachRole,
   options: CandidateGenerationOptions = {}
 ): HiringCandidate[] {
-  const { count = 7, existingStaff = [], currentYear = 2025 } = options;
+  const {
+    count = 7,
+    existingStaff = [],
+    currentYear = 2025,
+    currentTeamCoaches = [],
+    coachingBudgetRemaining,
+  } = options;
 
   const candidates: HiringCandidate[] = [];
 
@@ -300,6 +516,19 @@ export function generateHiringCandidates(
 
   // Ensure all schemes are covered
   const finalCandidates = ensureSchemesCovered(candidates, role, count, currentYear);
+
+  // Generate tags for all candidates based on team context
+  for (const candidate of finalCandidates) {
+    const contextTags = generateCandidateTags(
+      candidate.coach,
+      role,
+      currentTeamCoaches,
+      coachingBudgetRemaining,
+      candidate.expectedSalary
+    );
+    // Merge with any existing tags (e.g. "Former Staff")
+    candidate.tags = [...candidate.tags, ...contextTags];
+  }
 
   // Sort by reputation tier (elite first)
   const tierOrder: ReputationTier[] = ['legendary', 'elite', 'established', 'rising', 'unknown'];

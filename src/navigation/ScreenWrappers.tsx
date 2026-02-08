@@ -145,6 +145,7 @@ import { FakeCity, FAKE_CITIES } from '../core/models/team/FakeCities';
 import {
   HiringCandidate,
   createCandidateContract,
+  generateHiringCandidates,
 } from '../core/coaching/NewGameCandidateGenerator';
 import { Coach } from '../core/models/staff/Coach';
 import { Team } from '../core/models/team/Team';
@@ -182,10 +183,6 @@ import {
   getExtensionRecommendation,
 } from '../core/coaching/CoachManagementActions';
 import { getCurrentPhaseTasks } from '../core/offseason/OffSeasonPhaseManager';
-import {
-  createCoachFromCandidate,
-  CoachCandidate,
-} from '../core/offseason/phases/CoachingDecisionsPhase';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { getCoachHierarchyKey } from '../core/models/staff/StaffHierarchy';
 
@@ -3511,12 +3508,46 @@ export function CoachHiringScreenWrapper({
     return role.replace(/([A-Z])/g, ' $1').trim();
   };
 
+  // Gather current team coaches for tag generation context
+  const currentTeamCoaches: Coach[] = [];
+  const hierarchy = team.staffHierarchy;
+  const coachPositions = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'] as const;
+  for (const pos of coachPositions) {
+    const coachId = hierarchy[pos];
+    if (coachId && gameState.coaches[coachId]) {
+      currentTeamCoaches.push(gameState.coaches[coachId]);
+    }
+  }
+
+  // Calculate coaching budget remaining
+  // Sum up salaries of existing coaches, subtract from staff budget
+  const currentCoachingSpend = currentTeamCoaches.reduce(
+    (total, c) => total + (c.contract?.salaryPerYear ?? 0),
+    0
+  );
+  const staffBudget = hierarchy.staffBudget ?? 0;
+  // Coaching gets ~80% of staff budget
+  const coachingBudget = Math.round(staffBudget * 0.8);
+  const coachingBudgetRemaining = Math.max(0, coachingBudget - currentCoachingSpend);
+
+  // Generate candidates using the proper system
+  const candidates = React.useMemo(
+    () =>
+      generateHiringCandidates(roleToFill, {
+        count: 7,
+        currentYear: gameState.league.calendar.currentYear,
+        currentTeamCoaches,
+        coachingBudgetRemaining,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roleToFill]
+  );
+
   // Handle hiring a coach
-  const handleHireCoach = (candidate: CoachCandidate) => {
-    // Create the full coach entity from the candidate
-    const newCoach = createCoachFromCandidate(
+  const handleHireCoach = (candidate: HiringCandidate) => {
+    // Create the full coach entity with contract from the candidate
+    const newCoach = createCandidateContract(
       candidate,
-      roleToFill,
       gameState.userTeamId,
       gameState.league.calendar.currentYear
     );
@@ -3524,12 +3555,14 @@ export function CoachHiringScreenWrapper({
     // Get the hierarchy key for this role
     const hierarchyKey = getCoachHierarchyKey(roleToFill);
 
-    // Update the team's staff hierarchy
+    // Update the team's staff hierarchy and coaching spend
     const updatedTeam = {
       ...team,
       staffHierarchy: {
         ...team.staffHierarchy,
         [hierarchyKey]: newCoach.id,
+        coachingSpend: currentCoachingSpend + candidate.expectedSalary,
+        remainingBudget: team.staffHierarchy.remainingBudget - candidate.expectedSalary,
       },
     };
 
@@ -3556,10 +3589,12 @@ export function CoachHiringScreenWrapper({
     setGameState(updatedGameState);
     saveGameState(updatedGameState);
 
+    const coachName = `${candidate.coach.firstName} ${candidate.coach.lastName}`;
+
     // Show success and navigate back
     Alert.alert(
       'Coach Hired!',
-      `${candidate.name} has been hired as your ${formatRole(roleToFill)}.\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1000).toFixed(1)}M/year`,
+      `${coachName} has been hired as your ${formatRole(roleToFill)}.\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1_000_000).toFixed(1)}M/year`,
       [
         {
           text: 'OK',
@@ -3573,11 +3608,14 @@ export function CoachHiringScreenWrapper({
     <CoachHiringScreen
       vacancyRole={roleToFill}
       teamName={teamName}
+      candidates={candidates}
+      coachingBudgetRemaining={coachingBudgetRemaining}
       onBack={() => navigation.goBack()}
       onHire={(candidate) => {
+        const coachName = `${candidate.coach.firstName} ${candidate.coach.lastName}`;
         Alert.alert(
           'Hire Coach',
-          `Are you sure you want to hire ${candidate.name} as your new ${formatRole(roleToFill)}?\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1000).toFixed(1)}M/year`,
+          `Are you sure you want to hire ${coachName} as your new ${formatRole(roleToFill)}?\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1_000_000).toFixed(1)}M/year`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
