@@ -123,6 +123,13 @@ export type RootStackParamList = {
   // Enhanced Game Experience
   LiveGameSimulation: undefined;
   PostGameSummary: undefined;
+
+  // New Weekly Decision Systems
+  GamePlan: undefined;
+  TradeOffers: undefined;
+  StartSit: undefined;
+  WeeklyAwards: undefined;
+  WaiverWire: undefined;
 };
 
 /**
@@ -227,4 +234,11 @@ export const Routes = {
   // Enhanced Game Experience
   LiveGameSimulation: 'LiveGameSimulation',
   PostGameSummary: 'PostGameSummary',
+
+  // New Weekly Decision Systems
+  GamePlan: 'GamePlan',
+  TradeOffers: 'TradeOffers',
+  StartSit: 'StartSit',
+  WeeklyAwards: 'WeeklyAwards',
+  WaiverWire: 'WaiverWire',
 } as const;

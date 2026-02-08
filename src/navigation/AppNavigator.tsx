@@ -58,6 +58,11 @@ import {
   WeeklyScheduleScreenWrapper,
   LiveGameSimulationScreenWrapper,
   PostGameSummaryScreenWrapper,
+  GamePlanScreenWrapper,
+  TradeOffersScreenWrapper,
+  StartSitScreenWrapper,
+  WeeklyAwardsScreenWrapper,
+  WaiverWireScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -155,6 +160,13 @@ export function AppNavigator(): React.JSX.Element {
       {/* Enhanced Game Experience */}
       <Stack.Screen name="LiveGameSimulation" component={LiveGameSimulationScreenWrapper} />
       <Stack.Screen name="PostGameSummary" component={PostGameSummaryScreenWrapper} />
+
+      {/* New Weekly Decision Systems */}
+      <Stack.Screen name="GamePlan" component={GamePlanScreenWrapper} />
+      <Stack.Screen name="TradeOffers" component={TradeOffersScreenWrapper} />
+      <Stack.Screen name="StartSit" component={StartSitScreenWrapper} />
+      <Stack.Screen name="WeeklyAwards" component={WeeklyAwardsScreenWrapper} />
+      <Stack.Screen name="WaiverWire" component={WaiverWireScreenWrapper} />
     </Stack.Navigator>
   );
 }

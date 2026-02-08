@@ -953,6 +953,61 @@ export function DashboardScreenWrapper({
 
       newWeek = calendar.currentWeek + 1;
 
+      // ---- Weekly Systems Processing ----
+      // Build intermediate state for weekly processing
+      const intermediateState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+        players: updatedPlayers,
+      };
+
+      // Process waiver wire claims from previous week
+      let updatedWaiverWire = gameState.waiverWire;
+      if (newPhase === 'regularSeason' || newPhase === 'playoffs') {
+        try {
+          const { processWeeklyWaiverWire } = require('../core/roster/WaiverWireManager');
+          const waiverResult = processWeeklyWaiverWire(intermediateState, newWeek);
+          updatedWaiverWire = waiverResult.updatedWaiverState;
+          // Apply any roster changes from waiver claims
+          if (waiverResult.updatedGameState?.teams) {
+            Object.assign(updatedTeams, waiverResult.updatedGameState.teams);
+          }
+          if (waiverResult.updatedGameState?.players) {
+            Object.assign(updatedPlayers, waiverResult.updatedGameState.players);
+          }
+        } catch {
+          // Waiver wire processing is non-critical
+        }
+      }
+
+      // Generate new trade offers for the coming week
+      let updatedTradeOffers = gameState.tradeOffers;
+      if (newPhase === 'regularSeason' && newWeek <= 12) {
+        try {
+          const { processWeeklyTradeOffers } = require('../core/trade/AITradeOfferGenerator');
+          const tradeResult = processWeeklyTradeOffers(intermediateState);
+          updatedTradeOffers = tradeResult.tradeOffers;
+        } catch {
+          // Trade offer generation is non-critical
+        }
+      }
+
+      // Generate weekly awards and power rankings
+      let updatedWeeklyAwards = gameState.weeklyAwards;
+      if (newPhase === 'regularSeason' || newPhase === 'playoffs') {
+        try {
+          const { processWeeklyAwards } = require('../core/season/WeeklyAwards');
+          updatedWeeklyAwards = processWeeklyAwards(intermediateState);
+        } catch {
+          // Awards processing is non-critical
+        }
+      }
+
       // Handle phase transitions
       if (newPhase === 'regularSeason' && newWeek > 18) {
         newWeek = 19;
@@ -1141,6 +1196,14 @@ export function DashboardScreenWrapper({
         players: updatedPlayers,
         newsFeed: updatedNewsFeed,
         patienceMeter: updatedPatienceMeter || gameState.patienceMeter,
+        // Weekly systems state
+        waiverWire: updatedWaiverWire,
+        tradeOffers: updatedTradeOffers,
+        weeklyAwards: updatedWeeklyAwards,
+        // Reset per-week decisions for the new week
+        weeklyGamePlan: undefined,
+        startSitDecisions: undefined,
+        halftimeDecisions: undefined,
       };
 
       setGameState(updatedState);
@@ -1536,6 +1599,22 @@ export function DashboardScreenWrapper({
               },
             },
           ]);
+          break;
+        // New Weekly Decision Systems
+        case 'gamePlan':
+          navigation.navigate('GamePlan');
+          break;
+        case 'tradeOffers':
+          navigation.navigate('TradeOffers');
+          break;
+        case 'startSit':
+          navigation.navigate('StartSit');
+          break;
+        case 'weeklyAwards':
+          navigation.navigate('WeeklyAwards');
+          break;
+        case 'waiverWire':
+          navigation.navigate('WaiverWire');
           break;
       }
     },
@@ -6255,6 +6334,219 @@ export function PostGameSummaryScreenWrapper({
       week={week}
       phase={phase}
       onContinue={handleContinue}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// NEW WEEKLY DECISION SYSTEM SCREENS
+// ============================================
+
+export function GamePlanScreenWrapper({ navigation }: ScreenProps<'GamePlan'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  const { GamePlanScreen: GamePlanScreenComponent } = require('../screens/GamePlanScreen');
+  const { analyzeOpponent, applyGamePlan } = require('../core/gameplan');
+  const { getUserTeamGame } = require('../core/season/WeekSimulator');
+
+  const week = gameState.league.calendar.currentWeek;
+  const schedule = gameState.league.schedule;
+
+  // Get opponent info
+  let opponentAnalysis = null;
+  if (schedule) {
+    const userGame = getUserTeamGame(schedule, week, gameState.userTeamId);
+    if (userGame) {
+      const isHome = userGame.homeTeamId === gameState.userTeamId;
+      const opponentId = isHome ? userGame.awayTeamId : userGame.homeTeamId;
+      const opponentTeam = gameState.teams[opponentId];
+      if (opponentTeam) {
+        const opponentPlayers = opponentTeam.rosterPlayerIds
+          .map((id: string) => gameState.players[id])
+          .filter(Boolean);
+        opponentAnalysis = analyzeOpponent(opponentTeam, opponentPlayers, gameState);
+      }
+    }
+  }
+
+  return (
+    <GamePlanScreenComponent
+      week={week}
+      opponentAnalysis={opponentAnalysis}
+      existingPlan={gameState.weeklyGamePlan || null}
+      onConfirm={async (plan: any) => {
+        const updated = applyGamePlan(gameState, plan);
+        setGameState(updated);
+        await saveGameState(updated);
+        navigation.goBack();
+      }}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+export function TradeOffersScreenWrapper({
+  navigation,
+}: ScreenProps<'TradeOffers'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  const { TradeOffersScreen: TradeOffersComponent } = require('../screens/TradeOffersScreen');
+  const {
+    acceptTradeOffer,
+    rejectTradeOffer,
+    createTradeOffersState,
+  } = require('../core/trade/AITradeOfferGenerator');
+
+  const tradeOffers = gameState.tradeOffers || createTradeOffersState();
+
+  return (
+    <TradeOffersComponent
+      tradeOffers={tradeOffers}
+      onAccept={async (offerId: string) => {
+        const updated = acceptTradeOffer(gameState, offerId);
+        setGameState(updated);
+        await saveGameState(updated);
+      }}
+      onReject={async (offerId: string) => {
+        const updated = rejectTradeOffer(gameState, offerId);
+        setGameState(updated);
+        await saveGameState(updated);
+      }}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+export function StartSitScreenWrapper({ navigation }: ScreenProps<'StartSit'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  const { StartSitScreen: StartSitComponent } = require('../screens/StartSitScreen');
+  const {
+    generateStartSitDecisions,
+    applyStartSitDecisions,
+  } = require('../core/roster/StartSitManager');
+
+  const startSitState = gameState.startSitDecisions || generateStartSitDecisions(gameState);
+
+  return (
+    <StartSitComponent
+      startSitState={startSitState}
+      onConfirm={async (state: any) => {
+        const updated = applyStartSitDecisions(gameState, state);
+        setGameState(updated);
+        await saveGameState(updated);
+        navigation.goBack();
+      }}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+export function WeeklyAwardsScreenWrapper({
+  navigation,
+}: ScreenProps<'WeeklyAwards'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  const { WeeklyAwardsScreen: AwardsComponent } = require('../screens/WeeklyAwardsScreen');
+  const { createWeeklyAwardsState, generateAwardRaces } = require('../core/season/WeeklyAwards');
+
+  const awardsState = gameState.weeklyAwards || createWeeklyAwardsState();
+  const awardRaces = generateAwardRaces(gameState);
+
+  return (
+    <AwardsComponent
+      awardsState={awardsState}
+      awardRaces={awardRaces}
+      userTeamId={gameState.userTeamId}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+export function WaiverWireScreenWrapper({
+  navigation,
+}: ScreenProps<'WaiverWire'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading..." />;
+  }
+
+  const { WaiverWireScreen: WaiverComponent } = require('../screens/WaiverWireScreen');
+  const { createWaiverWireState } = require('../core/roster/WaiverWireManager');
+
+  const waiverState = gameState.waiverWire || createWaiverWireState();
+  const userTeam = gameState.teams[gameState.userTeamId];
+
+  // Build practice squad player list
+  const practiceSquadPlayers = (userTeam?.practiceSquadIds || [])
+    .map((id: string) => {
+      const p = gameState.players[id];
+      if (!p) return null;
+      const skills = Object.values(p.skills || {});
+      const skillValues = skills
+        .filter(
+          (s: unknown): s is { trueValue: number } =>
+            s != null && typeof s === 'object' && 'trueValue' in (s as Record<string, unknown>)
+        )
+        .map((s) => s.trueValue);
+      const rating =
+        skillValues.length > 0
+          ? Math.round(skillValues.reduce((a: number, b: number) => a + b, 0) / skillValues.length)
+          : 50;
+      return { id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, rating };
+    })
+    .filter(Boolean);
+
+  // Build droppable player list (bottom of roster by rating)
+  const droppablePlayers = (userTeam?.rosterPlayerIds || [])
+    .map((id: string) => {
+      const p = gameState.players[id];
+      if (!p) return null;
+      const skills = Object.values(p.skills || {});
+      const skillValues = skills
+        .filter(
+          (s: unknown): s is { trueValue: number } =>
+            s != null && typeof s === 'object' && 'trueValue' in (s as Record<string, unknown>)
+        )
+        .map((s) => s.trueValue);
+      const rating =
+        skillValues.length > 0
+          ? Math.round(skillValues.reduce((a: number, b: number) => a + b, 0) / skillValues.length)
+          : 50;
+      return { id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, rating };
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => a.rating - b.rating);
+
+  return (
+    <WaiverComponent
+      waiverState={waiverState}
+      practiceSquadPlayers={practiceSquadPlayers}
+      rosterCount={userTeam?.rosterPlayerIds?.length || 0}
+      droppablePlayers={droppablePlayers}
+      onStateChange={async (state: any) => {
+        const updated = { ...gameState, waiverWire: state };
+        setGameState(updated as any);
+        await saveGameState(updated as any);
+      }}
       onBack={() => navigation.goBack()}
     />
   );
