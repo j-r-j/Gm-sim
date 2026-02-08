@@ -13,9 +13,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
   DepthChartSlot,
@@ -94,6 +95,8 @@ function SlotPlayerCard({
         ]}
         onPress={onPress}
         onLongPress={onLongPress}
+        accessibilityLabel={`${slotView.shortName} slot, empty. Tap to assign player`}
+        accessibilityRole="button"
       >
         <Text style={styles.slotShortName}>{slotView.shortName}</Text>
         <Text style={styles.emptyText}>Empty</Text>
@@ -117,6 +120,9 @@ function SlotPlayerCard({
       ]}
       onPress={onPress}
       onLongPress={onLongPress}
+      accessibilityLabel={`${slotView.shortName}, ${player.lastName}, ${player.position}, rating ${rating}${isOutOfPosition ? ', out of position' : ''}${isSelected ? ', selected' : ''}`}
+      accessibilityRole="button"
+      accessibilityHint="Tap to select, long press for options"
     >
       <View style={styles.cardHeader}>
         <Text style={styles.slotShortName}>{slotView.shortName}</Text>
@@ -172,7 +178,7 @@ function SubcategorySection({
     if (rowSlots.length === 0) return null;
 
     return (
-      <View style={styles.slotRow}>
+      <View style={styles.slotRow} accessibilityLabel={`${name} ${label} row`}>
         <Text style={styles.depthLabel}>{label}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotsContainer}>
           {rowSlots.map((slotView) => {
@@ -202,7 +208,9 @@ function SubcategorySection({
 
   return (
     <View style={styles.subcategorySection}>
-      <Text style={styles.subcategoryTitle}>{name}</Text>
+      <Text style={styles.subcategoryTitle} accessibilityRole="header">
+        {name}
+      </Text>
       {renderSlotRow(starterSlots, 'Starters')}
       {renderSlotRow(backupSlots, 'Backups')}
       {renderSlotRow(depthSlots, 'Depth')}
@@ -227,8 +235,15 @@ function PlayerSelectionList({
   return (
     <View style={styles.selectionModal}>
       <View style={styles.selectionHeader}>
-        <Text style={styles.selectionTitle}>Select Player for {SLOT_INFO[slot].displayName}</Text>
-        <TouchableOpacity onPress={onCancel}>
+        <Text style={styles.selectionTitle} accessibilityRole="header">
+          Select Player for {SLOT_INFO[slot].displayName}
+        </Text>
+        <TouchableOpacity
+          onPress={onCancel}
+          accessibilityLabel="Cancel player selection"
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -242,6 +257,8 @@ function PlayerSelectionList({
               key={player.id}
               style={styles.playerListItem}
               onPress={() => onSelect(player.id)}
+              accessibilityLabel={`${player.firstName} ${player.lastName}, ${player.position}, age ${player.age}, rating ${rating}`}
+              accessibilityRole="button"
             >
               <Avatar id={player.id} size="sm" age={player.age} context="player" />
               <View style={styles.playerListInfo}>
@@ -287,7 +304,9 @@ function PackageView({
 }): React.JSX.Element {
   return (
     <View style={styles.packageView}>
-      <Text style={styles.packageTitle}>{packageName}</Text>
+      <Text style={styles.packageTitle} accessibilityRole="header">
+        {packageName}
+      </Text>
       <View style={styles.packageSlots}>
         {slots.map((slot) => {
           const assignment = depthChart.assignments.find((a) => a.slot === slot);
@@ -295,7 +314,7 @@ function PackageView({
           const slotInfo = SLOT_INFO[slot];
 
           return (
-            <View key={slot} style={styles.packageSlotItem}>
+            <View key={slot} style={styles.packageSlotItem} accessibilityLabel={`${slotInfo.shortName}, ${player ? player.lastName : 'empty'}`}>
               <Text style={styles.packageSlotLabel}>{slotInfo.shortName}</Text>
               {player ? (
                 <View style={styles.packagePlayerInfo}>
@@ -462,15 +481,15 @@ export function DepthChartScreenV2({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Depth Chart</Text>
-        <TouchableOpacity onPress={handleAutoGenerate} style={styles.autoButton}>
-          <Text style={styles.autoButtonText}>Auto</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Depth Chart"
+        onBack={onBack}
+        rightAction={{
+          icon: 'refresh',
+          onPress: handleAutoGenerate,
+          accessibilityLabel: 'Auto-generate depth chart',
+        }}
+      />
 
       {/* Validation warnings */}
       {!validation.isValid && (
@@ -489,7 +508,12 @@ export function DepthChartScreenV2({
           <Text style={styles.instructionsText}>
             Tap another player to swap, or tap player again for profile
           </Text>
-          <TouchableOpacity onPress={clearSelection}>
+          <TouchableOpacity
+            onPress={clearSelection}
+            accessibilityLabel="Cancel selection"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -502,6 +526,8 @@ export function DepthChartScreenV2({
             key={tab}
             style={[styles.tab, activeTab === tab && styles.activeTab]}
             onPress={() => setActiveTab(tab)}
+            accessibilityLabel={`${tab} tab${activeTab === tab ? ', selected' : ''}`}
+            accessibilityRole="button"
           >
             <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
           </TouchableOpacity>
@@ -513,6 +539,9 @@ export function DepthChartScreenV2({
         <TouchableOpacity
           style={[styles.viewModeButton, viewMode === 'standard' && styles.activeViewMode]}
           onPress={() => setViewMode('standard')}
+          accessibilityLabel={`Standard view${viewMode === 'standard' ? ', selected' : ''}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.viewModeText, viewMode === 'standard' && styles.activeViewModeText]}>
             Standard
@@ -521,6 +550,9 @@ export function DepthChartScreenV2({
         <TouchableOpacity
           style={[styles.viewModeButton, viewMode === 'packages' && styles.activeViewMode]}
           onPress={() => setViewMode('packages')}
+          accessibilityLabel={`Packages view${viewMode === 'packages' ? ', selected' : ''}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.viewModeText, viewMode === 'packages' && styles.activeViewModeText]}>
             Packages

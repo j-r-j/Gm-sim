@@ -5,7 +5,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { CompensatoryRound } from '../core/models/league/DraftPick';
 import {
@@ -265,13 +266,7 @@ export function CompPickTrackerScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Comp Pick Tracker</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Comp Pick Tracker" onBack={onBack} testID="comp-pick-header" />
 
       {/* Summary Stats */}
       <View style={styles.summaryContainer}>

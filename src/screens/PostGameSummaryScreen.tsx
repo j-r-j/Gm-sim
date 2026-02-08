@@ -138,6 +138,8 @@ function KeyPlayCard({ play }: { play: PlayResult }): React.JSX.Element {
     return '📋';
   };
 
+  const playType = play.touchdown ? 'Touchdown' : play.turnover ? 'Turnover' : 'Key play';
+
   return (
     <View
       style={[
@@ -145,6 +147,7 @@ function KeyPlayCard({ play }: { play: PlayResult }): React.JSX.Element {
         play.touchdown && styles.keyPlayTouchdown,
         play.turnover && styles.keyPlayTurnover,
       ]}
+      accessibilityLabel={`${playType}: ${play.description}`}
     >
       <Text style={styles.keyPlayIcon}>{getPlayIcon()}</Text>
       <Text style={styles.keyPlayText} numberOfLines={2}>
@@ -208,8 +211,9 @@ export function PostGameSummaryScreen({
             !isWin && !isTie && styles.resultBannerLoss,
             isTie && styles.resultBannerTie,
           ]}
+          accessibilityLabel={`Final score: ${awayTeam.abbr} ${awayScore}, ${homeTeam.abbr} ${homeScore}. ${isTie ? 'Tie game' : isWin ? 'Victory' : 'Defeat'}`}
         >
-          <Text style={styles.resultLabel}>
+          <Text style={styles.resultLabel} accessibilityRole="header">
             {isTie ? 'TIE GAME' : isWin ? 'VICTORY!' : 'DEFEAT'}
           </Text>
           <View style={styles.finalScoreContainer}>
@@ -234,10 +238,13 @@ export function PostGameSummaryScreen({
         </View>
 
         {/* Tab Selector */}
-        <View style={styles.tabContainer}>
+        <View style={styles.tabContainer} accessibilityRole="tablist">
           <TouchableOpacity
             style={[styles.tab, activeTab === 'summary' && styles.tabActive]}
             onPress={() => setActiveTab('summary')}
+            accessibilityLabel="Summary tab"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'summary' }}
           >
             <Text style={[styles.tabText, activeTab === 'summary' && styles.tabTextActive]}>
               Summary
@@ -246,6 +253,9 @@ export function PostGameSummaryScreen({
           <TouchableOpacity
             style={[styles.tab, activeTab === 'boxscore' && styles.tabActive]}
             onPress={() => setActiveTab('boxscore')}
+            accessibilityLabel="Box Score tab"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'boxscore' }}
           >
             <Text style={[styles.tabText, activeTab === 'boxscore' && styles.tabTextActive]}>
               Box Score
@@ -257,7 +267,9 @@ export function PostGameSummaryScreen({
           <>
             {/* Team Comparison */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Team Stats</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Team Stats
+              </Text>
               <View style={styles.comparisonCard}>
                 <View style={styles.comparisonHeader}>
                   <Text style={styles.comparisonTeam}>{homeTeam.abbr}</Text>
@@ -278,7 +290,9 @@ export function PostGameSummaryScreen({
             {/* Key Plays */}
             {keyPlays.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Key Plays</Text>
+                <Text style={styles.sectionTitle} accessibilityRole="header">
+                  Key Plays
+                </Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -293,7 +307,9 @@ export function PostGameSummaryScreen({
 
             {/* Stat Leaders */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Game Leaders</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Game Leaders
+              </Text>
               <StatLeaderCard title="Passing" leaders={boxScore.passingLeaders} />
               <StatLeaderCard title="Rushing" leaders={boxScore.rushingLeaders} />
               <StatLeaderCard title="Receiving" leaders={boxScore.receivingLeaders} />
@@ -303,10 +319,16 @@ export function PostGameSummaryScreen({
           <>
             {/* Scoring Summary */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Scoring</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Scoring
+              </Text>
               <View style={styles.scoringCard}>
                 {boxScore.scoringSummary.map((play, index) => (
-                  <View key={`scoring-${index}`} style={styles.scoringRow}>
+                  <View
+                    key={`scoring-${index}`}
+                    style={styles.scoringRow}
+                    accessibilityLabel={`Q${play.quarter}: ${play.team} ${play.description}, score ${play.homeScore}-${play.awayScore}`}
+                  >
                     <View style={styles.scoringInfo}>
                       <Text style={styles.scoringTeam}>{play.team}</Text>
                       <Text style={styles.scoringDesc}>{play.description}</Text>
@@ -327,9 +349,15 @@ export function PostGameSummaryScreen({
 
             {/* Full Stats */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Passing</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Passing
+              </Text>
               {boxScore.passingLeaders.map((leader, index) => (
-                <View key={`pass-${index}`} style={styles.fullStatRow}>
+                <View
+                  key={`pass-${index}`}
+                  style={styles.fullStatRow}
+                  accessibilityLabel={`${leader.playerName}, ${leader.position}, ${leader.statLine}`}
+                >
                   <Text style={styles.fullStatName}>{leader.playerName}</Text>
                   <Text style={styles.fullStatTeam}>{leader.position}</Text>
                   <Text style={styles.fullStatValue}>{leader.statLine}</Text>
@@ -338,9 +366,15 @@ export function PostGameSummaryScreen({
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Rushing</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Rushing
+              </Text>
               {boxScore.rushingLeaders.map((leader, index) => (
-                <View key={`rush-${index}`} style={styles.fullStatRow}>
+                <View
+                  key={`rush-${index}`}
+                  style={styles.fullStatRow}
+                  accessibilityLabel={`${leader.playerName}, ${leader.position}, ${leader.statLine}`}
+                >
                   <Text style={styles.fullStatName}>{leader.playerName}</Text>
                   <Text style={styles.fullStatTeam}>{leader.position}</Text>
                   <Text style={styles.fullStatValue}>{leader.statLine}</Text>
@@ -349,9 +383,15 @@ export function PostGameSummaryScreen({
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Receiving</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Receiving
+              </Text>
               {boxScore.receivingLeaders.map((leader, index) => (
-                <View key={`rec-${index}`} style={styles.fullStatRow}>
+                <View
+                  key={`rec-${index}`}
+                  style={styles.fullStatRow}
+                  accessibilityLabel={`${leader.playerName}, ${leader.position}, ${leader.statLine}`}
+                >
                   <Text style={styles.fullStatName}>{leader.playerName}</Text>
                   <Text style={styles.fullStatTeam}>{leader.position}</Text>
                   <Text style={styles.fullStatValue}>{leader.statLine}</Text>
@@ -366,7 +406,13 @@ export function PostGameSummaryScreen({
 
       {/* Continue Button */}
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.continueButton} onPress={onContinue} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={onContinue}
+          activeOpacity={0.8}
+          accessibilityLabel="Continue to week summary"
+          accessibilityRole="button"
+        >
           <Text style={styles.continueButtonText}>Continue</Text>
           <Text style={styles.continueSubtext}>View Week Summary</Text>
         </TouchableOpacity>
@@ -379,30 +425,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.primary,
-  },
-  backButton: {
-    padding: spacing.xs,
-    width: 60,
-  },
-  backText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-  },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textOnPrimary,
-  },
-  placeholder: {
-    width: 60,
   },
   content: {
     flex: 1,
@@ -468,6 +490,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.md,
     alignItems: 'center',
+    minHeight: accessibility.minTouchTarget,
   },
   tabActive: {
     borderBottomWidth: 2,
@@ -692,6 +715,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+    minHeight: accessibility.minTouchTarget,
     ...shadows.md,
   },
   continueButtonText: {
