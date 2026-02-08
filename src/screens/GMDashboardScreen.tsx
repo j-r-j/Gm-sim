@@ -52,7 +52,12 @@ export type DashboardAction =
   | 'simSeason'
   | 'settings'
   | 'saveGame'
-  | 'mainMenu';
+  | 'mainMenu'
+  | 'gamePlan'
+  | 'tradeOffers'
+  | 'startSit'
+  | 'weeklyAwards'
+  | 'waiverWire';
 
 interface GMDashboardScreenProps {
   gameState: GameState;
@@ -572,6 +577,37 @@ export function GMDashboardScreen({
           onPress={() => onAction('contracts')}
         />
 
+        {!isOffseason && (
+          <MenuCard
+            title="Game Plan"
+            subtitle="Set practice focus and strategy"
+            icon="📋"
+            color="#6C5CE7"
+            onPress={() => onAction('gamePlan')}
+            badge="NEW"
+          />
+        )}
+
+        {!isOffseason && (
+          <MenuCard
+            title="Start / Sit"
+            subtitle="Manage questionable players"
+            icon="🏥"
+            color="#E17055"
+            onPress={() => onAction('startSit')}
+          />
+        )}
+
+        {!isOffseason && (
+          <MenuCard
+            title="Waiver Wire"
+            subtitle="Claim players and PS elevations"
+            icon="📎"
+            color="#00B894"
+            onPress={() => onAction('waiverWire')}
+          />
+        )}
+
         {/* Season Actions */}
         <Text style={styles.sectionTitle}>Season</Text>
 
@@ -644,6 +680,37 @@ export function GMDashboardScreen({
           color={colors.warning}
           onPress={() => onAction('weeklyDigest')}
         />
+
+        {!isOffseason && (
+          <MenuCard
+            title="Trade Offers"
+            subtitle="Review incoming trade proposals"
+            icon="🤝"
+            color="#0984E3"
+            onPress={() => onAction('tradeOffers')}
+            badge={
+              (gameState as any).tradeOffers?.activeOffers?.filter(
+                (o: any) => o.status === 'pending'
+              ).length > 0
+                ? String(
+                    (gameState as any).tradeOffers.activeOffers.filter(
+                      (o: any) => o.status === 'pending'
+                    ).length
+                  )
+                : undefined
+            }
+          />
+        )}
+
+        {!isOffseason && (
+          <MenuCard
+            title="Awards & Rankings"
+            subtitle="Power rankings, POTW, award races"
+            icon="🏅"
+            color="#FDCB6E"
+            onPress={() => onAction('weeklyAwards')}
+          />
+        )}
 
         {/* Offseason Actions */}
         <Text style={styles.sectionTitle}>{isOffseason ? 'Offseason' : 'Player Acquisition'}</Text>

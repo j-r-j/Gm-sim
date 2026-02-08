@@ -130,6 +130,31 @@ export interface GameState {
 
   // Offseason persistent data (carries across phases)
   offseasonData?: import('../../offseason/OffseasonPersistentData').OffseasonPersistentData;
+
+  // ========================================
+  // NEW WEEKLY DECISION SYSTEMS
+  // ========================================
+
+  // Weekly game plan / practice focus
+  weeklyGamePlan?: import('../../gameplan/GamePlanManager').WeeklyGamePlan;
+
+  // AI-initiated trade offers
+  tradeOffers?: import('../../trade/AITradeOfferGenerator').TradeOffersState;
+
+  // Start/sit decisions for questionable players
+  startSitDecisions?: import('../../roster/StartSitManager').StartSitState;
+
+  // Weekly awards, power rankings, milestones
+  weeklyAwards?: import('../../season/WeeklyAwards').WeeklyAwardsState;
+
+  // Waiver wire state
+  waiverWire?: import('../../roster/WaiverWireManager').WaiverWireState;
+
+  // Halftime decisions (transient, only set during active game)
+  halftimeDecisions?: import('../../game/HalftimeAdjustments').HalftimeDecisions;
+
+  // Week flow flags (already used via cast, now formal)
+  weekFlags?: import('../../../services/flow/WeekFlowManager').WeekFlowFlags;
 }
 
 /**
