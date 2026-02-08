@@ -1,6 +1,7 @@
 /**
  * CoachHiringScreen
  * Allows GMs to hire coaches for vacant positions
+ * Uses the full HiringCandidate system with budget validation and narrative tags
  */
 
 import React, { useState } from 'react';
@@ -8,10 +9,7 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } fr
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { Avatar } from '../components/avatar';
-import {
-  CoachCandidate,
-  generateCoachCandidates,
-} from '../core/offseason/phases/CoachingDecisionsPhase';
+import { HiringCandidate, CandidateTag } from '../core/coaching/NewGameCandidateGenerator';
 
 /**
  * Props for CoachHiringScreen
@@ -19,8 +17,10 @@ import {
 export interface CoachHiringScreenProps {
   vacancyRole: CoachRole;
   teamName: string;
+  candidates: HiringCandidate[];
+  coachingBudgetRemaining?: number;
   onBack: () => void;
-  onHire: (candidate: CoachCandidate) => void;
+  onHire: (candidate: HiringCandidate) => void;
 }
 
 /**
@@ -33,22 +33,6 @@ function getRoleDisplayName(role: CoachRole): string {
     defensiveCoordinator: 'Defensive Coordinator',
   };
   return displayNames[role];
-}
-
-/**
- * Maps CoachRole to the candidate generation role type
- */
-function mapRoleToCandidateRole(
-  role: CoachRole
-): 'head_coach' | 'offensive_coordinator' | 'defensive_coordinator' {
-  switch (role) {
-    case 'headCoach':
-      return 'head_coach';
-    case 'offensiveCoordinator':
-      return 'offensive_coordinator';
-    case 'defensiveCoordinator':
-      return 'defensive_coordinator';
-  }
 }
 
 /**
@@ -66,6 +50,42 @@ function getInterestColor(interest: 'high' | 'medium' | 'low'): string {
 }
 
 /**
+ * Gets tag styling based on sentiment
+ */
+function getTagColors(sentiment: CandidateTag['sentiment']): {
+  bg: string;
+  border: string;
+  text: string;
+} {
+  switch (sentiment) {
+    case 'positive':
+      return {
+        bg: colors.success + '15',
+        border: colors.success + '30',
+        text: colors.success,
+      };
+    case 'negative':
+      return {
+        bg: colors.error + '15',
+        border: colors.error + '30',
+        text: colors.error,
+      };
+    case 'warning':
+      return {
+        bg: colors.warning + '15',
+        border: colors.warning + '30',
+        text: colors.warning,
+      };
+    case 'neutral':
+      return {
+        bg: colors.textSecondary + '15',
+        border: colors.textSecondary + '30',
+        text: colors.textSecondary,
+      };
+  }
+}
+
+/**
  * Formats salary for display
  */
 function formatSalary(salary: number): string {
@@ -76,31 +96,58 @@ function formatSalary(salary: number): string {
 }
 
 /**
+ * Tag Badge Component
+ */
+function TagBadge({ tag }: { tag: CandidateTag }): React.JSX.Element {
+  const tagColors = getTagColors(tag.sentiment);
+  return (
+    <View
+      style={[styles.tagBadge, { backgroundColor: tagColors.bg, borderColor: tagColors.border }]}
+    >
+      <Text style={[styles.tagText, { color: tagColors.text }]}>{tag.label}</Text>
+    </View>
+  );
+}
+
+/**
  * Coach Candidate Card Component
  */
 function CandidateCard({
   candidate,
   isSelected,
+  isOverBudget,
   onSelect,
   onHire,
 }: {
-  candidate: CoachCandidate;
+  candidate: HiringCandidate;
   isSelected: boolean;
+  isOverBudget: boolean;
   onSelect: () => void;
   onHire: () => void;
 }): React.JSX.Element {
+  const coachName = `${candidate.coach.firstName} ${candidate.coach.lastName}`;
+
   return (
     <TouchableOpacity
-      style={[styles.candidateCard, isSelected && styles.candidateCardSelected]}
+      style={[
+        styles.candidateCard,
+        isSelected && styles.candidateCardSelected,
+        isOverBudget && styles.candidateCardOverBudget,
+      ]}
       onPress={onSelect}
       activeOpacity={0.7}
     >
       {/* Header */}
       <View style={styles.candidateHeader}>
-        <Avatar id={candidate.candidateId} size="md" age={candidate.age} context="coach" />
+        <Avatar
+          id={candidate.coach.id}
+          size="md"
+          age={candidate.coach.attributes.age}
+          context="coach"
+        />
         <View style={styles.candidateInfo}>
           <View style={styles.candidateNameRow}>
-            <Text style={styles.candidateName}>{candidate.name}</Text>
+            <Text style={styles.candidateName}>{coachName}</Text>
             <View
               style={[
                 styles.interestBadge,
@@ -116,40 +163,79 @@ function CandidateCard({
             </View>
           </View>
           <Text style={styles.candidateRole}>
-            {candidate.currentTeam
-              ? `${candidate.currentRole} - ${candidate.currentTeam}`
-              : candidate.currentRole}
-            {!candidate.currentTeam && ' (Available)'}
+            {candidate.reputationDisplay} | {candidate.treeDisplay} Tree
+          </Text>
+          <Text style={styles.candidateSalary}>
+            {formatSalary(candidate.expectedSalary)}/yr
+            {isOverBudget && <Text style={styles.overBudgetInline}> - Over Budget</Text>}
           </Text>
         </View>
       </View>
+
+      {/* Tags Row (always visible if there are tags) */}
+      {candidate.tags.length > 0 && (
+        <View style={styles.tagsRow}>
+          {candidate.tags.map((tag, i) => (
+            <TagBadge key={i} tag={tag} />
+          ))}
+        </View>
+      )}
 
       {/* Basic Info */}
       <View style={styles.infoRow}>
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Age</Text>
-          <Text style={styles.infoValue}>{candidate.age}</Text>
+          <Text style={styles.infoValue}>{candidate.coach.attributes.age}</Text>
         </View>
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Experience</Text>
-          <Text style={styles.infoValue}>{candidate.experience} yrs</Text>
+          <Text style={styles.infoValue}>{candidate.coach.attributes.yearsExperience} yrs</Text>
         </View>
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Scheme</Text>
-          <Text style={styles.infoValue}>{candidate.scheme}</Text>
+          <Text style={styles.infoValue}>{candidate.schemeDisplay}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Personality</Text>
+          <Text style={styles.infoValue}>{candidate.personalityDisplay}</Text>
         </View>
       </View>
 
       {/* Expanded Content when selected */}
       {isSelected && (
         <View style={styles.expandedContent}>
+          {/* Writeup */}
+          <View style={styles.writeupSection}>
+            <Text style={styles.sectionTitle}>Scout Report</Text>
+            <Text style={styles.writeupText}>{candidate.writeup}</Text>
+          </View>
+
+          {/* Tag Descriptions */}
+          {candidate.tags.length > 0 && (
+            <View style={styles.tagDescriptionsSection}>
+              {candidate.tags.map((tag, i) => {
+                const tagColors = getTagColors(tag.sentiment);
+                return (
+                  <View key={i} style={styles.tagDescriptionRow}>
+                    <Text style={[styles.tagDescriptionLabel, { color: tagColors.text }]}>
+                      {tag.label}:
+                    </Text>
+                    <Text style={styles.tagDescriptionText}>{tag.description}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {/* Contract Expectations */}
           <View style={styles.contractSection}>
             <Text style={styles.sectionTitle}>Contract Expectations</Text>
             <View style={styles.contractDetails}>
               <View style={styles.contractItem}>
                 <Text style={styles.contractLabel}>Salary</Text>
-                <Text style={styles.contractValue}>
+                <Text
+                  style={[styles.contractValue, isOverBudget && styles.contractValueOverBudget]}
+                >
                   {formatSalary(candidate.expectedSalary)}/yr
                 </Text>
               </View>
@@ -159,7 +245,9 @@ function CandidateCard({
               </View>
               <View style={styles.contractItem}>
                 <Text style={styles.contractLabel}>Total</Text>
-                <Text style={styles.contractValue}>
+                <Text
+                  style={[styles.contractValue, isOverBudget && styles.contractValueOverBudget]}
+                >
                   {formatSalary(candidate.expectedSalary * candidate.expectedYears)}
                 </Text>
               </View>
@@ -191,9 +279,17 @@ function CandidateCard({
           </View>
 
           {/* Hire Button */}
-          <TouchableOpacity style={styles.hireButton} onPress={onHire}>
-            <Text style={styles.hireButtonText}>Hire {candidate.name.split(' ')[0]}</Text>
-          </TouchableOpacity>
+          {isOverBudget ? (
+            <View style={styles.hireButtonDisabled}>
+              <Text style={styles.hireButtonDisabledText}>
+                Cannot Afford ({formatSalary(candidate.expectedSalary)}/yr)
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.hireButton} onPress={onHire}>
+              <Text style={styles.hireButtonText}>Hire {candidate.coach.firstName}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -206,23 +302,18 @@ function CandidateCard({
 export function CoachHiringScreen({
   vacancyRole,
   teamName,
+  candidates,
+  coachingBudgetRemaining,
   onBack,
   onHire,
 }: CoachHiringScreenProps): React.JSX.Element {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
 
-  // Generate candidates for this role
-  const candidateRole = mapRoleToCandidateRole(vacancyRole);
-  const candidates = React.useMemo(
-    () => generateCoachCandidates(candidateRole, 6),
-    [candidateRole]
-  );
-
-  // Sort by interest level
-  const sortedCandidates = [...candidates].sort((a, b) => {
-    const interestOrder = { high: 0, medium: 1, low: 2 };
-    return interestOrder[a.interestLevel] - interestOrder[b.interestLevel];
-  });
+  // Count affordable vs unaffordable
+  const affordableCount =
+    coachingBudgetRemaining !== undefined
+      ? candidates.filter((c) => c.expectedSalary <= coachingBudgetRemaining).length
+      : candidates.length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -239,25 +330,41 @@ export function CoachHiringScreen({
       <View style={styles.positionBanner}>
         <Text style={styles.positionTitle}>{getRoleDisplayName(vacancyRole)}</Text>
         <Text style={styles.positionSubtitle}>{teamName}</Text>
+        {coachingBudgetRemaining !== undefined && (
+          <Text style={styles.budgetText}>
+            Coaching Budget: {formatSalary(coachingBudgetRemaining)} remaining
+          </Text>
+        )}
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.sectionHeader}>Available Candidates</Text>
-        <Text style={styles.sectionHint}>Tap a candidate to see details and make an offer</Text>
+        <Text style={styles.sectionHint}>
+          {affordableCount < candidates.length
+            ? `${affordableCount} of ${candidates.length} candidates within your budget. Tap to see details.`
+            : 'Tap a candidate to see details and make an offer'}
+        </Text>
 
-        {sortedCandidates.map((candidate) => (
-          <CandidateCard
-            key={candidate.candidateId}
-            candidate={candidate}
-            isSelected={selectedCandidateId === candidate.candidateId}
-            onSelect={() =>
-              setSelectedCandidateId(
-                selectedCandidateId === candidate.candidateId ? null : candidate.candidateId
-              )
-            }
-            onHire={() => onHire(candidate)}
-          />
-        ))}
+        {candidates.map((candidate) => {
+          const isOverBudget =
+            coachingBudgetRemaining !== undefined &&
+            candidate.expectedSalary > coachingBudgetRemaining;
+
+          return (
+            <CandidateCard
+              key={candidate.coach.id}
+              candidate={candidate}
+              isSelected={selectedCandidateId === candidate.coach.id}
+              isOverBudget={isOverBudget}
+              onSelect={() =>
+                setSelectedCandidateId(
+                  selectedCandidateId === candidate.coach.id ? null : candidate.coach.id
+                )
+              }
+              onHire={() => onHire(candidate)}
+            />
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -307,6 +414,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textSecondary,
   },
+  budgetText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
   content: {
     flex: 1,
   },
@@ -335,6 +447,9 @@ const styles = StyleSheet.create({
   candidateCardSelected: {
     borderColor: colors.primary,
   },
+  candidateCardOverBudget: {
+    opacity: 0.7,
+  },
   candidateHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -354,6 +469,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.text,
+    flex: 1,
   },
   interestBadge: {
     paddingHorizontal: spacing.sm,
@@ -367,6 +483,31 @@ const styles = StyleSheet.create({
   candidateRole: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+  },
+  candidateSalary: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  overBudgetInline: {
+    color: colors.error,
+    fontWeight: fontWeight.semibold,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  tagBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+  },
+  tagText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
   },
   infoRow: {
     flexDirection: 'row',
@@ -393,6 +534,35 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  writeupSection: {
+    marginBottom: spacing.md,
+  },
+  writeupText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  tagDescriptionsSection: {
+    marginBottom: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+  },
+  tagDescriptionRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  tagDescriptionLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    marginRight: spacing.xs,
+  },
+  tagDescriptionText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
   },
   contractSection: {
     marginBottom: spacing.md,
@@ -422,6 +592,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.primary,
+  },
+  contractValueOverBudget: {
+    color: colors.error,
   },
   traitsSection: {
     marginBottom: spacing.md,
@@ -464,6 +637,18 @@ const styles = StyleSheet.create({
   },
   hireButtonText: {
     color: colors.background,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  hireButtonDisabled: {
+    backgroundColor: colors.border,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  hireButtonDisabledText: {
+    color: colors.textSecondary,
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
   },
