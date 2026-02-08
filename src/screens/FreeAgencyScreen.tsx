@@ -17,7 +17,16 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { Position } from '../core/models/player/Position';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
@@ -94,7 +103,13 @@ function FreeAgentCard({
 }) {
   return (
     <View style={styles.agentCard}>
-      <TouchableOpacity style={styles.agentTappableArea} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.agentTappableArea}
+        onPress={onPress}
+        accessibilityLabel={`${agent.firstName} ${agent.lastName}, ${agent.position}, Age ${agent.age}, ${agent.experience} years experience, Estimated value ${formatMoney(agent.estimatedValue)}`}
+        accessibilityRole="button"
+        accessibilityHint="View player details"
+      >
         <View style={styles.agentHeader}>
           <View style={styles.avatarContainer}>
             <Avatar id={agent.id} size="sm" age={agent.age} context="player" />
@@ -117,7 +132,14 @@ function FreeAgentCard({
           </View>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.offerButton} onPress={onMakeOffer}>
+      <TouchableOpacity
+        style={styles.offerButton}
+        onPress={onMakeOffer}
+        accessibilityLabel={`Make offer to ${agent.firstName} ${agent.lastName}`}
+        accessibilityRole="button"
+        accessibilityHint="Opens contract offer screen"
+        hitSlop={accessibility.hitSlop}
+      >
         <Text style={styles.offerButtonText}>Make Offer</Text>
       </TouchableOpacity>
     </View>
@@ -239,10 +261,21 @@ function OfferModal({
               </View>
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={onClose}
+                  accessibilityLabel="Cancel offer"
+                  accessibilityRole="button"
+                >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleSubmit}
+                  accessibilityLabel="Submit contract offer"
+                  accessibilityRole="button"
+                  accessibilityHint="Submits your contract offer to the free agent"
+                >
                   <Text style={styles.submitButtonText}>Submit Offer</Text>
                 </TouchableOpacity>
               </View>
@@ -331,19 +364,15 @@ export function FreeAgencyScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Free Agency</Text>
-        <View style={styles.capBadge}>
-          <Text style={styles.capLabel}>Cap Space</Text>
-          <Text style={styles.capValue}>{formatMoney(capSpace)}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Free Agency"
+        subtitle={`Cap: ${formatMoney(capSpace)}`}
+        onBack={onBack}
+        testID="free-agency-header"
+      />
 
       {/* Position Filters */}
-      <View style={styles.filterContainer}>
+      <View style={styles.filterContainer} accessibilityRole="tablist">
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -353,6 +382,10 @@ export function FreeAgencyScreen({
             <TouchableOpacity
               style={[styles.filterChip, positionFilter === item && styles.filterChipActive]}
               onPress={() => setPositionFilter(item as PositionFilter)}
+              accessibilityLabel={`Filter by ${item === 'all' ? 'all positions' : item}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: positionFilter === item }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -368,13 +401,17 @@ export function FreeAgencyScreen({
       </View>
 
       {/* Sort Options */}
-      <View style={styles.sortContainer}>
+      <View style={styles.sortContainer} accessibilityRole="tablist">
         <Text style={styles.sortLabel}>Sort by:</Text>
         {(['value', 'age', 'position'] as SortOption[]).map((option) => (
           <TouchableOpacity
             key={option}
             style={[styles.sortOption, sortBy === option && styles.sortOptionActive]}
             onPress={() => setSortBy(option)}
+            accessibilityLabel={`Sort by ${option}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: sortBy === option }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.sortOptionText, sortBy === option && styles.sortOptionTextActive]}>
               {option.charAt(0).toUpperCase() + option.slice(1)}

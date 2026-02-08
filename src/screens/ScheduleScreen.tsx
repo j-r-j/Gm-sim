@@ -5,7 +5,8 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { ScheduledGame } from '../core/season/ScheduleGenerator';
 import { Team } from '../core/models/team/Team';
 
@@ -59,7 +60,10 @@ interface DisplayGame {
 function GameCard({ game, onPress }: { game: DisplayGame; onPress?: () => void }) {
   if (game.isBye) {
     return (
-      <View style={[styles.gameCard, styles.byeCard]}>
+      <View
+        style={[styles.gameCard, styles.byeCard]}
+        accessibilityLabel={`Week ${game.week}, Bye week`}
+      >
         <Text style={styles.weekLabel}>Week {game.week}</Text>
         <Text style={styles.byeText}>BYE WEEK</Text>
       </View>
@@ -72,6 +76,8 @@ function GameCard({ game, onPress }: { game: DisplayGame; onPress?: () => void }
       ? 'Not Played'
       : '';
 
+  const gameAccessLabel = `Week ${game.week}, ${game.isHome ? 'Home versus' : 'Away at'} ${game.opponent.name} (${game.opponent.record})${game.result ? `, ${game.result.won ? 'Win' : game.result.tie ? 'Tie' : 'Loss'} ${resultText}` : game.isCurrent ? ', Tap to play' : ', Upcoming'}`;
+
   return (
     <TouchableOpacity
       style={[
@@ -83,6 +89,10 @@ function GameCard({ game, onPress }: { game: DisplayGame; onPress?: () => void }
       ]}
       onPress={onPress}
       disabled={!onPress || game.isPast}
+      accessibilityLabel={gameAccessLabel}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !onPress || game.isPast }}
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.weekColumn}>
         <Text style={styles.weekLabel}>Week {game.week}</Text>
@@ -217,13 +227,7 @@ export function ScheduleScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Schedule</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Schedule" onBack={onBack} testID="schedule-header" />
 
       {/* Team Info */}
       <View style={styles.teamInfo}>

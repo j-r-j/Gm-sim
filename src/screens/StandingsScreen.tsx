@@ -5,7 +5,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
 import { calculateStandings, StandingsEntry } from '../services/StandingsService';
 
@@ -35,8 +36,12 @@ function StandingsRow({
   rank: number;
   isUserTeam: boolean;
 }) {
+  const record = `${entry.wins}-${entry.losses}${entry.ties > 0 ? `-${entry.ties}` : ''}`;
   return (
-    <View style={[styles.row, isUserTeam && styles.userTeamRow]}>
+    <View
+      style={[styles.row, isUserTeam && styles.userTeamRow]}
+      accessibilityLabel={`${rank}. ${entry.teamName} ${entry.teamAbbr}, Record ${record}, Points for ${entry.pointsFor}, Points against ${entry.pointsAgainst}${isUserTeam ? ', Your team' : ''}`}
+    >
       <Text style={[styles.rankCell, isUserTeam && styles.userTeamText]}>{rank}</Text>
       <View style={styles.teamCell}>
         <Text style={[styles.teamAbbr, isUserTeam && styles.userTeamText]}>{entry.teamAbbr}</Text>
@@ -44,10 +49,7 @@ function StandingsRow({
           {entry.teamName}
         </Text>
       </View>
-      <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>
-        {entry.wins}-{entry.losses}
-        {entry.ties > 0 ? `-${entry.ties}` : ''}
-      </Text>
+      <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>{record}</Text>
       <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>
         {entry.pct.toFixed(3).slice(1)}
       </Text>
@@ -127,40 +129,33 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Standings</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Standings" onBack={onBack} testID="standings-header" />
 
       {/* View Mode Toggle */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'division' && styles.toggleActive]}
-          onPress={() => setViewMode('division')}
-        >
-          <Text style={[styles.toggleText, viewMode === 'division' && styles.toggleTextActive]}>
-            Division
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'conference' && styles.toggleActive]}
-          onPress={() => setViewMode('conference')}
-        >
-          <Text style={[styles.toggleText, viewMode === 'conference' && styles.toggleTextActive]}>
-            Conference
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'playoff' && styles.toggleActive]}
-          onPress={() => setViewMode('playoff')}
-        >
-          <Text style={[styles.toggleText, viewMode === 'playoff' && styles.toggleTextActive]}>
-            Playoff Picture
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.toggleContainer} accessibilityRole="tablist">
+        {(['division', 'conference', 'playoff'] as ViewMode[]).map((mode) => {
+          const label =
+            mode === 'division'
+              ? 'Division'
+              : mode === 'conference'
+                ? 'Conference'
+                : 'Playoff Picture';
+          return (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.toggleButton, viewMode === mode && styles.toggleActive]}
+              onPress={() => setViewMode(mode)}
+              accessibilityLabel={`${label} view`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: viewMode === mode }}
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={[styles.toggleText, viewMode === mode && styles.toggleTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Standings Tables */}

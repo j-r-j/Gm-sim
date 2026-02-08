@@ -535,7 +535,9 @@ export function GMDashboardScreen({
       {/* Main Menu Grid */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.menuGrid}>
         {/* Primary Actions */}
-        <Text style={styles.sectionTitle}>Team Management</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          Team Management
+        </Text>
 
         <MenuCard
           title="Roster"
@@ -581,7 +583,7 @@ export function GMDashboardScreen({
           <MenuCard
             title="Game Plan"
             subtitle="Set practice focus and strategy"
-            icon="📋"
+            icon="🎯"
             color="#6C5CE7"
             onPress={() => onAction('gamePlan')}
             badge="NEW"
@@ -609,7 +611,9 @@ export function GMDashboardScreen({
         )}
 
         {/* Season Actions */}
-        <Text style={styles.sectionTitle}>Season</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          Season
+        </Text>
 
         {!isOffseason && (
           <MenuCard
@@ -676,7 +680,7 @@ export function GMDashboardScreen({
         <MenuCard
           title="Weekly Digest"
           subtitle="Week summary"
-          icon="📋"
+          icon="📰"
           color={colors.warning}
           onPress={() => onAction('weeklyDigest')}
         />
@@ -688,17 +692,13 @@ export function GMDashboardScreen({
             icon="🤝"
             color="#0984E3"
             onPress={() => onAction('tradeOffers')}
-            badge={
-              (gameState as any).tradeOffers?.activeOffers?.filter(
-                (o: any) => o.status === 'pending'
-              ).length > 0
-                ? String(
-                    (gameState as any).tradeOffers.activeOffers.filter(
-                      (o: any) => o.status === 'pending'
-                    ).length
-                  )
-                : undefined
-            }
+            badge={(() => {
+              const gs = gameState as GameState & {
+                tradeOffers?: { activeOffers?: Array<{ status: string }> };
+              };
+              const pending = gs.tradeOffers?.activeOffers?.filter((o) => o.status === 'pending');
+              return pending && pending.length > 0 ? String(pending.length) : undefined;
+            })()}
           />
         )}
 
@@ -713,7 +713,9 @@ export function GMDashboardScreen({
         )}
 
         {/* Offseason Actions */}
-        <Text style={styles.sectionTitle}>{isOffseason ? 'Offseason' : 'Player Acquisition'}</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          {isOffseason ? 'Offseason' : 'Player Acquisition'}
+        </Text>
 
         {isOffseason && (
           <MenuCard
@@ -738,7 +740,7 @@ export function GMDashboardScreen({
         <MenuCard
           title="Big Board"
           subtitle="Your scouting rankings"
-          icon="📋"
+          icon="📊"
           color={colors.info}
           onPress={() => onAction('bigBoard')}
         />
