@@ -34,8 +34,10 @@ import {
   DraftPickCard,
   TradeOfferCard,
   ProspectListItem,
+  WarRoomFeed,
   type TradeAsset,
 } from '../components/draft';
+import { WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';
 
 /**
  * Draft pick information
@@ -123,6 +125,8 @@ export interface DraftRoomScreenProps {
   onToggleAutoPick: () => void;
   /** Callback to pause/resume draft */
   onTogglePause: () => void;
+  /** War room feed events */
+  feedEvents?: WarRoomFeedEvent[];
   /** Callback to go back */
   onBack?: () => void;
 }
@@ -130,7 +134,7 @@ export interface DraftRoomScreenProps {
 /**
  * Tab options for the draft room
  */
-type DraftRoomTab = 'board' | 'trades' | 'picks';
+type DraftRoomTab = 'board' | 'feed' | 'trades' | 'picks';
 
 /**
  * DraftRoomScreen Component
@@ -153,6 +157,7 @@ export function DraftRoomScreen({
   onProposeTrade,
   onToggleAutoPick,
   onTogglePause,
+  feedEvents = [],
   onBack,
 }: DraftRoomScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<DraftRoomTab>('board');
@@ -351,6 +356,23 @@ export function DraftRoomScreen({
           <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>Board</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          style={[styles.tab, activeTab === 'feed' && styles.tabActive]}
+          onPress={() => setActiveTab('feed')}
+          accessibilityLabel={`War room feed${feedEvents.length > 0 ? `, ${feedEvents.length} events` : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'feed' }}
+          hitSlop={accessibility.hitSlop}
+        >
+          <Ionicons
+            name="radio"
+            size={16}
+            color={activeTab === 'feed' ? colors.textOnPrimary : colors.textSecondary}
+          />
+          <Text style={[styles.tabText, activeTab === 'feed' && styles.tabTextActive]}>
+            Feed {feedEvents.length > 0 && `(${feedEvents.length})`}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'trades' && styles.tabActive]}
           onPress={() => setActiveTab('trades')}
           accessibilityLabel={`Trades${pendingTradeOffers.length > 0 ? `, ${pendingTradeOffers.length} pending` : ''}`}
@@ -419,6 +441,12 @@ export function DraftRoomScreen({
               </View>
             }
           />
+        </View>
+      )}
+
+      {activeTab === 'feed' && (
+        <View style={styles.tabContent}>
+          <WarRoomFeed events={feedEvents} />
         </View>
       )}
 
