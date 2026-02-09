@@ -314,7 +314,11 @@ function PackageView({
           const slotInfo = SLOT_INFO[slot];
 
           return (
-            <View key={slot} style={styles.packageSlotItem} accessibilityLabel={`${slotInfo.shortName}, ${player ? player.lastName : 'empty'}`}>
+            <View
+              key={slot}
+              style={styles.packageSlotItem}
+              accessibilityLabel={`${slotInfo.shortName}, ${player ? player.lastName : 'empty'}`}
+            >
               <Text style={styles.packageSlotLabel}>{slotInfo.shortName}</Text>
               {player ? (
                 <View style={styles.packagePlayerInfo}>

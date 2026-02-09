@@ -5,7 +5,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
   CoachingTree,
@@ -248,14 +249,7 @@ export function CoachingTreeScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'< Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Coaching Tree</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Coaching Tree" onBack={onBack} testID="coaching-tree-header" />
 
       {/* Coach Info */}
       <View style={styles.coachInfo}>

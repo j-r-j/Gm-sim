@@ -5,7 +5,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { WeeklyDigest } from '../core/news/WeeklyDigest';
 import { NewsItem } from '../core/news/NewsGenerators';
@@ -204,14 +205,7 @@ export function WeeklyDigestScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'< Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Weekly Digest</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Weekly Digest" onBack={onBack} testID="weekly-digest-header" />
 
       {/* Section Tabs */}
       <View style={styles.tabBar}>

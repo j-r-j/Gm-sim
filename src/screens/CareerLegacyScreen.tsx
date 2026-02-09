@@ -5,7 +5,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
   CareerRecord,
@@ -258,14 +259,7 @@ export function CareerLegacyScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'< Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Career Legacy</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Career Legacy" onBack={onBack} testID="career-legacy-header" />
 
       {/* GM Info */}
       <View style={styles.gmInfo}>

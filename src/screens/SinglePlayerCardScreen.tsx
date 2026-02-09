@@ -19,7 +19,16 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import { SkillValue, SKILL_NAMES_BY_POSITION } from '../core/models/player/TechnicalSkills';
@@ -538,29 +547,23 @@ export function SinglePlayerCardScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Prospect Profile</Text>
-        <View style={styles.headerActions}>
-          {onToggleLock && (
-            <TouchableOpacity onPress={onToggleLock} style={styles.actionButton}>
-              <Text style={styles.actionText}>{isLocked ? 'Locked' : 'Unlocked'}</Text>
-            </TouchableOpacity>
-          )}
-          {onToggleFlag && (
-            <TouchableOpacity
-              onPress={onToggleFlag}
-              style={[styles.actionButton, flagged && styles.actionButtonActive]}
-            >
-              <Text style={[styles.actionText, flagged && styles.actionTextActive]}>
-                {flagged ? 'Flagged' : 'Flag'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      <ScreenHeader title="Prospect Profile" onBack={onBack} testID="prospect-profile-header" />
+      <View style={styles.headerActions}>
+        {onToggleLock && (
+          <TouchableOpacity onPress={onToggleLock} style={styles.actionButton}>
+            <Text style={styles.actionText}>{isLocked ? 'Locked' : 'Unlocked'}</Text>
+          </TouchableOpacity>
+        )}
+        {onToggleFlag && (
+          <TouchableOpacity
+            onPress={onToggleFlag}
+            style={[styles.actionButton, flagged && styles.actionButtonActive]}
+          >
+            <Text style={[styles.actionText, flagged && styles.actionTextActive]}>
+              {flagged ? 'Flagged' : 'Flag'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -788,7 +791,11 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
   },
   actionButton: {
     paddingHorizontal: spacing.sm,

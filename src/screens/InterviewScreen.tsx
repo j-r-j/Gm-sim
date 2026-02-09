@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import {
   InterviewRecord,
   OwnerPreview,
@@ -218,13 +219,7 @@ export function InterviewScreen({
   if (!interview) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>{'< Back'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Interview</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader title="Interview" onBack={onBack} testID="interview-header" />
 
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No interview scheduled with this team</Text>
@@ -242,14 +237,7 @@ export function InterviewScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'< Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Interview</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Interview" onBack={onBack} testID="interview-header" />
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Team Info */}

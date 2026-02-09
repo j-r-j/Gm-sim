@@ -10,7 +10,15 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../../styles';
 import {
   Coach,
   CareerHistoryEntry,
@@ -568,17 +576,27 @@ export function CoachCard({
           <Text style={styles.coachDetails}>{getRoleDisplayName(coach.role)}</Text>
         </View>
         {onClose && (
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityLabel="Close coach card"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <View style={styles.tabContainer} accessibilityRole="tablist">
         <TouchableOpacity
           style={[styles.tab, activeTab === 'profile' && styles.tabActive]}
           onPress={() => setActiveTab('profile')}
+          accessibilityLabel="Profile tab"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'profile' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
             Profile
@@ -587,6 +605,10 @@ export function CoachCard({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'career' && styles.tabActive]}
           onPress={() => setActiveTab('career')}
+          accessibilityLabel="Career tab"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'career' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'career' && styles.tabTextActive]}>
             Career
@@ -595,6 +617,10 @@ export function CoachCard({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'contract' && styles.tabActive]}
           onPress={() => setActiveTab('contract')}
+          accessibilityLabel="Contract tab"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'contract' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'contract' && styles.tabTextActive]}>
             Contract
