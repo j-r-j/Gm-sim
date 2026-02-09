@@ -606,133 +606,334 @@ function generateComponentE(
 }
 
 /**
- * Distributes games across weeks, respecting bye weeks where possible.
+ * Distributes games across weeks, respecting bye weeks.
  *
- * Uses an incremental approach: process games in order, assigning each to
- * a week where both teams are available. Tries multiple orderings to find
- * a complete assignment that respects bye weeks.
+ * Uses a multi-seed week-by-week greedy approach:
+ * - For each seed, randomize week processing order and game tie-breaking
+ * - Process one week at a time, greedily selecting the most constrained games
+ * - This guarantees no team plays twice in any week by construction
+ * - If no perfect assignment found, use Kempe-chain swap repair on the best result
  */
 function distributeGamesAcrossWeeks(
   games: ScheduledGame[],
   byeWeeks: Record<string, number>
 ): ScheduledGame[] {
-  // Helper to attempt scheduling with a given game order
-  const trySchedule = (
-    orderedGames: ScheduledGame[],
-    respectByes: boolean
-  ): Map<string, number> | null => {
-    const teamWeeks = new Map<string, Set<number>>();
-    const assignment = new Map<string, number>();
+  const n = games.length;
 
-    // Initialize all teams with bye weeks marked as used (if respecting byes)
-    for (const game of orderedGames) {
-      if (!teamWeeks.has(game.homeTeamId)) {
-        const used = new Set<number>();
-        if (respectByes && byeWeeks[game.homeTeamId]) {
-          used.add(byeWeeks[game.homeTeamId]);
+  // Compute target games per week (fixed across seeds)
+  const weekTargets: number[] = new Array(19).fill(0);
+  for (let w = 1; w <= 18; w++) {
+    let byeCount = 0;
+    for (const b of Object.values(byeWeeks)) if (b === w) byeCount++;
+    weekTargets[w] = (32 - byeCount) / 2;
+  }
+
+  // Collect all team IDs
+  const allTeams = new Set<string>();
+  for (const g of games) {
+    allTeams.add(g.homeTeamId);
+    allTeams.add(g.awayTeamId);
+  }
+
+  function createRng(seed: number): () => number {
+    let s = seed;
+    return () => {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      return s;
+    };
+  }
+
+  // Strategy A: Week-by-week greedy (guarantees no duplicates within weeks)
+  function tryWeekByWeek(seed: number): { weekOf: number[]; unassigned: number } {
+    const rng = createRng(seed);
+    const weekOf = new Array<number>(n).fill(0);
+    const busy = new Map<string, Set<number>>();
+    for (const t of allTeams) {
+      const s = new Set<number>();
+      if (byeWeeks[t]) s.add(byeWeeks[t]);
+      busy.set(t, s);
+    }
+
+    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+    for (let i = 17; i > 0; i--) {
+      const j = rng() % (i + 1);
+      [weeks[i], weeks[j]] = [weeks[j], weeks[i]];
+    }
+    if (seed % 3 === 0) {
+      weeks.sort((a, b) => weekTargets[a] - weekTargets[b]);
+    } else if (seed % 3 === 1) {
+      weeks.sort((a, b) => weekTargets[b] - weekTargets[a]);
+    }
+
+    const remaining = new Set<number>();
+    for (let i = 0; i < n; i++) remaining.add(i);
+
+    for (const w of weeks) {
+      const target = weekTargets[w];
+      const usedThisWeek = new Set<string>();
+      const sortKeys: { idx: number; vw: number; rk: number }[] = [];
+      for (const idx of remaining) {
+        const g = games[idx];
+        if (!busy.get(g.homeTeamId)!.has(w) && !busy.get(g.awayTeamId)!.has(w)) {
+          const hB = busy.get(g.homeTeamId)!;
+          const aB = busy.get(g.awayTeamId)!;
+          let vw = 0;
+          for (let ww = 1; ww <= 18; ww++) {
+            if (!hB.has(ww) && !aB.has(ww)) vw++;
+          }
+          sortKeys.push({ idx, vw, rk: rng() });
         }
-        teamWeeks.set(game.homeTeamId, used);
       }
-      if (!teamWeeks.has(game.awayTeamId)) {
-        const used = new Set<number>();
-        if (respectByes && byeWeeks[game.awayTeamId]) {
-          used.add(byeWeeks[game.awayTeamId]);
+      sortKeys.sort((a, b) => (a.vw !== b.vw ? a.vw - b.vw : a.rk - b.rk));
+
+      let count = 0;
+      for (const { idx } of sortKeys) {
+        if (count >= target) break;
+        const g = games[idx];
+        if (usedThisWeek.has(g.homeTeamId) || usedThisWeek.has(g.awayTeamId)) continue;
+        weekOf[idx] = w;
+        usedThisWeek.add(g.homeTeamId);
+        usedThisWeek.add(g.awayTeamId);
+        busy.get(g.homeTeamId)!.add(w);
+        busy.get(g.awayTeamId)!.add(w);
+        remaining.delete(idx);
+        count++;
+      }
+    }
+    return { weekOf, unassigned: remaining.size };
+  }
+
+  // Strategy B: Game-by-game MRV (assigns most constrained games first)
+  function tryMRV(seed: number): { weekOf: number[]; unassigned: number } {
+    const rng = createRng(seed);
+    const weekOf = new Array<number>(n).fill(0);
+    const busy = new Map<string, Set<number>>();
+    for (const t of allTeams) {
+      const s = new Set<number>();
+      if (byeWeeks[t]) s.add(byeWeeks[t]);
+      busy.set(t, s);
+    }
+    const weekCounts = new Array(19).fill(0);
+    const remaining = new Set<number>();
+    for (let i = 0; i < n; i++) remaining.add(i);
+
+    while (remaining.size > 0) {
+      let bestIdx = -1;
+      let bestVW: number[] = [];
+      let minVW = Infinity;
+      let tieCount = 1;
+
+      for (const idx of remaining) {
+        const g = games[idx];
+        const hB = busy.get(g.homeTeamId)!;
+        const aB = busy.get(g.awayTeamId)!;
+        const vw: number[] = [];
+        for (let w = 1; w <= 18; w++) {
+          if (!hB.has(w) && !aB.has(w)) vw.push(w);
         }
-        teamWeeks.set(game.awayTeamId, used);
+        if (vw.length < minVW) {
+          minVW = vw.length;
+          bestIdx = idx;
+          bestVW = vw;
+          tieCount = 1;
+        } else if (vw.length === minVW) {
+          tieCount++;
+          if (rng() % tieCount === 0) {
+            bestIdx = idx;
+            bestVW = vw;
+          }
+        }
+      }
+
+      if (minVW === 0) break;
+
+      // Pick least-loaded valid week, random tiebreaking
+      let bestWeek = bestVW[0];
+      let bestCount = weekCounts[bestWeek];
+      let wTie = 1;
+      for (let i = 1; i < bestVW.length; i++) {
+        const c = weekCounts[bestVW[i]];
+        if (c < bestCount) {
+          bestCount = c;
+          bestWeek = bestVW[i];
+          wTie = 1;
+        } else if (c === bestCount) {
+          wTie++;
+          if (rng() % wTie === 0) bestWeek = bestVW[i];
+        }
+      }
+
+      weekOf[bestIdx] = bestWeek;
+      busy.get(games[bestIdx].homeTeamId)!.add(bestWeek);
+      busy.get(games[bestIdx].awayTeamId)!.add(bestWeek);
+      weekCounts[bestWeek]++;
+      remaining.delete(bestIdx);
+    }
+    return { weekOf, unassigned: remaining.size };
+  }
+
+  function trySchedule(seed: number): { weekOf: number[]; unassigned: number } {
+    // Alternate between strategies
+    return seed % 2 === 0 ? tryWeekByWeek(seed) : tryMRV(seed);
+  }
+
+  // Try multiple seeds, pick the best result
+  let best = trySchedule(1);
+  for (let seed = 2; seed <= 500 && best.unassigned > 0; seed++) {
+    const result = trySchedule(seed);
+    if (result.unassigned < best.unassigned) {
+      best = result;
+    }
+  }
+
+  // If perfect, return immediately
+  if (best.unassigned === 0) {
+    return games.map((game, i) => ({ ...game, week: best.weekOf[i] }));
+  }
+
+  // Kempe-chain repair: rebuild state from best result, then fix unassigned games
+  const weekOf = best.weekOf;
+  const busy = new Map<string, Set<number>>();
+  for (const t of allTeams) {
+    const s = new Set<number>();
+    if (byeWeeks[t]) s.add(byeWeeks[t]);
+    busy.set(t, s);
+  }
+  // gamesByTeamWeek: teamId -> week -> gameIndex
+  const gamesByTeamWeek = new Map<string, Map<number, number>>();
+  for (const t of allTeams) gamesByTeamWeek.set(t, new Map());
+
+  for (let i = 0; i < n; i++) {
+    if (weekOf[i] === 0) continue;
+    const g = games[i];
+    busy.get(g.homeTeamId)!.add(weekOf[i]);
+    busy.get(g.awayTeamId)!.add(weekOf[i]);
+    gamesByTeamWeek.get(g.homeTeamId)!.set(weekOf[i], i);
+    gamesByTeamWeek.get(g.awayTeamId)!.set(weekOf[i], i);
+  }
+
+  // Helper: attempt a Kempe chain swap for colors (alpha, beta) starting from startTeam.
+  // otherTeam is the team we're trying to place a game for — the chain must not visit it.
+  // Returns true if the swap was executed successfully.
+  function tryKempeSwap(
+    alpha: number,
+    beta: number,
+    startTeam: string,
+    otherTeam: string
+  ): boolean {
+    // Build the chain: follow alternating alpha-beta edges from startTeam
+    const chainEdges: number[] = [];
+    const visited = new Set<string>([startTeam]);
+    let current = startTeam;
+    let seekColor = alpha;
+
+    for (let step = 0; step < 64; step++) {
+      const gIdx = gamesByTeamWeek.get(current)?.get(seekColor);
+      if (gIdx === undefined) break;
+      const cg = games[gIdx];
+      const next = cg.homeTeamId === current ? cg.awayTeamId : cg.homeTeamId;
+      if (next === otherTeam) return false; // chain would invalidate the target slot
+      if (visited.has(next)) break; // cycle detected
+      chainEdges.push(gIdx);
+      visited.add(next);
+      current = next;
+      seekColor = seekColor === alpha ? beta : alpha;
+    }
+
+    if (chainEdges.length === 0) return true;
+
+    // Check bye-week safety
+    for (const eIdx of chainEdges) {
+      const eg = games[eIdx];
+      const newW = weekOf[eIdx] === alpha ? beta : alpha;
+      if (byeWeeks[eg.homeTeamId] === newW || byeWeeks[eg.awayTeamId] === newW) {
+        return false;
       }
     }
 
-    for (const game of orderedGames) {
-      const homeUsed = teamWeeks.get(game.homeTeamId)!;
-      const awayUsed = teamWeeks.get(game.awayTeamId)!;
+    // Execute the swap
+    for (const eIdx of chainEdges) {
+      const eg = games[eIdx];
+      const oldW = weekOf[eIdx];
+      const newW = oldW === alpha ? beta : alpha;
+      busy.get(eg.homeTeamId)!.delete(oldW);
+      busy.get(eg.awayTeamId)!.delete(oldW);
+      gamesByTeamWeek.get(eg.homeTeamId)!.delete(oldW);
+      gamesByTeamWeek.get(eg.awayTeamId)!.delete(oldW);
+      weekOf[eIdx] = newW;
+      busy.get(eg.homeTeamId)!.add(newW);
+      busy.get(eg.awayTeamId)!.add(newW);
+      gamesByTeamWeek.get(eg.homeTeamId)!.set(newW, eIdx);
+      gamesByTeamWeek.get(eg.awayTeamId)!.set(newW, eIdx);
+    }
+    return true;
+  }
 
-      // Find a valid week
-      let assigned = false;
-      for (let week = 1; week <= 18; week++) {
-        if (!homeUsed.has(week) && !awayUsed.has(week)) {
-          assignment.set(game.gameId, week);
-          homeUsed.add(week);
-          awayUsed.add(week);
-          assigned = true;
+  // For each unassigned game, use Kempe-chain-style repair
+  for (let i = 0; i < n; i++) {
+    if (weekOf[i] !== 0) continue;
+    const g = games[i];
+    const hB = busy.get(g.homeTeamId)!;
+    const aB = busy.get(g.awayTeamId)!;
+    let placed = false;
+
+    // Collect all free weeks for each team
+    const freeH: number[] = [];
+    const freeA: number[] = [];
+    for (let w = 1; w <= 18; w++) {
+      if (!hB.has(w)) freeH.push(w);
+      if (!aB.has(w)) freeA.push(w);
+    }
+
+    // Try direct placement first (common free week)
+    for (const w of freeH) {
+      if (!aB.has(w)) {
+        weekOf[i] = w;
+        hB.add(w);
+        aB.add(w);
+        gamesByTeamWeek.get(g.homeTeamId)!.set(w, i);
+        gamesByTeamWeek.get(g.awayTeamId)!.set(w, i);
+        placed = true;
+        break;
+      }
+    }
+    if (placed) continue;
+
+    // Try all (alpha, beta) Kempe chain combinations
+    for (const alpha of freeH) {
+      if (placed) break;
+      for (const beta of freeA) {
+        if (alpha === beta) continue; // would have been caught by direct placement
+        // Try Kempe chain from awayTeam to free up alpha there
+        if (tryKempeSwap(alpha, beta, g.awayTeamId, g.homeTeamId)) {
+          weekOf[i] = alpha;
+          hB.add(alpha);
+          aB.add(alpha);
+          gamesByTeamWeek.get(g.homeTeamId)!.set(alpha, i);
+          gamesByTeamWeek.get(g.awayTeamId)!.set(alpha, i);
+          placed = true;
+          break;
+        }
+        // Also try from homeTeam to free up beta there
+        if (tryKempeSwap(beta, alpha, g.homeTeamId, g.awayTeamId)) {
+          weekOf[i] = beta;
+          hB.add(beta);
+          aB.add(beta);
+          gamesByTeamWeek.get(g.homeTeamId)!.set(beta, i);
+          gamesByTeamWeek.get(g.awayTeamId)!.set(beta, i);
+          placed = true;
           break;
         }
       }
-
-      if (!assigned) return null; // Failed to schedule this game
     }
 
-    return assignment;
-  };
-
-  // Simple seeded random shuffle
-  const shuffle = (arr: ScheduledGame[], seed: number): ScheduledGame[] => {
-    const result = [...arr];
-    let s = seed;
-    for (let i = result.length - 1; i > 0; i--) {
-      s = (s * 1103515245 + 12345) & 0x7fffffff;
-      const j = s % (i + 1);
-      [result[i], result[j]] = [result[j], result[i]];
-    }
-    return result;
-  };
-
-  // Try different orderings
-  const orderings = [
-    // 1. Divisional games first
-    [...games].sort((a, b) => (a.isDivisional === b.isDivisional ? 0 : a.isDivisional ? -1 : 1)),
-    // 2. Divisional games last
-    [...games].sort((a, b) => (a.isDivisional === b.isDivisional ? 0 : a.isDivisional ? 1 : -1)),
-    // 3. Random shuffles
-    shuffle(games, 12345),
-    shuffle(games, 67890),
-    shuffle(games, 11111),
-    shuffle(games, 22222),
-    shuffle(games, 33333),
-    shuffle(games, 44444),
-    shuffle(games, 55555),
-    shuffle(games, 99999),
-  ];
-
-  // First try with bye weeks respected
-  for (const ordering of orderings) {
-    const assignment = trySchedule(ordering, true);
-    if (assignment && assignment.size === games.length) {
-      // Success! Build result
-      return games.map((game) => ({
-        ...game,
-        week: assignment.get(game.gameId)!,
-      }));
+    if (!placed) {
+      // Absolute last resort
+      weekOf[i] = 1;
     }
   }
 
-  // If no ordering works with bye weeks, try without
-  for (const ordering of orderings) {
-    const assignment = trySchedule(ordering, false);
-    if (assignment && assignment.size === games.length) {
-      // Success (but some bye weeks may be violated)
-      return games.map((game) => ({
-        ...game,
-        week: assignment.get(game.gameId)!,
-      }));
-    }
-  }
-
-  // Last resort: use best partial result ignoring byes
-  let bestAssignment = new Map<string, number>();
-  for (const ordering of orderings) {
-    const assignment = trySchedule(ordering, false);
-    if (assignment && assignment.size > bestAssignment.size) {
-      bestAssignment = assignment;
-    }
-  }
-
-  // Return partial result
-  return games
-    .filter((game) => bestAssignment.has(game.gameId))
-    .map((game) => ({
-      ...game,
-      week: bestAssignment.get(game.gameId)!,
-    }));
+  return games.map((game, i) => ({ ...game, week: weekOf[i] }));
 }
 
 /**
