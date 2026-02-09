@@ -200,7 +200,7 @@ describe('TraitGenerator', () => {
       let qbLeaders = 0;
       let rbLeaders = 0;
 
-      for (let i = 0; i < 500; i++) {
+      for (let i = 0; i < 2000; i++) {
         const qbTraits = generateHiddenTraits(Position.QB);
         const rbTraits = generateHiddenTraits(Position.RB);
 
