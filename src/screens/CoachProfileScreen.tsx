@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Coach, getCoachFullName, getCareerWinningPercentage } from '../core/models/staff/Coach';
 import { ScreenHeader } from '../components';
 import { CoachPersonalityBadge } from '../components/coach/CoachPersonalityBadge';

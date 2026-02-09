@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { ScreenHeader } from '../components';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { Avatar } from '../components/avatar';

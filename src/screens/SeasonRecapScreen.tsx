@@ -5,15 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  shadows,
-  accessibility,
-} from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { ScreenHeader } from '../components';
 import { SeasonRecap } from '../core/offseason/OffSeasonPhaseManager';
 

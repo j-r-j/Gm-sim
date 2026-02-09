@@ -239,7 +239,9 @@ export function OffseasonScreen({
           <View style={styles.phaseIconContainer}>
             <Text style={styles.phaseIcon}>{phaseIcon}</Text>
           </View>
-          <Text style={styles.phaseTitle}>{phaseName}</Text>
+          <Text style={styles.phaseTitle} accessibilityRole="header">
+            {phaseName}
+          </Text>
           <Text style={styles.phaseDescription}>{phaseDescription}</Text>
           <Text style={styles.phaseDay}>Day {offseasonState.phaseDay}</Text>
         </View>
@@ -247,7 +249,9 @@ export function OffseasonScreen({
         {/* Required Tasks */}
         {requiredTasks.length > 0 && (
           <View style={styles.taskSection}>
-            <Text style={styles.sectionTitle}>Required Tasks</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Required Tasks
+            </Text>
             {requiredTasks.map((task) => (
               <TaskCard
                 key={task.id}
@@ -262,7 +266,9 @@ export function OffseasonScreen({
         {/* Optional Tasks */}
         {optionalTasks.length > 0 && (
           <View style={styles.taskSection}>
-            <Text style={styles.sectionTitle}>Optional Tasks</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Optional Tasks
+            </Text>
             {optionalTasks.map((task) => (
               <TaskCard
                 key={task.id}
@@ -323,7 +329,9 @@ export function OffseasonScreen({
         {/* Recent Events */}
         {offseasonState.events.length > 0 && (
           <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Recent Activity
+            </Text>
             {offseasonState.events
               .slice(-5)
               .reverse()

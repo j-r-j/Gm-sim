@@ -7,7 +7,7 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../../styles';
 import { WarRoomFeedEvent, FeedEventType, FeedUrgency } from '../../core/draft/DraftDayNarrator';
 
 /**
@@ -130,8 +130,8 @@ function FeedEventItem({ event }: { event: WarRoomFeedEvent }): React.JSX.Elemen
         isCritical && feedStyles.eventItemCritical,
         { opacity: fadeAnim, borderLeftColor: accentColor },
       ]}
-      accessibilityRole="text"
-      accessibilityLabel={`${event.headline}. ${event.detail}`}
+      accessibilityRole="summary"
+      accessibilityLabel={`${event.urgency} priority: ${event.headline}. ${event.detail}. ${formatTimestamp(event.timestamp)}`}
     >
       <View style={feedStyles.eventHeader}>
         <View style={[feedStyles.iconContainer, { backgroundColor: urgencyColor + '15' }]}>
@@ -173,10 +173,18 @@ export function WarRoomFeed({ events, maxEvents = 50 }: WarRoomFeedProps): React
 
   return (
     <View style={feedStyles.container}>
-      <View style={feedStyles.feedHeader}>
+      <View
+        style={feedStyles.feedHeader}
+        accessibilityRole="header"
+        accessibilityLabel="War Room Feed, live updates"
+      >
         <Ionicons name="radio" size={16} color={colors.error} />
         <Text style={feedStyles.feedTitle}>WAR ROOM FEED</Text>
-        <View style={feedStyles.liveIndicator}>
+        <View
+          style={feedStyles.liveIndicator}
+          accessibilityLabel="Live indicator"
+          accessibilityRole="text"
+        >
           <View style={feedStyles.liveDot} />
           <Text style={feedStyles.liveText}>LIVE</Text>
         </View>
@@ -189,8 +197,14 @@ export function WarRoomFeed({ events, maxEvents = 50 }: WarRoomFeedProps): React
         renderItem={renderEvent}
         contentContainerStyle={feedStyles.listContent}
         showsVerticalScrollIndicator={false}
+        accessibilityRole="list"
+        accessibilityLabel={`War room feed with ${displayEvents.length} events`}
         ListEmptyComponent={
-          <View style={feedStyles.emptyContainer}>
+          <View
+            style={feedStyles.emptyContainer}
+            accessibilityRole="text"
+            accessibilityLabel="Waiting for draft to begin"
+          >
             <Ionicons name="radio-outline" size={32} color={colors.textLight} />
             <Text style={feedStyles.emptyText}>Waiting for draft to begin...</Text>
           </View>
@@ -242,6 +256,7 @@ const feedStyles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   eventItem: {
+    minHeight: accessibility.minTouchTarget,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,

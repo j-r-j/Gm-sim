@@ -4,16 +4,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  shadows,
-  accessibility,
-} from '../styles';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
 

@@ -28,7 +28,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { Button } from '../components';
+import { Button, ScreenHeader } from '../components';
 import { Position } from '../core/models/player/Position';
 import {
   DraftPickCard,
@@ -265,37 +265,16 @@ export function DraftRoomScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onBack}
-            accessibilityLabel="Exit draft room"
-            accessibilityRole="button"
-            accessibilityHint="Returns to the previous screen"
-            hitSlop={accessibility.hitSlop}
-          >
-            <Ionicons name="close" size={24} color={colors.textOnPrimary} />
-            <Text style={styles.backButtonText}>Exit</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle} accessibilityRole="header">
-          Draft Room
-        </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.pauseButton, isPaused && styles.pauseButtonActive]}
-            onPress={onTogglePause}
-            accessibilityLabel={isPaused ? 'Resume draft' : 'Pause draft'}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: !isPaused }}
-            hitSlop={accessibility.hitSlop}
-          >
-            <Ionicons name={isPaused ? 'play' : 'pause'} size={16} color={colors.textOnPrimary} />
-            <Text style={styles.pauseButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Draft Room"
+        onBack={onBack}
+        rightAction={{
+          icon: isPaused ? 'play' : 'pause',
+          onPress: onTogglePause,
+          accessibilityLabel: isPaused ? 'Resume draft' : 'Pause draft',
+        }}
+        testID="draft-room-header"
+      />
 
       {/* Current Pick Card */}
       <View style={styles.currentPickContainer}>
@@ -481,7 +460,9 @@ export function DraftRoomScreen({
         <ScrollView style={styles.tabContent}>
           {/* Recent Picks */}
           <View style={styles.picksSection}>
-            <Text style={styles.picksSectionTitle}>Recent Picks</Text>
+            <Text style={styles.picksSectionTitle} accessibilityRole="header">
+              Recent Picks
+            </Text>
             {recentPicks.length > 0 ? (
               recentPicks.map((pick, index) => renderPickItem(pick, index, true))
             ) : (
@@ -491,7 +472,9 @@ export function DraftRoomScreen({
 
           {/* Upcoming Picks */}
           <View style={styles.picksSection}>
-            <Text style={styles.picksSectionTitle}>Upcoming</Text>
+            <Text style={styles.picksSectionTitle} accessibilityRole="header">
+              Upcoming
+            </Text>
             {upcomingPicks && upcomingPicks.length > 0 ? (
               upcomingPicks.map((pick, index) => renderPickItem(pick, index, false))
             ) : (

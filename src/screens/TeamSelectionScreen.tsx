@@ -15,15 +15,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  shadows,
-  accessibility,
-} from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { ScreenHeader } from '../components';
 import {
   FAKE_CITIES,

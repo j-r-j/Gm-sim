@@ -15,7 +15,15 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../../styles';
 import { LiveGameScore } from '../../core/simulation/WeekFlowState';
 
 // Enable LayoutAnimation on Android
@@ -76,9 +84,15 @@ function GameScorePill({
       onPress={onPress}
       activeOpacity={0.7}
       disabled={!onPress}
+      accessibilityLabel={`${game.awayTeamAbbr} ${game.awayScore}, ${game.homeTeamAbbr} ${game.homeScore}, ${isComplete ? 'Final' : `${formatQuarter(game.quarter)} ${formatTime(game.timeRemaining)}`}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
     >
       {/* Away Team */}
-      <View style={styles.teamContainer}>
+      <View
+        style={styles.teamContainer}
+        accessibilityLabel={`Away: ${game.awayTeamAbbr} ${game.awayScore}`}
+      >
         <Text
           style={[styles.teamAbbr, awayWinning && isComplete && styles.winnerText]}
           numberOfLines={1}
@@ -97,7 +111,10 @@ function GameScorePill({
       </View>
 
       {/* Status */}
-      <View style={styles.statusContainer}>
+      <View
+        style={styles.statusContainer}
+        accessibilityLabel={`Game status: ${isComplete ? 'Final' : `${formatQuarter(game.quarter)} ${formatTime(game.timeRemaining)}`}`}
+      >
         <Text style={[styles.statusText, isComplete && styles.finalText]}>
           {isComplete ? 'F' : formatQuarter(game.quarter)}
         </Text>
@@ -105,7 +122,10 @@ function GameScorePill({
       </View>
 
       {/* Home Team */}
-      <View style={styles.teamContainer}>
+      <View
+        style={styles.teamContainer}
+        accessibilityLabel={`Home: ${game.homeTeamAbbr} ${game.homeScore}`}
+      >
         <Text
           style={[styles.teamAbbr, homeWinning && isComplete && styles.winnerText]}
           numberOfLines={1}
@@ -146,24 +166,37 @@ function GameRowExpanded({
       onPress={onPress}
       activeOpacity={0.7}
       disabled={!onPress}
+      accessibilityLabel={`${game.awayTeamAbbr} ${game.awayScore}, ${game.homeTeamAbbr} ${game.homeScore}, ${isComplete ? 'Final' : `${formatQuarter(game.quarter)} ${formatTime(game.timeRemaining)}`}`}
+      accessibilityRole="button"
     >
       {/* Away Team */}
-      <View style={styles.expandedTeam}>
+      <View
+        style={styles.expandedTeam}
+        accessibilityLabel={`Away: ${game.awayTeamAbbr}${!isComplete && game.possession === 'away' ? ', has possession' : ''}`}
+      >
         <Text
           style={[styles.expandedAbbr, awayWinning && isComplete && styles.winnerText]}
           numberOfLines={1}
         >
           {game.awayTeamAbbr}
         </Text>
-        {!isComplete && game.possession === 'away' && <View style={styles.possessionDot} />}
+        {!isComplete && game.possession === 'away' && (
+          <View style={styles.possessionDot} accessibilityLabel="Has possession" />
+        )}
       </View>
 
-      <Text style={[styles.expandedScore, awayWinning && isComplete && styles.winnerText]}>
+      <Text
+        style={[styles.expandedScore, awayWinning && isComplete && styles.winnerText]}
+        accessibilityLabel={`Away score: ${game.awayScore}`}
+      >
         {game.awayScore}
       </Text>
 
       {/* Status */}
-      <View style={styles.expandedStatus}>
+      <View
+        style={styles.expandedStatus}
+        accessibilityLabel={`Game status: ${isComplete ? 'Final' : `${formatQuarter(game.quarter)} ${formatTime(game.timeRemaining)}`}`}
+      >
         <Text style={[styles.expandedStatusText, isComplete && styles.finalText]}>
           {isComplete ? 'FINAL' : formatQuarter(game.quarter)}
         </Text>
@@ -172,13 +205,21 @@ function GameRowExpanded({
         )}
       </View>
 
-      <Text style={[styles.expandedScore, homeWinning && isComplete && styles.winnerText]}>
+      <Text
+        style={[styles.expandedScore, homeWinning && isComplete && styles.winnerText]}
+        accessibilityLabel={`Home score: ${game.homeScore}`}
+      >
         {game.homeScore}
       </Text>
 
       {/* Home Team */}
-      <View style={[styles.expandedTeam, styles.expandedTeamRight]}>
-        {!isComplete && game.possession === 'home' && <View style={styles.possessionDot} />}
+      <View
+        style={[styles.expandedTeam, styles.expandedTeamRight]}
+        accessibilityLabel={`Home: ${game.homeTeamAbbr}${!isComplete && game.possession === 'home' ? ', has possession' : ''}`}
+      >
+        {!isComplete && game.possession === 'home' && (
+          <View style={styles.possessionDot} accessibilityLabel="Has possession" />
+        )}
         <Text
           style={[styles.expandedAbbr, homeWinning && isComplete && styles.winnerText]}
           numberOfLines={1}
@@ -214,13 +255,25 @@ export function OtherGamesTicker({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <TouchableOpacity style={styles.header} onPress={toggleExpanded} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.header}
+        onPress={toggleExpanded}
+        activeOpacity={0.7}
+        accessibilityLabel={`Other Games, ${completedCount} of ${otherGames.length} Final. ${isExpanded ? 'Collapse' : 'Expand'}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <Text style={styles.headerTitle}>Other Games</Text>
         <View style={styles.headerRight}>
-          <Text style={styles.headerCount}>
+          <Text
+            style={styles.headerCount}
+            accessibilityLabel={`${completedCount} of ${otherGames.length} games final`}
+          >
             {completedCount}/{otherGames.length} Final
           </Text>
-          <Text style={styles.expandIcon}>{isExpanded ? '▲' : '▼'}</Text>
+          <Text style={styles.expandIcon} accessible={false}>
+            {isExpanded ? '▲' : '▼'}
+          </Text>
         </View>
       </TouchableOpacity>
 
@@ -249,7 +302,13 @@ export function OtherGamesTicker({
             />
           ))}
           {otherGames.length > maxCollapsedGames && (
-            <TouchableOpacity style={styles.moreButton} onPress={toggleExpanded}>
+            <TouchableOpacity
+              style={styles.moreButton}
+              onPress={toggleExpanded}
+              accessibilityLabel={`Show ${otherGames.length - maxCollapsedGames} more games`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.moreButtonText}>+{otherGames.length - maxCollapsedGames}</Text>
             </TouchableOpacity>
           )}
