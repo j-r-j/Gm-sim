@@ -14,7 +14,8 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameSettings, SimulationSpeed } from '../core/models/game/GameState';
 
 /**
@@ -151,13 +152,7 @@ export function SettingsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Settings" onBack={onBack} testID="settings-header" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Game Settings */}

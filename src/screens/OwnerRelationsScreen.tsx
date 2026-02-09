@@ -5,8 +5,9 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { OwnerViewModel, OwnerDemand, getSecondaryTraitDescription } from '../core/models/owner';
+import { ScreenHeader } from '../components';
 import { PatienceViewModel } from '../core/career/PatienceMeterManager';
 
 /**
@@ -340,13 +341,7 @@ export function OwnerRelationsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Owner Relations</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Owner Relations" onBack={onBack} testID="owner-relations-header" />
 
       {/* Team name subtitle */}
       <View style={styles.teamBanner}>

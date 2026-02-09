@@ -24,7 +24,16 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { Coach } from '../core/models/staff/Coach';
 import { CoachRole, COACH_SALARY_RANGES } from '../core/models/staff/StaffSalary';
 import { getReputationTier, ReputationTier } from '../core/models/staff/CoachAttributes';
@@ -1029,18 +1038,7 @@ export function StaffHiringScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Text style={styles.backBtnText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Build Your Staff</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <ScreenHeader title="Build Your Staff" onBack={handleBack} testID="staff-hiring-header" />
 
       {/* Team */}
       <View style={styles.teamBar}>

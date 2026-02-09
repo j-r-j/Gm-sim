@@ -5,8 +5,9 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { ScreenHeader } from '../components';
 import {
   ScoutReport,
   DisplayReport,
@@ -273,13 +274,7 @@ export function ScoutingReportsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Scout Reports</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Scout Reports" onBack={onBack} testID="scouting-reports-header" />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

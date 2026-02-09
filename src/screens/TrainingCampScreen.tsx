@@ -5,7 +5,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
   PositionBattle,
@@ -457,13 +458,7 @@ export function TrainingCampScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Training Camp</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Training Camp" onBack={onBack} testID="training-camp-header" />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

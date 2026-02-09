@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
@@ -205,13 +206,7 @@ export function DepthChartScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Depth Chart</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Depth Chart" onBack={onBack} testID="depth-chart-header" />
 
       {/* Instructions */}
       {selectedPlayerId && (

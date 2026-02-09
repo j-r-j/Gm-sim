@@ -5,7 +5,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
 import { Avatar } from '../components/avatar';
@@ -210,13 +211,7 @@ export function StaffScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Staff</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Staff" onBack={onBack} testID="staff-header" />
 
       {/* Tab Selector */}
       <View style={styles.tabContainer}>
