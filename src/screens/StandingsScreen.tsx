@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } fr
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
+import { ScheduledGame } from '../core/season/ScheduleGenerator';
 import { calculateStandings, StandingsEntry } from '../services/StandingsService';
 
 /**
@@ -18,6 +19,8 @@ export interface StandingsScreenProps {
   teams: Record<string, Team>;
   /** User's team ID */
   userTeamId: string;
+  /** Completed games for head-to-head tiebreaker resolution */
+  completedGames?: ScheduledGame[];
   /** Callback to go back */
   onBack: () => void;
 }
@@ -120,11 +123,19 @@ function DivisionSection({
   );
 }
 
-export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenProps) {
+export function StandingsScreen({
+  teams,
+  userTeamId,
+  completedGames,
+  onBack,
+}: StandingsScreenProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('division');
 
-  // Calculate standings
-  const standings = useMemo(() => calculateStandings(teams, userTeamId), [teams, userTeamId]);
+  // Calculate standings with head-to-head tiebreaker support
+  const standings = useMemo(
+    () => calculateStandings(teams, userTeamId, completedGames),
+    [teams, userTeamId, completedGames]
+  );
 
   return (
     <SafeAreaView style={styles.container}>

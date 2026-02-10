@@ -2129,10 +2129,13 @@ export function StandingsScreenWrapper({
     return <LoadingFallback message="Loading standings..." />;
   }
 
+  const completedGames = gameState.league.schedule?.regularSeason?.filter((g) => g.isComplete);
+
   return (
     <StandingsScreen
       teams={gameState.teams}
       userTeamId={gameState.userTeamId}
+      completedGames={completedGames}
       onBack={() => navigation.goBack()}
     />
   );
