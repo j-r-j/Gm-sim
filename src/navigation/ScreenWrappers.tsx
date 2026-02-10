@@ -6255,15 +6255,25 @@ export function PostGameSummaryScreenWrapper({
   // Get user's completed game for this week
   const userGame = getUserTeamGame(schedule, week, userTeamId);
 
-  if (!userGame || !userGame.isComplete) {
-    // If no completed game, go back
+  // Use lastGameResult as a fallback if the schedule hasn't updated yet
+  const gameIsComplete = userGame?.isComplete || !!lastGameResult;
+
+  if (!gameIsComplete) {
+    // If no completed game and no lastGameResult fallback, go back
     navigation.goBack();
     return <LoadingFallback message="No completed game found..." />;
   }
 
-  const isHome = userGame.homeTeamId === userTeamId;
-  const homeTeam = gameState.teams[userGame.homeTeamId];
-  const awayTeam = gameState.teams[userGame.awayTeamId];
+  // Derive scores from schedule or lastGameResult
+  const homeTeamId = userGame?.homeTeamId ?? lastGameResult?.homeTeamId ?? '';
+  const awayTeamId = userGame?.awayTeamId ?? lastGameResult?.awayTeamId ?? '';
+  const homeScore = userGame?.isComplete ? userGame.homeScore! : (lastGameResult?.homeScore ?? 0);
+  const awayScore = userGame?.isComplete ? userGame.awayScore! : (lastGameResult?.awayScore ?? 0);
+  const gameId = userGame?.gameId ?? lastGameResult?.gameId ?? '';
+
+  const isHome = homeTeamId === userTeamId;
+  const homeTeam = gameState.teams[homeTeamId];
+  const awayTeam = gameState.teams[awayTeamId];
 
   if (!homeTeam || !awayTeam) {
     navigation.goBack();
@@ -6271,27 +6281,27 @@ export function PostGameSummaryScreenWrapper({
   }
 
   // Determine if user won
-  const userScore = isHome ? userGame.homeScore! : userGame.awayScore!;
-  const opponentScore = isHome ? userGame.awayScore! : userGame.homeScore!;
+  const userScore = isHome ? homeScore : awayScore;
+  const opponentScore = isHome ? awayScore : homeScore;
   const isWin = userScore > opponentScore;
 
   // Use actual box score from game result if available, otherwise create fallback
   const boxScore: import('../core/game/BoxScoreGenerator').BoxScore = lastGameResult?.boxScore ?? {
-    gameId: userGame.gameId,
+    gameId: gameId,
     date: new Date().toISOString().split('T')[0],
     week: week,
     homeTeam: {
-      id: userGame.homeTeamId,
+      id: homeTeamId,
       name: `${homeTeam.city} ${homeTeam.nickname}`,
       abbreviation: homeTeam.abbreviation,
-      score: userGame.homeScore!,
+      score: homeScore,
       scoreByQuarter: [],
     },
     awayTeam: {
-      id: userGame.awayTeamId,
+      id: awayTeamId,
       name: `${awayTeam.city} ${awayTeam.nickname}`,
       abbreviation: awayTeam.abbreviation,
-      score: userGame.awayScore!,
+      score: awayScore,
       scoreByQuarter: [],
     },
     scoringSummary: [],
@@ -6299,9 +6309,7 @@ export function PostGameSummaryScreenWrapper({
     rushingLeaders: [],
     receivingLeaders: [],
     defensiveLeaders: [],
-    teamComparison: [
-      { category: 'Final Score', home: userGame.homeScore!, away: userGame.awayScore! },
-    ],
+    teamComparison: [{ category: 'Final Score', home: homeScore, away: awayScore }],
     homePlayerStats: [],
     awayPlayerStats: [],
   };
@@ -6314,8 +6322,8 @@ export function PostGameSummaryScreenWrapper({
   return (
     <PostGameSummaryScreen
       isWin={isWin}
-      homeScore={userGame.homeScore!}
-      awayScore={userGame.awayScore!}
+      homeScore={homeScore}
+      awayScore={awayScore}
       homeTeam={{
         name: `${homeTeam.city} ${homeTeam.nickname}`,
         abbr: homeTeam.abbreviation,
