@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { ScreenHeader } from '../components';
-import { SeasonRecap } from '../core/offseason/OffSeasonPhaseManager';
+import { SeasonRecap, PlayerStatImprovement } from '../core/offseason/OffSeasonPhaseManager';
 
 interface SeasonRecapScreenProps {
   recap: SeasonRecap;
@@ -66,6 +66,8 @@ export function SeasonRecapScreen({
     draftPosition,
     topPerformers,
     awards,
+    seasonWriteUp,
+    playerImprovements,
   } = recap;
 
   const recordString = `${teamRecord.wins}-${teamRecord.losses}${teamRecord.ties > 0 ? `-${teamRecord.ties}` : ''}`;
@@ -229,7 +231,67 @@ export function SeasonRecapScreen({
           </View>
         )}
 
-        {/* Season Summary */}
+        {/* Season Write-Up */}
+        {seasonWriteUp && seasonWriteUp.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Season Summary</Text>
+            {seasonWriteUp.split('\n\n').map((paragraph, i) => (
+              <Text key={i} style={styles.writeUpParagraph}>
+                {paragraph}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        {/* Player Improvements & Rating Reveals */}
+        {playerImprovements && playerImprovements.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Roster Evaluation</Text>
+            <Text style={styles.sectionSubtitle}>
+              Stats, grades, and rating clarity based on playing time and tenure
+            </Text>
+            {playerImprovements
+              .filter((p: PlayerStatImprovement) => p.gamesPlayed > 0)
+              .slice(0, 15)
+              .map((p: PlayerStatImprovement) => (
+                <TouchableOpacity
+                  key={p.playerId}
+                  style={styles.improvementCard}
+                  onPress={() => onPlayerSelect?.(p.playerId)}
+                  disabled={!onPlayerSelect}
+                  accessibilityLabel={`View ${p.playerName} profile`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.improvementHeader}>
+                    <View style={styles.improvementNameRow}>
+                      <Text style={styles.improvementName}>{p.playerName}</Text>
+                      <Text style={styles.improvementPosition}>{p.position}</Text>
+                    </View>
+                    <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(p.grade) }]}>
+                      <Text style={styles.gradeText}>{p.grade}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.statLine}>{p.statLine}</Text>
+                  <View style={styles.improvementFooter}>
+                    <Text style={styles.gamesText}>
+                      {p.gamesStarted} GS / {p.gamesPlayed} GP
+                    </Text>
+                    {p.totalSkillsNarrowed > 0 && (
+                      <View style={[styles.revealBadge, p.hadFullReveal && styles.fullRevealBadge]}>
+                        <Text style={[styles.revealText, p.hadFullReveal && styles.fullRevealText]}>
+                          {p.hadFullReveal
+                            ? 'Fully Scouted'
+                            : `${p.totalSkillsNarrowed} skill${p.totalSkillsNarrowed !== 1 ? 's' : ''} clarified`}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+          </View>
+        )}
+
+        {/* Looking Ahead */}
         <View style={styles.summarySection}>
           <Text style={styles.summaryTitle}>Looking Ahead</Text>
           <Text style={styles.summaryText}>
@@ -461,6 +523,76 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textLight,
     marginTop: spacing.xs,
+  },
+  writeUpParagraph: {
+    fontSize: fontSize.md,
+    color: colors.text,
+    lineHeight: 24,
+    marginBottom: spacing.md,
+  },
+  sectionSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  improvementCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  improvementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  improvementNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  improvementName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    marginRight: spacing.sm,
+  },
+  improvementPosition: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  statLine: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  improvementFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gamesText: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+  },
+  revealBadge: {
+    backgroundColor: colors.info + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  fullRevealBadge: {
+    backgroundColor: colors.success + '20',
+  },
+  revealText: {
+    fontSize: fontSize.xs,
+    color: colors.info,
+    fontWeight: fontWeight.semibold,
+  },
+  fullRevealText: {
+    color: colors.success,
   },
   summarySection: {
     padding: spacing.lg,

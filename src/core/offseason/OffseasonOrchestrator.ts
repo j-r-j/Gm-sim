@@ -41,6 +41,12 @@ import {
   generatePreseasonEvaluations,
   generateSeasonStartData,
 } from './bridges/PhaseGenerators';
+import {
+  processSeasonEndWithReveals,
+  calculatePlayerGrade,
+  type PlayerSeasonGrade,
+  type AwardWinner as SeasonEndAward,
+} from './phases/SeasonEndPhase';
 
 /**
  * Result of entering or processing a phase
@@ -120,6 +126,28 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
         const awards = generateSeasonAwards(newGameState);
         newOffseasonData.awards = awards;
         changes.push(`Generated ${awards.length} season awards`);
+      }
+
+      // Process season-end reveals and write-up for user's team
+      const userTeam = newGameState.teams[newGameState.userTeamId];
+      if (userTeam && !newOffseasonState.seasonRecap) {
+        const seasonEndResult = buildSeasonEndRecap(
+          newOffseasonState,
+          newGameState,
+          userTeam,
+          newOffseasonData
+        );
+        newOffseasonState = seasonEndResult.offseasonState;
+        // Write updated players (with narrowed perceived ranges) back to GameState
+        const updatedPlayers = { ...newGameState.players };
+        for (const player of seasonEndResult.updatedPlayers) {
+          updatedPlayers[player.id] = player;
+        }
+        newGameState = { ...newGameState, players: updatedPlayers };
+        changes.push('Generated season write-up and player rating reveals');
+        changes.push(
+          `Narrowed skill ranges for ${seasonEndResult.updatedPlayers.length} players based on tenure and playing time`
+        );
       }
       break;
     }
@@ -710,6 +738,169 @@ function calculateDraftOrder(gameState: GameState): string[] {
   });
 
   return sortedTeams.map((t) => t.id);
+}
+
+// =============================================================================
+// Season End Helpers
+// =============================================================================
+
+/**
+ * Builds the full season-end recap with write-up, stat improvements, and rating reveals.
+ * Calculates player tenure, grades, and feeds them into processSeasonEndWithReveals.
+ */
+function buildSeasonEndRecap(
+  offseasonState: OffSeasonState,
+  gameState: GameState,
+  userTeam: GameState['teams'][string],
+  offseasonData: OffseasonPersistentData
+): { offseasonState: OffSeasonState; updatedPlayers: GameState['players'][string][] } {
+  const teamName = `${userTeam.city} ${userTeam.nickname}`;
+  const teamRecord = userTeam.currentRecord;
+
+  // Calculate division finish
+  const confKey = userTeam.conference.toLowerCase() as 'afc' | 'nfc';
+  const divKey = userTeam.division.toLowerCase() as 'north' | 'south' | 'east' | 'west';
+  const divisionTeamIds = gameState.league.standings[confKey]?.[divKey] || [];
+  const divisionTeams = divisionTeamIds
+    .map((teamId: string) => gameState.teams[teamId])
+    .filter(Boolean)
+    .sort((a, b) => {
+      const total = (t: typeof a) =>
+        Math.max(1, t.currentRecord.wins + t.currentRecord.losses + t.currentRecord.ties);
+      return b.currentRecord.wins / total(b) - a.currentRecord.wins / total(a);
+    });
+  const divisionFinish = divisionTeams.findIndex((t) => t.id === userTeam.id) + 1 || 4;
+
+  // Determine playoff status
+  const madePlayoffs = teamRecord.wins >= 10;
+  const playoffResult = gameState.league.playoffBracket
+    ? getPlayoffResultFromBracket(gameState, userTeam.id)
+    : null;
+
+  // Draft position
+  const draftPosition =
+    offseasonData.draftOrder.indexOf(userTeam.id) + 1 || calculateDraftPosition(gameState);
+
+  // Gather roster players
+  const rosterPlayers = userTeam.rosterPlayerIds.map((id) => gameState.players[id]).filter(Boolean);
+
+  // Season stats (if available)
+  const seasonStats = gameState.seasonStats || {};
+
+  // Calculate player tenures (approximate from experience - most players stay with drafting team)
+  const currentYear = gameState.league.calendar.currentYear;
+  const playerTenures: Record<string, number> = {};
+  for (const player of rosterPlayers) {
+    // Use years since draft as a reasonable proxy for tenure
+    playerTenures[player.id] = Math.max(1, currentYear - player.draftYear);
+  }
+
+  // Generate player grades from available stats or perceived ratings
+  const playerGrades: PlayerSeasonGrade[] = rosterPlayers.map((player) => {
+    const stats = seasonStats[player.id];
+    const gamesPlayed = stats?.gamesPlayed ?? 0;
+    const gamesStarted = stats?.gamesStarted ?? 0;
+    // Estimate performance from perceived skill average
+    const skills = Object.values(player.skills);
+    const avgPerceived =
+      skills.length > 0
+        ? skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) / skills.length
+        : 50;
+    const grade = calculatePlayerGrade(gamesPlayed, gamesStarted, avgPerceived);
+
+    return {
+      playerId: player.id,
+      playerName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      overallGrade: grade,
+      categories: { production: grade, consistency: grade, impact: grade },
+      highlights: [],
+      concerns: [],
+    };
+  });
+
+  // Convert persistent awards to SeasonEndPhase AwardWinner format
+  const awards: SeasonEndAward[] = (offseasonData.awards || []).map((a) => ({
+    award: a.award as SeasonEndAward['award'],
+    playerId: a.playerId,
+    playerName: a.playerName,
+    teamId: a.teamId,
+    teamName: a.teamName,
+    stats: '',
+  }));
+
+  return processSeasonEndWithReveals(
+    offseasonState,
+    userTeam.id,
+    teamName,
+    { wins: teamRecord.wins, losses: teamRecord.losses, ties: teamRecord.ties },
+    divisionFinish,
+    madePlayoffs,
+    playoffResult,
+    draftPosition,
+    rosterPlayers,
+    seasonStats,
+    playerTenures,
+    playerGrades,
+    awards,
+    offseasonData.draftOrder
+  );
+}
+
+/**
+ * Extracts playoff result from bracket (simplified)
+ */
+function getPlayoffResultFromBracket(gameState: GameState, teamId: string): string | null {
+  const bracket = gameState.league.playoffBracket;
+  if (!bracket) return null;
+
+  // Check if team was in the bracket at all
+  const allGames = [
+    ...(bracket.wildCardResults || []),
+    ...(bracket.divisionalResults || []),
+    ...(bracket.conferenceResults || []),
+    ...(bracket.superBowl ? [bracket.superBowl] : []),
+  ];
+
+  const teamGames = allGames.filter(
+    (g) => g && (g.homeTeamId === teamId || g.awayTeamId === teamId)
+  );
+
+  if (teamGames.length === 0) return null;
+
+  // Check for super bowl winner
+  if (bracket.superBowl?.winnerId === teamId) return 'Super Bowl Champions';
+  if (
+    bracket.superBowl &&
+    (bracket.superBowl.homeTeamId === teamId || bracket.superBowl.awayTeamId === teamId)
+  ) {
+    return 'Super Bowl Runner-Up';
+  }
+
+  // Check conference championship
+  const confGames = bracket.conferenceResults || [];
+  const inConf = confGames.some((g) => g && (g.homeTeamId === teamId || g.awayTeamId === teamId));
+  if (inConf) return 'Lost in Conference Championship';
+
+  // Check divisional
+  const divGames = bracket.divisionalResults || [];
+  const inDiv = divGames.some((g) => g && (g.homeTeamId === teamId || g.awayTeamId === teamId));
+  if (inDiv) return 'Lost in Divisional Round';
+
+  return 'Lost in Wild Card Round';
+}
+
+/**
+ * Simple draft position calculation fallback
+ */
+function calculateDraftPosition(gameState: GameState): number {
+  const allTeams = Object.values(gameState.teams);
+  const sorted = [...allTeams].sort((a, b) => {
+    const total = (t: typeof a) =>
+      Math.max(1, t.currentRecord.wins + t.currentRecord.losses + t.currentRecord.ties);
+    return a.currentRecord.wins / total(a) - b.currentRecord.wins / total(b);
+  });
+  return sorted.findIndex((t) => t.id === gameState.userTeamId) + 1 || 16;
 }
 
 // =============================================================================
