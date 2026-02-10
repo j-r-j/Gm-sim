@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { ScreenHeader } from '../components';
 import { SeasonRecap } from '../core/offseason/OffSeasonPhaseManager';
 
 interface SeasonRecapScreenProps {
@@ -77,16 +78,12 @@ export function SeasonRecapScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{year} Season Recap</Text>
-          <Text style={styles.headerSubtitle}>{teamName}</Text>
-        </View>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader
+        title={`${year} Season Recap`}
+        subtitle={teamName}
+        onBack={onBack}
+        testID="season-recap-header"
+      />
 
       <ScrollView style={styles.content}>
         {/* Record Card */}

@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
@@ -448,13 +449,7 @@ export function RFAScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>RFA Management</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="RFA Management" onBack={onBack} testID="rfa-header" />
 
       {/* Salary Cap Info */}
       <View style={styles.capInfo}>
@@ -463,12 +458,16 @@ export function RFAScreen({
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
+      <View style={styles.tabContainer} accessibilityRole="tablist">
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label}${tab.count > 0 ? `, ${tab.count} items` : ''}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}

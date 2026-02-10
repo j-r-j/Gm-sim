@@ -111,7 +111,11 @@ export function Scoreboard({
   const tied = homeScore === awayScore;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessibilityLabel={`${awayTeamName} ${awayScore}, ${homeTeamName} ${homeScore}. ${isGameOver ? 'Final' : `${formatQuarter(quarter)}, ${formatTime(timeRemaining)} remaining`}. ${possession === 'home' ? homeTeamName : possession === 'away' ? awayTeamName : 'No team'} has the ball`}
+      accessibilityRole="summary"
+    >
       {/* Clock Section */}
       <View style={styles.clockSection}>
         <View style={styles.quarterContainer}>

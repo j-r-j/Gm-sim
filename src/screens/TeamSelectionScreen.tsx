@@ -16,6 +16,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { ScreenHeader } from '../components';
 import {
   FAKE_CITIES,
   FakeCity,
@@ -141,13 +142,7 @@ export function TeamSelectionScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Your Team</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Select Your Team" onBack={onBack} testID="team-selection-header" />
 
       {/* View Mode Toggle */}
       <View style={styles.viewModeContainer}>

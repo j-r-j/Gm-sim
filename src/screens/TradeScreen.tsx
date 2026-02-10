@@ -15,8 +15,17 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { Player } from '../core/models/player/Player';
+import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
 import { Team } from '../core/models/team/Team';
 import { DraftPick } from '../core/models/league/DraftPick';
@@ -106,6 +115,9 @@ function TeamSelector({
         <TouchableOpacity
           style={[styles.teamChip, selectedTeamId === item.id && styles.teamChipActive]}
           onPress={() => onSelect(item.id)}
+          accessibilityLabel={`Trade with ${item.city} ${item.nickname}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text
             style={[styles.teamChipText, selectedTeamId === item.id && styles.teamChipTextActive]}
@@ -142,7 +154,13 @@ function AssetCard({ asset, onRemove }: { asset: TradeAsset; onRemove: () => voi
           </>
         )}
       </View>
-      <TouchableOpacity style={styles.removeButton} onPress={onRemove}>
+      <TouchableOpacity
+        style={styles.removeButton}
+        onPress={onRemove}
+        accessibilityLabel={`Remove ${asset.type === 'player' ? asset.playerName : `Round ${asset.round} ${asset.year} pick`} from trade`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <Text style={styles.removeButtonText}>×</Text>
       </TouchableOpacity>
     </View>
@@ -319,18 +337,14 @@ export function TradeScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Trade Center</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Trade Center" onBack={onBack} />
 
       <ScrollView style={styles.content}>
         {/* Team Selector */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Trade Partner</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Select Trade Partner
+          </Text>
           <TeamSelector
             teams={teams}
             selectedTeamId={tradePartner}
@@ -344,10 +358,15 @@ export function TradeScreen({
             {/* Your Offer */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>You Offer</Text>
+                <Text style={styles.sectionTitle} accessibilityRole="header">
+                  You Offer
+                </Text>
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => setShowAssetPicker('offer')}
+                  accessibilityLabel="Add asset to your offer"
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={styles.addButtonText}>+ Add</Text>
                 </TouchableOpacity>
@@ -368,10 +387,15 @@ export function TradeScreen({
             {/* You Request */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>You Request</Text>
+                <Text style={styles.sectionTitle} accessibilityRole="header">
+                  You Request
+                </Text>
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={() => setShowAssetPicker('request')}
+                  accessibilityLabel="Add asset to your request"
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={styles.addButtonText}>+ Add</Text>
                 </TouchableOpacity>
@@ -403,6 +427,8 @@ export function TradeScreen({
               ]}
               onPress={handleSubmitTrade}
               disabled={assetsOffered.length === 0 || assetsRequested.length === 0}
+              accessibilityLabel="Propose trade"
+              accessibilityRole="button"
             >
               <Text style={styles.submitButtonText}>Propose Trade</Text>
             </TouchableOpacity>
@@ -415,17 +441,24 @@ export function TradeScreen({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={styles.modalTitle} accessibilityRole="header">
                 {showAssetPicker === 'offer' ? 'Add to Your Offer' : 'Request from Partner'}
               </Text>
-              <TouchableOpacity onPress={() => setShowAssetPicker(null)}>
+              <TouchableOpacity
+                onPress={() => setShowAssetPicker(null)}
+                accessibilityLabel="Close asset picker"
+                accessibilityRole="button"
+                hitSlop={accessibility.hitSlop}
+              >
                 <Text style={styles.closeButton}>×</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.assetList}>
               {/* Players */}
-              <Text style={styles.assetGroupTitle}>Players</Text>
+              <Text style={styles.assetGroupTitle} accessibilityRole="header">
+                Players
+              </Text>
               {(showAssetPicker === 'offer' ? userPlayers : partnerPlayers).map((player) => (
                 <TouchableOpacity
                   key={player.id}
@@ -444,6 +477,8 @@ export function TradeScreen({
                       addToRequest(asset);
                     }
                   }}
+                  accessibilityLabel={`Select ${player.firstName} ${player.lastName}, ${player.position}`}
+                  accessibilityRole="button"
                 >
                   <Avatar id={player.id} size="xs" age={player.age} context="player" />
                   <Text style={styles.assetListPosition}>{player.position}</Text>
@@ -454,7 +489,9 @@ export function TradeScreen({
               ))}
 
               {/* Draft Picks */}
-              <Text style={styles.assetGroupTitle}>Draft Picks</Text>
+              <Text style={styles.assetGroupTitle} accessibilityRole="header">
+                Draft Picks
+              </Text>
               {(showAssetPicker === 'offer' ? userPicks : partnerPicks).map((pick) => (
                 <TouchableOpacity
                   key={pick.id}
@@ -473,6 +510,8 @@ export function TradeScreen({
                       addToRequest(asset);
                     }
                   }}
+                  accessibilityLabel={`Select ${pick.year} Round ${pick.round} Pick number ${pick.overallPick}`}
+                  accessibilityRole="button"
                 >
                   <Text style={styles.assetListPosition}>Rd {pick.round}</Text>
                   <Text style={styles.assetListName}>
@@ -492,28 +531,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.primary,
-  },
-  backButton: {
-    padding: spacing.sm,
-  },
-  backButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textOnPrimary,
-  },
-  placeholder: {
-    width: 60,
   },
   content: {
     flex: 1,

@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { ScreenHeader } from '../components';
 import {
   OTAReport,
   OTASummary,
@@ -474,13 +475,7 @@ export function OTAsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>OTAs</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="OTAs" onBack={onBack} testID="otas-header" />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../../styles';
 import { Position } from '../../core/models/player/Position';
 import { Avatar } from '../avatar';
 
@@ -85,6 +85,7 @@ export function ProspectListItem({
   onToggleFlag,
 }: ProspectListItemProps): React.JSX.Element {
   const roundColor = getRoundColor(projectedRound);
+  const projection = formatProjection(projectedRound, projectedPickRange);
 
   return (
     <TouchableOpacity
@@ -92,6 +93,11 @@ export function ProspectListItem({
       onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${overallRank ? `#${overallRank} ` : ''}${name}, ${position}, ${collegeName}, Projected ${projection}${flagged ? ', Flagged' : ''}${isSelected ? ', Selected' : ''}`}
+      accessibilityRole="button"
+      accessibilityHint="Tap for details, long press to compare"
+      accessibilityState={{ selected: isSelected }}
+      hitSlop={accessibility.hitSlop}
     >
       {/* Avatar */}
       <Avatar id={id} size="xs" context="prospect" accentColor={colors.info} />

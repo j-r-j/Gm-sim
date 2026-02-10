@@ -13,7 +13,15 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { BoxScore } from '../core/game/BoxScoreGenerator';
 
 export interface BoxScoreModalProps {
@@ -106,7 +114,9 @@ function StatLine({
 function SectionHeader({ title }: { title: string }): React.JSX.Element {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">
+        {title}
+      </Text>
     </View>
   );
 }
@@ -119,10 +129,18 @@ export function BoxScoreModal({
   if (!boxScore) {
     return (
       <Modal visible={visible} animationType="slide" transparent={false}>
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} accessibilityLabel="Box score modal">
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Box Score</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Text style={styles.headerTitle} accessibilityRole="header">
+              Box Score
+            </Text>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityLabel="Close box score"
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -139,11 +157,19 @@ export function BoxScoreModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} accessibilityLabel="Box score modal">
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Box Score</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Text style={styles.headerTitle} accessibilityRole="header">
+            Box Score
+          </Text>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            accessibilityLabel="Close box score"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>

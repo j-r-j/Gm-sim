@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { Coach, getCoachFullName, getCareerWinningPercentage } from '../core/models/staff/Coach';
+import { ScreenHeader } from '../components';
 import { CoachPersonalityBadge } from '../components/coach/CoachPersonalityBadge';
 import { CoachAttributesDisplay } from '../components/coach/CoachAttributesDisplay';
 import { CoachContractInfo } from '../components/coach/CoachContractInfo';
@@ -196,13 +197,7 @@ export function CoachProfileScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Coach Profile</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Coach Profile" onBack={onBack} testID="coach-profile-header" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Basic Info Section */}

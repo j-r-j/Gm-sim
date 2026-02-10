@@ -5,9 +5,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Avatar } from '../components/avatar';
+import { ScreenHeader } from '../components';
 import { Player } from '../core/models/player/Player';
 import {
   PlayerContract,
@@ -81,7 +82,9 @@ function CapOverview({ capStatus }: { capStatus: CapStatus }): React.JSX.Element
 
   return (
     <View style={styles.capOverview}>
-      <Text style={styles.sectionTitle}>Salary Cap Overview</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">
+        Salary Cap Overview
+      </Text>
 
       {/* Cap Bar */}
       <View style={styles.capBarContainer}>
@@ -173,7 +176,13 @@ function ContractItem({
   const deadMoney = calculateDeadMoney(contract, currentYear);
 
   return (
-    <TouchableOpacity style={styles.contractItem} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.contractItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`${contract.playerName}, ${contract.position}, ${getContractTypeLabel(contract.type)} contract`}
+      accessibilityRole="button"
+    >
       <View style={styles.contractHeader}>
         <Avatar id={contract.playerId} size="sm" context="player" />
         <View style={styles.contractPlayerInfo}>
@@ -228,6 +237,9 @@ function ContractItem({
           e.stopPropagation();
           onCutPress();
         }}
+        accessibilityLabel={`Cut analysis for ${contract.playerName}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
       >
         <Text style={styles.cutButtonText}>Cut Analysis</Text>
       </TouchableOpacity>
@@ -273,6 +285,9 @@ function ContractControls({
               key={option.value}
               style={[styles.controlButton, sortBy === option.value && styles.controlButtonActive]}
               onPress={() => onSortChange(option.value)}
+              accessibilityLabel={`Sort by ${option.label}${sortBy === option.value ? ', selected' : ''}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -298,6 +313,9 @@ function ContractControls({
                 filterBy === option.value && styles.controlButtonActive,
               ]}
               onPress={() => onFilterChange(option.value)}
+              accessibilityLabel={`Filter by ${option.label}${filterBy === option.value ? ', selected' : ''}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -381,13 +399,7 @@ export function ContractManagementScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Contract Management</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Contract Management" onBack={onBack} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Cap Overview */}

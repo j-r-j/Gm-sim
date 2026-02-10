@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenHeader } from '../components';
 import {
   colors,
   spacing,
@@ -48,14 +49,7 @@ export function StartSitScreen({
   if (state.decisions.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Ionicons name="chevron-back" size={24} color={colors.textOnPrimary} />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Injury Decisions</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader title="Injury Decisions" onBack={onBack} testID="start-sit-empty-header" />
         <View style={styles.emptyState}>
           <Ionicons name="medkit" size={48} color={colors.success} />
           <Text style={styles.emptyTitle}>All Clear</Text>
@@ -72,20 +66,7 @@ export function StartSitScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={accessibility.hitSlop}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textOnPrimary} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Start / Sit</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Start / Sit" onBack={onBack} testID="start-sit-header" />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Text style={styles.instructions}>

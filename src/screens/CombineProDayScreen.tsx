@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { Prospect } from '../core/draft/Prospect';
 import {
@@ -601,14 +602,7 @@ export function CombineProDayScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'< Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Combine & Pro Day</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Combine & Pro Day" onBack={onBack} testID="combine-pro-day-header" />
 
       {/* Summary Bar */}
       {combineSummary && (

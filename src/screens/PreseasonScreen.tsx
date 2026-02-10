@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { ScreenHeader } from '../components';
 import {
   PreseasonSummary,
   PreseasonGame,
@@ -419,13 +420,7 @@ export function PreseasonScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Preseason</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Preseason" onBack={onBack} testID="preseason-header" />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

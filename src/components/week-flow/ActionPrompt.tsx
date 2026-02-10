@@ -6,7 +6,15 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../../styles';
 import { NextActionPrompt } from '../../core/simulation/WeekFlowState';
 
 export interface ActionPromptProps {
@@ -116,8 +124,12 @@ export function ActionPrompt({
         onPress={onPress}
         activeOpacity={0.8}
         disabled={!prompt.isEnabled}
+        accessibilityLabel={`${prompt.actionText}. ${prompt.isEnabled ? prompt.contextText : prompt.disabledReason || prompt.contextText}`}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !prompt.isEnabled }}
+        hitSlop={accessibility.hitSlop}
       >
-        <View style={styles.iconContainer}>
+        <View style={styles.iconContainer} accessibilityLabel="Action icon" accessible={false}>
           <Text style={styles.icon}>{actionColors.icon}</Text>
         </View>
 
@@ -129,6 +141,7 @@ export function ActionPrompt({
               !prompt.isEnabled && styles.textDisabled,
             ]}
             numberOfLines={1}
+            accessibilityLabel={`Action: ${prompt.actionText}`}
           >
             {prompt.actionText}
           </Text>
@@ -139,13 +152,16 @@ export function ActionPrompt({
               !prompt.isEnabled && styles.textDisabled,
             ]}
             numberOfLines={1}
+            accessibilityLabel={`Status: ${prompt.isEnabled ? prompt.contextText : prompt.disabledReason || prompt.contextText}`}
           >
             {prompt.isEnabled ? prompt.contextText : prompt.disabledReason || prompt.contextText}
           </Text>
         </View>
 
-        <View style={styles.arrowContainer}>
-          <Text style={[styles.arrow, { color: actionColors.text }]}>→</Text>
+        <View style={styles.arrowContainer} accessible={false}>
+          <Text style={[styles.arrow, { color: actionColors.text }]} accessibilityLabel="">
+            →
+          </Text>
         </View>
       </TouchableOpacity>
     </Animated.View>

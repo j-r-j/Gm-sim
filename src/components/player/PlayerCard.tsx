@@ -20,6 +20,7 @@ import {
   borderRadius,
   shadows,
   getRatingTierColor,
+  accessibility,
 } from '../../styles';
 import { Position } from '../../core/models/player/Position';
 import { TechnicalSkills, SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
@@ -281,6 +282,8 @@ export function PlayerCard({
   // Determine if this is an elite player for special styling
   const isElite = skillSummary && skillSummary.midpoint >= 90;
 
+  const cardAccessLabel = `${firstName} ${lastName}, ${position}${collegeName ? `, ${collegeName}` : ''}${experience !== undefined ? `, ${experience} years experience` : ''}, Age ${age}${tierInfo ? `, ${tierInfo.tier} tier` : ''}${flagged ? ', Flagged' : ''}${selected ? ', Selected' : ''}`;
+
   return (
     <TouchableOpacity
       style={[
@@ -292,6 +295,11 @@ export function PlayerCard({
       onPress={handlePress}
       onLongPress={handleLongPress}
       activeOpacity={0.7}
+      accessibilityLabel={cardAccessLabel}
+      accessibilityRole="button"
+      accessibilityHint={onLongPress ? 'Long press to select for comparison' : undefined}
+      accessibilityState={{ selected }}
+      hitSlop={accessibility.hitSlop}
     >
       {/* Tier accent border */}
       <View style={[styles.tierAccent, tierInfo && { backgroundColor: tierInfo.primary }]} />

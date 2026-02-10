@@ -59,7 +59,11 @@ export function DraftPickCard({
   originalTeamAbbr,
 }: DraftPickCardProps): React.JSX.Element {
   return (
-    <View style={[styles.container, isUserPick && styles.containerUserPick]}>
+    <View
+      style={[styles.container, isUserPick && styles.containerUserPick]}
+      accessibilityLabel={`${getRoundSuffix(round)} Round, Pick #${pickNumber}. ${teamName} is on the clock${isUserPick ? '. This is your pick' : ''}${isBeingTraded ? '. Trade in progress' : ''}${timeRemaining ? `. ${formatTime(timeRemaining)} remaining` : ''}`}
+      accessibilityRole="summary"
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.roundText}>{getRoundSuffix(round)} Round</Text>

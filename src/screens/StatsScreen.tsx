@@ -14,7 +14,16 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
@@ -352,6 +361,9 @@ function TabButton({ label, isActive, onPress }: TabButtonProps): React.JSX.Elem
       style={[styles.tabButton, isActive && styles.tabButtonActive]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${label} tab`}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
     >
       <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>{label}</Text>
     </TouchableOpacity>
@@ -370,6 +382,10 @@ function FilterChip({ label, isActive, onPress }: FilterChipProps): React.JSX.El
       style={[styles.filterChip, isActive && styles.filterChipActive]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${label} filter`}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
+      hitSlop={accessibility.hitSlop}
     >
       <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>{label}</Text>
     </TouchableOpacity>
@@ -402,6 +418,8 @@ function LeaderCard({
       style={[styles.leaderCard, isUserTeam && styles.leaderCardHighlight]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={`Rank ${rank}, ${playerName}, ${teamAbbr} ${position}, ${value} ${statLabel}`}
+      accessibilityRole="button"
     >
       <View style={styles.leaderRank}>
         <Text style={[styles.leaderRankText, rank <= 3 && styles.leaderRankTop]}>{rank}</Text>
@@ -572,6 +590,7 @@ function LeagueLeadersView({
         showsHorizontalScrollIndicator={false}
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryScrollContent}
+        accessibilityRole="tablist"
       >
         {(['passing', 'rushing', 'receiving', 'defense', 'kicking'] as const).map((cat) => (
           <FilterChip
@@ -589,6 +608,7 @@ function LeagueLeadersView({
         showsHorizontalScrollIndicator={false}
         style={styles.statTypeScroll}
         contentContainerStyle={styles.statTypeScrollContent}
+        accessibilityRole="tablist"
       >
         {categories.map((cat) => (
           <FilterChip
@@ -680,10 +700,13 @@ function TeamStatsView({
   return (
     <View style={styles.viewContainer}>
       {/* Offense/Defense toggle */}
-      <View style={styles.toggleContainer}>
+      <View style={styles.toggleContainer} accessibilityRole="tablist">
         <TouchableOpacity
           style={[styles.toggleButton, statType === 'offense' && styles.toggleButtonActive]}
           onPress={() => setStatType('offense')}
+          accessibilityLabel="Offense stats"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: statType === 'offense' }}
         >
           <Text style={[styles.toggleText, statType === 'offense' && styles.toggleTextActive]}>
             Offense
@@ -692,6 +715,9 @@ function TeamStatsView({
         <TouchableOpacity
           style={[styles.toggleButton, statType === 'defense' && styles.toggleButtonActive]}
           onPress={() => setStatType('defense')}
+          accessibilityLabel="Defense stats"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: statType === 'defense' }}
         >
           <Text style={[styles.toggleText, statType === 'defense' && styles.toggleTextActive]}>
             Defense
@@ -874,6 +900,7 @@ function PlayerStatsView({
         showsHorizontalScrollIndicator={false}
         style={styles.categoryScroll}
         contentContainerStyle={styles.categoryScrollContent}
+        accessibilityRole="tablist"
       >
         {positionGroups.map((pg) => (
           <FilterChip
@@ -886,13 +913,19 @@ function PlayerStatsView({
       </ScrollView>
 
       {/* Sort options */}
-      <View style={styles.sortContainer}>
-        <Text style={styles.sortLabel}>Sort by:</Text>
+      <View style={styles.sortContainer} accessibilityRole="tablist">
+        <Text style={styles.sortLabel} accessibilityRole="header">
+          Sort by:
+        </Text>
         {(['games', 'name', 'team'] as const).map((sort) => (
           <TouchableOpacity
             key={sort}
             style={[styles.sortOption, sortBy === sort && styles.sortOptionActive]}
             onPress={() => setSortBy(sort)}
+            accessibilityLabel={`Sort by ${sort}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: sortBy === sort }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.sortOptionText, sortBy === sort && styles.sortOptionTextActive]}>
               {sort.charAt(0).toUpperCase() + sort.slice(1)}
@@ -915,6 +948,8 @@ function PlayerStatsView({
               ]}
               onPress={() => onPlayerSelect?.(item.player.id)}
               activeOpacity={0.7}
+              accessibilityLabel={`${item.player.firstName} ${item.player.lastName}, ${team?.abbreviation || 'FA'} ${item.player.position}`}
+              accessibilityRole="button"
             >
               <View style={styles.playerInfo}>
                 <Text style={styles.playerName}>
@@ -978,16 +1013,10 @@ export function StatsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>League Stats</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="League Stats" onBack={onBack} />
 
       {/* Tab Bar */}
-      <View style={styles.tabBar}>
+      <View style={styles.tabBar} accessibilityRole="tablist">
         <TabButton
           label="Leaders"
           isActive={activeTab === 'leaders'}
@@ -1011,6 +1040,7 @@ export function StatsScreen({
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScrollContent}
+          accessibilityRole="tablist"
         >
           <FilterChip
             label="League"
@@ -1044,6 +1074,7 @@ export function StatsScreen({
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterScrollContent}
+            accessibilityRole="tablist"
           >
             {conferences.map((conf) => (
               <FilterChip

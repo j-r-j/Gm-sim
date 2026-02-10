@@ -5,7 +5,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 
 /**
  * News item data
@@ -84,6 +85,9 @@ function NewsCard({ item, onPress }: { item: NewsItem; onPress?: () => void }) {
         onPress?.();
       }}
       activeOpacity={0.7}
+      accessibilityLabel={`${item.priority === 'breaking' ? 'Breaking: ' : ''}${CATEGORY_LABELS[item.category]} news: ${item.headline}. ${item.summary}${!item.isRead ? '. Unread' : ''}`}
+      accessibilityRole="button"
+      accessibilityHint={expanded ? 'Tap to collapse story' : 'Tap to expand and read full story'}
     >
       <View style={styles.cardHeader}>
         <View style={[styles.categoryBadge, { backgroundColor: CATEGORY_COLORS[item.category] }]}>
@@ -116,7 +120,9 @@ function EmptyState() {
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyIcon}>📰</Text>
-      <Text style={styles.emptyTitle}>No News Yet</Text>
+      <Text style={styles.emptyTitle} accessibilityRole="header">
+        No News Yet
+      </Text>
       <Text style={styles.emptyText}>News will appear here as the season progresses.</Text>
     </View>
   );
@@ -168,26 +174,20 @@ export function NewsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>News</Text>
-          {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-            </View>
-          )}
-        </View>
-        {onRumorMill ? (
-          <TouchableOpacity onPress={onRumorMill} style={styles.rumorsButton}>
-            <Text style={styles.rumorsText}>Rumors</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
-        )}
-      </View>
+      <ScreenHeader
+        title="News"
+        onBack={onBack}
+        subtitle={unreadCount > 0 ? `${unreadCount} unread` : undefined}
+        rightAction={
+          onRumorMill
+            ? {
+                icon: 'megaphone-outline',
+                onPress: onRumorMill,
+                accessibilityLabel: 'View rumor mill',
+              }
+            : undefined
+        }
+      />
 
       {/* Filter Tabs */}
       <View style={styles.filterContainer}>
@@ -199,6 +199,9 @@ export function NewsScreen({
             <TouchableOpacity
               style={[styles.filterButton, filter === item && styles.filterActive]}
               onPress={() => setFilter(item)}
+              accessibilityLabel={`Filter by ${CATEGORY_LABELS[item]}${filter === item ? ', currently selected' : ''}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
             >
               <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>
                 {CATEGORY_LABELS[item]}
@@ -230,56 +233,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-  },
-  unreadBadge: {
-    backgroundColor: colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.xs,
-  },
-  unreadBadgeText: {
-    color: colors.background,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-  },
-  placeholder: {
-    width: 60,
-  },
-  rumorsButton: {
-    padding: spacing.xs,
-  },
-  rumorsText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
   },
   filterContainer: {
     borderBottomWidth: 1,

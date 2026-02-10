@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
 import { GameState } from '../core/models/game/GameState';
+import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import {
@@ -231,13 +232,7 @@ export function BigBoardScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Big Board</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Big Board" onBack={onBack} testID="big-board-header" />
 
       {/* Summary Stats */}
       <View style={styles.summaryContainer}>

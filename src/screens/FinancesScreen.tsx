@@ -5,7 +5,8 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
 
@@ -88,7 +89,14 @@ function CapBar({ used, total, deadMoney }: { used: number; total: number; deadM
  */
 function ContractRow({ contract, onPress }: { contract: ContractSummary; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.contractRow} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.contractRow}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`${contract.playerName}, ${contract.position}, cap hit ${formatCurrency(contract.capHit)}, ${contract.yearsRemaining} year${contract.yearsRemaining !== 1 ? 's' : ''} remaining`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.contractInfo}>
         <Text style={styles.playerName}>{contract.playerName}</Text>
         <Text style={styles.playerPosition}>{contract.position}</Text>
@@ -163,13 +171,7 @@ export function FinancesScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Finances</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Finances" onBack={onBack} />
 
       <FlatList
         ListHeaderComponent={
@@ -177,7 +179,9 @@ export function FinancesScreen({
             {/* Cap Overview */}
             <View style={styles.capOverview}>
               <View style={styles.capHeader}>
-                <Text style={styles.capTitle}>Salary Cap</Text>
+                <Text style={styles.capTitle} accessibilityRole="header">
+                  Salary Cap
+                </Text>
                 <Text style={styles.capTotal}>{formatCurrency(salaryCap)}</Text>
               </View>
               <CapBar
@@ -202,7 +206,9 @@ export function FinancesScreen({
 
             {/* Position Breakdown */}
             <View style={styles.breakdownSection}>
-              <Text style={styles.sectionTitle}>By Position Group</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                By Position Group
+              </Text>
               {positionBreakdown.map(({ group, amount }) => (
                 <View key={group} style={styles.breakdownRow}>
                   <Text style={styles.breakdownLabel}>{group}</Text>
@@ -212,7 +218,9 @@ export function FinancesScreen({
             </View>
 
             {/* Contracts Header */}
-            <Text style={styles.sectionTitle}>Contracts ({financials.contracts.length})</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Contracts ({financials.contracts.length})
+            </Text>
           </>
         }
         data={financials.contracts}
@@ -258,30 +266,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-  },
-  placeholder: {
-    width: 60,
   },
   listContent: {
     padding: spacing.md,

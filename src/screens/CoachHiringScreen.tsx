@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { ScreenHeader } from '../components';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { Avatar } from '../components/avatar';
 import { HiringCandidate, CandidateTag } from '../core/coaching/NewGameCandidateGenerator';
@@ -317,14 +318,7 @@ export function CoachHiringScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{'< Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Hire Coach</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Hire Coach" onBack={onBack} testID="coach-hiring-header" />
 
       {/* Position Info */}
       <View style={styles.positionBanner}>
