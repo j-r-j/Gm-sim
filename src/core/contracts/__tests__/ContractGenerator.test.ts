@@ -10,6 +10,7 @@ import {
   calculateContractValue,
   generatePlayerContract,
   generateRosterContracts,
+  generateInitialRosterContracts,
   calculateTotalCapUsage,
   calculateFutureCommitments,
   getTeamContracts,
@@ -399,6 +400,220 @@ describe('ContractGenerator', () => {
 
       // Elite players should have higher percentage of their money guaranteed
       expect(eliteBonusPct).toBeGreaterThan(fringeBonusPct);
+    });
+  });
+
+  describe('generateInitialRosterContracts', () => {
+    it('should generate contracts for all players', () => {
+      const players = [
+        createMockPlayer({ id: 'player-1' }),
+        createMockPlayer({ id: 'player-2', position: Position.WR }),
+        createMockPlayer({ id: 'player-3', position: Position.CB }),
+      ];
+
+      const { contracts, updatedPlayers } = generateInitialRosterContracts(players, 'team-1', 2025);
+
+      expect(Object.keys(contracts).length).toBe(3);
+      expect(updatedPlayers.length).toBe(3);
+
+      for (const player of updatedPlayers) {
+        expect(player.contractId).not.toBeNull();
+      }
+    });
+
+    it('should create rookie contracts for young drafted players', () => {
+      const rookiePlayer = createMockPlayer({
+        id: 'rookie-1',
+        age: 23,
+        experience: 1,
+        draftRound: 2,
+        draftPick: 45,
+        roleFit: {
+          ceiling: 'solidStarter',
+          currentRole: 'qualityRotational',
+          roleEffectiveness: 75,
+        },
+      });
+
+      const { contracts } = generateInitialRosterContracts([rookiePlayer], 'team-1', 2025);
+      const contract = Object.values(contracts)[0];
+
+      expect(contract.type).toBe('rookie');
+      expect(contract.totalYears).toBe(4);
+      // 1 year of experience means 3 years remaining on rookie deal
+      expect(contract.yearsRemaining).toBe(3);
+      // Signed year should be in the past
+      expect(contract.signedYear).toBe(2024);
+    });
+
+    it('should create extension contracts for second-contract players', () => {
+      const secondContractPlayer = createMockPlayer({
+        id: 'second-1',
+        age: 27,
+        experience: 5,
+        draftRound: 1,
+        draftPick: 15,
+        roleFit: { ceiling: 'highEndStarter', currentRole: 'solidStarter', roleEffectiveness: 75 },
+      });
+
+      const { contracts } = generateInitialRosterContracts([secondContractPlayer], 'team-1', 2025);
+      const contract = Object.values(contracts)[0];
+
+      expect(contract.type).toBe('extension');
+      // Should be partway through the deal (yearsRemaining <= totalYears)
+      expect(contract.yearsRemaining).toBeLessThanOrEqual(contract.totalYears);
+      expect(contract.yearsRemaining).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should create veteran minimum deals for fringe depth players', () => {
+      const fringePlayer = createMockPlayer({
+        id: 'fringe-1',
+        age: 23,
+        experience: 1,
+        draftRound: 0,
+        draftPick: 0,
+        roleFit: { ceiling: 'depth', currentRole: 'depth', roleEffectiveness: 75 },
+      });
+
+      const { contracts } = generateInitialRosterContracts([fringePlayer], 'team-1', 2025);
+      const contract = Object.values(contracts)[0];
+
+      expect(contract.type).toBe('veteran');
+      expect(contract.totalYears).toBeLessThanOrEqual(2);
+    });
+
+    it('should have varied yearsRemaining across a full roster', () => {
+      // Create a diverse roster with different experience levels
+      const players = [
+        // Rookies on rookie deals
+        createMockPlayer({
+          id: 'p1',
+          age: 22,
+          experience: 0,
+          draftRound: 1,
+          draftPick: 10,
+          roleFit: {
+            ceiling: 'highEndStarter',
+            currentRole: 'solidStarter',
+            roleEffectiveness: 75,
+          },
+        }),
+        createMockPlayer({
+          id: 'p2',
+          age: 24,
+          experience: 2,
+          draftRound: 3,
+          draftPick: 80,
+          position: Position.WR,
+          roleFit: {
+            ceiling: 'solidStarter',
+            currentRole: 'qualityRotational',
+            roleEffectiveness: 75,
+          },
+        }),
+        // Second contract players
+        createMockPlayer({
+          id: 'p3',
+          age: 27,
+          experience: 5,
+          draftRound: 1,
+          draftPick: 15,
+          position: Position.DE,
+          roleFit: {
+            ceiling: 'franchiseCornerstone',
+            currentRole: 'highEndStarter',
+            roleEffectiveness: 75,
+          },
+        }),
+        createMockPlayer({
+          id: 'p4',
+          age: 28,
+          experience: 6,
+          draftRound: 2,
+          draftPick: 50,
+          position: Position.CB,
+          roleFit: { ceiling: 'solidStarter', currentRole: 'solidStarter', roleEffectiveness: 75 },
+        }),
+        // Veterans
+        createMockPlayer({
+          id: 'p5',
+          age: 32,
+          experience: 10,
+          draftRound: 1,
+          draftPick: 5,
+          position: Position.LT,
+          roleFit: {
+            ceiling: 'highEndStarter',
+            currentRole: 'solidStarter',
+            roleEffectiveness: 75,
+          },
+        }),
+        // Vet minimum depth
+        createMockPlayer({
+          id: 'p6',
+          age: 30,
+          experience: 8,
+          draftRound: 6,
+          draftPick: 190,
+          position: Position.ILB,
+          roleFit: { ceiling: 'depth', currentRole: 'depth', roleEffectiveness: 75 },
+        }),
+      ];
+
+      const { contracts } = generateInitialRosterContracts(players, 'team-1', 2025);
+      const allContracts = Object.values(contracts);
+
+      // Should have a mix of contract types
+      const types = allContracts.map((c) => c.type);
+      expect(types).toContain('rookie');
+
+      // Not all contracts should have yearsRemaining === totalYears
+      const hasMidDealContracts = allContracts.some((c) => c.yearsRemaining < c.totalYears);
+      expect(hasMidDealContracts).toBe(true);
+
+      // All contracts should have valid cap hits for the current year
+      for (const contract of allContracts) {
+        const yearData = contract.yearlyBreakdown.find((y) => y.year === 2025);
+        expect(yearData).toBeDefined();
+        expect(yearData!.capHit).toBeGreaterThan(0);
+      }
+    });
+
+    it('should produce reasonable total cap usage for a team', () => {
+      // Create a realistic mix of players
+      const players = [];
+      const ceilings: Array<
+        'franchiseCornerstone' | 'highEndStarter' | 'solidStarter' | 'qualityRotational' | 'depth'
+      > = ['franchiseCornerstone', 'highEndStarter', 'solidStarter', 'qualityRotational', 'depth'];
+
+      for (let i = 0; i < 20; i++) {
+        const experience = Math.floor(Math.random() * 12);
+        const age = 22 + experience;
+        const draftRound = Math.random() < 0.85 ? Math.ceil(Math.random() * 7) : 0;
+        const ceiling = ceilings[i % 5];
+
+        players.push(
+          createMockPlayer({
+            id: `cap-test-${i}`,
+            age: Math.min(age, 38),
+            experience,
+            draftRound,
+            draftPick: draftRound > 0 ? (draftRound - 1) * 32 + Math.ceil(Math.random() * 32) : 0,
+            position: [Position.QB, Position.WR, Position.DE, Position.CB, Position.RB][i % 5],
+            roleFit: {
+              ceiling,
+              currentRole: ceiling,
+              roleEffectiveness: 75,
+            },
+          })
+        );
+      }
+
+      const { contracts } = generateInitialRosterContracts(players, 'team-1', 2025);
+      const capUsage = calculateTotalCapUsage(contracts, 2025);
+
+      // Cap usage should be reasonable (not zero, not absurdly high)
+      expect(capUsage).toBeGreaterThan(0);
     });
   });
 });

@@ -155,6 +155,9 @@ export interface GameState {
 
   // Week flow flags (already used via cast, now formal)
   weekFlags?: import('../../../services/flow/WeekFlowManager').WeekFlowFlags;
+
+  // Player career history (season logs, transactions, injuries, awards)
+  playerHistory?: Record<string, import('../../history/PlayerHistoryTracker').PlayerCareerHistory>;
 }
 
 /**

@@ -48,6 +48,8 @@ export interface CoachGenerationConfig {
   /** Experience range */
   minExperience?: number;
   maxExperience?: number;
+  /** If true, randomize years remaining on contract (for initial game generation) */
+  randomizeContractYears?: boolean;
 }
 
 /**
@@ -301,20 +303,37 @@ export function generateCoach(
   );
 
   const yearsTotal = randomInRange(2, 5);
+  const clampedSalary = Math.max(salaryRange.min, Math.min(salaryRange.max, salaryPerYear));
+  const guaranteedMoney = Math.round(clampedSalary * yearsTotal * 0.4);
 
-  const contract = teamId
+  // For initial game generation, randomize how far into the contract the coach is
+  const shouldRandomizeYears = config.randomizeContractYears === true;
+  const yearsElapsed = shouldRandomizeYears ? randomInRange(0, yearsTotal - 1) : 0;
+  const adjustedStartYear = startYear - yearsElapsed;
+
+  let contract = teamId
     ? createCoachContract({
         id: generateUUID(),
         coachId,
         teamId,
         yearsTotal,
-        salaryPerYear: Math.max(salaryRange.min, Math.min(salaryRange.max, salaryPerYear)),
-        guaranteedMoney: Math.round(salaryPerYear * yearsTotal * 0.4),
-        startYear,
+        salaryPerYear: clampedSalary,
+        guaranteedMoney,
+        startYear: adjustedStartYear,
         isInterim: false,
         canBePoached: role !== 'headCoach',
       })
     : null;
+
+  // Adjust yearsRemaining and deadMoney for mid-contract coaches
+  if (contract && yearsElapsed > 0) {
+    const adjustedYearsRemaining = yearsTotal - yearsElapsed;
+    contract = {
+      ...contract,
+      yearsRemaining: adjustedYearsRemaining,
+      deadMoneyIfFired: Math.round((guaranteedMoney / yearsTotal) * adjustedYearsRemaining),
+    };
+  }
 
   // Create base coach
   const baseCoach = createDefaultCoach(coachId, firstName, lastName, role);

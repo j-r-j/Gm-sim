@@ -33,19 +33,27 @@ import { createDefaultTenureStats } from '../core/career/FiringMechanics';
 import { seedInitialFreeAgentPool } from '../core/freeAgency/FreeAgentSeeder';
 import { PlayerContract } from '../core/contracts/Contract';
 import {
-  generateRosterContracts,
+  generateInitialRosterContracts,
   calculateTotalCapUsage,
   calculateFutureCommitments,
 } from '../core/contracts/ContractGenerator';
 import { DEFAULT_SALARY_CAP } from '../core/models/team/TeamFinances';
+import { simulateLeagueHistory } from '../core/history/LeagueHistorySimulator';
 
 const SALARY_CAP = 255000000; // $255 million
+
+/** Default number of years to pre-simulate for league history */
+const DEFAULT_HISTORY_YEARS = 20;
 
 interface NewGameOptions {
   saveSlot: SaveSlot;
   gmName: string;
   selectedTeam: FakeCity;
   startYear?: number;
+  /** Number of years of league history to pre-simulate (default: 20, 0 to skip) */
+  historyYears?: number;
+  /** Callback for history simulation progress */
+  onHistoryProgress?: (year: number, totalYears: number, phase: string) => void;
 }
 
 /**
@@ -120,7 +128,8 @@ function createOwnerForTeam(teamId: string): Owner {
 
 /**
  * Creates coaches for a team (Head Coach, OC, DC)
- * Uses the new coach generator for varied, realistic attributes
+ * Uses the new coach generator for varied, realistic attributes.
+ * Coaches start with varied contract years remaining for realism.
  */
 function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[] {
   const coaches: Coach[] = [];
@@ -128,7 +137,7 @@ function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[]
   const coachRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   for (const role of coachRoles) {
-    const coach = generateCoach(role, teamId, startYear);
+    const coach = generateCoach(role, teamId, startYear, { randomizeContractYears: true });
     coaches.push(coach);
   }
 
@@ -137,6 +146,7 @@ function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[]
 
 /**
  * Creates scouts for a team (Head Scout, Offensive Scout, Defensive Scout)
+ * Scouts start with varied contract years remaining for realism.
  */
 function createScoutsForTeam(teamId: string): Scout[] {
   const scouts: Scout[] = [];
@@ -151,7 +161,11 @@ function createScoutsForTeam(teamId: string): Scout[] {
   );
   headScout.teamId = teamId;
   headScout.isAvailable = false;
-  headScout.contract = createScoutContract(1000000 + randomInt(0, 2000000), 3);
+  const headYearsTotal = randomInt(2, 4);
+  headScout.contract = {
+    ...createScoutContract(1000000 + randomInt(0, 2000000), headYearsTotal),
+    yearsRemaining: randomInt(1, headYearsTotal),
+  };
   scouts.push(headScout);
 
   // Offensive Scout
@@ -164,7 +178,11 @@ function createScoutsForTeam(teamId: string): Scout[] {
   );
   offensiveScout.teamId = teamId;
   offensiveScout.isAvailable = false;
-  offensiveScout.contract = createScoutContract(500000 + randomInt(0, 700000), 3);
+  const offYearsTotal = randomInt(2, 4);
+  offensiveScout.contract = {
+    ...createScoutContract(500000 + randomInt(0, 700000), offYearsTotal),
+    yearsRemaining: randomInt(1, offYearsTotal),
+  };
   scouts.push(offensiveScout);
 
   // Defensive Scout
@@ -177,7 +195,11 @@ function createScoutsForTeam(teamId: string): Scout[] {
   );
   defensiveScout.teamId = teamId;
   defensiveScout.isAvailable = false;
-  defensiveScout.contract = createScoutContract(500000 + randomInt(0, 700000), 3);
+  const defYearsTotal = randomInt(2, 4);
+  defensiveScout.contract = {
+    ...createScoutContract(500000 + randomInt(0, 700000), defYearsTotal),
+    yearsRemaining: randomInt(1, defYearsTotal),
+  };
   scouts.push(defensiveScout);
 
   return scouts;
@@ -214,7 +236,14 @@ function createDraftPicks(teamIds: string[], year: number): Record<string, Draft
  * Creates a complete new game state
  */
 export function createNewGame(options: NewGameOptions): GameState {
-  const { saveSlot, gmName, selectedTeam, startYear = 2025 } = options;
+  const {
+    saveSlot,
+    gmName,
+    selectedTeam,
+    startYear = 2025,
+    historyYears = DEFAULT_HISTORY_YEARS,
+    onHistoryProgress,
+  } = options;
 
   // Create all 32 teams
   const teams = createAllTeams();
@@ -238,8 +267,8 @@ export function createNewGame(options: NewGameOptions): GameState {
     const roster = generateRoster(teamId);
     const playerIds: string[] = [];
 
-    // Generate contracts for the roster
-    const { contracts: teamContracts, updatedPlayers } = generateRosterContracts(
+    // Generate contracts for the roster with realistic mid-deal diversity
+    const { contracts: teamContracts, updatedPlayers } = generateInitialRosterContracts(
       roster,
       teamId,
       startYear
@@ -390,7 +419,7 @@ export function createNewGame(options: NewGameOptions): GameState {
   // Initialize tenure stats
   const tenureStats = createDefaultTenureStats();
 
-  return {
+  let baseGameState: GameState = {
     saveSlot,
     createdAt: now,
     lastSavedAt: now,
@@ -412,6 +441,40 @@ export function createNewGame(options: NewGameOptions): GameState {
     patienceMeter,
     tenureStats,
   };
+
+  // Pre-simulate league history if requested
+  if (historyYears > 0) {
+    const historyResult = simulateLeagueHistory(baseGameState, {
+      years: historyYears,
+      onProgress: onHistoryProgress,
+    });
+
+    // Use the history-simulated state but preserve user-specific fields
+    baseGameState = {
+      ...historyResult.gameState,
+      saveSlot,
+      createdAt: now,
+      lastSavedAt: now,
+      userTeamId,
+      userName: gmName,
+      careerStats,
+      gameSettings: { ...DEFAULT_GAME_SETTINGS },
+      newsReadStatus: {},
+      newsFeed: createNewsFeedState(startYear, 1),
+      patienceMeter,
+      tenureStats,
+      scouts, // Keep original scouts (not simulated)
+      owners, // Keep original owners (not simulated)
+    };
+
+    // Re-set the user as GM of their team
+    baseGameState.teams[userTeamId] = {
+      ...baseGameState.teams[userTeamId],
+      gmId: gmName,
+    };
+  }
+
+  return baseGameState;
 }
 
 /**

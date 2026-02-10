@@ -13,6 +13,8 @@ import {
   getMinimumSalary,
 } from './Contract';
 import { getFranchiseTagValue } from './FranchiseTagSystem';
+import { getSlotValues } from '../draft/RookieContractGenerator';
+import { randomInt } from '../generators/utils/RandomUtils';
 
 /**
  * Position value multipliers relative to franchise tag for contract generation
@@ -371,4 +373,304 @@ export function validateTeamCapUsage(
     capSpace,
     overBy,
   };
+}
+
+// ============================================================================
+// Initial Roster Contract Generation
+// ============================================================================
+// These functions generate realistic, mid-deal contracts for new game creation.
+// Instead of all 53 players starting with freshly-signed deals, players get
+// contracts appropriate to their career stage:
+//
+// Typical NFL 53-man roster contract distribution:
+// - ~25% on rookie contracts (drafted 0-3 years ago, cheap slotted deals)
+// - ~35% on second contracts (4-7 years exp, the big-money extensions)
+// - ~25% on veteran deals (8+ years, shorter term)
+// - ~15% on veteran minimums (depth, journeymen)
+// ============================================================================
+
+/**
+ * Contract category for initial roster generation
+ */
+type InitialContractCategory = 'rookieDeal' | 'secondContract' | 'veteranDeal' | 'veteranMinimum';
+
+/**
+ * Determines what kind of contract a player should be on for initial roster generation.
+ * Based on experience level, draft status, and skill tier.
+ */
+function determineInitialContractCategory(
+  player: Player,
+  skillTier: string
+): InitialContractCategory {
+  const experience = player.experience;
+
+  // Players with 0-3 years experience who were drafted are on rookie deals
+  if (experience <= 3 && player.draftRound > 0) {
+    return 'rookieDeal';
+  }
+
+  // Undrafted young players on minimum deals
+  if (experience <= 3 && player.draftRound === 0) {
+    return 'veteranMinimum';
+  }
+
+  // Players with 4-7 years on second contracts (the big extensions)
+  if (experience >= 4 && experience <= 7) {
+    // Fringe players might be on vet minimum instead of a real second contract
+    if (skillTier === 'fringe') {
+      return Math.random() < 0.6 ? 'veteranMinimum' : 'veteranDeal';
+    }
+    return 'secondContract';
+  }
+
+  // Veterans 8+ years
+  if (skillTier === 'fringe' || skillTier === 'backup') {
+    return Math.random() < 0.4 ? 'veteranMinimum' : 'veteranDeal';
+  }
+
+  return 'veteranDeal';
+}
+
+/**
+ * Generates a rookie-scale contract for initial roster generation.
+ * Uses the actual NFL rookie wage scale based on draft pick position,
+ * with years remaining reflecting how long ago the player was drafted.
+ */
+function generateRookieDealForInitialRoster(
+  player: Player,
+  teamId: string,
+  currentYear: number
+): PlayerContract {
+  const experience = player.experience;
+  const signedYear = currentYear - experience;
+  const yearsRemaining = Math.max(1, 4 - experience);
+
+  // Get slot values from the rookie wage scale based on draft position
+  const overallPick = player.draftPick || randomInt(33, 224);
+  const round = player.draftRound || Math.min(7, Math.ceil(overallPick / 32));
+  const slotValues = getSlotValues(overallPick, round);
+
+  // Convert total 4-year value to per-year amounts
+  const totalAAV = Math.round(slotValues.totalValue / 4);
+  const bonusPerYear = Math.round(slotValues.signingBonus / 4);
+  const salaryPerYear = totalAAV - bonusPerYear;
+
+  const offer: ContractOffer = {
+    years: 4,
+    bonusPerYear,
+    salaryPerYear,
+    noTradeClause: false,
+  };
+
+  const playerName = `${player.firstName} ${player.lastName}`;
+  const contract = createPlayerContract(
+    player.id,
+    playerName,
+    teamId,
+    player.position,
+    offer,
+    signedYear,
+    'rookie'
+  );
+
+  return {
+    ...contract,
+    yearsRemaining,
+  };
+}
+
+/**
+ * Generates a second contract (extension after rookie deal) for initial roster generation.
+ * These are typically the biggest deals on a team - players who proved themselves
+ * during their rookie contract and earned a multi-year extension.
+ */
+function generateSecondContractForInitialRoster(
+  player: Player,
+  teamId: string,
+  currentYear: number,
+  skillTier: string
+): PlayerContract {
+  const contractValue = calculateContractValue(
+    player.position,
+    skillTier,
+    player.age,
+    player.experience,
+    currentYear
+  );
+
+  const totalYears = contractValue.years;
+
+  // They signed this deal somewhere between 0 and (totalYears-1) years ago
+  const maxYearsInto = Math.min(totalYears - 1, Math.max(0, player.experience - 3));
+  const yearsIntoContract = randomInt(0, Math.max(0, maxYearsInto));
+  const signedYear = currentYear - yearsIntoContract;
+  const yearsRemaining = totalYears - yearsIntoContract;
+
+  const offer: ContractOffer = {
+    years: totalYears,
+    bonusPerYear: contractValue.bonusPerYear,
+    salaryPerYear: contractValue.salaryPerYear,
+    noTradeClause: skillTier === 'elite' && totalYears >= 4,
+  };
+
+  const playerName = `${player.firstName} ${player.lastName}`;
+  const contract = createPlayerContract(
+    player.id,
+    playerName,
+    teamId,
+    player.position,
+    offer,
+    signedYear,
+    'extension'
+  );
+
+  return {
+    ...contract,
+    yearsRemaining,
+  };
+}
+
+/**
+ * Generates a veteran deal for initial roster generation.
+ * Veterans (8+ years experience) are typically on shorter contracts.
+ * Elite veterans may still command multi-year deals, while
+ * average veterans get 1-3 year contracts.
+ */
+function generateVeteranDealForInitialRoster(
+  player: Player,
+  teamId: string,
+  currentYear: number,
+  skillTier: string
+): PlayerContract {
+  const contractValue = calculateContractValue(
+    player.position,
+    skillTier,
+    player.age,
+    player.experience,
+    currentYear
+  );
+
+  // Veterans tend to get shorter deals
+  const totalYears = Math.min(contractValue.years, skillTier === 'elite' ? 4 : 3);
+
+  const maxYearsInto = Math.max(0, totalYears - 1);
+  const yearsIntoContract = randomInt(0, maxYearsInto);
+  const signedYear = currentYear - yearsIntoContract;
+  const yearsRemaining = totalYears - yearsIntoContract;
+
+  const offer: ContractOffer = {
+    years: totalYears,
+    bonusPerYear: contractValue.bonusPerYear,
+    salaryPerYear: contractValue.salaryPerYear,
+    noTradeClause: skillTier === 'elite' && totalYears >= 4,
+  };
+
+  const playerName = `${player.firstName} ${player.lastName}`;
+  const contract = createPlayerContract(
+    player.id,
+    playerName,
+    teamId,
+    player.position,
+    offer,
+    signedYear,
+    'veteran'
+  );
+
+  return {
+    ...contract,
+    yearsRemaining,
+  };
+}
+
+/**
+ * Generates a veteran minimum contract for initial roster generation.
+ * These are cheap 1-2 year deals for depth players, journeymen,
+ * undrafted players, and aging veterans clinging to roster spots.
+ */
+function generateVetMinimumForInitialRoster(
+  player: Player,
+  teamId: string,
+  currentYear: number
+): PlayerContract {
+  const minSalary = getMinimumSalary(player.experience);
+  const totalYears = randomInt(1, 2);
+
+  const yearsIntoContract = totalYears > 1 ? randomInt(0, 1) : 0;
+  const signedYear = currentYear - yearsIntoContract;
+  const yearsRemaining = totalYears - yearsIntoContract;
+
+  const offer: ContractOffer = {
+    years: totalYears,
+    bonusPerYear: minSalary,
+    salaryPerYear: 0,
+    noTradeClause: false,
+  };
+
+  const playerName = `${player.firstName} ${player.lastName}`;
+  const contract = createPlayerContract(
+    player.id,
+    playerName,
+    teamId,
+    player.position,
+    offer,
+    signedYear,
+    'veteran'
+  );
+
+  return {
+    ...contract,
+    yearsRemaining,
+  };
+}
+
+/**
+ * Generates contracts for an initial roster with realistic contract diversity.
+ * Unlike generateRosterContracts (which creates fresh contracts for mid-game use),
+ * this function creates contracts where players are at various stages of their deals,
+ * mirroring a real NFL team's salary cap situation:
+ *
+ * - Draft picks on cheap rookie-scale deals with 1-4 years remaining
+ * - Star players on expensive second contracts (extensions)
+ * - Veterans on shorter deals with varied years remaining
+ * - Depth players on veteran minimum contracts
+ *
+ * This creates interesting cap management decisions from day one.
+ */
+export function generateInitialRosterContracts(
+  players: Player[],
+  teamId: string,
+  year: number
+): { contracts: Record<string, PlayerContract>; updatedPlayers: Player[] } {
+  const contracts: Record<string, PlayerContract> = {};
+  const updatedPlayers: Player[] = [];
+
+  for (const player of players) {
+    const skillTier = determineSkillTierFromPlayer(player);
+    const category = determineInitialContractCategory(player, skillTier);
+
+    let contract: PlayerContract;
+
+    switch (category) {
+      case 'rookieDeal':
+        contract = generateRookieDealForInitialRoster(player, teamId, year);
+        break;
+      case 'secondContract':
+        contract = generateSecondContractForInitialRoster(player, teamId, year, skillTier);
+        break;
+      case 'veteranDeal':
+        contract = generateVeteranDealForInitialRoster(player, teamId, year, skillTier);
+        break;
+      case 'veteranMinimum':
+        contract = generateVetMinimumForInitialRoster(player, teamId, year);
+        break;
+    }
+
+    contracts[contract.id] = contract;
+    updatedPlayers.push({
+      ...player,
+      contractId: contract.id,
+    });
+  }
+
+  return { contracts, updatedPlayers };
 }
