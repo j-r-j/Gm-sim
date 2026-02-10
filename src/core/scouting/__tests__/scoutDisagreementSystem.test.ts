@@ -10,11 +10,8 @@ import {
   getMostContentiousProspects,
   getSplitOpinionLabel,
   validateSplitOpinionFlag,
-  DEFAULT_DISAGREEMENT_CONFIG,
-  type DisagreementConfig,
 } from '../ScoutDisagreementSystem';
 import { ScoutReport } from '../ScoutReportGenerator';
-import { SkillRange } from '../AutoScoutingSystem';
 
 // Helper to create a mock scout report
 function createMockReport(overrides: Partial<ScoutReport> = {}): ScoutReport {
@@ -27,7 +24,7 @@ function createMockReport(overrides: Partial<ScoutReport> = {}): ScoutReport {
     generatedAt: Date.now(),
     scoutId: 'scout-1',
     scoutName: 'Scout A',
-    physicalMeasurements: {} as any,
+    physicalMeasurements: { height: '6-2', weight: 220, college: 'Test University' },
     skillRanges: {
       overall: { min: 60, max: 80, confidence: 'medium' },
       physical: { min: 55, max: 75, confidence: 'medium' },

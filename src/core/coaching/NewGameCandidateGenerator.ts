@@ -24,7 +24,7 @@ import {
 } from './CoachWriteupGenerator';
 import { generateUUID } from '../generators/utils/RandomUtils';
 import { createCoachContract } from '../models/staff/CoachContract';
-import { COMPATIBLE_TREES, CONFLICTING_TREES, TreeName } from '../models/staff/CoachingTree';
+import { COMPATIBLE_TREES, CONFLICTING_TREES } from '../models/staff/CoachingTree';
 
 /**
  * Narrative tag describing a notable trait about a coaching candidate

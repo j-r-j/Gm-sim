@@ -1,11 +1,11 @@
 /**
  * Debug test to trace home/away counts for failing years
  */
+/* eslint-disable no-console */
 import {
   generateSeasonSchedule,
   createDefaultStandings,
   get17thGameHomeConference,
-  ScheduledGame,
 } from '../ScheduleGenerator';
 import { Team, createEmptyTeamRecord } from '../../models/team/Team';
 import { FAKE_CITIES } from '../../models/team/FakeCities';

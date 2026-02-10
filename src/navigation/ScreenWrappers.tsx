@@ -3618,7 +3618,6 @@ export function CoachHiringScreenWrapper({
         currentTeamCoaches,
         coachingBudgetRemaining,
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [roleToFill]
   );
 

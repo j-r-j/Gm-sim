@@ -516,7 +516,7 @@ export function generateRoundSummary(
 export function generateTradeRumor(
   teamName: string,
   targetPosition: Position,
-  currentPick: number
+  _currentPick: number
 ): WarRoomFeedEvent {
   const rumors = [
     `${teamName} reportedly working the phones, looking to move up for a ${targetPosition}`,

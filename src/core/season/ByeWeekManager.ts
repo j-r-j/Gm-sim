@@ -15,22 +15,26 @@ export const BYE_WEEK_END = 14;
 export const TOTAL_BYE_WEEKS = BYE_WEEK_END - BYE_WEEK_START + 1;
 
 /**
- * 2025 NFL Bye Week Template
- * Maps division to bye week assignment
- * This ensures balanced distribution and no division has all teams on same bye
+ * NFL Bye Week Template
+ * Maps division to bye week assignment for the 4 teams (sorted by ID).
+ * Each week must have an EVEN number of teams on bye so that all available
+ * teams can be paired into games (32 teams × 17 games = 272 games exactly).
+ *
+ * Distribution: weeks 5-10 have 4 byes each, weeks 11-14 have 2 byes each.
+ * Total: 6×4 + 4×2 = 32 teams. Available per week: 28 or 30 (both even).
  */
 const BYE_WEEK_TEMPLATE: Record<Conference, Record<Division, number[]>> = {
   AFC: {
-    East: [6, 9, 11, 14],
-    North: [5, 7, 10, 13],
-    South: [6, 8, 12, 14],
-    West: [7, 9, 11, 13],
+    East: [5, 6, 8, 11],
+    North: [5, 7, 9, 12],
+    South: [6, 8, 10, 13],
+    West: [7, 9, 10, 14],
   },
   NFC: {
-    East: [5, 8, 10, 12],
-    North: [6, 9, 11, 14],
-    South: [7, 10, 12, 13],
-    West: [5, 8, 11, 14],
+    East: [5, 7, 9, 13],
+    North: [6, 8, 10, 14],
+    South: [6, 7, 9, 12],
+    West: [5, 8, 10, 11],
   },
 };
 
