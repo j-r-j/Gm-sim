@@ -150,6 +150,13 @@ import {
 import { Coach } from '../core/models/staff/Coach';
 import { Team } from '../core/models/team/Team';
 import { simulateWeek, advanceWeek, getUserTeamGame } from '../core/season/WeekSimulator';
+import {
+  generatePlayoffBracket,
+  simulatePlayoffRound,
+  advancePlayoffRound,
+  PlayoffRound,
+} from '../core/season/PlayoffGenerator';
+import { calculateStandings as calculateDetailedStandings } from '../core/season/StandingsCalculator';
 import { updateSeasonStatsFromGame } from '../core/game/SeasonStatsAggregator';
 import {
   completeTask as completeOffseasonTask,
@@ -1399,33 +1406,56 @@ export function DashboardScreenWrapper({
                 };
               }
 
-              // Simulate playoffs (weeks 19-22)
-              while (currentPhase === 'playoffs' && currentWeek <= 22) {
+              // Generate playoff bracket from final standings
+              if (currentPhase === 'playoffs') {
                 const stateSchedule = currentState.league.schedule;
-                if (!stateSchedule) break;
+                if (stateSchedule) {
+                  const completedGames = stateSchedule.regularSeason.filter((g) => g.isComplete);
+                  const teamsArray = Object.values(currentState.teams);
+                  const finalStandings = calculateDetailedStandings(completedGames, teamsArray);
+                  const playoffBracket = generatePlayoffBracket(finalStandings);
 
-                // Simulate the playoff week
-                const weekResults = simulateWeek(
-                  currentWeek,
-                  stateSchedule,
-                  currentState,
-                  currentState.userTeamId,
-                  true
+                  currentState = {
+                    ...currentState,
+                    league: {
+                      ...currentState.league,
+                      schedule: {
+                        ...stateSchedule,
+                        playoffs: playoffBracket,
+                      },
+                    },
+                  };
+                }
+              }
+
+              // Simulate playoffs round by round (weeks 19-22)
+              const playoffRounds: PlayoffRound[] = [
+                'wildCard',
+                'divisional',
+                'conference',
+                'superBowl',
+              ];
+
+              for (const round of playoffRounds) {
+                if (currentPhase !== 'playoffs') break;
+
+                const stateSchedule = currentState.league.schedule;
+                if (!stateSchedule?.playoffs) break;
+
+                // Simulate the round
+                const roundResults = simulatePlayoffRound(
+                  stateSchedule.playoffs,
+                  round,
+                  currentState
                 );
 
-                let updatedSchedule = { ...stateSchedule };
+                // Advance the bracket to generate next round matchups
+                const advancedPlayoffs = advancePlayoffRound(stateSchedule.playoffs, roundResults);
 
-                for (const { game } of weekResults.games) {
-                  if (updatedSchedule.regularSeason) {
-                    updatedSchedule.regularSeason = updatedSchedule.regularSeason.map((g) =>
-                      g.gameId === game.gameId ? game : g
-                    );
-                  }
-                }
-
-                // Advance week
                 currentWeek++;
-                if (currentWeek > 22) {
+
+                // After Super Bowl, transition to offseason
+                if (round === 'superBowl') {
                   currentPhase = 'offseason';
                   currentWeek = 1;
                 }
@@ -1440,7 +1470,10 @@ export function DashboardScreenWrapper({
                       currentPhase,
                       offseasonPhase: currentPhase === 'offseason' ? 1 : null,
                     },
-                    schedule: updatedSchedule,
+                    schedule: {
+                      ...stateSchedule,
+                      playoffs: advancedPlayoffs,
+                    },
                   },
                 };
               }
