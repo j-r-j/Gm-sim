@@ -23,7 +23,11 @@ import {
   accessibility,
 } from '../../styles';
 import { Position } from '../../core/models/player/Position';
-import { TechnicalSkills, SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
+import {
+  TechnicalSkills,
+  SKILL_NAMES_BY_POSITION,
+  calculateSkillKnowledge,
+} from '../../core/models/player/TechnicalSkills';
 import { Avatar } from '../avatar';
 
 export interface PlayerCardProps {
@@ -245,6 +249,46 @@ function SkillRangeBar({
 }
 
 /**
+ * Knowledge Indicator - Shows how well the player's skills are known
+ */
+function KnowledgeIndicator({ knowledge }: { knowledge: number }): React.JSX.Element {
+  const filledDots = knowledge >= 90 ? 4 : knowledge >= 65 ? 3 : knowledge >= 35 ? 2 : 1;
+  const label =
+    knowledge >= 90
+      ? 'Known'
+      : knowledge >= 65
+        ? 'Familiar'
+        : knowledge >= 35
+          ? 'Developing'
+          : 'Unknown';
+  const dotColor =
+    knowledge >= 90
+      ? colors.success
+      : knowledge >= 65
+        ? colors.info
+        : knowledge >= 35
+          ? colors.warning
+          : colors.textLight;
+
+  return (
+    <View style={styles.knowledgeContainer}>
+      <View style={styles.knowledgeDots}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.knowledgeDot,
+              i < filledDots ? { backgroundColor: dotColor } : { backgroundColor: colors.border },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={[styles.knowledgeLabel, { color: dotColor }]}>{label}</Text>
+    </View>
+  );
+}
+
+/**
  * PlayerCard Component
  */
 export function PlayerCard({
@@ -266,6 +310,10 @@ export function PlayerCard({
   const positionColors = getPositionColor(position);
   const skillSummary = skills ? getSkillRangeSummary(skills, position) : null;
   const tierInfo = skillSummary ? getRatingTierColor(skillSummary.midpoint) : null;
+  const posGroupKey = getPositionGroupKey(position);
+  const knowledge = skills
+    ? calculateSkillKnowledge(skills, SKILL_NAMES_BY_POSITION[posGroupKey])
+    : null;
 
   const handlePress = () => {
     if (onPress) {
@@ -360,6 +408,9 @@ export function PlayerCard({
               tierColor={tierInfo.primary}
             />
           )}
+
+          {/* Knowledge indicator */}
+          {knowledge !== null && <KnowledgeIndicator knowledge={knowledge} />}
         </View>
       </View>
 
@@ -534,6 +585,25 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     minWidth: 36,
     textAlign: 'right',
+  },
+  // Knowledge indicator styles
+  knowledgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  knowledgeDots: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  knowledgeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  knowledgeLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
   },
   // Badge styles
   badgesRow: {

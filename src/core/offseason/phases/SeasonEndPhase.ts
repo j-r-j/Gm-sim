@@ -16,6 +16,7 @@ import {
 } from '../OffSeasonPhaseManager';
 import { Player } from '../../models/player/Player';
 import { SkillValue } from '../../models/player/TechnicalSkills';
+import { HiddenTraits } from '../../models/player/HiddenTraits';
 import { PlayerSeasonStats } from '../../game/SeasonStatsAggregator';
 
 /**
@@ -427,6 +428,48 @@ export function applyRatingClarity(
 }
 
 /**
+ * Reveals hidden traits at season end based on clarity factor.
+ * Higher clarity (more playing time + tenure) = higher chance of revealing each trait.
+ *
+ * Returns an immutably updated HiddenTraits object and the list of newly revealed trait names.
+ */
+export function revealHiddenTraits(
+  hiddenTraits: HiddenTraits,
+  clarityFactor: number
+): { updatedTraits: HiddenTraits; newlyRevealed: string[] } {
+  if (clarityFactor <= 0) {
+    return { updatedTraits: hiddenTraits, newlyRevealed: [] };
+  }
+
+  const newlyRevealed: string[] = [];
+  const updatedRevealed = [...hiddenTraits.revealedToUser];
+
+  const allTraits: string[] = [...hiddenTraits.positive, ...hiddenTraits.negative];
+
+  for (const trait of allTraits) {
+    if (updatedRevealed.includes(trait)) continue;
+
+    // Reveal chance scales with clarity:
+    //   clarity 0.3 -> ~22% chance per trait
+    //   clarity 0.6 -> ~45% chance per trait
+    //   clarity 1.0 -> ~75% chance per trait
+    const revealChance = clarityFactor * 0.75;
+
+    if (Math.random() < revealChance) {
+      updatedRevealed.push(trait);
+      newlyRevealed.push(trait);
+    }
+  }
+
+  const updatedTraits: HiddenTraits = {
+    ...hiddenTraits,
+    revealedToUser: updatedRevealed,
+  };
+
+  return { updatedTraits, newlyRevealed };
+}
+
+/**
  * Generates a position-appropriate stat line string for a player
  */
 export function generateStatLine(player: Player, stats: PlayerSeasonStats | undefined): string {
@@ -512,19 +555,40 @@ export function generatePlayerImprovement(
   yearsWithTeam: number,
   grade: PlayerGrade
 ): { improvement: PlayerStatImprovement; updatedPlayer: Player } {
-  const { updatedPlayer, reveals } = applyRatingClarity(player, yearsWithTeam, stats);
+  const gamesPlayed = stats?.gamesPlayed ?? 0;
+  const gamesStarted = stats?.gamesStarted ?? 0;
+  const clarityFactor = calculateClarityFactor(yearsWithTeam, gamesPlayed, gamesStarted);
+
+  // Narrow skill ranges
+  const { updatedPlayer: skillUpdatedPlayer, reveals } = applyRatingClarity(
+    player,
+    yearsWithTeam,
+    stats
+  );
+
+  // Reveal hidden traits
+  const { updatedTraits, newlyRevealed } = revealHiddenTraits(
+    skillUpdatedPlayer.hiddenTraits,
+    clarityFactor
+  );
+
+  const updatedPlayer: Player = {
+    ...skillUpdatedPlayer,
+    hiddenTraits: updatedTraits,
+  };
 
   const improvement: PlayerStatImprovement = {
     playerId: player.id,
     playerName: `${player.firstName} ${player.lastName}`,
     position: player.position,
-    gamesPlayed: stats?.gamesPlayed ?? 0,
-    gamesStarted: stats?.gamesStarted ?? 0,
+    gamesPlayed,
+    gamesStarted,
     statLine: generateStatLine(player, stats),
     grade,
     ratingReveals: reveals,
     totalSkillsNarrowed: reveals.length,
     hadFullReveal: reveals.some((r) => r.isFullyRevealed),
+    traitsRevealed: newlyRevealed,
   };
 
   return { improvement, updatedPlayer };
@@ -757,7 +821,7 @@ export function processSeasonEndWithReveals(
     });
   }
 
-  // Add reveal events for notable reveals
+  // Add reveal events for notable skill reveals
   const notableReveals = playerImprovements.filter((p) => p.hadFullReveal);
   for (const reveal of notableReveals.slice(0, 5)) {
     newState = addEvent(
@@ -765,6 +829,18 @@ export function processSeasonEndWithReveals(
       'development_reveal',
       `${reveal.playerName}'s true abilities have been fully evaluated`,
       { playerId: reveal.playerId, reveals: reveal.ratingReveals }
+    );
+  }
+
+  // Add events for trait reveals
+  const traitReveals = playerImprovements.filter((p) => p.traitsRevealed.length > 0);
+  for (const reveal of traitReveals.slice(0, 5)) {
+    const traitNames = reveal.traitsRevealed.join(', ');
+    newState = addEvent(
+      newState,
+      'development_reveal',
+      `Discovered ${reveal.playerName}'s hidden trait${reveal.traitsRevealed.length !== 1 ? 's' : ''}: ${traitNames}`,
+      { playerId: reveal.playerId, traits: reveal.traitsRevealed }
     );
   }
 

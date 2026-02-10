@@ -7,6 +7,7 @@ import {
   calculateClarityFactor,
   narrowSkillRange,
   applyRatingClarity,
+  revealHiddenTraits,
   generateStatLine,
   generatePlayerImprovement,
   generateSeasonWriteUp,
@@ -274,6 +275,113 @@ describe('SeasonEndPhase - Rating Clarity', () => {
   });
 });
 
+describe('SeasonEndPhase - Hidden Trait Reveals', () => {
+  describe('revealHiddenTraits', () => {
+    it('should not reveal any traits with 0 clarity', () => {
+      const traits = {
+        positive: ['clutch' as const, 'leader' as const],
+        negative: ['lazy' as const],
+        revealedToUser: [],
+      };
+
+      const { newlyRevealed } = revealHiddenTraits(traits, 0);
+      expect(newlyRevealed).toHaveLength(0);
+    });
+
+    it('should reveal traits with high clarity (1.0) most of the time', () => {
+      const traits = {
+        positive: ['clutch' as const, 'leader' as const],
+        negative: ['lazy' as const],
+        revealedToUser: [],
+      };
+
+      // Run multiple times to check probabilistic behavior
+      let totalRevealed = 0;
+      const runs = 100;
+      for (let i = 0; i < runs; i++) {
+        const { newlyRevealed } = revealHiddenTraits(traits, 1.0);
+        totalRevealed += newlyRevealed.length;
+      }
+
+      // With clarity 1.0, chance per trait is 75%, so average 2.25 out of 3 traits
+      const avgRevealed = totalRevealed / runs;
+      expect(avgRevealed).toBeGreaterThan(1.5);
+    });
+
+    it('should not re-reveal already revealed traits', () => {
+      const traits = {
+        positive: ['clutch' as const, 'leader' as const],
+        negative: [],
+        revealedToUser: ['clutch'],
+      };
+
+      const { updatedTraits, newlyRevealed } = revealHiddenTraits(traits, 1.0);
+
+      // clutch should not appear in newly revealed since it was already known
+      expect(newlyRevealed.includes('clutch')).toBe(false);
+      // the already revealed trait should be preserved
+      expect(updatedTraits.revealedToUser.includes('clutch')).toBe(true);
+    });
+
+    it('should return immutably updated traits', () => {
+      const traits = {
+        positive: ['clutch' as const],
+        negative: [],
+        revealedToUser: [],
+      };
+
+      const { updatedTraits } = revealHiddenTraits(traits, 1.0);
+
+      // Original should not be mutated
+      expect(traits.revealedToUser).toHaveLength(0);
+      // Updated may have reveals
+      expect(updatedTraits).not.toBe(traits);
+    });
+
+    it('should handle players with no traits', () => {
+      const traits = { positive: [], negative: [], revealedToUser: [] };
+      const { newlyRevealed, updatedTraits } = revealHiddenTraits(traits, 1.0);
+
+      expect(newlyRevealed).toHaveLength(0);
+      expect(updatedTraits.revealedToUser).toHaveLength(0);
+    });
+  });
+
+  describe('generatePlayerImprovement with traits', () => {
+    it('should include trait reveals for players with hidden traits', () => {
+      const player = makePlayer({
+        hiddenTraits: {
+          positive: ['clutch', 'leader'],
+          negative: ['lazy'],
+          revealedToUser: [],
+        },
+      });
+      const stats = makeSeasonStats({ gamesPlayed: 17, gamesStarted: 17 });
+
+      // Run multiple times to get at least some trait reveals
+      let foundTraitReveals = false;
+      for (let i = 0; i < 20; i++) {
+        const { improvement } = generatePlayerImprovement(player, stats, 4, 'A');
+        if (improvement.traitsRevealed.length > 0) {
+          foundTraitReveals = true;
+          break;
+        }
+      }
+
+      // With clarity ~1.0 (4 years + full-time starter), should reveal traits most of the time
+      expect(foundTraitReveals).toBe(true);
+    });
+
+    it('should return empty traitsRevealed for players with no traits', () => {
+      const player = makePlayer();
+      const stats = makeSeasonStats();
+
+      const { improvement } = generatePlayerImprovement(player, stats, 2, 'A');
+      expect(improvement.traitsRevealed).toHaveLength(0);
+    });
+  });
+});
+
 describe('SeasonEndPhase - Stat Lines', () => {
   describe('generateStatLine', () => {
     it('should generate QB stat line', () => {
@@ -475,6 +583,7 @@ describe('SeasonEndPhase - Season Write-Up', () => {
           ],
           totalSkillsNarrowed: 1,
           hadFullReveal: false,
+          traitsRevealed: [],
         },
       ];
 
@@ -505,6 +614,7 @@ describe('SeasonEndPhase - Season Write-Up', () => {
           ratingReveals: [],
           totalSkillsNarrowed: 3,
           hadFullReveal: true,
+          traitsRevealed: [],
         },
       ];
 

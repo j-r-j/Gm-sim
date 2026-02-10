@@ -276,15 +276,29 @@ export function SeasonRecapScreen({
                     <Text style={styles.gamesText}>
                       {p.gamesStarted} GS / {p.gamesPlayed} GP
                     </Text>
-                    {p.totalSkillsNarrowed > 0 && (
-                      <View style={[styles.revealBadge, p.hadFullReveal && styles.fullRevealBadge]}>
-                        <Text style={[styles.revealText, p.hadFullReveal && styles.fullRevealText]}>
-                          {p.hadFullReveal
-                            ? 'Fully Scouted'
-                            : `${p.totalSkillsNarrowed} skill${p.totalSkillsNarrowed !== 1 ? 's' : ''} clarified`}
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.badgesRow}>
+                      {p.totalSkillsNarrowed > 0 && (
+                        <View
+                          style={[styles.revealBadge, p.hadFullReveal && styles.fullRevealBadge]}
+                        >
+                          <Text
+                            style={[styles.revealText, p.hadFullReveal && styles.fullRevealText]}
+                          >
+                            {p.hadFullReveal
+                              ? 'Fully Scouted'
+                              : `${p.totalSkillsNarrowed} skill${p.totalSkillsNarrowed !== 1 ? 's' : ''} clarified`}
+                          </Text>
+                        </View>
+                      )}
+                      {p.traitsRevealed && p.traitsRevealed.length > 0 && (
+                        <View style={styles.traitRevealBadge}>
+                          <Text style={styles.traitRevealText}>
+                            {p.traitsRevealed.length} trait
+                            {p.traitsRevealed.length !== 1 ? 's' : ''} discovered
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -593,6 +607,22 @@ const styles = StyleSheet.create({
   },
   fullRevealText: {
     color: colors.success,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  traitRevealBadge: {
+    backgroundColor: '#9C27B0' + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  traitRevealText: {
+    fontSize: fontSize.xs,
+    color: '#9C27B0',
+    fontWeight: fontWeight.semibold,
   },
   summarySection: {
     padding: spacing.lg,

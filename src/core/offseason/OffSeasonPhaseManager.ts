@@ -216,6 +216,8 @@ export interface PlayerStatImprovement {
   totalSkillsNarrowed: number;
   /** Whether any skill was fully revealed */
   hadFullReveal: boolean;
+  /** Hidden traits revealed this season (e.g., 'clutch', 'lazy') */
+  traitsRevealed: string[];
 }
 
 /**
