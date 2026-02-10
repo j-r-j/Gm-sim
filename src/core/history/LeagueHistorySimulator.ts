@@ -49,6 +49,18 @@ import {
   updateTeamHistories,
   createDraftPicksForYear,
 } from './HistoryOffseasonProcessor';
+import {
+  PlayerCareerHistory,
+  createPlayerCareerHistory,
+  addSeasonLog,
+  addTransaction,
+  addInjuryRecord,
+  addAward,
+  markRetired,
+  PlayerSeasonLog,
+} from './PlayerHistoryTracker';
+import { generateSeasonStats, generateSeasonInjuries } from './HistoryStatsGenerator';
+import { getPlayerFullName } from '../models/player/Player';
 
 /**
  * Configuration for history simulation
@@ -388,6 +400,38 @@ export function simulateLeagueHistory(
   let totalFreeAgencySignings = 0;
   let totalCoachingChanges = 0;
 
+  // Initialize player history tracking
+  let playerHistory: Record<string, PlayerCareerHistory> = state.playerHistory || {};
+
+  // Initialize history for all existing players
+  for (const player of Object.values(state.players)) {
+    if (!playerHistory[player.id]) {
+      const teamId = findPlayerTeam(player.id, state.teams);
+      playerHistory[player.id] = createPlayerCareerHistory(
+        player.id,
+        getPlayerFullName(player),
+        player.position,
+        player.draftYear,
+        player.draftRound,
+        player.draftPick,
+        teamId || '',
+        player.collegeId
+      );
+      // Record initial transaction
+      if (teamId) {
+        playerHistory[player.id] = addTransaction(playerHistory[player.id], {
+          year: player.draftYear,
+          type: player.draftRound > 0 ? 'drafted' : 'udfa_signed',
+          teamId,
+          description:
+            player.draftRound > 0
+              ? `Drafted round ${player.draftRound}, pick ${player.draftPick}`
+              : 'Signed as undrafted free agent',
+        });
+      }
+    }
+  }
+
   // Start simulation from (startYear - years)
   const startYear = state.league.calendar.currentYear;
   const historyStartYear = startYear - years;
@@ -479,6 +523,56 @@ export function simulateLeagueHistory(
       draftOrder,
     });
 
+    // ============================
+    // PLAYER HISTORY: Generate season stats, injuries, and awards
+    // ============================
+    const seasonLogs = new Map<string, PlayerSeasonLog>();
+
+    for (const team of Object.values(state.teams)) {
+      for (const playerId of team.rosterPlayerIds) {
+        const player = state.players[playerId];
+        if (!player) continue;
+
+        // Generate season stats
+        const log = generateSeasonStats(player, team, currentYear, playoffTeamIds, championTeamId);
+        seasonLogs.set(playerId, log);
+
+        // Add season log to player history
+        if (!playerHistory[playerId]) {
+          playerHistory[playerId] = createPlayerCareerHistory(
+            playerId,
+            getPlayerFullName(player),
+            player.position,
+            player.draftYear,
+            player.draftRound,
+            player.draftPick,
+            team.id,
+            player.collegeId
+          );
+        }
+        playerHistory[playerId] = addSeasonLog(playerHistory[playerId], log);
+
+        // Generate injuries for players who missed games
+        if (log.gamesPlayed < 17) {
+          const { injuries } = generateSeasonInjuries(
+            playerId,
+            team.id,
+            currentYear,
+            log.gamesPlayed
+          );
+          for (const injury of injuries) {
+            playerHistory[playerId] = addInjuryRecord(playerHistory[playerId], injury);
+          }
+        }
+      }
+    }
+
+    // Generate season awards and assign to player histories
+    assignAwardsToPlayers(state.players, state.teams, seasonLogs, currentYear, playerHistory);
+
+    // Find MVP player ID for league history
+    const mvpPlayerId = findMVPPlayer(state.players, state.teams, seasonLogs) || '';
+
     // 6. Update team all-time records and championship history
     state = {
       ...state,
@@ -489,7 +583,7 @@ export function simulateLeagueHistory(
     const seasonSummary: SeasonSummary = {
       year: currentYear,
       championTeamId: championTeamId || '',
-      mvpPlayerId: '', // MVP not tracked in quick sim
+      mvpPlayerId,
       draftOrder,
     };
     state = {
@@ -522,6 +616,13 @@ export function simulateLeagueHistory(
     };
     totalRetirements += retirementResult.retiredPlayerIds.length;
 
+    // Record retirement transactions in player history
+    for (const retiredId of retirementResult.retiredPlayerIds) {
+      if (playerHistory[retiredId]) {
+        playerHistory[retiredId] = markRetired(playerHistory[retiredId], currentYear);
+      }
+    }
+
     // 6c. Contract expirations → free agents
     const contractResult = processContractExpirations(state.players, state.contracts, state.teams);
     state = {
@@ -530,6 +631,22 @@ export function simulateLeagueHistory(
       contracts: contractResult.updatedContracts,
       teams: contractResult.updatedTeams,
     };
+
+    // Record contract expiration transactions
+    for (const faId of contractResult.newFreeAgentIds) {
+      if (playerHistory[faId]) {
+        const lastTeam =
+          playerHistory[faId].seasonLogs.length > 0
+            ? playerHistory[faId].seasonLogs[playerHistory[faId].seasonLogs.length - 1].teamId
+            : '';
+        playerHistory[faId] = addTransaction(playerHistory[faId], {
+          year: currentYear,
+          type: 'contract_expired',
+          teamId: lastTeam,
+          description: 'Contract expired, became free agent',
+        });
+      }
+    }
 
     // 6d. Coaching changes
     const coachResult = processCoachingChanges(state.teams, state.coaches, currentYear);
@@ -567,6 +684,27 @@ export function simulateLeagueHistory(
     };
     totalDraftPicks += draftResult.draftedPlayers.length;
 
+    // Record draft transactions in player history
+    for (const dp of draftResult.draftedPlayers) {
+      const teamId = findPlayerTeam(dp.id, state.teams) || '';
+      playerHistory[dp.id] = createPlayerCareerHistory(
+        dp.id,
+        getPlayerFullName(dp),
+        dp.position,
+        currentYear + 1,
+        dp.draftRound,
+        dp.draftPick,
+        teamId,
+        dp.collegeId
+      );
+      playerHistory[dp.id] = addTransaction(playerHistory[dp.id], {
+        year: currentYear + 1,
+        type: 'drafted',
+        teamId,
+        description: `Drafted round ${dp.draftRound}, pick ${dp.draftPick}`,
+      });
+    }
+
     // 6f. AI Free Agency
     const freeAgentIds = contractResult.newFreeAgentIds.filter((id) => state.players[id] != null);
     const faResult = processAIFreeAgency(
@@ -583,6 +721,18 @@ export function simulateLeagueHistory(
       contracts: faResult.updatedContracts,
     };
     totalFreeAgencySignings += faResult.signings.length;
+
+    // Record FA signing transactions
+    for (const signing of faResult.signings) {
+      if (playerHistory[signing.playerId]) {
+        playerHistory[signing.playerId] = addTransaction(playerHistory[signing.playerId], {
+          year: currentYear + 1,
+          type: 'free_agent_signed',
+          teamId: signing.teamId,
+          description: `Signed as free agent`,
+        });
+      }
+    }
 
     // 6g. Roster maintenance (fill to 53, cut extras)
     const rosterResult = processRosterMaintenance(
@@ -635,6 +785,7 @@ export function simulateLeagueHistory(
     ...state,
     draftPicks,
     prospects,
+    playerHistory,
   };
 
   // Generate the final season schedule for the user's year
@@ -695,4 +846,219 @@ export function simulateLeagueHistory(
     totalFreeAgencySignings,
     totalCoachingChanges,
   };
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Find which team a player is on
+ */
+function findPlayerTeam(playerId: string, teams: Record<string, Team>): string | null {
+  for (const team of Object.values(teams)) {
+    if (team.rosterPlayerIds.includes(playerId)) {
+      return team.id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Assign awards to the appropriate players in their career histories
+ */
+function assignAwardsToPlayers(
+  players: Record<string, Player>,
+  teams: Record<string, Team>,
+  seasonLogs: Map<string, PlayerSeasonLog>,
+  year: number,
+  playerHistory: Record<string, PlayerCareerHistory>
+): void {
+  // Build award candidates sorted by score (same logic as generateSeasonAwards)
+  const getOverallSkill = (player: Player): number => {
+    const vals: number[] = [];
+    for (const sv of Object.values(player.skills)) {
+      if (sv && typeof sv.trueValue === 'number') vals.push(sv.trueValue);
+    }
+    return vals.length === 0 ? 50 : vals.reduce((s, v) => s + v, 0) / vals.length;
+  };
+
+  // Create candidate-to-player mapping by matching award types
+  // MVP → top overall, OPOY → top offensive, DPOY → top defensive, etc.
+  const allCandidates: {
+    playerId: string;
+    score: number;
+    isOffense: boolean;
+    isRookie: boolean;
+  }[] = [];
+
+  for (const [playerId, log] of seasonLogs) {
+    const player = players[playerId];
+    if (!player || log.gamesPlayed < 8) continue;
+    const team = teams[log.teamId];
+    if (!team) continue;
+
+    const skill = getOverallSkill(player);
+    const totalGames = team.currentRecord.wins + team.currentRecord.losses;
+    const winPct = totalGames > 0 ? team.currentRecord.wins / totalGames : 0.5;
+    const score = skill + winPct * 20 + (log.gamesPlayed / 17) * 10;
+
+    const offPositions = ['QB', 'RB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'];
+    allCandidates.push({
+      playerId,
+      score,
+      isOffense: offPositions.includes(player.position),
+      isRookie: player.experience <= 1,
+    });
+  }
+
+  allCandidates.sort((a, b) => b.score - a.score);
+
+  const offensiveSorted = allCandidates.filter((c) => c.isOffense);
+  const defensiveSorted = allCandidates.filter((c) => !c.isOffense);
+  const rookieOff = offensiveSorted.filter((c) => c.isRookie);
+  const rookieDef = defensiveSorted.filter((c) => c.isRookie);
+
+  // Award mapping: each unique award type → best matching player
+  const awarded = new Set<string>();
+
+  const assignOne = (
+    type: import('./PlayerHistoryTracker').AwardType,
+    list: typeof allCandidates
+  ) => {
+    for (const c of list) {
+      if (!awarded.has(`${type}-${c.playerId}`)) {
+        if (playerHistory[c.playerId]) {
+          playerHistory[c.playerId] = addAward(playerHistory[c.playerId], {
+            year,
+            type,
+            teamId: seasonLogs.get(c.playerId)?.teamId || '',
+          });
+        }
+        awarded.add(`${type}-${c.playerId}`);
+        return;
+      }
+    }
+  };
+
+  assignOne('mvp', allCandidates);
+  assignOne('opoy', offensiveSorted);
+  assignOne('dpoy', defensiveSorted);
+  assignOne('oroy', rookieOff);
+  assignOne('droy', rookieDef);
+
+  // All-Pro and Pro Bowl: top N at each position
+  // First-team All-Pro: top player at each position group
+  const posGroups: { positions: string[]; slots: number }[] = [
+    { positions: ['QB'], slots: 1 },
+    { positions: ['RB'], slots: 1 },
+    { positions: ['WR'], slots: 2 },
+    { positions: ['TE'], slots: 1 },
+    { positions: ['LT', 'RT'], slots: 2 },
+    { positions: ['LG', 'RG'], slots: 2 },
+    { positions: ['C'], slots: 1 },
+    { positions: ['DE'], slots: 2 },
+    { positions: ['DT'], slots: 2 },
+    { positions: ['OLB'], slots: 2 },
+    { positions: ['ILB'], slots: 2 },
+    { positions: ['CB'], slots: 2 },
+    { positions: ['FS', 'SS'], slots: 2 },
+    { positions: ['K'], slots: 1 },
+    { positions: ['P'], slots: 1 },
+  ];
+
+  const firstTeam = new Set<string>();
+  const secondTeam = new Set<string>();
+
+  for (const group of posGroups) {
+    const groupCandidates = allCandidates.filter((c) => {
+      const player = players[c.playerId];
+      return player && group.positions.includes(player.position);
+    });
+
+    for (let i = 0; i < group.slots && i < groupCandidates.length; i++) {
+      const pid = groupCandidates[i].playerId;
+      if (!firstTeam.has(pid) && playerHistory[pid]) {
+        playerHistory[pid] = addAward(playerHistory[pid], {
+          year,
+          type: 'first_team_all_pro',
+          teamId: seasonLogs.get(pid)?.teamId || '',
+        });
+        firstTeam.add(pid);
+      }
+    }
+
+    const remaining = groupCandidates.filter((c) => !firstTeam.has(c.playerId));
+    for (let i = 0; i < group.slots && i < remaining.length; i++) {
+      const pid = remaining[i].playerId;
+      if (!secondTeam.has(pid) && playerHistory[pid]) {
+        playerHistory[pid] = addAward(playerHistory[pid], {
+          year,
+          type: 'second_team_all_pro',
+          teamId: seasonLogs.get(pid)?.teamId || '',
+        });
+        secondTeam.add(pid);
+      }
+    }
+  }
+
+  // Pro Bowl: all All-Pros + next ~44 best
+  const allProIds = new Set([...firstTeam, ...secondTeam]);
+  for (const id of allProIds) {
+    if (playerHistory[id]) {
+      playerHistory[id] = addAward(playerHistory[id], {
+        year,
+        type: 'pro_bowl',
+        teamId: seasonLogs.get(id)?.teamId || '',
+      });
+    }
+  }
+
+  const proBowlRemaining = allCandidates.filter((c) => !allProIds.has(c.playerId));
+  const additionalProBowl = Math.min(44, proBowlRemaining.length);
+  for (let i = 0; i < additionalProBowl; i++) {
+    const pid = proBowlRemaining[i].playerId;
+    if (playerHistory[pid]) {
+      playerHistory[pid] = addAward(playerHistory[pid], {
+        year,
+        type: 'pro_bowl',
+        teamId: seasonLogs.get(pid)?.teamId || '',
+      });
+    }
+  }
+}
+
+/**
+ * Find the MVP (best overall player) for league history tracking
+ */
+function findMVPPlayer(
+  players: Record<string, Player>,
+  teams: Record<string, Team>,
+  seasonLogs: Map<string, PlayerSeasonLog>
+): string | null {
+  let bestId: string | null = null;
+  let bestScore = -Infinity;
+
+  for (const [playerId, log] of seasonLogs) {
+    const player = players[playerId];
+    if (!player || log.gamesPlayed < 8) continue;
+    const team = teams[log.teamId];
+    if (!team) continue;
+
+    const vals: number[] = [];
+    for (const sv of Object.values(player.skills)) {
+      if (sv && typeof sv.trueValue === 'number') vals.push(sv.trueValue);
+    }
+    const skill = vals.length === 0 ? 50 : vals.reduce((s, v) => s + v, 0) / vals.length;
+    const totalGames = team.currentRecord.wins + team.currentRecord.losses;
+    const winPct = totalGames > 0 ? team.currentRecord.wins / totalGames : 0.5;
+    const score = skill + winPct * 20 + (log.gamesPlayed / 17) * 10;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = playerId;
+    }
+  }
+
+  return bestId;
 }

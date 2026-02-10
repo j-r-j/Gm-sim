@@ -29,6 +29,16 @@ import {
   updateTeamHistories,
 } from '../HistoryOffseasonProcessor';
 import { generateDraftClass } from '../../draft/DraftClassGenerator';
+import { generateSeasonStats, generateSeasonInjuries } from '../HistoryStatsGenerator';
+import {
+  createPlayerCareerHistory,
+  addSeasonLog,
+  addTransaction,
+  addInjuryRecord,
+  addAward,
+  markRetired,
+  getCareerTotals,
+} from '../PlayerHistoryTracker';
 import { Player } from '../../models/player/Player';
 import { Position } from '../../models/player/Position';
 
@@ -398,4 +408,457 @@ describe('simulateLeagueHistory', () => {
     const totalChampionships = champCounts.reduce((sum, c) => sum + c, 0);
     expect(totalChampionships).toBe(5); // Exactly one champion per year
   }, 180000);
+
+  it('should populate playerHistory for all rostered players', () => {
+    const baseState = createTestGameState();
+    const result = simulateLeagueHistory(baseState, { years: 3 });
+    const state = result.gameState;
+
+    expect(state.playerHistory).toBeDefined();
+
+    // Every player currently on a roster should have a history entry
+    for (const team of Object.values(state.teams)) {
+      for (const playerId of team.rosterPlayerIds) {
+        expect(state.playerHistory![playerId]).toBeDefined();
+        const history = state.playerHistory![playerId];
+        expect(history.playerId).toBe(playerId);
+        expect(history.playerName).toBeTruthy();
+        expect(history.position).toBeTruthy();
+      }
+    }
+  }, 120000);
+
+  it('should generate season logs with stats for players', () => {
+    const baseState = createTestGameState();
+    const result = simulateLeagueHistory(baseState, { years: 2 });
+    const state = result.gameState;
+
+    // Find a player who has been on a roster for the full sim
+    const histories = Object.values(state.playerHistory!);
+    const playersWithLogs = histories.filter((h) => h.seasonLogs.length > 0);
+
+    expect(playersWithLogs.length).toBeGreaterThan(0);
+
+    // Check that season logs have reasonable data
+    for (const history of playersWithLogs.slice(0, 10)) {
+      for (const log of history.seasonLogs) {
+        expect(log.year).toBeGreaterThan(0);
+        expect(log.teamId).toBeTruthy();
+        expect(log.gamesPlayed).toBeGreaterThanOrEqual(0);
+        expect(log.gamesPlayed).toBeLessThanOrEqual(17);
+      }
+    }
+  }, 120000);
+
+  it('should record transactions for drafted players', () => {
+    const baseState = createTestGameState();
+    const result = simulateLeagueHistory(baseState, { years: 3 });
+    const state = result.gameState;
+
+    // Find players with draft transactions
+    const histories = Object.values(state.playerHistory!);
+    const draftedPlayers = histories.filter((h) =>
+      h.transactions.some((t) => t.type === 'drafted')
+    );
+
+    expect(draftedPlayers.length).toBeGreaterThan(0);
+
+    for (const history of draftedPlayers.slice(0, 5)) {
+      const draftTx = history.transactions.find((t) => t.type === 'drafted');
+      expect(draftTx).toBeDefined();
+      expect(draftTx!.teamId).toBeTruthy();
+      expect(draftTx!.description).toContain('Drafted');
+    }
+  }, 120000);
+
+  it('should assign awards each season', () => {
+    const baseState = createTestGameState();
+    const result = simulateLeagueHistory(baseState, { years: 3 });
+    const state = result.gameState;
+
+    const histories = Object.values(state.playerHistory!);
+    const allAwards = histories.flatMap((h) => h.awards);
+
+    // Should have MVPs (one per year)
+    const mvps = allAwards.filter((a) => a.type === 'mvp');
+    expect(mvps.length).toBe(3);
+
+    // Should have Pro Bowlers
+    const proBowlers = allAwards.filter((a) => a.type === 'pro_bowl');
+    expect(proBowlers.length).toBeGreaterThan(0);
+
+    // Should have All-Pros
+    const allPros = allAwards.filter(
+      (a) => a.type === 'first_team_all_pro' || a.type === 'second_team_all_pro'
+    );
+    expect(allPros.length).toBeGreaterThan(0);
+  }, 120000);
+
+  it('should record retirement transactions', () => {
+    const baseState = createTestGameState();
+    const result = simulateLeagueHistory(baseState, { years: 5 });
+    const state = result.gameState;
+
+    const histories = Object.values(state.playerHistory!);
+    const retiredPlayers = histories.filter((h) => h.isRetired);
+
+    // With 5 years of sim, some players should have retired
+    if (result.totalRetirements > 0) {
+      expect(retiredPlayers.length).toBeGreaterThan(0);
+      for (const history of retiredPlayers.slice(0, 5)) {
+        expect(history.retirementYear).not.toBeNull();
+        const retireTx = history.transactions.find((t) => t.type === 'retired');
+        expect(retireTx).toBeDefined();
+      }
+    }
+  }, 180000);
+});
+
+describe('PlayerHistoryTracker', () => {
+  it('should create empty career history', () => {
+    const history = createPlayerCareerHistory(
+      'player-1',
+      'John Doe',
+      Position.QB,
+      2020,
+      1,
+      5,
+      'team-1',
+      'college-1'
+    );
+
+    expect(history.playerId).toBe('player-1');
+    expect(history.playerName).toBe('John Doe');
+    expect(history.position).toBe(Position.QB);
+    expect(history.rookieYear).toBe(2020);
+    expect(history.draftRound).toBe(1);
+    expect(history.draftPick).toBe(5);
+    expect(history.seasonLogs).toHaveLength(0);
+    expect(history.transactions).toHaveLength(0);
+    expect(history.injuries).toHaveLength(0);
+    expect(history.awards).toHaveLength(0);
+    expect(history.isRetired).toBe(false);
+  });
+
+  it('should add season logs immutably', () => {
+    const history = createPlayerCareerHistory(
+      'p1',
+      'Test',
+      Position.WR,
+      2020,
+      2,
+      35,
+      'team-1',
+      'col-1'
+    );
+
+    const log = {
+      year: 2020,
+      teamId: 'team-1',
+      age: 22,
+      gamesPlayed: 16,
+      gamesStarted: 14,
+      passAttempts: 0,
+      passCompletions: 0,
+      passYards: 0,
+      passTDs: 0,
+      passINTs: 0,
+      passerRating: 0,
+      rushAttempts: 5,
+      rushYards: 30,
+      rushTDs: 0,
+      receptions: 68,
+      receivingYards: 950,
+      receivingTDs: 7,
+      tackles: 0,
+      sacks: 0,
+      interceptions: 0,
+      forcedFumbles: 0,
+      fieldGoalsMade: 0,
+      fieldGoalAttempts: 0,
+      teamWins: 10,
+      teamLosses: 7,
+      madePlayoffs: true,
+      wonChampionship: false,
+    };
+
+    const updated = addSeasonLog(history, log);
+    expect(updated.seasonLogs).toHaveLength(1);
+    expect(history.seasonLogs).toHaveLength(0); // Original unchanged
+    expect(updated.seasonLogs[0].receivingYards).toBe(950);
+  });
+
+  it('should add transactions immutably', () => {
+    const history = createPlayerCareerHistory(
+      'p1',
+      'Test',
+      Position.RB,
+      2020,
+      3,
+      70,
+      'team-1',
+      'col-1'
+    );
+
+    const updated = addTransaction(history, {
+      year: 2023,
+      type: 'free_agent_signed',
+      teamId: 'team-2',
+      description: 'Signed as free agent',
+    });
+
+    expect(updated.transactions).toHaveLength(1);
+    expect(history.transactions).toHaveLength(0);
+    expect(updated.transactions[0].type).toBe('free_agent_signed');
+  });
+
+  it('should add injury records immutably', () => {
+    const history = createPlayerCareerHistory(
+      'p1',
+      'Test',
+      Position.CB,
+      2020,
+      1,
+      15,
+      'team-1',
+      'col-1'
+    );
+
+    const updated = addInjuryRecord(history, {
+      year: 2021,
+      week: 5,
+      type: 'acl',
+      weeksMissed: 12,
+      teamId: 'team-1',
+    });
+
+    expect(updated.injuries).toHaveLength(1);
+    expect(history.injuries).toHaveLength(0);
+    expect(updated.injuries[0].type).toBe('acl');
+  });
+
+  it('should add awards immutably', () => {
+    const history = createPlayerCareerHistory(
+      'p1',
+      'Test',
+      Position.QB,
+      2020,
+      1,
+      1,
+      'team-1',
+      'col-1'
+    );
+
+    const updated = addAward(history, {
+      year: 2023,
+      type: 'mvp',
+      teamId: 'team-1',
+    });
+
+    expect(updated.awards).toHaveLength(1);
+    expect(history.awards).toHaveLength(0);
+    expect(updated.awards[0].type).toBe('mvp');
+  });
+
+  it('should mark retired with transaction', () => {
+    let history = createPlayerCareerHistory(
+      'p1',
+      'Test',
+      Position.DE,
+      2010,
+      1,
+      10,
+      'team-1',
+      'col-1'
+    );
+    history = addSeasonLog(history, {
+      year: 2020,
+      teamId: 'team-2',
+      age: 32,
+      gamesPlayed: 16,
+      gamesStarted: 16,
+      passAttempts: 0,
+      passCompletions: 0,
+      passYards: 0,
+      passTDs: 0,
+      passINTs: 0,
+      passerRating: 0,
+      rushAttempts: 0,
+      rushYards: 0,
+      rushTDs: 0,
+      receptions: 0,
+      receivingYards: 0,
+      receivingTDs: 0,
+      tackles: 55,
+      sacks: 8.5,
+      interceptions: 0,
+      forcedFumbles: 3,
+      fieldGoalsMade: 0,
+      fieldGoalAttempts: 0,
+      teamWins: 11,
+      teamLosses: 6,
+      madePlayoffs: true,
+      wonChampionship: false,
+    });
+
+    const retired = markRetired(history, 2021);
+    expect(retired.isRetired).toBe(true);
+    expect(retired.retirementYear).toBe(2021);
+    const retireTx = retired.transactions.find((t) => t.type === 'retired');
+    expect(retireTx).toBeDefined();
+    expect(retireTx!.teamId).toBe('team-2'); // Last season's team
+  });
+
+  it('should calculate career totals', () => {
+    let history = createPlayerCareerHistory(
+      'p1',
+      'Test QB',
+      Position.QB,
+      2018,
+      1,
+      1,
+      'team-1',
+      'col-1'
+    );
+
+    // Add two season logs
+    history = addSeasonLog(history, {
+      year: 2018,
+      teamId: 'team-1',
+      age: 22,
+      gamesPlayed: 16,
+      gamesStarted: 16,
+      passAttempts: 500,
+      passCompletions: 320,
+      passYards: 3800,
+      passTDs: 25,
+      passINTs: 12,
+      passerRating: 92.5,
+      rushAttempts: 40,
+      rushYards: 200,
+      rushTDs: 2,
+      receptions: 0,
+      receivingYards: 0,
+      receivingTDs: 0,
+      tackles: 0,
+      sacks: 0,
+      interceptions: 0,
+      forcedFumbles: 0,
+      fieldGoalsMade: 0,
+      fieldGoalAttempts: 0,
+      teamWins: 10,
+      teamLosses: 7,
+      madePlayoffs: true,
+      wonChampionship: false,
+    });
+
+    history = addSeasonLog(history, {
+      year: 2019,
+      teamId: 'team-1',
+      age: 23,
+      gamesPlayed: 17,
+      gamesStarted: 17,
+      passAttempts: 550,
+      passCompletions: 370,
+      passYards: 4500,
+      passTDs: 35,
+      passINTs: 8,
+      passerRating: 105.2,
+      rushAttempts: 35,
+      rushYards: 180,
+      rushTDs: 3,
+      receptions: 0,
+      receivingYards: 0,
+      receivingTDs: 0,
+      tackles: 0,
+      sacks: 0,
+      interceptions: 0,
+      forcedFumbles: 0,
+      fieldGoalsMade: 0,
+      fieldGoalAttempts: 0,
+      teamWins: 13,
+      teamLosses: 4,
+      madePlayoffs: true,
+      wonChampionship: true,
+    });
+
+    history = addAward(history, { year: 2019, type: 'mvp', teamId: 'team-1' });
+    history = addAward(history, { year: 2019, type: 'pro_bowl', teamId: 'team-1' });
+    history = addAward(history, { year: 2018, type: 'pro_bowl', teamId: 'team-1' });
+
+    const totals = getCareerTotals(history);
+    expect(totals.seasons).toBe(2);
+    expect(totals.gamesPlayed).toBe(33);
+    expect(totals.passYards).toBe(8300);
+    expect(totals.passTDs).toBe(60);
+    expect(totals.rushYards).toBe(380);
+    expect(totals.awards).toBe(3);
+    expect(totals.proBowls).toBe(2);
+  });
+});
+
+describe('HistoryStatsGenerator', () => {
+  let gameState: ReturnType<typeof createTestGameState>;
+
+  beforeAll(() => {
+    gameState = createTestGameState();
+  });
+
+  describe('generateSeasonStats', () => {
+    it('should generate plausible QB stats', () => {
+      // Find a QB
+      const qb = Object.values(gameState.players).find((p) => p.position === Position.QB);
+      expect(qb).toBeDefined();
+      const team = Object.values(gameState.teams).find((t) => t.rosterPlayerIds.includes(qb!.id))!;
+
+      const log = generateSeasonStats(qb!, team, 2025, [], null);
+
+      expect(log.gamesPlayed).toBeGreaterThanOrEqual(0);
+      expect(log.gamesPlayed).toBeLessThanOrEqual(17);
+      expect(log.teamId).toBe(team.id);
+      expect(log.year).toBe(2025);
+      // QB should have pass stats if they played
+      if (log.gamesPlayed > 0 && log.gamesStarted > 0) {
+        expect(log.passAttempts).toBeGreaterThan(0);
+      }
+    });
+
+    it('should generate plausible defensive stats', () => {
+      const defender = Object.values(gameState.players).find(
+        (p) => p.position === Position.ILB || p.position === Position.DE
+      );
+      expect(defender).toBeDefined();
+      const team = Object.values(gameState.teams).find((t) =>
+        t.rosterPlayerIds.includes(defender!.id)
+      )!;
+
+      const log = generateSeasonStats(defender!, team, 2025, [], null);
+
+      if (log.gamesPlayed > 0 && log.gamesStarted > 0) {
+        expect(log.tackles).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('generateSeasonInjuries', () => {
+    it('should generate injuries when games missed', () => {
+      const result = generateSeasonInjuries('player-1', 'team-1', 2025, 10);
+      // 17 - 10 = 7 weeks missed
+      expect(result.weeksMissed).toBe(7);
+      expect(result.injuries.length).toBeGreaterThan(0);
+
+      for (const injury of result.injuries) {
+        expect(injury.year).toBe(2025);
+        expect(injury.teamId).toBe('team-1');
+        expect(injury.weeksMissed).toBeGreaterThan(0);
+        expect(injury.type).toBeTruthy();
+      }
+    });
+
+    it('should return no injuries when all 17 games played', () => {
+      const result = generateSeasonInjuries('player-1', 'team-1', 2025, 17);
+      expect(result.weeksMissed).toBe(0);
+      expect(result.injuries).toHaveLength(0);
+    });
+  });
 });
