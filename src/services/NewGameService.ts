@@ -38,14 +38,22 @@ import {
   calculateFutureCommitments,
 } from '../core/contracts/ContractGenerator';
 import { DEFAULT_SALARY_CAP } from '../core/models/team/TeamFinances';
+import { simulateLeagueHistory } from '../core/history/LeagueHistorySimulator';
 
 const SALARY_CAP = 255000000; // $255 million
+
+/** Default number of years to pre-simulate for league history */
+const DEFAULT_HISTORY_YEARS = 20;
 
 interface NewGameOptions {
   saveSlot: SaveSlot;
   gmName: string;
   selectedTeam: FakeCity;
   startYear?: number;
+  /** Number of years of league history to pre-simulate (default: 20, 0 to skip) */
+  historyYears?: number;
+  /** Callback for history simulation progress */
+  onHistoryProgress?: (year: number, totalYears: number, phase: string) => void;
 }
 
 /**
@@ -228,7 +236,14 @@ function createDraftPicks(teamIds: string[], year: number): Record<string, Draft
  * Creates a complete new game state
  */
 export function createNewGame(options: NewGameOptions): GameState {
-  const { saveSlot, gmName, selectedTeam, startYear = 2025 } = options;
+  const {
+    saveSlot,
+    gmName,
+    selectedTeam,
+    startYear = 2025,
+    historyYears = DEFAULT_HISTORY_YEARS,
+    onHistoryProgress,
+  } = options;
 
   // Create all 32 teams
   const teams = createAllTeams();
@@ -404,7 +419,7 @@ export function createNewGame(options: NewGameOptions): GameState {
   // Initialize tenure stats
   const tenureStats = createDefaultTenureStats();
 
-  return {
+  let baseGameState: GameState = {
     saveSlot,
     createdAt: now,
     lastSavedAt: now,
@@ -426,6 +441,40 @@ export function createNewGame(options: NewGameOptions): GameState {
     patienceMeter,
     tenureStats,
   };
+
+  // Pre-simulate league history if requested
+  if (historyYears > 0) {
+    const historyResult = simulateLeagueHistory(baseGameState, {
+      years: historyYears,
+      onProgress: onHistoryProgress,
+    });
+
+    // Use the history-simulated state but preserve user-specific fields
+    baseGameState = {
+      ...historyResult.gameState,
+      saveSlot,
+      createdAt: now,
+      lastSavedAt: now,
+      userTeamId,
+      userName: gmName,
+      careerStats,
+      gameSettings: { ...DEFAULT_GAME_SETTINGS },
+      newsReadStatus: {},
+      newsFeed: createNewsFeedState(startYear, 1),
+      patienceMeter,
+      tenureStats,
+      scouts, // Keep original scouts (not simulated)
+      owners, // Keep original owners (not simulated)
+    };
+
+    // Re-set the user as GM of their team
+    baseGameState.teams[userTeamId] = {
+      ...baseGameState.teams[userTeamId],
+      gmId: gmName,
+    };
+  }
+
+  return baseGameState;
 }
 
 /**
