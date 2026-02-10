@@ -443,38 +443,6 @@ function ByeWeekCard() {
 }
 
 /**
- * Loading Indicator
- */
-function SimulatingIndicator({ current, total }: { current: number; total: number }) {
-  const spinAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1,
-        duration: 1000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
-  }, [spinAnim]);
-
-  const spin = spinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  return (
-    <View style={styles.simIndicator}>
-      <Animated.View style={[styles.simSpinner, { transform: [{ rotate: spin }] }]} />
-      <Text style={styles.simText}>
-        Simulating games... {current}/{total}
-      </Text>
-    </View>
-  );
-}
-
-/**
  * Main Component
  */
 export function WeeklySchedulePopup({
@@ -494,8 +462,6 @@ export function WeeklySchedulePopup({
   const [animatingGameId, setAnimatingGameId] = useState<string | null>(null);
   const [selectedBoxScore, setSelectedBoxScore] = useState<BoxScore | null>(null);
   const [showBoxScore, setShowBoxScore] = useState(false);
-  const [currentSimGame, setCurrentSimGame] = useState(0);
-  const [totalSimGames, setTotalSimGames] = useState(0);
 
   const weekTitle = phase === 'playoffs' ? getPlayoffRoundName(week) : `Week ${week}`;
   const userGame = games.find((g) => g.isUserGame);
@@ -515,18 +481,24 @@ export function WeeklySchedulePopup({
     prevUserGameCompleteRef.current = userGameAlreadyComplete;
   }, [userGameAlreadyComplete, simPhase]);
 
-  // Pre-populate user's completed game
+  // Pre-populate all already-complete games (user's and others)
   useEffect(() => {
-    if (userGame && userGameAlreadyComplete && !simulatedGames.has(userGame.gameId)) {
-      const simGame: SimulatedGame = {
-        ...userGame,
-        homeScore: userGame.homeScore ?? 0,
-        awayScore: userGame.awayScore ?? 0,
-        isComplete: true,
-      };
-      setSimulatedGames((prev) => new Map(prev).set(userGame.gameId, simGame));
+    const alreadyComplete = games.filter((g) => g.isComplete && !simulatedGames.has(g.gameId));
+    if (alreadyComplete.length > 0) {
+      setSimulatedGames((prev) => {
+        const next = new Map(prev);
+        for (const game of alreadyComplete) {
+          next.set(game.gameId, {
+            ...game,
+            homeScore: game.homeScore ?? 0,
+            awayScore: game.awayScore ?? 0,
+            isComplete: true,
+          });
+        }
+        return next;
+      });
     }
-  }, [userGame, userGameAlreadyComplete, simulatedGames]);
+  }, [games, simulatedGames]);
 
   const completedCount = simulatedGames.size;
   const totalCount = games.length;
@@ -573,28 +545,15 @@ export function WeeklySchedulePopup({
     triggerHaptic('light');
 
     const results = await onSimOtherGames();
-    setTotalSimGames(results.length);
 
-    for (let i = 0; i < results.length; i++) {
-      const game = results[i];
-      setCurrentSimGame(i + 1);
-
-      await new Promise<void>((resolve) => {
-        const isClose =
-          game.homeScore !== undefined &&
-          game.awayScore !== undefined &&
-          Math.abs(game.homeScore - game.awayScore) <= 7;
-        const delay = isClose ? 400 : 250;
-
-        setTimeout(() => {
-          setAnimatingGameId(game.gameId);
-          setSimulatedGames((prev) => new Map(prev).set(game.gameId, game));
-          triggerHaptic('light');
-          setTimeout(() => {
-            setAnimatingGameId(null);
-            resolve();
-          }, 400);
-        }, delay);
+    // Add all results at once instead of one-by-one
+    if (results.length > 0) {
+      setSimulatedGames((prev) => {
+        const next = new Map(prev);
+        for (const game of results) {
+          next.set(game.gameId, game);
+        }
+        return next;
       });
     }
 
@@ -746,11 +705,6 @@ export function WeeklySchedulePopup({
               </TouchableOpacity>
             )}
           </View>
-        )}
-
-        {/* Simulating Indicator */}
-        {simPhase === 'simulating_others' && (
-          <SimulatingIndicator current={currentSimGame} total={totalSimGames} />
         )}
 
         {/* Other Games Scoreboard */}
@@ -1056,33 +1010,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-  },
-
-  // Simulating Indicator
-  simIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryLight,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    marginBottom: spacing.lg,
-    alignSelf: 'center',
-  },
-  simSpinner: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: colors.textOnPrimary,
-    borderTopColor: 'transparent',
-    marginRight: spacing.sm,
-  },
-  simText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textOnPrimary,
   },
 
   // Scoreboard Grid
