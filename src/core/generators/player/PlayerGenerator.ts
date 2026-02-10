@@ -214,7 +214,54 @@ const ROSTER_SKILL_DISTRIBUTION = {
 };
 
 /**
+ * Gets a realistic age range for roster generation based on roster slot.
+ * Creates a mix of:
+ * - Young players on rookie deals (age 22-25, experience 0-3)
+ * - Prime players on second contracts (age 26-29, experience 4-7)
+ * - Veterans on later deals (age 30-35, experience 8+)
+ *
+ * Mirrors typical NFL roster composition where ~25% are on rookie deals,
+ * ~35% on second contracts, ~25% on veteran deals, and ~15% on minimums.
+ */
+function getRealisticAgeRange(
+  isStarter: boolean,
+  positionIndex: number,
+  positionCount: number,
+  skillTier: 'elite' | 'starter' | 'backup' | 'fringe'
+): { min: number; max: number } {
+  if (isStarter) {
+    // Starters are typically prime-age players on second contracts
+    if (skillTier === 'elite') {
+      return { min: 25, max: 30 };
+    }
+    return { min: 24, max: 31 };
+  }
+
+  // Second player at position - young developing talent or solid backup
+  if (positionIndex === 1 && positionCount >= 3) {
+    const roll = Math.random();
+    if (roll < 0.4) {
+      return { min: 22, max: 25 }; // Young, on rookie deal
+    }
+    return { min: 25, max: 29 }; // Established backup on second contract
+  }
+
+  // Deep depth - skew toward cheaper options (young rookie deals or vet minimum)
+  const depthRoll = Math.random();
+  if (depthRoll < 0.4) {
+    return { min: 22, max: 24 }; // Young, cheap rookie deal
+  } else if (depthRoll < 0.7) {
+    return { min: 24, max: 28 }; // Mid-career
+  } else {
+    return { min: 29, max: 34 }; // Veteran depth
+  }
+}
+
+/**
  * Generates a full roster for a team.
+ * Creates a realistic mix of players at different career stages,
+ * mirroring a typical NFL 53-man roster with young draft picks,
+ * prime second-contract players, and veteran depth.
  * @param teamId - The team ID to assign to players
  * @returns Array of 53 players forming a complete roster
  */
@@ -242,11 +289,13 @@ export function generateRoster(teamId: string): Player[] {
         skillTier = 'fringe';
       }
 
+      const ageRange = getRealisticAgeRange(isStarter, i, count, skillTier);
+
       const player = generatePlayer({
         position: position as Position,
         skillTier,
         teamId,
-        ageRange: isStarter ? { min: 24, max: 32 } : { min: 22, max: 30 },
+        ageRange,
       });
 
       roster.push(player);

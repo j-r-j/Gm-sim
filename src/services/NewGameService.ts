@@ -33,7 +33,7 @@ import { createDefaultTenureStats } from '../core/career/FiringMechanics';
 import { seedInitialFreeAgentPool } from '../core/freeAgency/FreeAgentSeeder';
 import { PlayerContract } from '../core/contracts/Contract';
 import {
-  generateRosterContracts,
+  generateInitialRosterContracts,
   calculateTotalCapUsage,
   calculateFutureCommitments,
 } from '../core/contracts/ContractGenerator';
@@ -120,7 +120,8 @@ function createOwnerForTeam(teamId: string): Owner {
 
 /**
  * Creates coaches for a team (Head Coach, OC, DC)
- * Uses the new coach generator for varied, realistic attributes
+ * Uses the new coach generator for varied, realistic attributes.
+ * Coaches start with varied contract years remaining for realism.
  */
 function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[] {
   const coaches: Coach[] = [];
@@ -128,7 +129,7 @@ function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[]
   const coachRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   for (const role of coachRoles) {
-    const coach = generateCoach(role, teamId, startYear);
+    const coach = generateCoach(role, teamId, startYear, { randomizeContractYears: true });
     coaches.push(coach);
   }
 
@@ -137,6 +138,7 @@ function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[]
 
 /**
  * Creates scouts for a team (Head Scout, Offensive Scout, Defensive Scout)
+ * Scouts start with varied contract years remaining for realism.
  */
 function createScoutsForTeam(teamId: string): Scout[] {
   const scouts: Scout[] = [];
@@ -151,7 +153,11 @@ function createScoutsForTeam(teamId: string): Scout[] {
   );
   headScout.teamId = teamId;
   headScout.isAvailable = false;
-  headScout.contract = createScoutContract(1000000 + randomInt(0, 2000000), 3);
+  const headYearsTotal = randomInt(2, 4);
+  headScout.contract = {
+    ...createScoutContract(1000000 + randomInt(0, 2000000), headYearsTotal),
+    yearsRemaining: randomInt(1, headYearsTotal),
+  };
   scouts.push(headScout);
 
   // Offensive Scout
@@ -164,7 +170,11 @@ function createScoutsForTeam(teamId: string): Scout[] {
   );
   offensiveScout.teamId = teamId;
   offensiveScout.isAvailable = false;
-  offensiveScout.contract = createScoutContract(500000 + randomInt(0, 700000), 3);
+  const offYearsTotal = randomInt(2, 4);
+  offensiveScout.contract = {
+    ...createScoutContract(500000 + randomInt(0, 700000), offYearsTotal),
+    yearsRemaining: randomInt(1, offYearsTotal),
+  };
   scouts.push(offensiveScout);
 
   // Defensive Scout
@@ -177,7 +187,11 @@ function createScoutsForTeam(teamId: string): Scout[] {
   );
   defensiveScout.teamId = teamId;
   defensiveScout.isAvailable = false;
-  defensiveScout.contract = createScoutContract(500000 + randomInt(0, 700000), 3);
+  const defYearsTotal = randomInt(2, 4);
+  defensiveScout.contract = {
+    ...createScoutContract(500000 + randomInt(0, 700000), defYearsTotal),
+    yearsRemaining: randomInt(1, defYearsTotal),
+  };
   scouts.push(defensiveScout);
 
   return scouts;
@@ -238,8 +252,8 @@ export function createNewGame(options: NewGameOptions): GameState {
     const roster = generateRoster(teamId);
     const playerIds: string[] = [];
 
-    // Generate contracts for the roster
-    const { contracts: teamContracts, updatedPlayers } = generateRosterContracts(
+    // Generate contracts for the roster with realistic mid-deal diversity
+    const { contracts: teamContracts, updatedPlayers } = generateInitialRosterContracts(
       roster,
       teamId,
       startYear
