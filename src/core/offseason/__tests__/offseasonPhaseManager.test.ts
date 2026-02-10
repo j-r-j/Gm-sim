@@ -278,6 +278,8 @@ describe('OffSeasonPhaseManager', () => {
         draftPosition: 20,
         topPerformers: [],
         awards: [],
+        seasonWriteUp: '',
+        playerImprovements: [],
       };
 
       const newState = setSeasonRecap(state, recap);

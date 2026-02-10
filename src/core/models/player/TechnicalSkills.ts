@@ -104,3 +104,33 @@ export function getPerceivedRange(skill: SkillValue): { min: number; max: number
 export function isSkillRevealed(skill: SkillValue, playerAge: number): boolean {
   return playerAge >= skill.maturityAge;
 }
+
+/**
+ * Calculates how well a player's skills are known based on perceived range widths.
+ * Returns a value from 0-100 where 100 means all skills are fully known.
+ *
+ * A brand-new unknown player typically has ~40-point ranges per skill (0% knowledge).
+ * As ranges narrow toward the true value, knowledge approaches 100%.
+ */
+export function calculateSkillKnowledge(
+  skills: TechnicalSkills,
+  positionSkillNames: readonly string[]
+): number {
+  let totalRange = 0;
+  let count = 0;
+
+  for (const name of positionSkillNames) {
+    const skill = skills[name];
+    if (skill) {
+      totalRange += skill.perceivedMax - skill.perceivedMin;
+      count++;
+    }
+  }
+
+  if (count === 0) return 0;
+
+  const avgRange = totalRange / count;
+  // Max typical starting range is about 40 points
+  const maxRange = 40;
+  return Math.max(0, Math.min(100, Math.round((1 - avgRange / maxRange) * 100)));
+}

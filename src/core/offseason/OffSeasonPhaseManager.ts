@@ -186,6 +186,41 @@ export interface OffSeasonEvent {
 }
 
 /**
+ * A single skill rating insight revealed at season end
+ */
+export interface SkillRatingReveal {
+  skillName: string;
+  previousMin: number;
+  previousMax: number;
+  newMin: number;
+  newMax: number;
+  isFullyRevealed: boolean;
+}
+
+/**
+ * Per-player stat improvement summary for season end
+ */
+export interface PlayerStatImprovement {
+  playerId: string;
+  playerName: string;
+  position: string;
+  gamesPlayed: number;
+  gamesStarted: number;
+  /** Key stat line (position-appropriate) */
+  statLine: string;
+  /** Overall grade earned */
+  grade: string;
+  /** Skill rating reveals earned through playing time and tenure */
+  ratingReveals: SkillRatingReveal[];
+  /** How many skills were narrowed this season */
+  totalSkillsNarrowed: number;
+  /** Whether any skill was fully revealed */
+  hadFullReveal: boolean;
+  /** Hidden traits revealed this season (e.g., 'clutch', 'lazy') */
+  traitsRevealed: string[];
+}
+
+/**
  * Season recap data
  */
 export interface SeasonRecap {
@@ -206,6 +241,10 @@ export interface SeasonRecap {
     playerId: string;
     playerName: string;
   }>;
+  /** Narrative write-up of the season */
+  seasonWriteUp: string;
+  /** Per-player stat improvements and rating reveals */
+  playerImprovements: PlayerStatImprovement[];
 }
 
 /**

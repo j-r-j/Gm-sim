@@ -26,7 +26,10 @@ import {
 } from '../../styles';
 import { Player } from '../../core/models/player/Player';
 import { Position } from '../../core/models/player/Position';
-import { SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
+import {
+  SKILL_NAMES_BY_POSITION,
+  calculateSkillKnowledge,
+} from '../../core/models/player/TechnicalSkills';
 import { getInjuryDisplayString, isHealthy } from '../../core/models/player/InjuryStatus';
 import { getRoleDisplayName, getRoleFitDescription } from '../../core/models/player/RoleFit';
 import {
@@ -227,6 +230,80 @@ function InfoChip({
 }
 
 /**
+ * Player Intel Section - Shows aggregate knowledge about the player
+ */
+function PlayerIntelSection({
+  player,
+  positionKey,
+}: {
+  player: Player;
+  positionKey: keyof typeof SKILL_NAMES_BY_POSITION;
+}): React.JSX.Element {
+  const skillNames = SKILL_NAMES_BY_POSITION[positionKey];
+  const skillKnowledge = calculateSkillKnowledge(player.skills, skillNames);
+
+  const totalTraits = player.hiddenTraits.positive.length + player.hiddenTraits.negative.length;
+  const revealedTraits = player.hiddenTraits.revealedToUser.length;
+  const traitKnowledge = totalTraits > 0 ? Math.round((revealedTraits / totalTraits) * 100) : 100;
+
+  // Weighted overall: 70% skills, 30% traits
+  const overallKnowledge = Math.round(skillKnowledge * 0.7 + traitKnowledge * 0.3);
+
+  const knowledgeColor =
+    overallKnowledge >= 80
+      ? colors.success
+      : overallKnowledge >= 50
+        ? colors.info
+        : overallKnowledge >= 25
+          ? colors.warning
+          : colors.error;
+
+  const knowledgeLabel =
+    overallKnowledge >= 80
+      ? 'Well Known'
+      : overallKnowledge >= 50
+        ? 'Familiar'
+        : overallKnowledge >= 25
+          ? 'Developing'
+          : 'Unknown';
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Player Intel</Text>
+      <View style={styles.intelCard}>
+        <View style={styles.intelHeader}>
+          <Text style={[styles.intelPercentage, { color: knowledgeColor }]}>
+            {overallKnowledge}%
+          </Text>
+          <Text style={[styles.intelLabel, { color: knowledgeColor }]}>{knowledgeLabel}</Text>
+        </View>
+        <View style={styles.intelProgressBar}>
+          <View
+            style={[
+              styles.intelProgressFill,
+              { width: `${overallKnowledge}%`, backgroundColor: knowledgeColor },
+            ]}
+          />
+        </View>
+        <View style={styles.intelBreakdown}>
+          <View style={styles.intelBreakdownItem}>
+            <Text style={styles.intelBreakdownLabel}>Skills</Text>
+            <Text style={styles.intelBreakdownValue}>{skillKnowledge}%</Text>
+          </View>
+          <View style={styles.intelBreakdownDivider} />
+          <View style={styles.intelBreakdownItem}>
+            <Text style={styles.intelBreakdownLabel}>Traits</Text>
+            <Text style={styles.intelBreakdownValue}>
+              {revealedTraits}/{totalTraits}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
  * Profile Tab Content
  */
 function ProfileTab({
@@ -297,6 +374,9 @@ function ProfileTab({
           </View>
         )}
       </View>
+
+      {/* Player Intel Section */}
+      <PlayerIntelSection player={player} positionKey={positionKey} />
 
       {/* Skills Section */}
       <View style={styles.section}>
@@ -1023,6 +1103,62 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.text,
+  },
+
+  // Player Intel styles
+  intelCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+  },
+  intelHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  intelPercentage: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    fontVariant: ['tabular-nums'],
+  },
+  intelLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+  intelProgressBar: {
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+  },
+  intelProgressFill: {
+    height: '100%',
+    borderRadius: borderRadius.full,
+  },
+  intelBreakdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  intelBreakdownItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  intelBreakdownDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+  },
+  intelBreakdownLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxs,
+  },
+  intelBreakdownValue: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
   },
 
   // Skills grid

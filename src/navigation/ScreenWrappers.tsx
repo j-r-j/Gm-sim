@@ -3384,6 +3384,8 @@ export function SeasonRecapScreenWrapper({
       draftPosition,
       topPerformers,
       awards: [], // No awards system yet
+      seasonWriteUp: '',
+      playerImprovements: [],
     };
   }
 
