@@ -25,6 +25,48 @@ export interface WeeklyDigestScreenProps {
   onPlayerSelect?: (playerId: string) => void;
 }
 
+/**
+ * Derives a richer digest from gameState when newsFeed data is available.
+ * Falls back to the provided digest prop when no real data exists.
+ */
+function deriveDigest(gameState: GameState, propsDigest: WeeklyDigest): WeeklyDigest {
+  const feed = gameState.newsFeed;
+  if (!feed || (feed.newsItems.length === 0 && feed.rumors.length === 0)) {
+    return propsDigest;
+  }
+
+  const currentWeek = gameState.league.calendar.currentWeek;
+  const currentYear = gameState.league.calendar.currentYear;
+
+  // Get this week's news
+  const weekNews = feed.newsItems.filter((n) => n.season === currentYear && n.week === currentWeek);
+
+  // Get active rumors
+  const activeRumors = feed.rumors.filter((r) => !r.isResolved && r.expiresAt > Date.now());
+
+  // If we have real news, build a richer digest
+  if (weekNews.length > 0 || activeRumors.length > 0) {
+    const traitHintingNews = weekNews.filter((n) => n.revealsTraitHint);
+    const unreadCount = weekNews.filter((n) => !n.isRead).length;
+    const categories = Array.from(new Set(weekNews.map((n) => n.category))) as NewsFeedCategory[];
+
+    return {
+      ...propsDigest,
+      season: currentYear,
+      week: currentWeek,
+      topStories: weekNews.length > 0 ? weekNews : propsDigest.topStories,
+      activeRumors: activeRumors.length > 0 ? activeRumors : propsDigest.activeRumors,
+      traitHintingNews:
+        traitHintingNews.length > 0 ? traitHintingNews : propsDigest.traitHintingNews,
+      totalNewsCount: weekNews.length > 0 ? weekNews.length : propsDigest.totalNewsCount,
+      unreadCount: weekNews.length > 0 ? unreadCount : propsDigest.unreadCount,
+      categoriesWithNews: categories.length > 0 ? categories : propsDigest.categoriesWithNews,
+    };
+  }
+
+  return propsDigest;
+}
+
 type SectionType = 'overview' | 'stories' | 'rumors' | 'categories';
 
 /**
@@ -189,13 +231,17 @@ function CategorySummaryCard({
  * Weekly Digest Screen Component
  */
 export function WeeklyDigestScreen({
-  digest,
+  gameState,
+  digest: propsDigest,
   onBack,
   onNewsSelect,
   onRumorSelect,
   onPlayerSelect,
 }: WeeklyDigestScreenProps): React.JSX.Element {
   const [activeSection, setActiveSection] = useState<SectionType>('overview');
+
+  // Derive real digest from gameState when available
+  const digest = deriveDigest(gameState, propsDigest);
 
   // Count news by category
   const categoryCounts: Partial<Record<NewsFeedCategory, number>> = {};

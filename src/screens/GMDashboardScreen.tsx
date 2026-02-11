@@ -3,8 +3,16 @@
  * Main hub for managing your team - access all game features from here
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   colors,
@@ -51,6 +59,7 @@ export type DashboardAction =
   | 'playWeek'
   | 'quickSim'
   | 'simSeason'
+  | 'simByeWeek'
   | 'settings'
   | 'saveGame'
   | 'mainMenu'
@@ -58,7 +67,9 @@ export type DashboardAction =
   | 'tradeOffers'
   | 'startSit'
   | 'weeklyAwards'
-  | 'waiverWire';
+  | 'waiverWire'
+  | 'seasonHistory'
+  | 'hallOfFame';
 
 interface GMDashboardScreenProps {
   gameState: GameState;
@@ -308,11 +319,12 @@ export function GMDashboardScreen({
     // If on bye (and games not complete yet)
     if (userOnBye) {
       return {
-        actionText: `Advance ${weekLabel}`,
-        contextText: 'Your team has a bye - sim league games',
+        actionText: `Sim Bye Week`,
+        contextText: `${weekLabel} - Your team has a bye`,
         actionType: 'secondary' as const,
         targetAction: 'advance_week' as const,
         isEnabled: true,
+        isByeWeek: true,
       };
     }
 
@@ -348,6 +360,12 @@ export function GMDashboardScreen({
   // Handle action prompt press
   const handleActionPromptPress = () => {
     if (!actionPrompt) return;
+
+    // Bye week gets its own action for one-tap sim
+    if ('isByeWeek' in actionPrompt && actionPrompt.isByeWeek) {
+      onAction('simByeWeek');
+      return;
+    }
 
     switch (actionPrompt.targetAction) {
       case 'view_matchup':
@@ -396,8 +414,47 @@ export function GMDashboardScreen({
         2;
   const isPlayoffs = phase === 'playoffs';
 
+  // First-time onboarding modal: show on week 1, season 1 (first dashboard visit)
+  const isNewGame =
+    !isOffseason &&
+    calendar.currentWeek === 1 &&
+    (!gameState.careerStats || gameState.careerStats.seasonsCompleted === 0);
+  const [showOnboarding, setShowOnboarding] = useState(isNewGame);
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* First-Time Onboarding Modal */}
+      <Modal
+        visible={showOnboarding}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOnboarding(false)}
+      >
+        <View style={styles.onboardingOverlay}>
+          <View style={styles.onboardingModal}>
+            <Text style={styles.onboardingTitle}>Welcome, GM!</Text>
+            <Text style={styles.onboardingSubtitle}>Here are a few tips to get you started:</Text>
+            <View style={styles.onboardingTips}>
+              <Text style={styles.onboardingTip}>
+                Tap &quot;Play Week&quot; to start your first game
+              </Text>
+              <Text style={styles.onboardingTip}>Check your Depth Chart before each game</Text>
+              <Text style={styles.onboardingTip}>Visit Roster to manage your players</Text>
+              <Text style={styles.onboardingTip}>Monitor Owner Relations to keep your job</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.onboardingButton}
+              onPress={() => setShowOnboarding(false)}
+              accessibilityLabel="Dismiss onboarding tips"
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={styles.onboardingButtonText}>Got it!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Header with Team Info */}
       <View style={styles.header}>
         <View style={styles.teamBanner}>
@@ -770,6 +827,47 @@ export function GMDashboardScreen({
           color={colors.success}
           onPress={() => onAction('freeAgency')}
           badge={isFreeAgency ? 'ACTIVE' : undefined}
+        />
+
+        {isOffseason && (
+          <MenuCard
+            title="Restricted Free Agents"
+            subtitle="Manage RFA tenders and offers"
+            icon="🔒"
+            color="#6C5CE7"
+            onPress={() => onAction('rfa')}
+          />
+        )}
+
+        {isOffseason && (
+          <MenuCard
+            title="Compensatory Picks"
+            subtitle="Track comp pick projections"
+            icon="📌"
+            color="#E17055"
+            onPress={() => onAction('compPicks')}
+          />
+        )}
+
+        {/* League */}
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          League
+        </Text>
+
+        <MenuCard
+          title="Season History"
+          subtitle="Past seasons and champions"
+          icon="📚"
+          color={colors.primary}
+          onPress={() => onAction('seasonHistory')}
+        />
+
+        <MenuCard
+          title="Hall of Fame"
+          subtitle="All-time greats"
+          icon="🏛️"
+          color={colors.secondary}
+          onPress={() => onAction('hallOfFame')}
         />
 
         {/* System Actions */}
@@ -1206,6 +1304,60 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     marginTop: spacing.xxs,
+  },
+  // Onboarding Modal
+  onboardingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  onboardingModal: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 360,
+    ...shadows.lg,
+  },
+  onboardingTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  onboardingSubtitle: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  onboardingTips: {
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  onboardingTip: {
+    fontSize: fontSize.md,
+    color: colors.text,
+    paddingLeft: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    paddingVertical: spacing.xs,
+  },
+  onboardingButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    minHeight: accessibility.minTouchTarget,
+    justifyContent: 'center',
+  },
+  onboardingButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
   },
 });
 

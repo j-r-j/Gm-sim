@@ -26,6 +26,7 @@ import {
 } from '../styles';
 import { ScreenHeader, Button } from '../components';
 import { Player } from '../core/models/player/Player';
+import { getInjuryDisplayString } from '../core/models/player/InjuryStatus';
 import {
   OFFENSIVE_POSITIONS,
   DEFENSIVE_POSITIONS,
@@ -59,6 +60,8 @@ export interface ExtensionOffer {
 export interface RosterScreenProps {
   /** Team's player IDs */
   rosterIds: string[];
+  /** IR player IDs */
+  injuredReserveIds?: string[];
   /** All players */
   players: Record<string, Player>;
   /** Team's salary cap space */
@@ -80,9 +83,13 @@ export interface RosterScreenProps {
   ) => Promise<'accepted' | 'rejected' | 'counter'>;
   /** Navigate to trade screen */
   onTrade?: () => void;
+  /** Callback to place a player on IR */
+  onPlaceOnIR?: (playerId: string) => Promise<boolean>;
+  /** Callback to activate a player from IR */
+  onActivateFromIR?: (playerId: string) => Promise<boolean>;
 }
 
-type PositionFilter = 'all' | 'offense' | 'defense' | 'special';
+type PositionFilter = 'all' | 'offense' | 'defense' | 'special' | 'ir';
 
 /**
  * Format money for display
@@ -103,12 +110,14 @@ function RosterPlayerCard({
   onCut,
   onExtend,
   canExtend,
+  onPlaceOnIR,
 }: {
   player: Player;
   onPress?: () => void;
   onCut?: () => void;
   onExtend?: () => void;
   canExtend?: boolean;
+  onPlaceOnIR?: () => void;
 }) {
   const [showActions, setShowActions] = useState(false);
 
@@ -152,6 +161,19 @@ function RosterPlayerCard({
               <Text style={styles.extendButtonText}>Extend</Text>
             </TouchableOpacity>
           )}
+          {onPlaceOnIR && (
+            <TouchableOpacity
+              style={styles.irButton}
+              onPress={onPlaceOnIR}
+              accessibilityLabel={`Place ${player.firstName} ${player.lastName} on IR`}
+              accessibilityRole="button"
+              accessibilityHint="Places this injured player on injured reserve"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Ionicons name="medkit" size={14} color={colors.textOnPrimary} />
+              <Text style={styles.irButtonText}>IR</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.cutButton}
             onPress={onCut}
@@ -165,6 +187,66 @@ function RosterPlayerCard({
           </TouchableOpacity>
         </View>
       )}
+    </View>
+  );
+}
+
+/**
+ * IR player card - shows injured reserve players with activate action
+ */
+function IRPlayerCard({
+  player,
+  onPress,
+  onActivate,
+}: {
+  player: Player;
+  onPress?: () => void;
+  onActivate?: () => void;
+}) {
+  const injuryText = getInjuryDisplayString(player.injuryStatus);
+
+  return (
+    <View style={styles.irCardContainer}>
+      <TouchableOpacity
+        style={styles.irCard}
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityLabel={`${player.firstName} ${player.lastName}, ${player.position}, ${injuryText}`}
+        accessibilityRole="button"
+      >
+        <View style={styles.irCardLeft}>
+          <Text style={styles.irCardPosition}>{player.position}</Text>
+          <View style={styles.irCardInfo}>
+            <Text style={styles.irCardName}>
+              {player.firstName} {player.lastName}
+            </Text>
+            <View style={styles.irInjuryRow}>
+              <View style={styles.irInjuryBadge}>
+                <Text style={styles.irInjuryBadgeText}>IR</Text>
+              </View>
+              <Text style={styles.irInjuryText}>{injuryText}</Text>
+              {player.injuryStatus.weeksRemaining > 0 && (
+                <Text style={styles.irWeeksText}>
+                  {player.injuryStatus.weeksRemaining}w remaining
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+        {onActivate && (
+          <TouchableOpacity
+            style={styles.activateButton}
+            onPress={onActivate}
+            accessibilityLabel={`Activate ${player.firstName} ${player.lastName} from IR`}
+            accessibilityRole="button"
+            accessibilityHint="Moves player from injured reserve to active roster"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="arrow-up-circle" size={14} color={colors.textOnPrimary} />
+            <Text style={styles.activateButtonText}>Activate</Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -375,6 +457,7 @@ function ExtensionModal({
 
 export function RosterScreen({
   rosterIds,
+  injuredReserveIds = [],
   players,
   capSpace,
   onBack,
@@ -384,6 +467,8 @@ export function RosterScreen({
   isExtensionEligible,
   onExtendPlayer,
   onTrade,
+  onPlaceOnIR,
+  onActivateFromIR,
 }: RosterScreenProps) {
   const [filter, setFilter] = useState<PositionFilter>('all');
   const [cutModalVisible, setCutModalVisible] = useState(false);
@@ -468,6 +553,39 @@ export function RosterScreen({
     }
   };
 
+  // Handle placing a player on IR
+  const handlePlaceOnIR = async (player: Player) => {
+    if (onPlaceOnIR) {
+      const success = await onPlaceOnIR(player.id);
+      if (success) {
+        Alert.alert(
+          'Placed on IR',
+          `${player.firstName} ${player.lastName} has been placed on injured reserve.`
+        );
+      } else {
+        Alert.alert('Error', 'Failed to place player on IR.');
+      }
+    }
+  };
+
+  // Handle activating a player from IR
+  const handleActivateFromIR = async (player: Player) => {
+    if (onActivateFromIR) {
+      const success = await onActivateFromIR(player.id);
+      if (success) {
+        Alert.alert(
+          'Activated from IR',
+          `${player.firstName} ${player.lastName} has been activated from injured reserve.`
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          'Cannot activate player from IR yet. The player may need more recovery time or the roster may be full.'
+        );
+      }
+    }
+  };
+
   // Get roster players
   const rosterPlayers = useMemo(() => {
     return rosterIds
@@ -506,6 +624,14 @@ export function RosterScreen({
     });
   }, [rosterPlayers, filter]);
 
+  // IR players
+  const irPlayers = useMemo(() => {
+    return injuredReserveIds
+      .map((id) => players[id])
+      .filter(Boolean)
+      .sort((a, b) => a.lastName.localeCompare(b.lastName));
+  }, [injuredReserveIds, players]);
+
   // Count by group
   const counts = useMemo(() => {
     const offense = rosterPlayers.filter((p) => OFFENSIVE_POSITIONS.includes(p.position)).length;
@@ -513,8 +639,8 @@ export function RosterScreen({
     const special = rosterPlayers.filter((p) =>
       SPECIAL_TEAMS_POSITIONS.includes(p.position)
     ).length;
-    return { offense, defense, special, total: rosterPlayers.length };
-  }, [rosterPlayers]);
+    return { offense, defense, special, total: rosterPlayers.length, ir: irPlayers.length };
+  }, [rosterPlayers, irPlayers]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -554,7 +680,7 @@ export function RosterScreen({
 
       {/* Position Filter */}
       <View style={styles.filterContainer} accessibilityRole="tablist">
-        {(['all', 'offense', 'defense', 'special'] as PositionFilter[]).map((f) => {
+        {(['all', 'offense', 'defense', 'special', 'ir'] as PositionFilter[]).map((f) => {
           const label =
             f === 'all'
               ? `All (${counts.total})`
@@ -562,7 +688,9 @@ export function RosterScreen({
                 ? `Offense (${counts.offense})`
                 : f === 'defense'
                   ? `Defense (${counts.defense})`
-                  : `Special Teams (${counts.special})`;
+                  : f === 'ir'
+                    ? `IR (${counts.ir})`
+                    : `Special Teams (${counts.special})`;
           const shortLabel =
             f === 'all'
               ? `All (${counts.total})`
@@ -570,7 +698,9 @@ export function RosterScreen({
                 ? `OFF (${counts.offense})`
                 : f === 'defense'
                   ? `DEF (${counts.defense})`
-                  : `ST (${counts.special})`;
+                  : f === 'ir'
+                    ? `IR (${counts.ir})`
+                    : `ST (${counts.special})`;
 
           return (
             <TouchableOpacity
@@ -590,34 +720,67 @@ export function RosterScreen({
         })}
       </View>
 
-      {/* Player List */}
-      <FlatList
-        data={filteredPlayers}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RosterPlayerCard
-            player={item}
-            onPress={() => onSelectPlayer?.(item.id)}
-            onCut={() => handleCutPress(item)}
-            onExtend={() => handleExtendPress(item)}
-            canExtend={isExtensionEligible?.(item.id) ?? false}
-          />
-        )}
-        contentContainerStyle={[
-          styles.listContent,
-          filteredPlayers.length === 0 && styles.emptyListContent,
-        ]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>👥</Text>
-            <Text style={styles.emptyStateTitle}>No Players</Text>
-            <Text style={styles.emptyStateText}>
-              {filter === 'all' ? 'Your roster is empty' : `No ${filter} players on roster`}
-            </Text>
-          </View>
-        }
-      />
+      {/* Player List - Active roster or IR list */}
+      {filter === 'ir' ? (
+        <FlatList
+          data={irPlayers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <IRPlayerCard
+              player={item}
+              onPress={() => onSelectPlayer?.(item.id)}
+              onActivate={onActivateFromIR ? () => handleActivateFromIR(item) : undefined}
+            />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            irPlayers.length === 0 && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>+</Text>
+              <Text style={styles.emptyStateTitle}>No Players on IR</Text>
+              <Text style={styles.emptyStateText}>No players are currently on injured reserve</Text>
+            </View>
+          }
+        />
+      ) : (
+        <FlatList
+          data={filteredPlayers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <RosterPlayerCard
+              player={item}
+              onPress={() => onSelectPlayer?.(item.id)}
+              onCut={() => handleCutPress(item)}
+              onExtend={() => handleExtendPress(item)}
+              canExtend={isExtensionEligible?.(item.id) ?? false}
+              onPlaceOnIR={
+                onPlaceOnIR &&
+                item.injuryStatus.severity !== 'none' &&
+                item.injuryStatus.severity !== 'questionable'
+                  ? () => handlePlaceOnIR(item)
+                  : undefined
+              }
+            />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredPlayers.length === 0 && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>👥</Text>
+              <Text style={styles.emptyStateTitle}>No Players</Text>
+              <Text style={styles.emptyStateText}>
+                {filter === 'all' ? 'Your roster is empty' : `No ${filter} players on roster`}
+              </Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Cut Modal */}
       <CutModal
@@ -942,6 +1105,100 @@ const styles = StyleSheet.create({
   },
   modalButtonFlex: {
     flex: 1,
+  },
+  // IR button in actions overlay
+  irButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.warning,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
+  },
+  irButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+  // IR card styles
+  irCardContainer: {
+    marginBottom: spacing.sm,
+  },
+  irCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning,
+    ...shadows.sm,
+  },
+  irCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.sm,
+  },
+  irCardPosition: {
+    width: 32,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  irCardInfo: {
+    flex: 1,
+  },
+  irCardName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  irInjuryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  irInjuryBadge: {
+    backgroundColor: colors.error + '20',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+  },
+  irInjuryBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.error,
+  },
+  irInjuryText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  irWeeksText: {
+    fontSize: fontSize.xs,
+    color: colors.warning,
+    fontWeight: fontWeight.medium,
+  },
+  // Activate from IR button
+  activateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
+  },
+  activateButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
   },
 });
 

@@ -1,6 +1,6 @@
 /**
  * FinancesScreen
- * Displays salary cap and financial information
+ * Displays salary cap and financial information using real contract data
  */
 
 import React, { useMemo } from 'react';
@@ -9,6 +9,7 @@ import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } fr
 import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
+import { PlayerContract, getCapHitForYear, calculateDeadMoney } from '../core/contracts';
 
 /**
  * Contract summary for display
@@ -35,6 +36,10 @@ export interface FinancesScreenProps {
   onBack: () => void;
   /** Callback when player is selected */
   onSelectPlayer?: (playerId: string) => void;
+  /** Player contracts keyed by player ID or contract ID */
+  contracts?: Record<string, PlayerContract>;
+  /** Current season year for cap hit calculations */
+  currentYear?: number;
 }
 
 /**
@@ -111,50 +116,123 @@ function ContractRow({ contract, onPress }: { contract: ContractSummary; onPress
   );
 }
 
+/**
+ * Build contract summaries from real contract data for a team's roster
+ */
+function buildContractsFromRealData(
+  team: Team,
+  contracts: Record<string, PlayerContract>,
+  currentYear: number
+): { contracts: ContractSummary[]; totalSpending: number; deadMoney: number } {
+  const summaries: ContractSummary[] = [];
+  let totalSpending = 0;
+  let totalDeadMoney = 0;
+
+  // Build a lookup from playerId to contract for quick access
+  const contractsByPlayerId = new Map<string, PlayerContract>();
+  for (const contract of Object.values(contracts)) {
+    if (contract.teamId === team.id && contract.status === 'active') {
+      contractsByPlayerId.set(contract.playerId, contract);
+    }
+  }
+
+  // Iterate roster and map to real contracts
+  for (const playerId of team.rosterPlayerIds) {
+    const contract = contractsByPlayerId.get(playerId);
+    if (!contract) continue;
+
+    const capHit = getCapHitForYear(contract, currentYear);
+    if (capHit <= 0) continue;
+
+    summaries.push({
+      playerId: contract.playerId,
+      playerName: contract.playerName,
+      position: contract.position,
+      capHit,
+      yearsRemaining: contract.yearsRemaining,
+    });
+
+    totalSpending += capHit;
+  }
+
+  // Also account for dead money from non-active contracts on this team
+  for (const contract of Object.values(contracts)) {
+    if (contract.teamId === team.id && contract.status !== 'active') {
+      const deadMoney = calculateDeadMoney(contract, currentYear);
+      totalDeadMoney += deadMoney;
+    }
+  }
+
+  // Add team-level dead money from finances if available
+  totalDeadMoney += team.finances?.deadMoney ?? 0;
+
+  // Sort by cap hit descending
+  summaries.sort((a, b) => b.capHit - a.capHit);
+
+  return {
+    contracts: summaries,
+    totalSpending,
+    deadMoney: totalDeadMoney,
+  };
+}
+
+/**
+ * Build contract summaries from player estimates (fallback when no contracts provided)
+ */
+function buildContractsFromEstimates(
+  team: Team,
+  players: Record<string, Player>
+): { contracts: ContractSummary[]; totalSpending: number; deadMoney: number } {
+  const summaries: ContractSummary[] = [];
+  let totalSpending = 0;
+  const deadMoney = team.finances?.deadMoney ?? 0;
+
+  for (const playerId of team.rosterPlayerIds) {
+    const player = players[playerId];
+    if (!player) continue;
+
+    const baseCapHit = 1000000;
+    const experienceBonus = player.experience * 500000;
+    const capHit = baseCapHit + experienceBonus;
+
+    summaries.push({
+      playerId: player.id,
+      playerName: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      capHit,
+      yearsRemaining: Math.max(1, 4 - player.experience),
+    });
+
+    totalSpending += capHit;
+  }
+
+  summaries.sort((a, b) => b.capHit - a.capHit);
+
+  return {
+    contracts: summaries,
+    totalSpending,
+    deadMoney,
+  };
+}
+
 export function FinancesScreen({
   team,
   players,
   salaryCap,
   onBack,
   onSelectPlayer,
+  contracts,
+  currentYear,
 }: FinancesScreenProps) {
-  // Calculate financial summary
+  // Calculate financial summary using real contract data when available
   const financials = useMemo(() => {
-    // Get contracts from roster
-    const contracts: ContractSummary[] = [];
-    let totalSpending = 0;
-    const deadMoney = team.finances?.deadMoney ?? 0;
-
-    for (const playerId of team.rosterPlayerIds) {
-      const player = players[playerId];
-      if (!player) continue;
-
-      // Estimate cap hit based on player value (simplified)
-      const baseCapHit = 1000000; // $1M base
-      const experienceBonus = player.experience * 500000;
-      const capHit = baseCapHit + experienceBonus;
-
-      contracts.push({
-        playerId: player.id,
-        playerName: `${player.firstName} ${player.lastName}`,
-        position: player.position,
-        capHit,
-        yearsRemaining: Math.max(1, 4 - player.experience),
-      });
-
-      totalSpending += capHit;
+    if (contracts && currentYear) {
+      return buildContractsFromRealData(team, contracts, currentYear);
     }
+    return buildContractsFromEstimates(team, players);
+  }, [team, players, salaryCap, contracts, currentYear]);
 
-    // Sort by cap hit descending
-    contracts.sort((a, b) => b.capHit - a.capHit);
-
-    return {
-      contracts,
-      totalSpending,
-      deadMoney,
-      capSpace: salaryCap - totalSpending,
-    };
-  }, [team, players, salaryCap]);
+  const capSpace = salaryCap - financials.totalSpending;
 
   // Group by position
   const positionBreakdown = useMemo(() => {
@@ -189,16 +267,30 @@ export function FinancesScreen({
                 total={salaryCap}
                 deadMoney={financials.deadMoney}
               />
-              <View style={styles.capSummary}>
-                <View style={styles.capSummaryItem}>
+
+              {/* Cap Summary with breakdown */}
+              <View style={styles.capSummaryGrid}>
+                <View style={styles.capSummaryGridItem}>
+                  <Text style={styles.capSummaryLabel}>Active Roster</Text>
+                  <Text style={styles.capSummaryGridValue}>
+                    {formatCurrency(financials.totalSpending)}
+                  </Text>
+                </View>
+                <View style={styles.capSummaryGridItem}>
+                  <Text style={styles.capSummaryLabel}>Dead Money</Text>
+                  <Text style={[styles.capSummaryGridValue, { color: colors.error }]}>
+                    {formatCurrency(financials.deadMoney)}
+                  </Text>
+                </View>
+                <View style={styles.capSummaryGridItem}>
                   <Text style={styles.capSummaryLabel}>Cap Space</Text>
                   <Text
                     style={[
-                      styles.capSummaryValue,
-                      financials.capSpace < 0 ? styles.negative : styles.positive,
+                      styles.capSummaryGridValue,
+                      capSpace < 0 ? styles.negative : styles.positive,
                     ]}
                   >
-                    {formatCurrency(financials.capSpace)}
+                    {formatCurrency(capSpace)}
                   </Text>
                 </View>
               </View>
@@ -331,21 +423,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textSecondary,
   },
-  capSummary: {
+  capSummaryGrid: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginTop: spacing.sm,
+    gap: spacing.sm,
   },
-  capSummaryItem: {
+  capSummaryGridItem: {
+    flex: 1,
     alignItems: 'center',
+    backgroundColor: colors.background,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   capSummaryLabel: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
+    marginBottom: spacing.xxs,
   },
-  capSummaryValue: {
-    fontSize: fontSize.xl,
+  capSummaryGridValue: {
+    fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
+    color: colors.text,
   },
   positive: {
     color: colors.success,

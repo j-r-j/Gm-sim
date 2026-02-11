@@ -28,6 +28,42 @@ export interface RumorMillScreenProps {
   onTeamSelect?: (teamId: string) => void;
 }
 
+/**
+ * Derives rumors from gameState.newsFeed when available,
+ * falling back to the rumors prop. Also enriches trade offer data.
+ */
+function deriveRumors(gameState: GameState, propsRumors: Rumor[]): Rumor[] {
+  // Use real news feed rumors if available
+  const feedRumors = gameState.newsFeed?.rumors;
+  const baseRumors = feedRumors && feedRumors.length > 0 ? feedRumors : propsRumors;
+
+  // Supplement with trade offer-derived rumors if available
+  const tradeOffers = gameState.tradeOffers?.activeOffers ?? [];
+  const tradeRumors: Rumor[] = tradeOffers
+    .filter((offer) => offer.status === 'pending')
+    .map((offer) => ({
+      id: `trade-rumor-${offer.id}`,
+      type: 'trade_interest' as RumorType,
+      headline: `Report: ${offer.offeringTeamName} Interested in Trade`,
+      body: `Sources say the ${offer.offeringTeamName} have reached out about a potential trade. ${offer.motivation}`,
+      isTrue: true,
+      sourceConfidence: 'strong' as RumorSourceConfidence,
+      timestamp: Date.now(),
+      season: gameState.league.calendar.currentYear,
+      week: offer.createdWeek || gameState.league.calendar.currentWeek,
+      teamId: offer.offeringTeamId,
+      priority: 'high' as StoryPriority,
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      isResolved: false,
+    }));
+
+  // Merge, avoiding duplicates by id
+  const existingIds = new Set(baseRumors.map((r) => r.id));
+  const newTradeRumors = tradeRumors.filter((r) => !existingIds.has(r.id));
+
+  return [...baseRumors, ...newTradeRumors];
+}
+
 type TabType = 'active' | 'confirmed' | 'debunked' | 'all';
 type FilterType = RumorType | 'all';
 
@@ -234,13 +270,17 @@ function FilterChip({
  * Rumor Mill Screen Component
  */
 export function RumorMillScreen({
-  rumors,
+  gameState,
+  rumors: propsRumors,
   onBack,
   onPlayerSelect,
   onTeamSelect,
 }: RumorMillScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
+
+  // Derive real rumors from gameState + props
+  const rumors = deriveRumors(gameState, propsRumors);
 
   // Filter rumors based on tab
   const getFilteredRumors = (): Rumor[] => {

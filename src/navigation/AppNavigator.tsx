@@ -64,6 +64,12 @@ import {
   StartSitScreenWrapper,
   WeeklyAwardsScreenWrapper,
   WaiverWireScreenWrapper,
+  ChampionshipCelebrationScreenWrapper,
+  SeasonOverScreenWrapper,
+  SeasonHistoryScreenWrapper,
+  HallOfFameScreenWrapper,
+  PlayerComparisonScreenWrapper,
+  DraftTradeCalculatorScreenWrapper,
 } from './ScreenWrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -169,6 +175,17 @@ export function AppNavigator(): React.JSX.Element {
       <Stack.Screen name="StartSit" component={StartSitScreenWrapper} />
       <Stack.Screen name="WeeklyAwards" component={WeeklyAwardsScreenWrapper} />
       <Stack.Screen name="WaiverWire" component={WaiverWireScreenWrapper} />
+
+      {/* P1+ New Screens */}
+      <Stack.Screen
+        name="ChampionshipCelebration"
+        component={ChampionshipCelebrationScreenWrapper}
+      />
+      <Stack.Screen name="SeasonOver" component={SeasonOverScreenWrapper} />
+      <Stack.Screen name="SeasonHistory" component={SeasonHistoryScreenWrapper} />
+      <Stack.Screen name="HallOfFame" component={HallOfFameScreenWrapper} />
+      <Stack.Screen name="PlayerComparison" component={PlayerComparisonScreenWrapper} />
+      <Stack.Screen name="DraftTradeCalculator" component={DraftTradeCalculatorScreenWrapper} />
     </Stack.Navigator>
   );
 }

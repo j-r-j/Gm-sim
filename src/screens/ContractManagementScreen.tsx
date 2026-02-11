@@ -1,6 +1,7 @@
 /**
  * ContractManagementScreen
  * Displays team contract overview, salary cap status, and contract management actions
+ * including franchise tag management and contract restructuring.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -10,6 +11,7 @@ import { GameState } from '../core/models/game/GameState';
 import { Avatar } from '../components/avatar';
 import { ScreenHeader } from '../components';
 import { Player } from '../core/models/player/Player';
+import { Position } from '../core/models/player/Position';
 import {
   PlayerContract,
   CapStatus,
@@ -17,7 +19,20 @@ import {
   isExpiringContract,
   getCutBreakdown,
   CutBreakdown,
+  getFranchiseTagValue,
+  getRestructureOptions,
+  previewRestructure,
+  RestructurePreview,
 } from '../core/contracts';
+
+/**
+ * Action types the screen can dispatch to the wrapper
+ */
+export type ContractAction =
+  | { type: 'applyFranchiseTag'; playerId: string; position: Position }
+  | { type: 'removeFranchiseTag'; playerId: string }
+  | { type: 'restructureContract'; contractId: string; amountToConvert: number; voidYears: number }
+  | { type: 'cutPlayer'; playerId: string; cutBreakdown: CutBreakdown };
 
 /**
  * Props for ContractManagementScreen
@@ -29,6 +44,7 @@ export interface ContractManagementScreenProps {
   onBack: () => void;
   onPlayerSelect?: (playerId: string) => void;
   onCutPlayer?: (playerId: string, cutBreakdown: CutBreakdown) => void;
+  onAction?: (action: ContractAction) => void;
 }
 
 type SortOption = 'capHit' | 'yearsRemaining' | 'position' | 'name';
@@ -151,6 +167,310 @@ function CapOverview({ capStatus }: { capStatus: CapStatus }): React.JSX.Element
           </View>
         )}
       </View>
+    </View>
+  );
+}
+
+/**
+ * Franchise Tag section
+ */
+function FranchiseTagSection({
+  contracts,
+  currentYear,
+  players,
+  onApplyTag,
+  onRemoveTag,
+}: {
+  contracts: PlayerContract[];
+  currentYear: number;
+  players: Record<string, Player>;
+  onApplyTag: (playerId: string, position: Position) => void;
+  onRemoveTag: (playerId: string) => void;
+}): React.JSX.Element {
+  const [showEligible, setShowEligible] = useState(false);
+
+  const taggedContract = useMemo(
+    () => contracts.find((c) => c.type === 'franchise_tag' && c.status === 'active'),
+    [contracts]
+  );
+
+  const eligiblePlayers = useMemo(() => {
+    if (!showEligible) return [];
+    return contracts
+      .filter((c) => isExpiringContract(c) && c.type !== 'franchise_tag')
+      .map((c) => {
+        const tagCost = getFranchiseTagValue(c.position, 1, currentYear);
+        return { contract: c, tagCost };
+      })
+      .sort((a, b) => b.tagCost - a.tagCost);
+  }, [contracts, currentYear, showEligible]);
+
+  return (
+    <View style={styles.tagSection}>
+      <Text style={styles.sectionTitle} accessibilityRole="header">
+        Franchise Tag
+      </Text>
+
+      {taggedContract ? (
+        <View style={styles.taggedPlayerCard}>
+          <View style={styles.taggedPlayerHeader}>
+            <Avatar id={taggedContract.playerId} size="sm" context="player" />
+            <View style={styles.taggedPlayerInfo}>
+              <Text style={styles.taggedPlayerName}>{taggedContract.playerName}</Text>
+              <Text style={styles.taggedPlayerPosition}>{taggedContract.position}</Text>
+            </View>
+            <View style={styles.tagCostBadge}>
+              <Text style={styles.tagCostText}>
+                {formatMoney(taggedContract.yearlyBreakdown[0]?.capHit || 0)}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.indicatorBadge, { backgroundColor: colors.primary + '30' }]}>
+            <Text style={[styles.indicatorText, { color: colors.primary }]}>FRANCHISE TAGGED</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.removeTagButton}
+            onPress={() => onRemoveTag(taggedContract.playerId)}
+            accessibilityLabel={`Remove franchise tag from ${taggedContract.playerName}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Text style={styles.removeTagButtonText}>Remove Tag</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.noTagContainer}>
+          <Text style={styles.noTagText}>No player currently franchise tagged</Text>
+          <TouchableOpacity
+            style={styles.applyTagButton}
+            onPress={() => setShowEligible(!showEligible)}
+            accessibilityLabel={
+              showEligible ? 'Hide eligible players' : 'Show eligible players for franchise tag'
+            }
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Text style={styles.applyTagButtonText}>
+              {showEligible ? 'Hide Eligible Players' : 'Apply Franchise Tag'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showEligible && !taggedContract && (
+        <View style={styles.eligibleList}>
+          {eligiblePlayers.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No players with expiring contracts eligible for tag
+            </Text>
+          ) : (
+            eligiblePlayers.map(({ contract, tagCost }) => {
+              const player = players[contract.playerId];
+              return (
+                <View key={contract.id} style={styles.eligibleItem}>
+                  <View style={styles.eligibleItemInfo}>
+                    <Avatar id={contract.playerId} size="sm" context="player" />
+                    <View style={styles.eligibleItemText}>
+                      <Text style={styles.eligiblePlayerName}>{contract.playerName}</Text>
+                      <Text style={styles.eligiblePlayerDetail}>
+                        {contract.position} | Age {player?.age ?? '?'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.eligibleItemAction}>
+                    <Text style={styles.tagCostLabel}>Tag Cost</Text>
+                    <Text style={styles.tagCostValue}>{formatMoney(tagCost)}</Text>
+                    <TouchableOpacity
+                      style={styles.tagPlayerButton}
+                      onPress={() => onApplyTag(contract.playerId, contract.position)}
+                      accessibilityLabel={`Apply franchise tag to ${contract.playerName} for ${formatMoney(tagCost)}`}
+                      accessibilityRole="button"
+                      hitSlop={accessibility.hitSlop}
+                    >
+                      <Text style={styles.tagPlayerButtonText}>Tag</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Restructure Deals section
+ */
+function RestructureSection({
+  contracts,
+  currentYear,
+  onRestructure,
+}: {
+  contracts: PlayerContract[];
+  currentYear: number;
+  onRestructure: (contractId: string, amount: number, voidYears: number) => void;
+}): React.JSX.Element {
+  const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
+
+  const restructurablePlayers = useMemo(() => {
+    return contracts
+      .filter((c) => {
+        const options = getRestructureOptions(c, currentYear);
+        return options.canRestructure;
+      })
+      .map((c) => {
+        const options = getRestructureOptions(c, currentYear);
+        return { contract: c, options };
+      })
+      .sort((a, b) => b.options.maxConversion - a.options.maxConversion);
+  }, [contracts, currentYear]);
+
+  if (restructurablePlayers.length === 0) {
+    return (
+      <View style={styles.restructureSection}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          Restructure Deals
+        </Text>
+        <Text style={styles.emptyText}>No contracts eligible for restructuring</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.restructureSection}>
+      <Text style={styles.sectionTitle} accessibilityRole="header">
+        Restructure Deals
+      </Text>
+      <Text style={styles.restructureSubtitle}>
+        {restructurablePlayers.length} player{restructurablePlayers.length !== 1 ? 's' : ''}{' '}
+        eligible
+      </Text>
+
+      {restructurablePlayers.map(({ contract, options }) => {
+        const isExpanded = expandedContractId === contract.id;
+        const currentCapHit =
+          contract.yearlyBreakdown.find((y) => y.year === currentYear)?.capHit ?? 0;
+
+        return (
+          <View key={contract.id} style={styles.restructureItem}>
+            <TouchableOpacity
+              style={styles.restructureItemHeader}
+              onPress={() => setExpandedContractId(isExpanded ? null : contract.id)}
+              accessibilityLabel={`${contract.playerName}, ${contract.position}, cap hit ${formatMoney(currentCapHit)}, max savings ${formatMoney(options.maxConversion)}${isExpanded ? ', collapse' : ', expand for options'}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Avatar id={contract.playerId} size="sm" context="player" />
+              <View style={styles.restructureItemInfo}>
+                <Text style={styles.restructurePlayerName}>{contract.playerName}</Text>
+                <Text style={styles.restructurePlayerDetail}>
+                  {contract.position} | {contract.yearsRemaining} yr
+                  {contract.yearsRemaining !== 1 ? 's' : ''} left
+                </Text>
+              </View>
+              <View style={styles.restructureItemStats}>
+                <Text style={styles.restructureStatLabel}>Cap Hit</Text>
+                <Text style={styles.restructureStatValue}>{formatMoney(currentCapHit)}</Text>
+              </View>
+              <Text style={styles.expandIcon}>{isExpanded ? '[-]' : '[+]'}</Text>
+            </TouchableOpacity>
+
+            {isExpanded && (
+              <RestructureOptions
+                contract={contract}
+                options={options}
+                currentYear={currentYear}
+                onRestructure={onRestructure}
+              />
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Restructure options for an expanded player
+ */
+function RestructureOptions({
+  contract,
+  options,
+  currentYear,
+  onRestructure,
+}: {
+  contract: PlayerContract;
+  options: ReturnType<typeof getRestructureOptions>;
+  currentYear: number;
+  onRestructure: (contractId: string, amount: number, voidYears: number) => void;
+}): React.JSX.Element {
+  const previews: { amount: number; preview: RestructurePreview }[] = useMemo(() => {
+    return options.suggestedConversions.map((amount) => ({
+      amount,
+      preview: previewRestructure(contract, currentYear, amount),
+    }));
+  }, [contract, currentYear, options.suggestedConversions]);
+
+  return (
+    <View style={styles.restructureOptionsContainer}>
+      <View style={styles.restructureOptionsHeader}>
+        <Text style={styles.restructureOptionsTitle}>Conversion Options</Text>
+        <Text style={styles.restructureOptionsSubtitle}>
+          Max convertible: {formatMoney(options.maxConversion)}
+        </Text>
+      </View>
+
+      {previews.map(({ amount, preview }) => {
+        const deadMoneyImpact = preview.futureImpact.reduce(
+          (sum, f) => sum + f.additionalCapHit,
+          0
+        );
+
+        return (
+          <View key={amount} style={styles.restructureOptionRow}>
+            <View style={styles.restructureOptionInfo}>
+              <Text style={styles.restructureOptionAmount}>Convert {formatMoney(amount)}</Text>
+              <View style={styles.restructureOptionDetails}>
+                <Text style={styles.restructureOptionDetail}>
+                  New cap hit: {formatMoney(preview.newCapHit)}
+                </Text>
+                <Text style={[styles.restructureOptionDetail, { color: colors.success }]}>
+                  Savings: {formatMoney(preview.capSavings)}
+                </Text>
+                {deadMoneyImpact > 0 && (
+                  <Text style={[styles.restructureOptionDetail, { color: colors.warning }]}>
+                    Future impact: +{formatMoney(deadMoneyImpact)}
+                  </Text>
+                )}
+              </View>
+              {preview.recommendation ? (
+                <Text style={styles.restructureRecommendation}>{preview.recommendation}</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.restructureButton,
+                !preview.isRecommended && styles.restructureButtonCaution,
+              ]}
+              onPress={() => onRestructure(contract.id, amount, 0)}
+              accessibilityLabel={`Restructure ${contract.playerName}, convert ${formatMoney(amount)}, save ${formatMoney(preview.capSavings)}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text
+                style={[
+                  styles.restructureButtonText,
+                  !preview.isRecommended && styles.restructureButtonTextCaution,
+                ]}
+              >
+                Restructure
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -340,6 +660,7 @@ export function ContractManagementScreen({
   onBack,
   onPlayerSelect,
   onCutPlayer,
+  onAction,
 }: ContractManagementScreenProps): React.JSX.Element {
   const [sortBy, setSortBy] = useState<SortOption>('capHit');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
@@ -353,7 +674,7 @@ export function ContractManagementScreen({
       case 'expiring':
         filtered = filtered.filter((c) => isExpiringContract(c));
         break;
-      case 'highCap':
+      case 'highCap': {
         const avgCapHit =
           contracts.length > 0
             ? contracts.reduce((sum, c) => sum + (c.yearlyBreakdown[0]?.capHit || 0), 0) /
@@ -361,6 +682,7 @@ export function ContractManagementScreen({
             : 0;
         filtered = filtered.filter((c) => (c.yearlyBreakdown[0]?.capHit || 0) > avgCapHit);
         break;
+      }
       case 'rookie':
         filtered = filtered.filter((c) => c.type === 'rookie');
         break;
@@ -391,9 +713,23 @@ export function ContractManagementScreen({
 
   const handleCutAnalysis = (contract: PlayerContract) => {
     const breakdown = getCutBreakdown(contract, currentYear);
-    if (onCutPlayer) {
+    if (onAction) {
+      onAction({ type: 'cutPlayer', playerId: contract.playerId, cutBreakdown: breakdown });
+    } else if (onCutPlayer) {
       onCutPlayer(contract.playerId, breakdown);
     }
+  };
+
+  const handleApplyTag = (playerId: string, position: Position) => {
+    onAction?.({ type: 'applyFranchiseTag', playerId, position });
+  };
+
+  const handleRemoveTag = (playerId: string) => {
+    onAction?.({ type: 'removeFranchiseTag', playerId });
+  };
+
+  const handleRestructure = (contractId: string, amount: number, voidYears: number) => {
+    onAction?.({ type: 'restructureContract', contractId, amountToConvert: amount, voidYears });
   };
 
   return (
@@ -404,6 +740,22 @@ export function ContractManagementScreen({
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Cap Overview */}
         <CapOverview capStatus={capStatus} />
+
+        {/* Franchise Tag */}
+        <FranchiseTagSection
+          contracts={contracts}
+          currentYear={currentYear}
+          players={gameState.players}
+          onApplyTag={handleApplyTag}
+          onRemoveTag={handleRemoveTag}
+        />
+
+        {/* Restructure Deals */}
+        <RestructureSection
+          contracts={contracts}
+          currentYear={currentYear}
+          onRestructure={handleRestructure}
+        />
 
         {/* Controls */}
         <ContractControls
@@ -551,6 +903,276 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.text,
+  },
+  // Franchise Tag Section
+  tagSection: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  taggedPlayerCard: {
+    backgroundColor: colors.background,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  taggedPlayerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  taggedPlayerInfo: {
+    flex: 1,
+  },
+  taggedPlayerName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  taggedPlayerPosition: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  tagCostBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+  },
+  tagCostText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  removeTagButton: {
+    backgroundColor: colors.error + '20',
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  removeTagButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.error,
+  },
+  noTagContainer: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  noTagText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  applyTagButton: {
+    backgroundColor: colors.primary + '20',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  applyTagButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  eligibleList: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  eligibleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  eligibleItemInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  eligibleItemText: {
+    flex: 1,
+  },
+  eligiblePlayerName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  eligiblePlayerDetail: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  eligibleItemAction: {
+    alignItems: 'flex-end',
+    gap: spacing.xxs,
+  },
+  tagCostLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  tagCostValue: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  tagPlayerButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  tagPlayerButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+  },
+  emptyText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+  // Restructure Section
+  restructureSection: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  restructureSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  restructureItem: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  restructureItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.sm,
+    gap: spacing.sm,
+    minHeight: 44,
+  },
+  restructureItemInfo: {
+    flex: 1,
+  },
+  restructurePlayerName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  restructurePlayerDetail: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  restructureItemStats: {
+    alignItems: 'flex-end',
+  },
+  restructureStatLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  restructureStatValue: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  expandIcon: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+  },
+  restructureOptionsContainer: {
+    padding: spacing.sm,
+    paddingTop: 0,
+    gap: spacing.sm,
+  },
+  restructureOptionsHeader: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+  },
+  restructureOptionsTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  restructureOptionsSubtitle: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
+  },
+  restructureOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    gap: spacing.sm,
+  },
+  restructureOptionInfo: {
+    flex: 1,
+  },
+  restructureOptionAmount: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  restructureOptionDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
+  },
+  restructureOptionDetail: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  restructureRecommendation: {
+    fontSize: fontSize.xs,
+    color: colors.info,
+    fontStyle: 'italic',
+    marginTop: spacing.xxs,
+  },
+  restructureButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  restructureButtonCaution: {
+    backgroundColor: colors.warning + '30',
+  },
+  restructureButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+  },
+  restructureButtonTextCaution: {
+    color: colors.warning,
   },
   // Controls
   controls: {

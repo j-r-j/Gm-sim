@@ -64,6 +64,13 @@ import { CoachHiringScreen } from '../screens/CoachHiringScreen';
 import { CareerLegacyScreen } from '../screens/CareerLegacyScreen';
 import { CombineProDayScreen } from '../screens/CombineProDayScreen';
 import { StatsScreen } from '../screens/StatsScreen';
+import { ChampionshipCelebrationScreen } from '../screens/ChampionshipCelebrationScreen';
+import { SeasonOverScreen } from '../screens/SeasonOverScreen';
+import { SeasonHistoryScreen } from '../screens/SeasonHistoryScreen';
+import { HallOfFameScreen } from '../screens/HallOfFameScreen';
+import { PlayerComparisonScreen } from '../screens/PlayerComparisonScreen';
+import { DraftTradeCalculatorScreen, TradeCalcPick } from '../screens/DraftTradeCalculatorScreen';
+import { ContractAction } from '../screens/ContractManagementScreen';
 import { StaffDecisionScreen } from '../screens/StaffDecisionScreen';
 import { StaffHiringScreen } from '../screens/StaffHiringScreen';
 import { WeeklySchedulePopup, WeeklyGame, SimulatedGame } from '../screens/WeeklySchedulePopup';
@@ -160,6 +167,7 @@ import {
   simulatePlayoffRound,
   advancePlayoffRound,
   PlayoffRound,
+  PlayoffMatchup as EnginePlayoffMatchup,
 } from '../core/season/PlayoffGenerator';
 import { calculateStandings as calculateDetailedStandings } from '../core/season/StandingsCalculator';
 import { updateSeasonStatsFromGame } from '../core/game/SeasonStatsAggregator';
@@ -1859,6 +1867,105 @@ export function DashboardScreenWrapper({
     }
   }, [gameState, setGameState, saveGameState, setIsLoading, navigation]);
 
+  // Sim bye week: simulate all other teams' games (user is on bye), then show WeekSummary
+  const handleSimByeWeek = useCallback(async () => {
+    if (!gameState) return;
+
+    const { calendar, schedule } = gameState.league;
+    if (!schedule?.regularSeason) {
+      Alert.alert('Error', 'No schedule available');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Simulate all games for the week EXCEPT user's game (since they're on bye)
+      const weekResults = simulateWeek(
+        calendar.currentWeek,
+        schedule,
+        gameState,
+        gameState.userTeamId,
+        false // do NOT include user game - they're on bye
+      );
+
+      // Update schedule with results
+      const updatedSchedule = { ...schedule };
+      const updatedGames = [...updatedSchedule.regularSeason];
+      for (const simResult of weekResults.games) {
+        const gameIndex = updatedGames.findIndex((g) => g.gameId === simResult.game.gameId);
+        if (gameIndex >= 0) {
+          updatedGames[gameIndex] = simResult.game;
+        }
+      }
+      updatedSchedule.regularSeason = updatedGames;
+
+      // Update team records for other teams
+      const updatedTeams = { ...gameState.teams };
+      for (const simResult of weekResults.games) {
+        const { result, game } = simResult;
+        const homeTeam = updatedTeams[game.homeTeamId];
+        const awayTeam = updatedTeams[game.awayTeamId];
+
+        if (homeTeam && awayTeam) {
+          const homeWon = result.homeScore > result.awayScore;
+          const awayWon = result.awayScore > result.homeScore;
+          const tie = result.homeScore === result.awayScore;
+
+          updatedTeams[game.homeTeamId] = {
+            ...homeTeam,
+            currentRecord: {
+              ...homeTeam.currentRecord,
+              wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+              losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+              ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
+              pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
+            },
+          };
+          updatedTeams[game.awayTeamId] = {
+            ...awayTeam,
+            currentRecord: {
+              ...awayTeam.currentRecord,
+              wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+              losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+              ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
+              pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
+            },
+          };
+        }
+      }
+
+      // Aggregate season stats
+      let updatedSeasonStats = gameState.seasonStats || {};
+      for (const simResult of weekResults.games) {
+        updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, simResult.result);
+      }
+
+      const updatedState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          schedule: updatedSchedule,
+        },
+        teams: updatedTeams,
+        seasonStats: updatedSeasonStats,
+      };
+
+      setGameState(updatedState);
+      await saveGameState(updatedState);
+      setIsLoading(false);
+
+      // Navigate to WeekSummary to see around-the-league results
+      navigation.navigate('WeekSummary');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error simming bye week:', error);
+      Alert.alert('Error', 'Failed to simulate bye week');
+      setIsLoading(false);
+    }
+  }, [gameState, setGameState, saveGameState, setIsLoading, navigation]);
+
   const handleAction = useCallback(
     (action: DashboardAction) => {
       switch (action) {
@@ -1992,6 +2099,15 @@ export function DashboardScreenWrapper({
         case 'quickSim':
           handleQuickSim();
           break;
+        case 'simByeWeek':
+          handleSimByeWeek();
+          break;
+        case 'seasonHistory':
+          navigation.navigate('SeasonHistory');
+          break;
+        case 'hallOfFame':
+          navigation.navigate('HallOfFame');
+          break;
       }
     },
     [
@@ -2000,6 +2116,7 @@ export function DashboardScreenWrapper({
       handleAdvanceWeek,
       handleSimSeason,
       handleQuickSim,
+      handleSimByeWeek,
       saveGame,
       setGameState,
     ]
@@ -2023,13 +2140,50 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
   const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
   const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2;
 
+  // Get IR player IDs from team data (injuredReservePlayerIds or fallback)
+  const injuredReserveIds: string[] =
+    (userTeam as unknown as { injuredReservePlayerIds?: string[] }).injuredReservePlayerIds || [];
+
   return (
     <RosterScreen
       rosterIds={userTeam.rosterPlayerIds}
+      injuredReserveIds={injuredReserveIds}
       players={gameState.players}
       capSpace={capSpace}
       onBack={() => navigation.goBack()}
       onSelectPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+      onPlaceOnIR={async (playerId) => {
+        const updatedRoster = userTeam.rosterPlayerIds.filter((id) => id !== playerId);
+        const updatedIR = [...injuredReserveIds, playerId];
+        const updatedTeam = {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+          injuredReservePlayerIds: updatedIR,
+        };
+        const updatedState: GameState = {
+          ...gameState,
+          teams: { ...gameState.teams, [userTeam.id]: updatedTeam },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+        return true;
+      }}
+      onActivateFromIR={async (playerId) => {
+        const updatedIR = injuredReserveIds.filter((id) => id !== playerId);
+        const updatedRoster = [...userTeam.rosterPlayerIds, playerId];
+        const updatedTeam = {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+          injuredReservePlayerIds: updatedIR,
+        };
+        const updatedState: GameState = {
+          ...gameState,
+          teams: { ...gameState.teams, [userTeam.id]: updatedTeam },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+        return true;
+      }}
       onGetCutPreview={(playerId) => {
         const player = gameState.players[playerId];
         if (!player) return null;
@@ -2210,7 +2364,7 @@ export function OwnerRelationsScreenWrapper({
 export function ContractManagementScreenWrapper({
   navigation,
 }: ScreenProps<'ContractManagement'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading contracts..." />;
@@ -2312,6 +2466,87 @@ export function ContractManagementScreenWrapper({
             `  Dead Money: $${(breakdown.postJune1Cut.deadMoney / 1000).toFixed(1)}M\n\n` +
             `Recommendation: ${breakdown.bestOptionReason}`
         );
+      }}
+      onAction={async (action: ContractAction) => {
+        switch (action.type) {
+          case 'applyFranchiseTag': {
+            // Mark player as franchise tagged in contracts
+            const existingContract = gameState.contracts[action.playerId];
+            if (existingContract) {
+              const taggedContract: PlayerContract = {
+                ...existingContract,
+                type: 'franchise_tag',
+                notes: [
+                  ...(existingContract.notes || []),
+                  `Franchise tagged at ${action.position}`,
+                ],
+              };
+              const updatedContracts = {
+                ...gameState.contracts,
+                [action.playerId]: taggedContract,
+              };
+              const updatedState: GameState = { ...gameState, contracts: updatedContracts };
+              setGameState(updatedState);
+              await saveGameState(updatedState);
+            }
+            Alert.alert('Franchise Tag Applied', `Player has been franchise tagged.`);
+            break;
+          }
+          case 'removeFranchiseTag': {
+            const existingContract = gameState.contracts[action.playerId];
+            if (existingContract) {
+              const untaggedContract: PlayerContract = {
+                ...existingContract,
+                type: existingContract.totalYears <= 3 ? 'rookie' : 'veteran',
+                notes: [...(existingContract.notes || []), 'Franchise tag removed'],
+              };
+              const updatedContracts = {
+                ...gameState.contracts,
+                [action.playerId]: untaggedContract,
+              };
+              const updatedState: GameState = { ...gameState, contracts: updatedContracts };
+              setGameState(updatedState);
+              await saveGameState(updatedState);
+            }
+            Alert.alert('Franchise Tag Removed', `Franchise tag has been removed.`);
+            break;
+          }
+          case 'restructureContract': {
+            // Apply contract restructure - convert salary to signing bonus
+            const contract = Object.values(gameState.contracts).find(
+              (c) => c.id === action.contractId
+            );
+            if (contract) {
+              const restructuredContract: PlayerContract = {
+                ...contract,
+                notes: [
+                  ...(contract.notes || []),
+                  `Restructured: converted $${(action.amountToConvert / 1000).toFixed(1)}M${action.voidYears > 0 ? ` with ${action.voidYears} void year(s)` : ''}`,
+                ],
+                voidYears: contract.voidYears + action.voidYears,
+              };
+              const updatedContracts = {
+                ...gameState.contracts,
+                [contract.playerId]: restructuredContract,
+              };
+              const updatedState: GameState = { ...gameState, contracts: updatedContracts };
+              setGameState(updatedState);
+              await saveGameState(updatedState);
+            }
+            Alert.alert('Contract Restructured', `Contract has been restructured.`);
+            break;
+          }
+          case 'cutPlayer': {
+            const player = gameState.players[action.playerId];
+            Alert.alert(
+              'Cut Analysis',
+              `${player?.firstName} ${player?.lastName}\n\n` +
+                `Cap Savings: $${(action.cutBreakdown.standardCut.capSavings / 1000).toFixed(1)}M\n` +
+                `Dead Money: $${(action.cutBreakdown.standardCut.deadMoney / 1000).toFixed(1)}M`
+            );
+            break;
+          }
+        }
       }}
     />
   );
@@ -2464,6 +2699,8 @@ export function FinancesScreenWrapper({ navigation }: ScreenProps<'Finances'>): 
       team={userTeam}
       players={gameState.players}
       salaryCap={salaryCap}
+      contracts={gameState.contracts}
+      currentYear={gameState.league.calendar.currentYear}
       onBack={() => navigation.goBack()}
       onSelectPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
@@ -2786,11 +3023,25 @@ export function PlayoffBracketScreenWrapper({
 // TRADE SCREEN
 // ============================================
 
+// Trade deadline week (P3-4): after this week, no more trades during regular season
+const TRADE_DEADLINE_WEEK = 9;
+
 export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.JSX.Element {
   const { gameState, setGameState, saveGameState } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading trade..." />;
+  }
+
+  // P3-4: Trade deadline - prevent trades after week 9 during regular season
+  const { calendar } = gameState.league;
+  if (calendar.currentPhase === 'regularSeason' && calendar.currentWeek > TRADE_DEADLINE_WEEK) {
+    Alert.alert(
+      'Trade Deadline Passed',
+      `The trade deadline (Week ${TRADE_DEADLINE_WEEK}) has passed. No trades can be made until the offseason.`
+    );
+    navigation.goBack();
+    return <LoadingFallback message="Trade deadline has passed..." />;
   }
 
   const userTeam = gameState.teams[gameState.userTeamId];
@@ -6636,6 +6887,10 @@ export function WeeklyScheduleScreenWrapper({
 
 // ============================================
 // LIVE GAME SIMULATION SCREEN (now using unified GameDayScreen)
+// TODO (P2-6): Add halftime decision pause point. When the GameDayScreen engine
+// supports a halftime callback, present options like "Adjust game plan" or
+// "No changes" before resuming the second half. The halftimeDecisions state
+// (GameState.halftimeDecisions) is already defined in the state model.
 // ============================================
 
 export function LiveGameSimulationScreenWrapper({
@@ -6679,6 +6934,33 @@ export function LiveGameSimulationScreenWrapper({
 
         setGameState(updatedState);
         await saveGameState(updatedState);
+
+        // Check if this was a playoff game and handle Championship/SeasonOver flow
+        const cal = updatedState.league.calendar;
+        if (cal.currentPhase === 'playoffs') {
+          const userTeamId = updatedState.userTeamId;
+          const isHome = result.homeTeamId === userTeamId;
+          const userScore = isHome ? result.homeScore : result.awayScore;
+          const opponentScore = isHome ? result.awayScore : result.homeScore;
+          const userWon = userScore > opponentScore;
+
+          // Check if this was the Super Bowl
+          const playoffs = updatedState.league.schedule?.playoffs;
+          const isSuperBowl =
+            playoffs?.superBowl != null &&
+            (playoffs.superBowl.homeTeamId === userTeamId ||
+              playoffs.superBowl.awayTeamId === userTeamId);
+
+          if (isSuperBowl && userWon) {
+            // User won the Super Bowl!
+            navigation.navigate('ChampionshipCelebration');
+            return;
+          } else if (!userWon) {
+            // User was eliminated from playoffs
+            navigation.navigate('SeasonOver');
+            return;
+          }
+        }
 
         // Navigate to week summary instead of post-game summary
         navigation.navigate('WeekSummary');
@@ -6954,11 +7236,26 @@ export function WeekSummaryScreenWrapper({
       setGameState(newState);
       await saveGameState(newState);
 
-      // Check if season ended -> auto-transition to offseason
+      // Check if season ended -> auto-transition to offseason or playoffs
       const newPhase = newState.league.calendar.currentPhase;
       if (newPhase === 'playoffs' && calendar.currentPhase === 'regularSeason') {
-        // Just entered playoffs
-        navigation.navigate('PlayoffBracket');
+        // Just entered playoffs - check if user team made playoffs
+        const playoffBracket = newState.league.schedule?.playoffs;
+        const userInPlayoffs =
+          playoffBracket &&
+          (playoffBracket.wildCardRound?.some(
+            (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
+          ) ||
+            playoffBracket.divisionalRound?.some(
+              (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
+            ));
+
+        if (!userInPlayoffs) {
+          // User missed playoffs - show season over screen
+          navigation.navigate('SeasonOver');
+        } else {
+          navigation.navigate('PlayoffBracket');
+        }
       } else {
         navigation.navigate('Dashboard');
       }
@@ -7200,6 +7497,514 @@ export function WaiverWireScreenWrapper({
       onBack={() => navigation.goBack()}
     />
   );
+}
+
+// ============================================
+// CHAMPIONSHIP CELEBRATION SCREEN
+// ============================================
+
+export function ChampionshipCelebrationScreenWrapper({
+  navigation,
+}: ScreenProps<'ChampionshipCelebration'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading celebration..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const calendar = gameState.league.calendar;
+  const teamName = `${userTeam.city} ${userTeam.nickname}`;
+
+  // Get playoff record from bracket data
+  let playoffWins = 0;
+  let playoffLosses = 0;
+  const playoffs = gameState.league.schedule?.playoffs;
+  if (playoffs) {
+    const allMatchups = [
+      ...playoffs.wildCardRound,
+      ...playoffs.divisionalRound,
+      ...playoffs.conferenceChampionships,
+      ...(playoffs.superBowl ? [playoffs.superBowl] : []),
+    ];
+    for (const game of allMatchups) {
+      if (game.homeTeamId === gameState.userTeamId || game.awayTeamId === gameState.userTeamId) {
+        if (game.isComplete) {
+          const isHomeGame = game.homeTeamId === gameState.userTeamId;
+          const uScore = isHomeGame ? (game.homeScore ?? 0) : (game.awayScore ?? 0);
+          const oScore = isHomeGame ? (game.awayScore ?? 0) : (game.homeScore ?? 0);
+          if (uScore > oScore) playoffWins++;
+          else playoffLosses++;
+        }
+      }
+    }
+  }
+
+  // Get Super Bowl game info
+  const superBowlGame = playoffs?.superBowl ?? null;
+  const isHome = superBowlGame?.homeTeamId === gameState.userTeamId;
+  const oppTeamId = superBowlGame
+    ? isHome
+      ? superBowlGame.awayTeamId
+      : superBowlGame.homeTeamId
+    : '';
+  const oppTeam = gameState.teams[oppTeamId];
+  const superBowlScore = {
+    userScore: superBowlGame
+      ? isHome
+        ? (superBowlGame.homeScore ?? 0)
+        : (superBowlGame.awayScore ?? 0)
+      : 0,
+    opponentScore: superBowlGame
+      ? isHome
+        ? (superBowlGame.awayScore ?? 0)
+        : (superBowlGame.homeScore ?? 0)
+      : 0,
+    opponentName: oppTeam ? `${oppTeam.city} ${oppTeam.nickname}` : 'Opponent',
+  };
+
+  // Find MVP (best player by overall rating)
+  const rosterPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aSkills = Object.values(a.skills || {});
+      const bSkills = Object.values(b.skills || {});
+      const aAvg =
+        aSkills.length > 0
+          ? aSkills.reduce(
+              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
+              0
+            ) / aSkills.length
+          : 0;
+      const bAvg =
+        bSkills.length > 0
+          ? bSkills.reduce(
+              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
+              0
+            ) / bSkills.length
+          : 0;
+      return bAvg - aAvg;
+    });
+  const mvpPlayer = rosterPlayers[0];
+
+  // Calculate GM grade based on record
+  const { wins, losses } = userTeam.currentRecord;
+  const winPct = wins + losses > 0 ? wins / (wins + losses) : 0.5;
+  const gmGrade =
+    winPct >= 0.85
+      ? 'A+'
+      : winPct >= 0.75
+        ? 'A'
+        : winPct >= 0.65
+          ? 'A-'
+          : winPct >= 0.55
+            ? 'B+'
+            : 'B';
+
+  return (
+    <ChampionshipCelebrationScreen
+      teamName={teamName}
+      teamAbbreviation={userTeam.abbreviation}
+      seasonYear={calendar.currentYear}
+      record={userTeam.currentRecord}
+      playoffRecord={{ wins: playoffWins, losses: playoffLosses }}
+      superBowlScore={superBowlScore}
+      mvp={{
+        name: mvpPlayer ? `${mvpPlayer.firstName} ${mvpPlayer.lastName}` : 'Unknown',
+        position: mvpPlayer?.position ?? 'QB',
+        keyStats: 'Championship Performance',
+      }}
+      gmGrade={gmGrade}
+      onContinue={async () => {
+        // Transition to offseason
+        if (!gameState.offseasonState) {
+          const initResult = initializeOffseason(gameState);
+          const phaseResult = enterPhase(initResult.gameState, 'season_end');
+          const updatedState: GameState = {
+            ...phaseResult.gameState,
+            league: {
+              ...phaseResult.gameState.league,
+              calendar: {
+                ...phaseResult.gameState.league.calendar,
+                currentWeek: 1,
+                currentPhase: 'offseason',
+                offseasonPhase: 1,
+              },
+            },
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+        }
+        navigation.navigate('Offseason');
+      }}
+    />
+  );
+}
+
+// ============================================
+// SEASON OVER SCREEN
+// ============================================
+
+export function SeasonOverScreenWrapper({
+  navigation,
+}: ScreenProps<'SeasonOver'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading season summary..." />;
+  }
+
+  const userTeam = gameState.teams[gameState.userTeamId];
+  const calendar = gameState.league.calendar;
+  const teamName = `${userTeam.city} ${userTeam.nickname}`;
+
+  // Determine playoff result
+  let playoffResult: string | undefined;
+  const playoffs = gameState.league.schedule?.playoffs;
+  if (playoffs) {
+    const userInPlayoffs =
+      playoffs.wildCardRound?.some(
+        (g) => g.homeTeamId === gameState.userTeamId || g.awayTeamId === gameState.userTeamId
+      ) ||
+      playoffs.divisionalRound?.some(
+        (g) => g.homeTeamId === gameState.userTeamId || g.awayTeamId === gameState.userTeamId
+      );
+
+    if (userInPlayoffs) {
+      // Determine which round they were eliminated
+      const rounds: Array<{ matchups: EnginePlayoffMatchup[]; name: string }> = [
+        { matchups: playoffs.superBowl ? [playoffs.superBowl] : [], name: 'Super Bowl Runner-Up' },
+        { matchups: playoffs.conferenceChampionships, name: 'Conference Championship' },
+        { matchups: playoffs.divisionalRound, name: 'Divisional Round' },
+        { matchups: playoffs.wildCardRound, name: 'Wild Card Round' },
+      ];
+      for (const { matchups, name } of rounds) {
+        const game = matchups.find(
+          (g) => g.homeTeamId === gameState.userTeamId || g.awayTeamId === gameState.userTeamId
+        );
+        if (game?.isComplete) {
+          const isHomeSide = game.homeTeamId === gameState.userTeamId;
+          const userScore = isHomeSide ? (game.homeScore ?? 0) : (game.awayScore ?? 0);
+          const oppScore = isHomeSide ? (game.awayScore ?? 0) : (game.homeScore ?? 0);
+          if (userScore < oppScore) {
+            playoffResult = `Eliminated in ${name}`;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Generate season highlights from news
+  const seasonHighlights: string[] = [];
+  if (gameState.newsFeed) {
+    const allNews = getAllNews(gameState.newsFeed);
+    const teamNews = allNews
+      .filter(
+        (item) =>
+          item.headline?.includes(userTeam.city) || item.headline?.includes(userTeam.nickname)
+      )
+      .slice(0, 5);
+    for (const item of teamNews) {
+      if (item.headline) seasonHighlights.push(item.headline);
+    }
+  }
+  if (seasonHighlights.length === 0) {
+    seasonHighlights.push(
+      `Finished the season ${userTeam.currentRecord.wins}-${userTeam.currentRecord.losses}`
+    );
+  }
+
+  // Find top 3 performers
+  const topPlayers = userTeam.rosterPlayerIds
+    .map((id) => gameState.players[id])
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aSkills = Object.values(a.skills || {});
+      const bSkills = Object.values(b.skills || {});
+      const aAvg =
+        aSkills.length > 0
+          ? aSkills.reduce(
+              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
+              0
+            ) / aSkills.length
+          : 0;
+      const bAvg =
+        bSkills.length > 0
+          ? bSkills.reduce(
+              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
+              0
+            ) / bSkills.length
+          : 0;
+      return bAvg - aAvg;
+    })
+    .slice(0, 3)
+    .map((player) => ({
+      name: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      stats: `Age ${player.age}, ${player.experience} yr${player.experience !== 1 ? 's' : ''} exp`,
+    }));
+
+  // Calculate GM grade
+  const { wins, losses } = userTeam.currentRecord;
+  const winPct = wins + losses > 0 ? wins / (wins + losses) : 0.5;
+  const gmGrade =
+    winPct >= 0.75
+      ? 'A'
+      : winPct >= 0.65
+        ? 'B+'
+        : winPct >= 0.55
+          ? 'B'
+          : winPct >= 0.45
+            ? 'B-'
+            : winPct >= 0.35
+              ? 'C'
+              : 'D';
+
+  return (
+    <SeasonOverScreen
+      teamName={teamName}
+      seasonYear={calendar.currentYear}
+      record={userTeam.currentRecord}
+      playoffResult={playoffResult}
+      seasonHighlights={seasonHighlights}
+      topPlayers={topPlayers}
+      gmGrade={gmGrade}
+      onProceedToOffseason={async () => {
+        // Transition to offseason
+        if (!gameState.offseasonState) {
+          const initResult = initializeOffseason(gameState);
+          const phaseResult = enterPhase(initResult.gameState, 'season_end');
+          const updatedState: GameState = {
+            ...phaseResult.gameState,
+            league: {
+              ...phaseResult.gameState.league,
+              calendar: {
+                ...phaseResult.gameState.league.calendar,
+                currentWeek: 1,
+                currentPhase: 'offseason',
+                offseasonPhase: 1,
+              },
+            },
+          };
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+        }
+        navigation.navigate('Offseason');
+      }}
+    />
+  );
+}
+
+// ============================================
+// SEASON HISTORY SCREEN
+// ============================================
+
+export function SeasonHistoryScreenWrapper({
+  navigation,
+}: ScreenProps<'SeasonHistory'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading season history..." />;
+  }
+
+  const seasonHistory = gameState.league.seasonHistory || [];
+
+  const seasons = seasonHistory.map((summary) => {
+    const championTeam = gameState.teams[summary.championTeamId];
+    const championName = championTeam ? `${championTeam.city} ${championTeam.nickname}` : 'Unknown';
+    const championRecord = championTeam
+      ? `${championTeam.currentRecord.wins}-${championTeam.currentRecord.losses}`
+      : 'N/A';
+
+    const userTeam = gameState.teams[gameState.userTeamId];
+    const userRecord = userTeam
+      ? `${userTeam.currentRecord.wins}-${userTeam.currentRecord.losses}`
+      : 'N/A';
+
+    const mvpPlayer = gameState.players[summary.mvpPlayerId];
+    const mvpName = mvpPlayer ? `${mvpPlayer.firstName} ${mvpPlayer.lastName}` : undefined;
+
+    return {
+      year: summary.year,
+      champion: { teamName: championName, record: championRecord },
+      userTeamRecord: userRecord,
+      userPlayoffResult: undefined as string | undefined,
+      mvp: mvpName,
+    };
+  });
+
+  return <SeasonHistoryScreen seasons={seasons} onBack={() => navigation.goBack()} />;
+}
+
+// ============================================
+// HALL OF FAME SCREEN
+// ============================================
+
+export function HallOfFameScreenWrapper({
+  navigation,
+}: ScreenProps<'HallOfFame'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading Hall of Fame..." />;
+  }
+
+  // Find retired players with notable careers from playerHistory
+  const inductees: Array<{
+    name: string;
+    position: string;
+    teams: string[];
+    yearsActive: string;
+    careerHighlights: string[];
+    legacyTier: string;
+  }> = [];
+
+  if (gameState.playerHistory) {
+    for (const [, history] of Object.entries(gameState.playerHistory)) {
+      // Consider players with long careers or many awards as HoF candidates
+      const seasonCount = history.seasonLogs?.length ?? 0;
+      const awardCount = history.awards?.length ?? 0;
+
+      if (seasonCount >= 10 || awardCount >= 3) {
+        const teams: string[] = [];
+        const teamSet = new Set<string>();
+        for (const tx of history.transactions || []) {
+          if (tx.teamId && !teamSet.has(tx.teamId)) {
+            teamSet.add(tx.teamId);
+            const team = gameState.teams[tx.teamId];
+            if (team) teams.push(`${team.city} ${team.nickname}`);
+          }
+        }
+        if (teams.length === 0) {
+          const draftTeam = gameState.teams[history.draftTeamId];
+          if (draftTeam) teams.push(`${draftTeam.city} ${draftTeam.nickname}`);
+        }
+
+        const highlights = (history.awards || []).map((a) => a.type || 'Award');
+        const legacyTier = awardCount >= 5 ? 'first-ballot' : 'hall-of-famer';
+        const startYear = history.rookieYear;
+        const endYear = startYear + seasonCount;
+
+        inductees.push({
+          name: history.playerName,
+          position: history.position,
+          teams,
+          yearsActive: `${startYear}-${endYear}`,
+          careerHighlights: highlights.slice(0, 5),
+          legacyTier,
+        });
+      }
+    }
+  }
+
+  return <HallOfFameScreen inductees={inductees} onBack={() => navigation.goBack()} />;
+}
+
+// ============================================
+// PLAYER COMPARISON SCREEN
+// ============================================
+
+export function PlayerComparisonScreenWrapper({
+  navigation,
+  route,
+}: ScreenProps<'PlayerComparison'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading comparison..." />;
+  }
+
+  const { player1Id, player2Id } = route.params;
+  const p1 = gameState.players[player1Id];
+  const p2 = gameState.players[player2Id];
+
+  if (!p1 || !p2) {
+    return <LoadingFallback message="Players not found..." />;
+  }
+
+  const mapPlayerData = (player: typeof p1) => {
+    const skills: Record<string, number> = {};
+    for (const [key, skillVal] of Object.entries(player.skills || {})) {
+      if (skillVal && typeof skillVal === 'object' && 'perceivedValue' in skillVal) {
+        skills[key] = (skillVal as { perceivedValue: number }).perceivedValue;
+      }
+    }
+
+    const stats: Record<string, number> = {};
+    const seasonStats = gameState.seasonStats?.[player.id];
+    if (seasonStats) {
+      for (const [key, val] of Object.entries(seasonStats)) {
+        if (typeof val === 'number') stats[key] = val;
+      }
+    }
+
+    return {
+      name: `${player.firstName} ${player.lastName}`,
+      position: player.position,
+      age: player.age,
+      overall:
+        Object.values(skills).length > 0
+          ? Math.round(
+              Object.values(skills).reduce((a, b) => a + b, 0) / Object.values(skills).length
+            )
+          : 50,
+      skills,
+      stats,
+      contract:
+        player.experience > 0
+          ? {
+              yearsRemaining: Math.max(1, 4 - player.experience),
+              salary: 2000000 + player.experience * 1000000,
+            }
+          : undefined,
+    };
+  };
+
+  return (
+    <PlayerComparisonScreen
+      player1={mapPlayerData(p1)}
+      player2={mapPlayerData(p2)}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// DRAFT TRADE CALCULATOR SCREEN
+// ============================================
+
+export function DraftTradeCalculatorScreenWrapper({
+  navigation,
+}: ScreenProps<'DraftTradeCalculator'>): React.JSX.Element {
+  const { gameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading trade calculator..." />;
+  }
+
+  const userTeamId = gameState.userTeamId;
+  const userTeam = gameState.teams[userTeamId];
+
+  // Map user's draft picks to TradeCalcPick format
+  const picks: TradeCalcPick[] = Object.values(gameState.draftPicks)
+    .filter((pick) => pick.currentTeamId === userTeamId)
+    .map((pick) => ({
+      id: pick.id,
+      round: pick.round,
+      pickNumber: pick.overallPick,
+      year: pick.year,
+      teamAbbreviation: userTeam.abbreviation,
+      label:
+        pick.originalTeamId !== userTeamId
+          ? `Round ${pick.round} (via ${gameState.teams[pick.originalTeamId]?.abbreviation ?? 'trade'})`
+          : `Round ${pick.round}`,
+    }))
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.round - b.round));
+
+  return <DraftTradeCalculatorScreen picks={picks} onBack={() => navigation.goBack()} />;
 }
 
 // ============================================

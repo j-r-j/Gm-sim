@@ -131,9 +131,10 @@ function MatchupCard({
 }) {
   const homeTeam = matchup.homeTeamId ? teams[matchup.homeTeamId] : null;
   const awayTeam = matchup.awayTeamId ? teams[matchup.awayTeamId] : null;
+  const involvesUser = matchup.homeTeamId === userTeamId || matchup.awayTeamId === userTeamId;
 
   return (
-    <View style={styles.matchupCard}>
+    <View style={[styles.matchupCard, involvesUser && styles.userMatchupCard]}>
       <TeamBracketCard
         seed={matchup.homeSeed}
         team={homeTeam}
@@ -153,6 +154,46 @@ function MatchupCard({
         isUserTeam={matchup.awayTeamId === userTeamId}
         isEliminated={matchup.isComplete && matchup.winnerId !== matchup.awayTeamId}
       />
+      {/* Show final score summary for completed matchups */}
+      {matchup.isComplete && matchup.homeScore !== null && matchup.awayScore !== null && (
+        <View style={styles.finalScoreBar}>
+          <Text style={styles.finalScoreText}>
+            FINAL: {matchup.homeScore} - {matchup.awayScore}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Bye round indicator for #1 seeds
+ */
+function ByeRoundCard({
+  seed,
+  team,
+  isUserTeam,
+}: {
+  seed: PlayoffSeed;
+  team: Team | null;
+  isUserTeam: boolean;
+}) {
+  return (
+    <View style={[styles.matchupCard, isUserTeam && styles.userMatchupCard]}>
+      <View style={[styles.teamCard, isUserTeam && styles.teamCardUser]}>
+        <Text style={styles.seedNumber}>{seed.seed}</Text>
+        <View style={styles.teamInfo}>
+          <Text style={styles.teamName} numberOfLines={1}>
+            {team ? team.city : 'TBD'}
+          </Text>
+          <Text style={styles.teamNickname} numberOfLines={1}>
+            {team ? team.nickname : ''}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.byeIndicator}>
+        <Text style={styles.byeText}>BYE</Text>
+      </View>
     </View>
   );
 }
@@ -178,6 +219,10 @@ function ConferenceBracket({
   const divisionalMatchups = confMatchups.filter((m) => m.round === 'divisional');
   const conferenceMatchup = confMatchups.find((m) => m.round === 'conference');
 
+  const topSeed = seeds[0];
+  const topSeedTeam = topSeed ? teams[topSeed.teamId] : null;
+  const isUserTopSeed = topSeed?.teamId === userTeamId;
+
   return (
     <View style={styles.conferenceBracket}>
       <Text
@@ -190,23 +235,26 @@ function ConferenceBracket({
       <View style={styles.seedsContainer}>
         {seeds.slice(0, 7).map((seed) => {
           const team = teams[seed.teamId];
+          const isUser = seed.teamId === userTeamId;
           return (
-            <View key={seed.seed} style={styles.seedItem}>
-              <Text style={styles.seedLabel}>{seed.seed}.</Text>
-              <Text style={styles.seedTeam} numberOfLines={1}>
+            <View key={seed.seed} style={[styles.seedItem, isUser && styles.seedItemUser]}>
+              <Text style={[styles.seedLabel, isUser && styles.seedLabelUser]}>{seed.seed}.</Text>
+              <Text style={[styles.seedTeam, isUser && styles.seedTeamUser]} numberOfLines={1}>
                 {team?.abbreviation || 'TBD'}
               </Text>
               <Text style={styles.seedRecord}>
                 ({seed.record.wins}-{seed.record.losses})
               </Text>
+              {seed.seed === 1 && <Text style={styles.byeBadge}>BYE</Text>}
             </View>
           );
         })}
       </View>
 
-      {/* Wild Card */}
+      {/* Wild Card - #1 seed has bye */}
       <View style={styles.roundSection}>
         <Text style={styles.roundTitle}>Wild Card</Text>
+        {topSeed && <ByeRoundCard seed={topSeed} team={topSeedTeam} isUserTeam={isUserTopSeed} />}
         {wildCardMatchups.map((m) => (
           <MatchupCard key={m.gameId} matchup={m} teams={teams} userTeamId={userTeamId} />
         ))}
@@ -567,6 +615,60 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.success,
+  },
+  // User team highlight for matchup cards
+  userMatchupCard: {
+    borderWidth: 2,
+    borderColor: colors.secondary,
+    borderRadius: borderRadius.md,
+  },
+  // Bye round indicator
+  byeIndicator: {
+    backgroundColor: colors.background,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  byeText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    letterSpacing: 2,
+  },
+  // Bye badge for seeds list
+  byeBadge: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.success,
+    marginLeft: spacing.xs,
+  },
+  // User seed highlight in seeds list
+  seedItemUser: {
+    backgroundColor: colors.secondary + '15',
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.xs,
+    marginHorizontal: -spacing.xs,
+  },
+  seedLabelUser: {
+    color: colors.secondary,
+    fontWeight: fontWeight.bold,
+  },
+  seedTeamUser: {
+    color: colors.secondary,
+    fontWeight: fontWeight.bold,
+  },
+  // Final score bar for completed matchups
+  finalScoreBar: {
+    backgroundColor: colors.background,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  finalScoreText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    letterSpacing: 1,
   },
 });
 

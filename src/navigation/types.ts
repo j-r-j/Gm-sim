@@ -131,6 +131,17 @@ export type RootStackParamList = {
   StartSit: undefined;
   WeeklyAwards: undefined;
   WaiverWire: undefined;
+
+  // P1+ New Screens
+  ChampionshipCelebration: undefined;
+  SeasonOver: undefined;
+  SeasonHistory: undefined;
+  HallOfFame: undefined;
+  PlayerComparison: {
+    player1Id: string;
+    player2Id: string;
+  };
+  DraftTradeCalculator: undefined;
 };
 
 /**
@@ -243,4 +254,12 @@ export const Routes = {
   StartSit: 'StartSit',
   WeeklyAwards: 'WeeklyAwards',
   WaiverWire: 'WaiverWire',
+
+  // P1+ New Screens
+  ChampionshipCelebration: 'ChampionshipCelebration',
+  SeasonOver: 'SeasonOver',
+  SeasonHistory: 'SeasonHistory',
+  HallOfFame: 'HallOfFame',
+  PlayerComparison: 'PlayerComparison',
+  DraftTradeCalculator: 'DraftTradeCalculator',
 } as const;
