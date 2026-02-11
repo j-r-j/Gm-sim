@@ -49,6 +49,7 @@ export type DashboardAction =
   | 'ownerRelations'
   | 'advanceWeek'
   | 'playWeek'
+  | 'quickSim'
   | 'simSeason'
   | 'settings'
   | 'saveGame'
@@ -244,10 +245,24 @@ export function GMDashboardScreen({
     ? createPatienceViewModel(gameState.patienceMeter)
     : null;
 
-  // Generate action prompt for week advancement
+  // Generate action prompt for week advancement or offseason entry
   const actionPrompt: NextActionPrompt | null = useMemo(() => {
-    // Only show action prompt during regular season or playoffs
-    if (isOffseason) return null;
+    // During offseason, show offseason entry/continue CTA
+    if (isOffseason) {
+      const offseasonLabel = offseasonPhase
+        ? `Continue Offseason - ${getPhaseDisplay(offseasonPhase)}`
+        : 'Enter Offseason';
+      const contextLabel = offseasonPhase
+        ? `Current phase: ${getPhaseDisplay(offseasonPhase)}`
+        : 'Begin offseason activities';
+      return {
+        actionText: offseasonLabel,
+        contextText: contextLabel,
+        actionType: 'primary' as const,
+        targetAction: 'enter_offseason' as const,
+        isEnabled: true,
+      };
+    }
 
     const schedule = gameState.league.schedule;
     if (!schedule) return null;
@@ -339,11 +354,14 @@ export function GMDashboardScreen({
       case 'start_simulation':
         onAction('playWeek');
         break;
+      case 'enter_offseason':
+        onAction('offseason');
+        break;
       case 'advance_week':
-        onAction('advanceWeek');
+        onAction('playWeek');
         break;
       default:
-        onAction('gamecast');
+        onAction('playWeek');
     }
   };
 
@@ -524,7 +542,7 @@ export function GMDashboardScreen({
       )}
 
       {/* Action Prompt - What to do next */}
-      {actionPrompt && !isOffseason && (
+      {actionPrompt && (
         <ActionPrompt
           prompt={actionPrompt}
           onPress={handleActionPromptPress}
@@ -617,12 +635,12 @@ export function GMDashboardScreen({
 
         {!isOffseason && (
           <MenuCard
-            title="Gamecast"
-            subtitle="Watch your next game"
-            icon="🏈"
+            title={`Quick Sim Week ${calendar.currentWeek}`}
+            subtitle="Simulate game instantly"
+            icon="⚡"
             color={colors.secondary}
-            onPress={() => onAction('gamecast')}
-            badge="PLAY"
+            onPress={() => onAction('quickSim')}
+            badge="SIM"
           />
         )}
 

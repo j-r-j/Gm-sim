@@ -123,6 +123,7 @@ export type RootStackParamList = {
   // Enhanced Game Experience
   LiveGameSimulation: undefined;
   PostGameSummary: undefined;
+  WeekSummary: undefined;
 
   // New Weekly Decision Systems
   GamePlan: undefined;
@@ -234,6 +235,7 @@ export const Routes = {
   // Enhanced Game Experience
   LiveGameSimulation: 'LiveGameSimulation',
   PostGameSummary: 'PostGameSummary',
+  WeekSummary: 'WeekSummary',
 
   // New Weekly Decision Systems
   GamePlan: 'GamePlan',
