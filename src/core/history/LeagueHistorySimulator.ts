@@ -404,9 +404,10 @@ export function simulateLeagueHistory(
   let playerHistory: Record<string, PlayerCareerHistory> = state.playerHistory || {};
 
   // Initialize history for all existing players
+  let playerTeamMap = buildPlayerTeamMap(state.teams);
   for (const player of Object.values(state.players)) {
     if (!playerHistory[player.id]) {
-      const teamId = findPlayerTeam(player.id, state.teams);
+      const teamId = findPlayerTeamFromMap(player.id, playerTeamMap);
       playerHistory[player.id] = createPlayerCareerHistory(
         player.id,
         getPlayerFullName(player),
@@ -685,8 +686,10 @@ export function simulateLeagueHistory(
     totalDraftPicks += draftResult.draftedPlayers.length;
 
     // Record draft transactions in player history
+    // Rebuild map after draft changed rosters
+    playerTeamMap = buildPlayerTeamMap(state.teams);
     for (const dp of draftResult.draftedPlayers) {
-      const teamId = findPlayerTeam(dp.id, state.teams) || '';
+      const teamId = findPlayerTeamFromMap(dp.id, playerTeamMap) || '';
       playerHistory[dp.id] = createPlayerCareerHistory(
         dp.id,
         getPlayerFullName(dp),
@@ -853,15 +856,24 @@ export function simulateLeagueHistory(
 // ============================================================================
 
 /**
- * Find which team a player is on
+ * Build a Map from playerId → teamId for O(1) lookups.
+ * Should be rebuilt whenever rosters change (after draft, FA, roster maintenance).
  */
-function findPlayerTeam(playerId: string, teams: Record<string, Team>): string | null {
+function buildPlayerTeamMap(teams: Record<string, Team>): Map<string, string> {
+  const map = new Map<string, string>();
   for (const team of Object.values(teams)) {
-    if (team.rosterPlayerIds.includes(playerId)) {
-      return team.id;
+    for (const playerId of team.rosterPlayerIds) {
+      map.set(playerId, team.id);
     }
   }
-  return null;
+  return map;
+}
+
+/**
+ * Find which team a player is on using a pre-built lookup map.
+ */
+function findPlayerTeamFromMap(playerId: string, playerTeamMap: Map<string, string>): string | null {
+  return playerTeamMap.get(playerId) ?? null;
 }
 
 /**

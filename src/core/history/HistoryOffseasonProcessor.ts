@@ -24,6 +24,7 @@ import {
   createPlayerContract,
   ContractOffer,
   getMinimumSalary,
+  getCapHitForYear,
 } from '../contracts/Contract';
 import {
   generatePlayerContract,
@@ -37,7 +38,7 @@ import { generateCoach } from '../coaching/CoachGenerator';
 import { advanceContractYear as advanceCoachContractYear } from '../models/staff/CoachContract';
 import { CoachRole } from '../models/staff/StaffSalary';
 import { Prospect } from '../draft/Prospect';
-import { generateRoster } from '../generators/player/PlayerGenerator';
+import { generatePlayer } from '../generators/player/PlayerGenerator';
 import { randomInt } from '../generators/utils/RandomUtils';
 
 /**
@@ -218,6 +219,14 @@ export function processPlayerProgression(
 ): Record<string, Player> {
   const updatedPlayers = { ...players };
 
+  // Pre-build head coach lookup by teamId for O(1) access
+  const headCoachByTeam = new Map<string, Coach>();
+  for (const coach of Object.values(coaches)) {
+    if (coach.teamId && coach.role === 'headCoach') {
+      headCoachByTeam.set(coach.teamId, coach);
+    }
+  }
+
   for (const team of Object.values(teams)) {
     const teamPlayers = team.rosterPlayerIds
       .map((id) => updatedPlayers[id])
@@ -225,10 +234,8 @@ export function processPlayerProgression(
 
     if (teamPlayers.length === 0) continue;
 
-    // Find the team's head coach
-    const teamCoach = Object.values(coaches).find(
-      (c) => c.teamId === team.id && c.role === 'headCoach'
-    );
+    // Use cached head coach lookup
+    const teamCoach = headCoachByTeam.get(team.id);
 
     if (teamCoach) {
       const { updatedPlayers: progressed } = processTeamProgression(teamPlayers, teamCoach, {
@@ -590,34 +597,44 @@ export function processAIFreeAgency(
   const updatedTeams = { ...teams };
   const updatedContracts = { ...contracts };
 
-  // Sort free agents by skill (best first)
+  // Cache skill tiers for all free agents to avoid redundant calls
+  const skillTierCache = new Map<string, string>();
+  const tierScores: Record<string, number> = { elite: 4, starter: 3, backup: 2, fringe: 1 };
+  for (const id of freeAgentIds) {
+    const player = updatedPlayers[id];
+    if (player) {
+      skillTierCache.set(id, determineSkillTierFromPlayer(player));
+    }
+  }
+
+  // Sort free agents by skill (best first) using cached tiers
   const sortedFAs = freeAgentIds
     .map((id) => updatedPlayers[id])
     .filter((p): p is Player => p != null)
     .sort((a, b) => {
-      const aScore =
-        determineSkillTierFromPlayer(a) === 'elite'
-          ? 4
-          : determineSkillTierFromPlayer(a) === 'starter'
-            ? 3
-            : determineSkillTierFromPlayer(a) === 'backup'
-              ? 2
-              : 1;
-      const bScore =
-        determineSkillTierFromPlayer(b) === 'elite'
-          ? 4
-          : determineSkillTierFromPlayer(b) === 'starter'
-            ? 3
-            : determineSkillTierFromPlayer(b) === 'backup'
-              ? 2
-              : 1;
+      const aScore = tierScores[skillTierCache.get(a.id) || 'fringe'] || 1;
+      const bScore = tierScores[skillTierCache.get(b.id) || 'fringe'] || 1;
       return bScore - aScore;
     });
 
+  // Pre-compute cap usage for all teams to avoid recalculating per signing
+  const teamCapUsage = new Map<string, number>();
+  for (const team of Object.values(updatedTeams)) {
+    const teamContracts = Object.values(updatedContracts).filter(
+      (c) => c.teamId === team.id && c.status === 'active'
+    );
+    const capUsage = calculateTotalCapUsage(
+      Object.fromEntries(teamContracts.map((c) => [c.id, c])),
+      year
+    );
+    teamCapUsage.set(team.id, capUsage);
+  }
+
   for (const freeAgent of sortedFAs) {
-    // Don't sign old marginal players
-    if (freeAgent.age > 36 && determineSkillTierFromPlayer(freeAgent) === 'fringe') continue;
-    if (freeAgent.age > 38 && determineSkillTierFromPlayer(freeAgent) !== 'elite') continue;
+    // Don't sign old marginal players (use cached skill tiers)
+    const faTier = skillTierCache.get(freeAgent.id) || 'fringe';
+    if (freeAgent.age > 36 && faTier === 'fringe') continue;
+    if (freeAgent.age > 38 && faTier !== 'elite') continue;
 
     // Find teams that need this position
     const interestedTeams: { teamId: string; needScore: number }[] = [];
@@ -631,14 +648,8 @@ export function processAIFreeAgency(
       const rosterNeed = rosterSize < 53 ? (53 - rosterSize) * 2 : 0;
 
       if (needDeficit > 0 || rosterSize < 50) {
-        // Check cap space
-        const teamContracts = Object.values(updatedContracts).filter(
-          (c) => c.teamId === team.id && c.status === 'active'
-        );
-        const capUsage = calculateTotalCapUsage(
-          Object.fromEntries(teamContracts.map((c) => [c.id, c])),
-          year
-        );
+        // Use cached cap usage for O(1) lookup
+        const capUsage = teamCapUsage.get(team.id) || 0;
         const capSpace = DEFAULT_SALARY_CAP - capUsage;
 
         if (capSpace > 1000000) {
@@ -660,6 +671,10 @@ export function processAIFreeAgency(
     const contract = generatePlayerContract(freeAgent, winnerTeamId, year);
     updatedContracts[contract.id] = contract;
     updatedPlayers[freeAgent.id] = { ...freeAgent, contractId: contract.id };
+
+    // Incrementally update cached cap usage for the signing team
+    const newCapHit = getCapHitForYear(contract, year);
+    teamCapUsage.set(winnerTeamId, (teamCapUsage.get(winnerTeamId) || 0) + newCapHit);
 
     // Add to team
     updatedTeams[winnerTeamId] = {
@@ -733,11 +748,23 @@ export function processRosterMaintenance(
     // Fill roster if below 53
     if (rosterIds.length < 53) {
       const needed = 53 - rosterIds.length;
-      const fillerRoster = generateRoster(teamId);
 
-      // Pick random fillers to fill gaps
-      for (let i = 0; i < needed && i < fillerRoster.length; i++) {
-        const newPlayer = fillerRoster[i];
+      // Generate only the exact number of players needed
+      const fillerPositions: Position[] = [
+        Position.WR, Position.CB, Position.DE, Position.OLB, Position.DT,
+        Position.RB, Position.TE, Position.ILB, Position.FS, Position.SS,
+        Position.LG, Position.RG, Position.LT, Position.RT, Position.C,
+        Position.QB, Position.K, Position.P,
+      ];
+
+      for (let i = 0; i < needed; i++) {
+        const position = fillerPositions[i % fillerPositions.length];
+        const newPlayer = generatePlayer({
+          position,
+          skillTier: 'fringe',
+          teamId,
+          ageRange: { min: 22, max: 28 },
+        });
         const minSalary = getMinimumSalary(0);
         const offer: ContractOffer = {
           years: 1,

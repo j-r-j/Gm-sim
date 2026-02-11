@@ -43,7 +43,7 @@ import { simulateLeagueHistory } from '../core/history/LeagueHistorySimulator';
 const SALARY_CAP = 255000000; // $255 million
 
 /** Default number of years to pre-simulate for league history */
-const DEFAULT_HISTORY_YEARS = 20;
+const DEFAULT_HISTORY_YEARS = 10;
 
 interface NewGameOptions {
   saveSlot: SaveSlot;

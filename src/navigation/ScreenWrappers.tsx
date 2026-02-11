@@ -560,10 +560,12 @@ export function TeamSelectionScreenWrapper({
 }: ScreenProps<'TeamSelection'>): React.JSX.Element {
   const { setPendingNewGame } = useGame();
   const [isCreating, setIsCreating] = useState(false);
+  const [progressText, setProgressText] = useState('');
 
   const handleTeamSelected = useCallback(
     (team: FakeCity, gmName: string, saveSlot: SaveSlot) => {
       setIsCreating(true);
+      setProgressText('Creating your franchise...');
 
       // Use setTimeout to let the loading indicator render before synchronous work
       setTimeout(() => {
@@ -574,7 +576,18 @@ export function TeamSelectionScreenWrapper({
             gmName,
             selectedTeam: team,
             startYear: 2025,
+            onHistoryProgress: (year, totalYears, phase) => {
+              if (phase === 'setup') {
+                setProgressText('Creating your franchise...');
+              } else if (phase === 'final') {
+                setProgressText('Preparing your first season...');
+              } else {
+                setProgressText(`Simulating year ${year} of ${totalYears}...`);
+              }
+            },
           });
+
+          setProgressText('Preparing your first season...');
 
           // Store in context so it persists across navigation
           setPendingNewGame(newGameState);
@@ -587,6 +600,7 @@ export function TeamSelectionScreenWrapper({
           });
         } finally {
           setIsCreating(false);
+          setProgressText('');
         }
       }, 50);
     },
@@ -601,7 +615,7 @@ export function TeamSelectionScreenWrapper({
     return (
       <SafeAreaView style={styles.fallbackContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.fallbackText}>Creating your franchise...</Text>
+        <Text style={styles.fallbackText}>{progressText || 'Creating your franchise...'}</Text>
       </SafeAreaView>
     );
   }
