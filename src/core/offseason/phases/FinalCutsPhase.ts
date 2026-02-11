@@ -12,6 +12,32 @@ import {
   PlayerRelease,
   PlayerSigning,
 } from '../OffSeasonPhaseManager';
+import { Position } from '../../models/player/Position';
+
+/**
+ * Maps specific positions to broad position groups for roster minimums
+ */
+function getPositionGroup(position: string): string {
+  switch (position) {
+    case Position.LT:
+    case Position.LG:
+    case Position.C:
+    case Position.RG:
+    case Position.RT:
+      return 'OL';
+    case Position.DE:
+    case Position.DT:
+      return 'DL';
+    case Position.OLB:
+    case Position.ILB:
+      return 'LB';
+    case Position.FS:
+    case Position.SS:
+      return 'S';
+    default:
+      return position;
+  }
+}
 
 /**
  * Player for cut evaluation
@@ -157,12 +183,13 @@ export function evaluateRosterForCuts(
   const sortedRoster = [...roster].sort((a, b) => b.overallRating - a.overallRating);
 
   for (const player of sortedRoster) {
-    const count = positionCounts.get(player.position) || 0;
-    const minimum = positionMinimums[player.position] || 2;
+    const group = getPositionGroup(player.position);
+    const count = positionCounts.get(group) || 0;
+    const minimum = positionMinimums[group] || 2;
 
     if (count < minimum) {
       keep.push(player);
-      positionCounts.set(player.position, count + 1);
+      positionCounts.set(group, count + 1);
     }
   }
 

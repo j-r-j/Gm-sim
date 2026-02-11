@@ -254,7 +254,7 @@ export interface OffSeasonState {
   year: number;
   currentPhase: OffSeasonPhaseType;
   phaseDay: number;
-  phaseTasks: Map<OffSeasonPhaseType, PhaseTaskStatus>;
+  phaseTasks: Record<OffSeasonPhaseType, PhaseTaskStatus>;
   events: OffSeasonEvent[];
   completedPhases: OffSeasonPhaseType[];
   isComplete: boolean;
@@ -680,10 +680,10 @@ function createPhaseTaskStatus(phase: OffSeasonPhaseType): PhaseTaskStatus {
  * Creates initial off-season state
  */
 export function createOffSeasonState(year: number): OffSeasonState {
-  const phaseTasks = new Map<OffSeasonPhaseType, PhaseTaskStatus>();
+  const phaseTasks = {} as Record<OffSeasonPhaseType, PhaseTaskStatus>;
 
   for (const phase of PHASE_ORDER) {
-    phaseTasks.set(phase, createPhaseTaskStatus(phase));
+    phaseTasks[phase] = createPhaseTaskStatus(phase);
   }
 
   return {
@@ -727,7 +727,7 @@ export function getCurrentPhaseDescription(state: OffSeasonState): string {
  * Gets tasks for the current phase
  */
 export function getCurrentPhaseTasks(state: OffSeasonState): OffSeasonTask[] {
-  const taskStatus = state.phaseTasks.get(state.currentPhase);
+  const taskStatus = state.phaseTasks[state.currentPhase];
   return taskStatus?.tasks || [];
 }
 
@@ -765,7 +765,7 @@ export function areAllTasksComplete(state: OffSeasonState): boolean {
  * Completes a task
  */
 export function completeTask(state: OffSeasonState, taskId: string): OffSeasonState {
-  const taskStatus = state.phaseTasks.get(state.currentPhase);
+  const taskStatus = state.phaseTasks[state.currentPhase];
   if (!taskStatus) {
     return state;
   }
@@ -798,8 +798,10 @@ export function completeTask(state: OffSeasonState, taskId: string): OffSeasonSt
     optionalComplete,
   };
 
-  const newPhaseTasks = new Map(state.phaseTasks);
-  newPhaseTasks.set(state.currentPhase, updatedTaskStatus);
+  const newPhaseTasks: Record<OffSeasonPhaseType, PhaseTaskStatus> = {
+    ...state.phaseTasks,
+    [state.currentPhase]: updatedTaskStatus,
+  };
 
   // Create event
   const event: OffSeasonEvent = {
@@ -1116,7 +1118,8 @@ export function validateOffSeasonState(state: OffSeasonState): boolean {
   if (!PHASE_ORDER.includes(state.currentPhase)) return false;
   if (typeof state.phaseDay !== 'number' || state.phaseDay < 1) return false;
 
-  if (!(state.phaseTasks instanceof Map)) return false;
+  if (typeof state.phaseTasks !== 'object' || state.phaseTasks === null || Array.isArray(state.phaseTasks))
+    return false;
   if (!Array.isArray(state.events)) return false;
   if (!Array.isArray(state.completedPhases)) return false;
   if (!Array.isArray(state.draftOrder)) return false;
@@ -1133,8 +1136,10 @@ export function validateOffSeasonState(state: OffSeasonState): boolean {
  * Resets a phase (for testing or re-do scenarios)
  */
 export function resetPhase(state: OffSeasonState, phase: OffSeasonPhaseType): OffSeasonState {
-  const newPhaseTasks = new Map(state.phaseTasks);
-  newPhaseTasks.set(phase, createPhaseTaskStatus(phase));
+  const newPhaseTasks: Record<OffSeasonPhaseType, PhaseTaskStatus> = {
+    ...state.phaseTasks,
+    [phase]: createPhaseTaskStatus(phase),
+  };
 
   const newCompletedPhases = state.completedPhases.filter((p) => p !== phase);
 

@@ -23,29 +23,29 @@ export function otaToTrainingCampInput(
   rookieReports: RookieIntegrationReport[],
   positionBattlePreviews: PositionBattlePreview[]
 ): {
-  playerConditionLevels: Map<string, number>;
-  playerSchemeGrasp: Map<string, number>;
+  playerConditionLevels: Record<string, number>;
+  playerSchemeGrasp: Record<string, number>;
   positionBattleSeeds: Array<{
     position: string;
     incumbentId: string;
     challengerIds: string[];
     incumbentAdvantage: number;
   }>;
-  rookieReadiness: Map<string, 'ahead' | 'on_track' | 'behind'>;
+  rookieReadiness: Record<string, 'ahead' | 'on_track' | 'behind'>;
 } {
-  const playerConditionLevels = new Map<string, number>();
-  const playerSchemeGrasp = new Map<string, number>();
+  const playerConditionLevels: Record<string, number> = {};
+  const playerSchemeGrasp: Record<string, number> = {};
 
   // Extract conditioning and scheme grasp from OTA reports
   for (const report of otaReports) {
-    playerConditionLevels.set(report.playerId, report.conditioningLevel);
-    playerSchemeGrasp.set(report.playerId, report.schemeGrasp);
+    playerConditionLevels[report.playerId] = report.conditioningLevel;
+    playerSchemeGrasp[report.playerId] = report.schemeGrasp;
   }
 
   // Extract rookie readiness
-  const rookieReadiness = new Map<string, 'ahead' | 'on_track' | 'behind'>();
+  const rookieReadiness: Record<string, 'ahead' | 'on_track' | 'behind'> = {};
   for (const report of rookieReports) {
-    rookieReadiness.set(report.playerId, report.learningCurve);
+    rookieReadiness[report.playerId] = report.learningCurve;
   }
 
   // Convert position battle previews to seeds
@@ -80,29 +80,29 @@ export function trainingCampToPreseasonInput(
   developmentReveals: DevelopmentReveal[],
   campInjuries: CampInjury[]
 ): {
-  startingProjections: Map<string, boolean>; // playerId -> likely starter
-  developmentBonuses: Map<string, number>; // playerId -> bonus to performance
-  injuredPlayers: Set<string>;
-  repsDistribution: Map<string, number>; // playerId -> reps percentage (0-100)
+  startingProjections: Record<string, boolean>; // playerId -> likely starter
+  developmentBonuses: Record<string, number>; // playerId -> bonus to performance
+  injuredPlayers: string[];
+  repsDistribution: Record<string, number>; // playerId -> reps percentage (0-100)
 } {
-  const startingProjections = new Map<string, boolean>();
-  const developmentBonuses = new Map<string, number>();
-  const injuredPlayers = new Set<string>();
-  const repsDistribution = new Map<string, number>();
+  const startingProjections: Record<string, boolean> = {};
+  const developmentBonuses: Record<string, number> = {};
+  const injuredPlayerSet = new Set<string>();
+  const repsDistribution: Record<string, number> = {};
 
   // Determine starters from position battles
   for (const battle of positionBattles) {
     // Winner is the starter
     if (battle.winner) {
-      startingProjections.set(battle.winner, true);
-      repsDistribution.set(battle.winner, 30); // Starters get fewer preseason reps
+      startingProjections[battle.winner] = true;
+      repsDistribution[battle.winner] = 30; // Starters get fewer preseason reps
     }
 
     // Competitors get more reps to evaluate
     for (const competitor of battle.competitors) {
       if (competitor.playerId !== battle.winner) {
-        startingProjections.set(competitor.playerId, false);
-        repsDistribution.set(competitor.playerId, 60); // More reps for evaluation
+        startingProjections[competitor.playerId] = false;
+        repsDistribution[competitor.playerId] = 60; // More reps for evaluation
       }
     }
   }
@@ -114,22 +114,22 @@ export function trainingCampToPreseasonInput(
     else if (reveal.revealType === 'trait' && reveal.impact === 'positive') bonus = 7;
     else if (reveal.revealType === 'decline') bonus = -5;
     else if (reveal.revealType === 'injury_concern') bonus = -3;
-    developmentBonuses.set(reveal.playerId, bonus);
+    developmentBonuses[reveal.playerId] = bonus;
   }
 
   // Track injured players based on severity
   for (const injury of campInjuries) {
     if (injury.severity === 'serious' || injury.severity === 'season_ending') {
-      injuredPlayers.add(injury.playerId);
+      injuredPlayerSet.add(injury.playerId);
     } else if (injury.practiceStatus === 'out') {
-      injuredPlayers.add(injury.playerId);
+      injuredPlayerSet.add(injury.playerId);
     }
   }
 
   return {
     startingProjections,
     developmentBonuses,
-    injuredPlayers,
+    injuredPlayers: [...injuredPlayerSet],
     repsDistribution,
   };
 }
@@ -224,15 +224,10 @@ export function preseasonToFinalCutsInput(
     } else {
       // Calculate approximate overall from skills (use perceived high end)
       let overallRating = 70; // Default
-      if (player.skills.perceived) {
-        const perceivedValues = Object.values(player.skills.perceived) as Array<{
-          low: number;
-          high: number;
-        }>;
-        if (perceivedValues.length > 0) {
-          const sum = perceivedValues.reduce((acc, range) => acc + range.high, 0);
-          overallRating = Math.round(sum / perceivedValues.length);
-        }
+      const skillValues = Object.values(player.skills);
+      if (skillValues.length > 0) {
+        const sum = skillValues.reduce((acc, s) => acc + s.perceivedMax, 0);
+        overallRating = Math.round(sum / skillValues.length);
       }
 
       cutCandidates.push({
@@ -279,14 +274,14 @@ export function calculateRosterNeeds(
 ): {
   overBy: number;
   needToCut: number;
-  positionBreakdown: Map<string, { current: number; ideal: number }>;
+  positionBreakdown: Record<string, { current: number; ideal: number }>;
 } {
   const userTeam = gameState.teams[gameState.userTeamId];
   const overBy = Math.max(0, currentRosterSize - targetRosterSize);
   const needToCut = overBy;
 
   // Calculate position breakdown
-  const positionBreakdown = new Map<string, { current: number; ideal: number }>();
+  const positionBreakdown: Record<string, { current: number; ideal: number }> = {};
   const idealCounts: Record<string, number> = {
     QB: 3,
     RB: 4,
@@ -305,22 +300,21 @@ export function calculateRosterNeeds(
   };
 
   // Count current players by position
-  const currentCounts = new Map<string, number>();
+  const currentCounts: Record<string, number> = {};
   if (userTeam) {
     for (const playerId of userTeam.rosterPlayerIds) {
       const player = gameState.players[playerId];
       if (player) {
-        const count = currentCounts.get(player.position) || 0;
-        currentCounts.set(player.position, count + 1);
+        currentCounts[player.position] = (currentCounts[player.position] || 0) + 1;
       }
     }
   }
 
   for (const [position, ideal] of Object.entries(idealCounts)) {
-    positionBreakdown.set(position, {
-      current: currentCounts.get(position) || 0,
+    positionBreakdown[position] = {
+      current: currentCounts[position] || 0,
       ideal,
-    });
+    };
   }
 
   return {

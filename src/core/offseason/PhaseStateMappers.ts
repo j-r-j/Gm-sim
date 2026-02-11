@@ -17,6 +17,8 @@ import type {
 import type { CampInjury } from './phases/TrainingCampPhase';
 import type { PreseasonInjury } from './phases/PreseasonPhase';
 import type { Prospect } from '../draft/Prospect';
+import { createDefaultCoach } from '../models/staff/Coach';
+import type { CoachRole } from '../models/staff/StaffSalary';
 
 /**
  * Result of applying a phase to GameState
@@ -98,6 +100,30 @@ export function applyCoachingChanges(
           result.changes.coachesRemoved.push(change.coachId);
         }
       } else if (change.type === 'hire') {
+        // Create the coach object if it doesn't already exist in the coaches map
+        if (!newCoaches[change.coachId]) {
+          // Map the role string to CoachRole type
+          const roleLower = change.role.toLowerCase();
+          let coachRole: CoachRole = 'headCoach';
+          if (roleLower.includes('offensive') || roleLower === 'oc') {
+            coachRole = 'offensiveCoordinator';
+          } else if (roleLower.includes('defensive') || roleLower === 'dc') {
+            coachRole = 'defensiveCoordinator';
+          }
+
+          // Parse name into first/last
+          const nameParts = change.coachName.split(' ');
+          const firstName = nameParts[0] || 'Coach';
+          const lastName = nameParts.slice(1).join(' ') || 'Unknown';
+
+          const newCoach = createDefaultCoach(change.coachId, firstName, lastName, coachRole);
+          newCoaches[change.coachId] = {
+            ...newCoach,
+            teamId: change.teamId,
+            isAvailable: false,
+          };
+        }
+
         // Add coach to team's staff hierarchy
         const team = newTeams[change.teamId];
         if (team && newCoaches[change.coachId]) {
@@ -173,6 +199,9 @@ export function applyContractDecisions(
           delete newContracts[contractId];
           result.changes.contractsRemoved.push(contractId);
         }
+
+        // Track cut players so they can be added to the free agent pool
+        result.changes.playersRemoved.push(decision.playerId);
 
         // Apply dead money to team finances
         if (team && decision.details.deadMoney) {

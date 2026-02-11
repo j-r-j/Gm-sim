@@ -138,10 +138,9 @@ function findTopRookie(players: Player[], side: 'offense' | 'defense'): Player |
 }
 
 function getPlayerScore(player: Player): number {
-  if (!player.skills.perceived) return 50;
-  const values = Object.values(player.skills.perceived) as Array<{ low: number; high: number }>;
-  if (values.length === 0) return 50;
-  return values.reduce((sum, range) => sum + (range.low + range.high) / 2, 0) / values.length;
+  const skills = Object.values(player.skills);
+  if (skills.length === 0) return 50;
+  return skills.reduce((sum, s) => sum + (s.perceivedMin + s.perceivedMax) / 2, 0) / skills.length;
 }
 
 // =============================================================================
@@ -586,8 +585,9 @@ export function generatePreseasonGames(gameState: GameState): PreseasonGame[] {
 
   if (!userTeam) return games;
 
+  const opponentPool = teams.filter((t) => t.id !== gameState.userTeamId);
   for (let gameNum = 1; gameNum <= 3; gameNum++) {
-    const opponent = teams[Math.floor(Math.random() * teams.length)];
+    const opponent = opponentPool[Math.floor(Math.random() * opponentPool.length)];
     const isHome = gameNum % 2 === 1;
     const teamScore = 10 + Math.floor(Math.random() * 20);
     const oppScore = 10 + Math.floor(Math.random() * 20);

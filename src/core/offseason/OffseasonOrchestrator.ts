@@ -42,6 +42,11 @@ import {
   generateSeasonStartData,
 } from './bridges/PhaseGenerators';
 import {
+  otaToTrainingCampInput,
+  trainingCampToPreseasonInput,
+  preseasonToFinalCutsInput,
+} from './bridges/PhaseDataFlow';
+import {
   processSeasonEndWithReveals,
   calculatePlayerGrade,
   type PlayerSeasonGrade,
@@ -168,11 +173,36 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
       changes.push('NFL Combine period started');
       break;
 
-    case 'free_agency':
+    case 'free_agency': {
       // Initialize free agency day counter
       newOffseasonData.freeAgencyDay = 1;
+
+      // Populate free agent pool: collect all players not on any team's roster
+      const allRosteredPlayerIds = new Set<string>();
+      for (const team of Object.values(newGameState.teams)) {
+        for (const pid of team.rosterPlayerIds) {
+          allRosteredPlayerIds.add(pid);
+        }
+        for (const pid of team.practiceSquadIds) {
+          allRosteredPlayerIds.add(pid);
+        }
+        for (const pid of team.injuredReserveIds) {
+          allRosteredPlayerIds.add(pid);
+        }
+      }
+      const freeAgentIds = Object.keys(newGameState.players).filter(
+        (pid) => !allRosteredPlayerIds.has(pid)
+      );
+      newOffseasonData.remainingFreeAgents = [
+        ...new Set([...newOffseasonData.remainingFreeAgents, ...freeAgentIds]),
+      ];
+
       changes.push('Free agency period opened');
+      changes.push(
+        `Populated free agent pool with ${newOffseasonData.remainingFreeAgents.length} players`
+      );
       break;
+    }
 
     case 'draft':
       // Ensure draft order is set
@@ -210,11 +240,34 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
     }
 
     case 'training_camp': {
+      // Bridge OTA data into training camp
+      const otaCampBridge = otaToTrainingCampInput(
+        newOffseasonData.otaReports || [],
+        newOffseasonData.rookieIntegrationReports || [],
+        [] // Position battle previews are not persisted; seeds come from OTA conditioning/scheme data
+      );
+
       // Auto-generate position battles
       if (!newOffseasonData.positionBattles || newOffseasonData.positionBattles.length === 0) {
         const battles = generatePositionBattles(newGameState);
+        // Enhance position battle scores using OTA conditioning data from bridge
+        for (const battle of battles) {
+          for (const competitor of battle.competitors) {
+            const conditioning = otaCampBridge.playerConditionLevels[competitor.playerId];
+            const schemeGrasp = otaCampBridge.playerSchemeGrasp[competitor.playerId];
+            if (conditioning !== undefined) {
+              // Players with better conditioning get a slight score boost
+              competitor.currentScore += (conditioning - 70) * 0.1;
+            }
+            if (schemeGrasp !== undefined) {
+              // Players with better scheme grasp get a slight score boost
+              competitor.currentScore += (schemeGrasp - 60) * 0.1;
+            }
+            competitor.currentScore = Math.min(100, Math.max(0, competitor.currentScore));
+          }
+        }
         newOffseasonData.positionBattles = battles;
-        changes.push(`Generated ${battles.length} position battles`);
+        changes.push(`Generated ${battles.length} position battles (enhanced with OTA data)`);
       }
       // Auto-generate development reveals
       if (
@@ -231,11 +284,24 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
         newOffseasonData.campInjuries = injuries;
         changes.push(`Generated ${injuries.length} camp injuries`);
       }
+      // Apply camp injuries to player records in GameState
+      if (newOffseasonData.campInjuries.length > 0) {
+        const injuryResult = applyInjuries(newGameState, newOffseasonData.campInjuries);
+        newGameState = injuryResult.gameState;
+        changes.push(`Applied ${newOffseasonData.campInjuries.length} camp injuries to players`);
+      }
       changes.push('Training camp begins');
       break;
     }
 
     case 'preseason': {
+      // Bridge training camp data into preseason
+      const campPreseasonBridge = trainingCampToPreseasonInput(
+        newOffseasonData.positionBattles || [],
+        newOffseasonData.developmentReveals || [],
+        newOffseasonData.campInjuries || []
+      );
+
       // Auto-generate preseason games
       if (!newOffseasonData.preseasonGames || newOffseasonData.preseasonGames.length === 0) {
         const games = generatePreseasonGames(newGameState);
@@ -244,18 +310,44 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
 
         // Auto-generate evaluations from games
         const evaluations = generatePreseasonEvaluations(games, newGameState);
+        // Enhance evaluations with camp bridge data (development bonuses, injury status)
+        for (const evaluation of evaluations) {
+          const devBonus = campPreseasonBridge.developmentBonuses[evaluation.playerId];
+          if (devBonus !== undefined) {
+            evaluation.avgGrade = Math.min(100, Math.max(0, evaluation.avgGrade + devBonus));
+          }
+          // Mark injured players as cut candidates if still out
+          if (campPreseasonBridge.injuredPlayers.includes(evaluation.playerId)) {
+            evaluation.rosterProjection = 'bubble';
+            evaluation.recommendation = 'Limited by camp injury - monitor closely';
+          }
+        }
         newOffseasonData.preseasonEvaluations = evaluations;
-        changes.push(`Generated ${evaluations.length} preseason evaluations`);
+        changes.push(
+          `Generated ${evaluations.length} preseason evaluations (enhanced with camp data)`
+        );
       }
       changes.push('Preseason schedule ready');
       break;
     }
 
-    case 'final_cuts':
+    case 'final_cuts': {
+      // Bridge preseason data into final cuts
+      const preseasonCutsBridge = preseasonToFinalCutsInput(
+        newOffseasonData.preseasonEvaluations || [],
+        newOffseasonData.positionBattles || [],
+        newGameState
+      );
       // Initialize waiver wire
       newOffseasonData.waiverWire = [];
       changes.push('Final roster cutdown begins');
+      changes.push(
+        `Cut analysis: ${preseasonCutsBridge.cutCandidates.length} cut candidates, ` +
+          `${preseasonCutsBridge.bubblePlayers.length} bubble players, ` +
+          `${preseasonCutsBridge.mustKeepPlayers.length} must-keep players`
+      );
       break;
+    }
 
     case 'season_start': {
       // Auto-generate season start data
@@ -341,10 +433,18 @@ export function processPhaseAction(gameState: GameState, action: PhaseAction): P
     case 'apply_contract_decisions': {
       const result = applyContractDecisions(newGameState, action.decisions);
       newGameState = result.gameState;
+      // Add cut players to free agent pool
+      const cutPlayerIds = result.changes.playersRemoved;
       newOffseasonData = mergeOffseasonData(newOffseasonData, {
         contractDecisions: [...newOffseasonData.contractDecisions, ...action.decisions],
+        remainingFreeAgents: [
+          ...new Set([...newOffseasonData.remainingFreeAgents, ...cutPlayerIds]),
+        ],
       });
       changes.push(`Applied ${action.decisions.length} contract decisions`);
+      if (cutPlayerIds.length > 0) {
+        changes.push(`Added ${cutPlayerIds.length} cut players to free agent pool`);
+      }
       errors.push(...result.errors);
       break;
     }
@@ -639,64 +739,6 @@ export function getOffseasonProgress(gameState: GameState): number {
   const completedPhases = offseasonState.completedPhases.length;
 
   return Math.round((completedPhases / PHASE_ORDER.length) * 100);
-}
-
-/**
- * Completes the offseason and transitions to the regular season
- */
-export function completeOffseason(gameState: GameState): PhaseProcessResult {
-  const offseasonState = gameState.offseasonState;
-  const offseasonData = gameState.offseasonData || createEmptyOffseasonData();
-
-  if (!offseasonState) {
-    return {
-      gameState,
-      offseasonState: createOffSeasonState(gameState.league.calendar.currentYear),
-      offseasonData,
-      success: false,
-      errors: ['No offseason state found'],
-      changes: [],
-    };
-  }
-
-  const changes: string[] = [];
-
-  // Mark offseason as complete
-  const completedOffseasonState: OffSeasonState = {
-    ...offseasonState,
-    isComplete: true,
-    completedPhases: [...PHASE_ORDER],
-  };
-
-  // Update league calendar to regular season
-  const newYear = gameState.league.calendar.currentYear + 1;
-  const updatedLeague = {
-    ...gameState.league,
-    calendar: {
-      ...gameState.league.calendar,
-      currentPhase: 'regularSeason' as const,
-      currentWeek: 1,
-      currentYear: newYear,
-    },
-  };
-
-  changes.push(`Offseason complete, starting ${newYear} regular season`);
-
-  const updatedGameState: GameState = {
-    ...gameState,
-    league: updatedLeague,
-    offseasonState: completedOffseasonState,
-    offseasonData,
-  };
-
-  return {
-    gameState: updatedGameState,
-    offseasonState: completedOffseasonState,
-    offseasonData,
-    success: true,
-    errors: [],
-    changes,
-  };
 }
 
 /**

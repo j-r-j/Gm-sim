@@ -7,6 +7,7 @@ import {
   // Types
   OffSeasonPhaseType,
   OffSeasonState,
+  OffSeasonTask,
 
   // Constants
   PHASE_ORDER,
@@ -119,7 +120,7 @@ describe('OffSeasonPhaseManager', () => {
 
     it('should have tasks for all phases', () => {
       for (const phase of PHASE_ORDER) {
-        expect(state.phaseTasks.get(phase)).toBeDefined();
+        expect(state.phaseTasks[phase]).toBeDefined();
       }
     });
   });
@@ -443,8 +444,8 @@ describe('OffSeasonPhaseManager', () => {
       expect(resetState.completedPhases).not.toContain('season_end');
       expect(resetState.isComplete).toBe(false);
 
-      const tasks = resetState.phaseTasks.get('season_end');
-      expect(tasks?.tasks.every((t) => !t.isComplete)).toBe(true);
+      const tasks = resetState.phaseTasks['season_end'];
+      expect(tasks?.tasks.every((t: OffSeasonTask) => !t.isComplete)).toBe(true);
     });
   });
 
