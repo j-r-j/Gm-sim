@@ -6,25 +6,12 @@
 /**
  * Coach role types
  */
-export type CoachRole =
-  | 'headCoach'
-  | 'offensiveCoordinator'
-  | 'defensiveCoordinator'
-  | 'specialTeamsCoordinator'
-  | 'qbCoach'
-  | 'rbCoach'
-  | 'wrCoach'
-  | 'teCoach'
-  | 'olCoach'
-  | 'dlCoach'
-  | 'lbCoach'
-  | 'dbCoach'
-  | 'stCoach';
+export type CoachRole = 'headCoach' | 'offensiveCoordinator' | 'defensiveCoordinator';
 
 /**
  * Scout role types
  */
-export type ScoutRole = 'scoutingDirector' | 'nationalScout' | 'regionalScout' | 'proScout';
+export type ScoutRole = 'headScout' | 'offensiveScout' | 'defensiveScout';
 
 /**
  * Salary range structure
@@ -41,26 +28,15 @@ export const COACH_SALARY_RANGES: Record<CoachRole, SalaryRange> = {
   headCoach: { min: 8_000_000, max: 18_000_000 },
   offensiveCoordinator: { min: 2_000_000, max: 6_000_000 },
   defensiveCoordinator: { min: 2_000_000, max: 6_000_000 },
-  specialTeamsCoordinator: { min: 1_000_000, max: 3_000_000 },
-  qbCoach: { min: 500_000, max: 1_500_000 },
-  rbCoach: { min: 400_000, max: 1_200_000 },
-  wrCoach: { min: 400_000, max: 1_200_000 },
-  teCoach: { min: 400_000, max: 1_200_000 },
-  olCoach: { min: 500_000, max: 1_500_000 },
-  dlCoach: { min: 500_000, max: 1_500_000 },
-  lbCoach: { min: 400_000, max: 1_200_000 },
-  dbCoach: { min: 500_000, max: 1_500_000 },
-  stCoach: { min: 300_000, max: 800_000 },
 };
 
 /**
  * Salary ranges for scouts in dollars per year
  */
 export const SCOUT_SALARY_RANGES: Record<ScoutRole, SalaryRange> = {
-  scoutingDirector: { min: 1_000_000, max: 3_000_000 },
-  nationalScout: { min: 500_000, max: 1_200_000 },
-  regionalScout: { min: 200_000, max: 600_000 },
-  proScout: { min: 300_000, max: 800_000 },
+  headScout: { min: 1_000_000, max: 3_000_000 },
+  offensiveScout: { min: 500_000, max: 1_200_000 },
+  defensiveScout: { min: 500_000, max: 1_200_000 },
 };
 
 /**
@@ -96,27 +72,12 @@ export const ALL_COACH_ROLES: CoachRole[] = [
   'headCoach',
   'offensiveCoordinator',
   'defensiveCoordinator',
-  'specialTeamsCoordinator',
-  'qbCoach',
-  'rbCoach',
-  'wrCoach',
-  'teCoach',
-  'olCoach',
-  'dlCoach',
-  'lbCoach',
-  'dbCoach',
-  'stCoach',
 ];
 
 /**
  * All scout roles
  */
-export const ALL_SCOUT_ROLES: ScoutRole[] = [
-  'scoutingDirector',
-  'nationalScout',
-  'regionalScout',
-  'proScout',
-];
+export const ALL_SCOUT_ROLES: ScoutRole[] = ['headScout', 'offensiveScout', 'defensiveScout'];
 
 /**
  * Gets the salary range for a coach role
@@ -183,16 +144,6 @@ export function getCoachRoleDisplayName(role: CoachRole): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    qbCoach: 'Quarterbacks Coach',
-    rbCoach: 'Running Backs Coach',
-    wrCoach: 'Wide Receivers Coach',
-    teCoach: 'Tight Ends Coach',
-    olCoach: 'Offensive Line Coach',
-    dlCoach: 'Defensive Line Coach',
-    lbCoach: 'Linebackers Coach',
-    dbCoach: 'Defensive Backs Coach',
-    stCoach: 'Special Teams Coach',
   };
 
   return displayNames[role];
@@ -203,10 +154,9 @@ export function getCoachRoleDisplayName(role: CoachRole): string {
  */
 export function getScoutRoleDisplayName(role: ScoutRole): string {
   const displayNames: Record<ScoutRole, string> = {
-    scoutingDirector: 'Director of Scouting',
-    nationalScout: 'National Scout',
-    regionalScout: 'Regional Scout',
-    proScout: 'Pro Scout',
+    headScout: 'Head Scout',
+    offensiveScout: 'Offensive Scout',
+    defensiveScout: 'Defensive Scout',
   };
 
   return displayNames[role];

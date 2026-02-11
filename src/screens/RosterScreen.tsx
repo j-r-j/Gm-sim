@@ -14,13 +14,24 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader, Button } from '../components';
 import { Player } from '../core/models/player/Player';
 import {
   OFFENSIVE_POSITIONS,
   DEFENSIVE_POSITIONS,
   SPECIAL_TEAMS_POSITIONS,
 } from '../core/models/player/Position';
+import { PlayerCard } from '../components/player/PlayerCard';
 
 /**
  * Cut preview info passed to the screen
@@ -84,9 +95,9 @@ function formatMoney(amount: number): string {
 }
 
 /**
- * Player card component with action buttons
+ * Roster player card wrapper - uses refactored PlayerCard with action buttons overlay
  */
-function PlayerCard({
+function RosterPlayerCard({
   player,
   onPress,
   onCut,
@@ -101,52 +112,60 @@ function PlayerCard({
 }) {
   const [showActions, setShowActions] = useState(false);
 
+  const handlePress = () => {
+    if (showActions) {
+      setShowActions(false);
+    } else {
+      onPress?.();
+    }
+  };
+
+  const handleLongPress = () => {
+    setShowActions(!showActions);
+  };
+
   return (
-    <TouchableOpacity
-      style={styles.playerCard}
-      onPress={() => {
-        if (showActions) {
-          setShowActions(false);
-        } else {
-          onPress?.();
-        }
-      }}
-      onLongPress={() => setShowActions(!showActions)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.playerInfo}>
-        <View style={styles.positionBadge}>
-          <Text style={styles.positionText}>{player.position}</Text>
-        </View>
-        <View style={styles.nameContainer}>
-          <Text style={styles.playerName}>
-            {player.firstName} {player.lastName}
-          </Text>
-          <Text style={styles.playerDetails}>
-            Age {player.age} •{' '}
-            {player.experience === 0
-              ? 'Rookie'
-              : `${player.experience} yr${player.experience > 1 ? 's' : ''}`}
-          </Text>
-        </View>
-      </View>
-      {showActions ? (
-        <View style={styles.actionButtons}>
+    <View style={styles.rosterCardContainer}>
+      <PlayerCard
+        id={player.id}
+        firstName={player.firstName}
+        lastName={player.lastName}
+        position={player.position}
+        age={player.age}
+        experience={player.experience}
+        skills={player.skills}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+      />
+      {showActions && (
+        <View style={styles.actionsOverlay}>
           {canExtend && (
-            <TouchableOpacity style={styles.extendButton} onPress={onExtend}>
+            <TouchableOpacity
+              style={styles.extendButton}
+              onPress={onExtend}
+              accessibilityLabel={`Extend ${player.firstName} ${player.lastName}`}
+              accessibilityRole="button"
+              accessibilityHint="Opens contract extension negotiation"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Ionicons name="document-text" size={14} color={colors.textOnPrimary} />
               <Text style={styles.extendButtonText}>Extend</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.cutButton} onPress={onCut}>
+          <TouchableOpacity
+            style={styles.cutButton}
+            onPress={onCut}
+            accessibilityLabel={`Cut ${player.firstName} ${player.lastName}`}
+            accessibilityRole="button"
+            accessibilityHint="Opens release confirmation"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="close-circle" size={14} color={colors.textOnPrimary} />
             <Text style={styles.cutButtonText}>Cut</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.statsContainer}>
-          <Text style={styles.chevron}>›</Text>
-        </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -191,12 +210,21 @@ function CutModal({
           <Text style={styles.recommendation}>{preview.recommendation}</Text>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmCutButton} onPress={onConfirm}>
-              <Text style={styles.confirmCutButtonText}>Confirm Cut</Text>
-            </TouchableOpacity>
+            <Button
+              label="Cancel"
+              onPress={onCancel}
+              variant="ghost"
+              style={styles.modalButtonFlex}
+              testID="cut-cancel-button"
+            />
+            <Button
+              label="Confirm Cut"
+              onPress={onConfirm}
+              variant="danger"
+              style={styles.modalButtonFlex}
+              accessibilityHint="Releases the player from the roster"
+              testID="cut-confirm-button"
+            />
           </View>
         </View>
       </View>
@@ -249,6 +277,9 @@ function ExtensionModal({
                   key={y}
                   style={[styles.yearOption, years === y && styles.yearOptionActive]}
                   onPress={() => setYears(y)}
+                  accessibilityLabel={`${y} year${y > 1 ? 's' : ''}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: years === y }}
                 >
                   <Text style={[styles.yearOptionText, years === y && styles.yearOptionTextActive]}>
                     {y}
@@ -262,13 +293,22 @@ function ExtensionModal({
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setTotalValue(Math.max(1, totalValue - 5))}
+                accessibilityLabel="Decrease total value by 5 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>-5M</Text>
               </TouchableOpacity>
-              <Text style={styles.sliderValue}>{formatMoney(totalValue * 1000000)}</Text>
+              <Text
+                style={styles.sliderValue}
+                accessibilityLabel={`Total value ${formatMoney(totalValue * 1000000)}`}
+              >
+                {formatMoney(totalValue * 1000000)}
+              </Text>
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setTotalValue(totalValue + 5)}
+                accessibilityLabel="Increase total value by 5 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>+5M</Text>
               </TouchableOpacity>
@@ -279,13 +319,22 @@ function ExtensionModal({
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setGuaranteed(Math.max(0, guaranteed - 2))}
+                accessibilityLabel="Decrease guaranteed by 2 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>-2M</Text>
               </TouchableOpacity>
-              <Text style={styles.sliderValue}>{formatMoney(guaranteed * 1000000)}</Text>
+              <Text
+                style={styles.sliderValue}
+                accessibilityLabel={`Guaranteed ${formatMoney(guaranteed * 1000000)}`}
+              >
+                {formatMoney(guaranteed * 1000000)}
+              </Text>
               <TouchableOpacity
                 style={styles.adjustButton}
                 onPress={() => setGuaranteed(Math.min(totalValue, guaranteed + 2))}
+                accessibilityLabel="Increase guaranteed by 2 million"
+                accessibilityRole="button"
               >
                 <Text style={styles.adjustButtonText}>+2M</Text>
               </TouchableOpacity>
@@ -302,12 +351,21 @@ function ExtensionModal({
           </View>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>Submit Offer</Text>
-            </TouchableOpacity>
+            <Button
+              label="Cancel"
+              onPress={onCancel}
+              variant="ghost"
+              style={styles.modalButtonFlex}
+              testID="extension-cancel-button"
+            />
+            <Button
+              label="Submit Offer"
+              onPress={handleSubmit}
+              variant="primary"
+              style={styles.modalButtonFlex}
+              accessibilityHint="Submits the contract extension offer to the player"
+              testID="extension-submit-button"
+            />
           </View>
         </View>
       </View>
@@ -461,19 +519,20 @@ export function RosterScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Roster</Text>
-        {onTrade ? (
-          <TouchableOpacity onPress={onTrade} style={styles.tradeButton}>
-            <Text style={styles.tradeButtonText}>Trade</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
-        )}
-      </View>
+      <ScreenHeader
+        title="Roster"
+        onBack={onBack}
+        rightAction={
+          onTrade
+            ? {
+                icon: 'swap-horizontal',
+                onPress: onTrade,
+                accessibilityLabel: 'Trade players',
+              }
+            : undefined
+        }
+        testID="roster-header"
+      />
 
       {/* Roster Summary */}
       <View style={styles.summary}>
@@ -494,24 +553,41 @@ export function RosterScreen({
       </View>
 
       {/* Position Filter */}
-      <View style={styles.filterContainer}>
-        {(['all', 'offense', 'defense', 'special'] as PositionFilter[]).map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterButton, filter === f && styles.filterActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === 'all'
-                ? `All (${counts.total})`
-                : f === 'offense'
-                  ? `OFF (${counts.offense})`
-                  : f === 'defense'
-                    ? `DEF (${counts.defense})`
-                    : `ST (${counts.special})`}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.filterContainer} accessibilityRole="tablist">
+        {(['all', 'offense', 'defense', 'special'] as PositionFilter[]).map((f) => {
+          const label =
+            f === 'all'
+              ? `All (${counts.total})`
+              : f === 'offense'
+                ? `Offense (${counts.offense})`
+                : f === 'defense'
+                  ? `Defense (${counts.defense})`
+                  : `Special Teams (${counts.special})`;
+          const shortLabel =
+            f === 'all'
+              ? `All (${counts.total})`
+              : f === 'offense'
+                ? `OFF (${counts.offense})`
+                : f === 'defense'
+                  ? `DEF (${counts.defense})`
+                  : `ST (${counts.special})`;
+
+          return (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterButton, filter === f && styles.filterActive]}
+              onPress={() => setFilter(f)}
+              accessibilityLabel={label}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: filter === f }}
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {shortLabel}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Player List */}
@@ -519,7 +595,7 @@ export function RosterScreen({
         data={filteredPlayers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <PlayerCard
+          <RosterPlayerCard
             player={item}
             onPress={() => onSelectPlayer?.(item.id)}
             onCut={() => handleCutPress(item)}
@@ -527,8 +603,20 @@ export function RosterScreen({
             canExtend={isExtensionEligible?.(item.id) ?? false}
           />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          filteredPlayers.length === 0 && styles.emptyListContent,
+        ]}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>👥</Text>
+            <Text style={styles.emptyStateTitle}>No Players</Text>
+            <Text style={styles.emptyStateText}>
+              {filter === 'all' ? 'Your roster is empty' : `No ${filter} players on roster`}
+            </Text>
+          </View>
+        }
       />
 
       {/* Cut Modal */}
@@ -638,53 +726,41 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacing.md,
   },
-  playerCard: {
-    flexDirection: 'row',
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyState: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    paddingVertical: spacing.xxxl,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  emptyStateTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
     marginBottom: spacing.sm,
   },
-  playerInfo: {
+  emptyStateText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  rosterCardContainer: {
+    position: 'relative',
+  },
+  actionsOverlay: {
+    position: 'absolute',
+    right: spacing.md,
+    top: 0,
+    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-  },
-  positionBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  positionText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  nameContainer: {
-    flex: 1,
-  },
-  playerName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-  },
-  playerDetails: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  statsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chevron: {
-    fontSize: fontSize.xl,
-    color: colors.textSecondary,
+    gap: spacing.sm,
+    paddingRight: spacing.sm,
   },
   // Trade button
   tradeButton: {
@@ -711,15 +787,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   // Action buttons
-  actionButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
   extendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   extendButtonText: {
     color: colors.textOnPrimary,
@@ -727,10 +803,14 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   cutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.error,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   cutButtonText: {
     color: colors.textOnPrimary,
@@ -860,40 +940,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  cancelButton: {
+  modalButtonFlex: {
     flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  confirmCutButton: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.error,
-    alignItems: 'center',
-  },
-  confirmCutButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textOnPrimary,
-  },
-  submitButton: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textOnPrimary,
   },
 });
 

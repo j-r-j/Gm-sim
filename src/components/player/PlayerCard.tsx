@@ -1,15 +1,34 @@
 /**
  * PlayerCard Component
- * Compact card view of a player/prospect for lists and grids.
+ * Modern compact card view of a player/prospect for lists and grids.
  *
- * BRAND GUIDELINE: No overall rating. Shows key info and skill range summary.
+ * Design inspired by:
+ * - FIFA/EA FC Ultimate Team card layouts
+ * - Madden NFL MUT card designs
+ * - NBA 2K MyTeam gem tier system
+ *
+ * BRAND GUIDELINE: No overall rating number. Shows color tier indicator and skill range.
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  getRatingTierColor,
+  accessibility,
+} from '../../styles';
 import { Position } from '../../core/models/player/Position';
-import { TechnicalSkills, SKILL_NAMES_BY_POSITION } from '../../core/models/player/TechnicalSkills';
+import {
+  TechnicalSkills,
+  SKILL_NAMES_BY_POSITION,
+  calculateSkillKnowledge,
+} from '../../core/models/player/TechnicalSkills';
+import { Avatar } from '../avatar';
 
 export interface PlayerCardProps {
   /** Player ID */
@@ -65,17 +84,17 @@ function getPositionGroup(position: Position): 'offense' | 'defense' | 'special'
 }
 
 /**
- * Get position color
+ * Get position color based on group
  */
-function getPositionColor(position: Position): string {
+function getPositionColor(position: Position): { main: string; light: string } {
   const group = getPositionGroup(position);
   switch (group) {
     case 'offense':
-      return colors.primary;
+      return { main: colors.positionOffense, light: colors.positionOffenseLight };
     case 'defense':
-      return colors.secondary;
+      return { main: colors.positionDefense, light: colors.positionDefenseLight };
     case 'special':
-      return colors.info;
+      return { main: colors.positionSpecial, light: colors.positionSpecialLight };
   }
 }
 
@@ -86,8 +105,7 @@ function getPositionColor(position: Position): string {
 function getSkillRangeSummary(
   skills: TechnicalSkills,
   position: Position
-): { avgMin: number; avgMax: number } {
-  // Get the skill names for this position group
+): { avgMin: number; avgMax: number; midpoint: number } {
   const positionKey = getPositionGroupKey(position);
   const skillNames = SKILL_NAMES_BY_POSITION[positionKey];
 
@@ -105,12 +123,15 @@ function getSkillRangeSummary(
   }
 
   if (count === 0) {
-    return { avgMin: 50, avgMax: 70 };
+    return { avgMin: 50, avgMax: 70, midpoint: 60 };
   }
 
+  const avgMin = Math.round(totalMin / count);
+  const avgMax = Math.round(totalMax / count);
   return {
-    avgMin: Math.round(totalMin / count),
-    avgMax: Math.round(totalMax / count),
+    avgMin,
+    avgMax,
+    midpoint: Math.round((avgMin + avgMax) / 2),
   };
 }
 
@@ -163,6 +184,111 @@ function formatProjectedRound(round: number): string {
 }
 
 /**
+ * Rating Tier Indicator - Color-coded badge showing player quality
+ * Inspired by NBA 2K gem system and FIFA card tiers
+ */
+function RatingTierIndicator({
+  rating,
+  compact = false,
+}: {
+  rating: number;
+  compact?: boolean;
+}): React.JSX.Element {
+  const tierInfo = getRatingTierColor(rating);
+
+  return (
+    <View
+      style={[
+        styles.tierIndicator,
+        { backgroundColor: tierInfo.background, borderColor: tierInfo.primary },
+        compact && styles.tierIndicatorCompact,
+      ]}
+    >
+      <View style={[styles.tierDot, { backgroundColor: tierInfo.primary }]} />
+      {!compact && (
+        <Text style={[styles.tierText, { color: tierInfo.primary }]}>{tierInfo.tier}</Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Skill Range Bar - Mini visualization of skill range
+ */
+function SkillRangeBar({
+  min,
+  max,
+  tierColor,
+}: {
+  min: number;
+  max: number;
+  tierColor: string;
+}): React.JSX.Element {
+  return (
+    <View style={styles.skillBarContainer}>
+      <View style={styles.skillBarTrack}>
+        <View
+          style={[
+            styles.skillBarFill,
+            {
+              left: `${min}%`,
+              width: `${max - min}%`,
+              backgroundColor: tierColor,
+            },
+          ]}
+        />
+        {/* Tick marks for reference */}
+        <View style={[styles.skillBarTick, { left: '50%' }]} />
+        <View style={[styles.skillBarTick, { left: '75%' }]} />
+      </View>
+      <Text style={styles.skillBarText}>
+        {min}-{max}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Knowledge Indicator - Shows how well the player's skills are known
+ */
+function KnowledgeIndicator({ knowledge }: { knowledge: number }): React.JSX.Element {
+  const filledDots = knowledge >= 90 ? 4 : knowledge >= 65 ? 3 : knowledge >= 35 ? 2 : 1;
+  const label =
+    knowledge >= 90
+      ? 'Known'
+      : knowledge >= 65
+        ? 'Familiar'
+        : knowledge >= 35
+          ? 'Developing'
+          : 'Unknown';
+  const dotColor =
+    knowledge >= 90
+      ? colors.success
+      : knowledge >= 65
+        ? colors.info
+        : knowledge >= 35
+          ? colors.warning
+          : colors.textLight;
+
+  return (
+    <View style={styles.knowledgeContainer}>
+      <View style={styles.knowledgeDots}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.knowledgeDot,
+              i < filledDots ? { backgroundColor: dotColor } : { backgroundColor: colors.border },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={[styles.knowledgeLabel, { color: dotColor }]}>{label}</Text>
+    </View>
+  );
+}
+
+/**
  * PlayerCard Component
  */
 export function PlayerCard({
@@ -181,8 +307,13 @@ export function PlayerCard({
   onLongPress,
   selected = false,
 }: PlayerCardProps): React.JSX.Element {
-  const positionColor = getPositionColor(position);
+  const positionColors = getPositionColor(position);
   const skillSummary = skills ? getSkillRangeSummary(skills, position) : null;
+  const tierInfo = skillSummary ? getRatingTierColor(skillSummary.midpoint) : null;
+  const posGroupKey = getPositionGroupKey(position);
+  const knowledge = skills
+    ? calculateSkillKnowledge(skills, SKILL_NAMES_BY_POSITION[posGroupKey])
+    : null;
 
   const handlePress = () => {
     if (onPress) {
@@ -196,13 +327,31 @@ export function PlayerCard({
     }
   };
 
+  // Determine if this is an elite player for special styling
+  const isElite = skillSummary && skillSummary.midpoint >= 90;
+
+  const cardAccessLabel = `${firstName} ${lastName}, ${position}${collegeName ? `, ${collegeName}` : ''}${experience !== undefined ? `, ${experience} years experience` : ''}, Age ${age}${tierInfo ? `, ${tierInfo.tier} tier` : ''}${flagged ? ', Flagged' : ''}${selected ? ', Selected' : ''}`;
+
   return (
     <TouchableOpacity
-      style={[styles.container, selected && styles.containerSelected]}
+      style={[
+        styles.container,
+        selected && styles.containerSelected,
+        isElite && styles.containerElite,
+        tierInfo && { borderLeftColor: tierInfo.primary },
+      ]}
       onPress={handlePress}
       onLongPress={handleLongPress}
       activeOpacity={0.7}
+      accessibilityLabel={cardAccessLabel}
+      accessibilityRole="button"
+      accessibilityHint={onLongPress ? 'Long press to select for comparison' : undefined}
+      accessibilityState={{ selected }}
+      hitSlop={accessibility.hitSlop}
     >
+      {/* Tier accent border */}
+      <View style={[styles.tierAccent, tierInfo && { backgroundColor: tierInfo.primary }]} />
+
       {/* Flag indicator */}
       {flagged && (
         <View style={styles.flagIndicator}>
@@ -210,145 +359,206 @@ export function PlayerCard({
         </View>
       )}
 
-      {/* Position badge */}
-      <View style={[styles.positionBadge, { backgroundColor: positionColor }]}>
-        <Text style={styles.positionText}>{position}</Text>
-      </View>
+      {/* Main content row */}
+      <View style={styles.contentRow}>
+        {/* Left: Avatar with position badge overlay */}
+        <View style={styles.avatarSection}>
+          <Avatar
+            id={id}
+            size="sm"
+            age={age}
+            context={collegeName ? 'prospect' : 'player'}
+            accentColor={positionColors.main}
+          />
+          <View style={[styles.positionBadge, { backgroundColor: positionColors.main }]}>
+            <Text style={styles.positionText}>{position}</Text>
+          </View>
+        </View>
 
-      {/* Player info */}
-      <View style={styles.infoContainer}>
-        <Text style={styles.playerName} numberOfLines={1}>
-          {firstName} {lastName}
-        </Text>
-        <View style={styles.detailsRow}>
-          {collegeName && (
-            <Text style={styles.detailText} numberOfLines={1}>
-              {collegeName}
-            </Text>
+        {/* Center: Player info */}
+        <View style={styles.infoSection}>
+          <Text style={styles.playerName} numberOfLines={1}>
+            {firstName.charAt(0)}. {lastName}
+          </Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.ageText}>{age} yo</Text>
+            {collegeName && (
+              <Text style={styles.collegeText} numberOfLines={1}>
+                {collegeName}
+              </Text>
+            )}
+            {experience !== undefined && experience > 0 && (
+              <Text style={styles.expText}>
+                {experience} yr{experience !== 1 ? 's' : ''}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Right: Rating and badges */}
+        <View style={styles.ratingSection}>
+          {/* Tier indicator */}
+          {skillSummary && <RatingTierIndicator rating={skillSummary.midpoint} />}
+
+          {/* Skill range bar */}
+          {skillSummary && tierInfo && (
+            <SkillRangeBar
+              min={skillSummary.avgMin}
+              max={skillSummary.avgMax}
+              tierColor={tierInfo.primary}
+            />
           )}
-          {experience !== undefined && experience > 0 && (
-            <Text style={styles.detailText}>
-              {experience} yr{experience !== 1 ? 's' : ''} exp
-            </Text>
-          )}
-          <Text style={styles.ageText}>Age {age}</Text>
+
+          {/* Knowledge indicator */}
+          {knowledge !== null && <KnowledgeIndicator knowledge={knowledge} />}
         </View>
       </View>
 
-      {/* Right side info */}
-      <View style={styles.rightContainer}>
-        {/* Skill range summary */}
-        {skillSummary && (
-          <View style={styles.skillSummary}>
-            <Text style={styles.skillRangeText}>
-              {skillSummary.avgMin}-{skillSummary.avgMax}
-            </Text>
-            <View style={styles.skillBar}>
-              <View
-                style={[
-                  styles.skillBarFill,
-                  {
-                    left: `${skillSummary.avgMin}%`,
-                    width: `${skillSummary.avgMax - skillSummary.avgMin}%`,
-                  },
-                ]}
-              />
+      {/* Bottom badges row */}
+      {(projectedRound !== undefined || userTier) && (
+        <View style={styles.badgesRow}>
+          {projectedRound !== undefined && (
+            <View style={[styles.badge, styles.projectionBadge]}>
+              <Text style={styles.badgeText}>{formatProjectedRound(projectedRound)} Rd</Text>
             </View>
-          </View>
-        )}
-
-        {/* Draft projection or tier */}
-        {projectedRound !== undefined && (
-          <View style={styles.projectionBadge}>
-            <Text style={styles.projectionText}>{formatProjectedRound(projectedRound)} Rd</Text>
-          </View>
-        )}
-        {userTier && (
-          <View style={styles.tierBadge}>
-            <Text style={styles.tierText}>{userTier}</Text>
-          </View>
-        )}
-      </View>
+          )}
+          {userTier && (
+            <View style={[styles.badge, styles.tierBadge]}>
+              <Text style={styles.badgeText}>{userTier}</Text>
+            </View>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    borderRadius: borderRadius.lg,
     marginBottom: spacing.sm,
-    ...shadows.sm,
+    overflow: 'hidden',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.border,
+    ...shadows.md,
   },
   containerSelected: {
     borderWidth: 2,
     borderColor: colors.primary,
-    ...shadows.md,
+    borderLeftWidth: 4,
+  },
+  containerElite: {
+    backgroundColor: colors.cardHighlight,
+  },
+  tierAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: colors.border,
   },
   flagIndicator: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: spacing.xs,
+    right: spacing.xs,
     zIndex: 1,
   },
   flagIcon: {
     fontSize: fontSize.sm,
   },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    paddingLeft: spacing.lg,
+  },
+  avatarSection: {
+    position: 'relative',
+    marginRight: spacing.md,
+  },
   positionBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    minWidth: 26,
+    height: 18,
+    borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    paddingHorizontal: spacing.xs,
+    ...shadows.sm,
   },
   positionText: {
     color: colors.textOnPrimary,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
   },
-  infoContainer: {
+  infoSection: {
     flex: 1,
     marginRight: spacing.md,
   },
   playerName: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.bold,
     color: colors.text,
     marginBottom: spacing.xxs,
   },
   detailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  detailText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
   },
   ageText: {
     fontSize: fontSize.sm,
-    color: colors.textLight,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
   },
-  rightContainer: {
+  collegeText: {
+    fontSize: fontSize.sm,
+    color: colors.textLight,
+    maxWidth: 100,
+  },
+  expText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  ratingSection: {
     alignItems: 'flex-end',
     gap: spacing.xs,
   },
-  skillSummary: {
-    alignItems: 'flex-end',
+  // Tier indicator styles
+  tierIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    gap: spacing.xs,
   },
-  skillRangeText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.text,
-    fontVariant: ['tabular-nums'],
-    marginBottom: spacing.xxs,
+  tierIndicatorCompact: {
+    paddingHorizontal: spacing.xs,
   },
-  skillBar: {
-    width: 60,
+  tierDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+  },
+  tierText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+  },
+  // Skill bar styles
+  skillBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  skillBarTrack: {
+    width: 50,
     height: 6,
     backgroundColor: colors.border,
     borderRadius: borderRadius.sm,
@@ -359,27 +569,61 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    backgroundColor: colors.info,
+    borderRadius: borderRadius.sm,
+  },
+  skillBarTick: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  skillBarText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+    fontVariant: ['tabular-nums'],
+    minWidth: 36,
+    textAlign: 'right',
+  },
+  // Knowledge indicator styles
+  knowledgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  knowledgeDots: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  knowledgeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  knowledgeLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+  },
+  // Badge styles
+  badgesRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
     borderRadius: borderRadius.sm,
   },
   projectionBadge: {
     backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.sm,
-  },
-  projectionText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textOnPrimary,
   },
   tierBadge: {
     backgroundColor: colors.secondary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.sm,
   },
-  tierText: {
+  badgeText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textOnPrimary,

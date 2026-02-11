@@ -6,8 +6,22 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { ScreenHeader } from '../components';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
+import { Avatar } from '../components/avatar';
+import { CoachRole } from '../core/models/staff/StaffSalary';
+import { ScoutAccuracyBadge } from '../components/scouting/ScoutAccuracyBadge';
+import { getMaxFocusProspects } from '../core/scouting/FocusPlayerSystem';
+
+/**
+ * Vacancy info for display
+ */
+export interface VacancyDisplay {
+  role: CoachRole;
+  displayName: string;
+  priority: 'critical' | 'important' | 'normal';
+}
 
 /**
  * Props for StaffScreen
@@ -17,10 +31,14 @@ export interface StaffScreenProps {
   coaches: Coach[];
   /** Team's scouts */
   scouts: Scout[];
+  /** Vacant coaching positions */
+  vacancies?: VacancyDisplay[];
   /** Callback to go back */
   onBack: () => void;
   /** Callback when staff member is selected */
   onSelectStaff?: (staffId: string, type: 'coach' | 'scout') => void;
+  /** Callback when user wants to hire for a vacant position */
+  onHireCoach?: (role: CoachRole) => void;
 }
 
 type StaffTab = 'coaches' | 'scouts';
@@ -32,8 +50,11 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
-        <View style={[styles.roleBadge, { backgroundColor: colors.primary }]}>
-          <Text style={styles.roleText}>{coach.role.slice(0, 2).toUpperCase()}</Text>
+        <View style={styles.avatarContainer}>
+          <Avatar id={coach.id} size="sm" age={coach.attributes.age} context="coach" />
+          <View style={[styles.roleBadge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.roleText}>{coach.role.slice(0, 2).toUpperCase()}</Text>
+          </View>
         </View>
         <View style={styles.nameContainer}>
           <Text style={styles.staffName}>
@@ -54,27 +75,78 @@ function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
  * Scout card component
  */
 function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
+  // Get badge text based on role
+  const badgeText =
+    scout.role === 'headScout' ? 'HS' : scout.role === 'offensiveScout' ? 'OS' : 'DS';
+  const maxFocus = getMaxFocusProspects(scout.attributes.experience);
+  const currentFocus = scout.focusProspects.length;
+
   return (
     <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.staffInfo}>
-        <View style={[styles.roleBadge, { backgroundColor: colors.accent }]}>
-          <Text style={styles.roleText}>SC</Text>
+        <View style={styles.avatarContainer}>
+          <Avatar id={scout.id} size="sm" context="coach" accentColor={colors.accent} />
+          <View style={[styles.roleBadge, { backgroundColor: colors.accent }]}>
+            <Text style={styles.roleText}>{badgeText}</Text>
+          </View>
         </View>
         <View style={styles.nameContainer}>
-          <Text style={styles.staffName}>
-            {scout.firstName} {scout.lastName}
-          </Text>
-          <Text style={styles.staffRole}>
-            {scout.attributes.regionKnowledge || 'General'} Region •{' '}
-            {scout.attributes.positionSpecialty || 'All'} Specialist
+          <View style={styles.scoutNameRow}>
+            <Text style={styles.staffName}>
+              {scout.firstName} {scout.lastName}
+            </Text>
+            <ScoutAccuracyBadge scout={scout} size="sm" />
+          </View>
+          <Text style={styles.staffRole}>{formatScoutRole(scout.role)}</Text>
+          {scout.attributes.positionSpecialty && (
+            <Text style={styles.specialtyText}>
+              Specialty: {scout.attributes.positionSpecialty}
+            </Text>
+          )}
+        </View>
+      </View>
+      <View style={styles.scoutStatsContainer}>
+        <View style={styles.ratingContainer}>
+          <Text style={styles.ratingLabel}>Exp</Text>
+          <Text style={styles.ratingValue}>{scout.attributes.experience}</Text>
+        </View>
+        <View style={styles.focusContainer}>
+          <Text style={styles.ratingLabel}>Focus</Text>
+          <Text style={[styles.focusValue, currentFocus >= maxFocus && styles.focusValueFull]}>
+            {currentFocus}/{maxFocus}
           </Text>
         </View>
       </View>
-      <View style={styles.ratingContainer}>
-        <Text style={styles.ratingLabel}>Exp</Text>
-        <Text style={styles.ratingValue}>{scout.attributes.experience}</Text>
-      </View>
     </TouchableOpacity>
+  );
+}
+
+/**
+ * Vacancy card component
+ */
+function VacancyCard({ vacancy, onHire }: { vacancy: VacancyDisplay; onHire?: () => void }) {
+  const priorityColor =
+    vacancy.priority === 'critical'
+      ? colors.error
+      : vacancy.priority === 'important'
+        ? colors.warning
+        : colors.textSecondary;
+
+  return (
+    <View style={[styles.staffCard, styles.vacancyCard, { borderColor: priorityColor }]}>
+      <View style={styles.staffInfo}>
+        <View style={[styles.roleBadge, styles.vacancyBadge, { borderColor: priorityColor }]}>
+          <Text style={[styles.vacancyBadgeText, { color: priorityColor }]}>?</Text>
+        </View>
+        <View style={styles.nameContainer}>
+          <Text style={[styles.vacancyTitle, { color: priorityColor }]}>VACANT</Text>
+          <Text style={styles.staffRole}>{vacancy.displayName}</Text>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.hireButton} onPress={onHire} activeOpacity={0.7}>
+        <Text style={styles.hireButtonText}>Hire</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -86,20 +158,30 @@ function formatRole(role: string): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    quarterbacksCoach: 'Quarterbacks Coach',
-    runningBacksCoach: 'Running Backs Coach',
-    wideReceiversCoach: 'Wide Receivers Coach',
-    tightEndsCoach: 'Tight Ends Coach',
-    offensiveLineCoach: 'Offensive Line Coach',
-    defensiveLineCoach: 'Defensive Line Coach',
-    linebackersCoach: 'Linebackers Coach',
-    secondaryCoach: 'Secondary Coach',
   };
   return roleMap[role] || role;
 }
 
-export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScreenProps) {
+/**
+ * Format scout role for display
+ */
+function formatScoutRole(role: string): string {
+  const roleMap: Record<string, string> = {
+    headScout: 'Head Scout',
+    offensiveScout: 'Offensive Scout',
+    defensiveScout: 'Defensive Scout',
+  };
+  return roleMap[role] || role;
+}
+
+export function StaffScreen({
+  coaches,
+  scouts,
+  vacancies = [],
+  onBack,
+  onSelectStaff,
+  onHireCoach,
+}: StaffScreenProps) {
   const [activeTab, setActiveTab] = useState<StaffTab>('coaches');
 
   // Sort coaches by role importance
@@ -120,16 +202,16 @@ export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScr
     });
   }, [coaches]);
 
+  // Sort vacancies by priority
+  const sortedVacancies = useMemo(() => {
+    const priorityOrder = { critical: 0, important: 1, normal: 2 };
+    return [...vacancies].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  }, [vacancies]);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Staff</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Staff" onBack={onBack} testID="staff-header" />
 
       {/* Tab Selector */}
       <View style={styles.tabContainer}>
@@ -161,10 +243,27 @@ export function StaffScreen({ coaches, scouts, onBack, onSelectStaff }: StaffScr
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            sortedVacancies.length > 0 ? (
+              <View style={styles.vacanciesSection}>
+                <Text style={styles.vacanciesHeader}>Vacant Positions</Text>
+                {sortedVacancies.map((vacancy) => (
+                  <VacancyCard
+                    key={vacancy.role}
+                    vacancy={vacancy}
+                    onHire={() => onHireCoach?.(vacancy.role)}
+                  />
+                ))}
+                <Text style={styles.filledHeader}>Filled Positions</Text>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No coaches on staff</Text>
-            </View>
+            sortedVacancies.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No coaches on staff</Text>
+              </View>
+            ) : null
           }
         />
       ) : (
@@ -255,16 +354,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: spacing.sm,
+  },
   roleBadge: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    minWidth: 22,
+    height: 16,
     borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    paddingHorizontal: spacing.xxs,
   },
   roleText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.background,
   },
@@ -292,6 +398,31 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.primary,
   },
+  scoutNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  specialtyText: {
+    fontSize: fontSize.xs,
+    color: colors.accent,
+    marginTop: 2,
+  },
+  scoutStatsContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  focusContainer: {
+    alignItems: 'center',
+  },
+  focusValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  focusValueFull: {
+    color: colors.warning,
+  },
   emptyState: {
     padding: spacing.xl,
     alignItems: 'center',
@@ -299,6 +430,55 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
+  },
+  // Vacancy styles
+  vacanciesSection: {
+    marginBottom: spacing.md,
+  },
+  vacanciesHeader: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.warning,
+    marginBottom: spacing.sm,
+  },
+  filledHeader: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  vacancyCard: {
+    borderWidth: 2,
+    borderColor: colors.warning,
+    borderStyle: 'dashed',
+    backgroundColor: colors.warning + '10',
+  },
+  vacancyBadge: {
+    backgroundColor: colors.warning + '30',
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  vacancyBadgeText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.warning,
+  },
+  vacancyTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.warning,
+  },
+  hireButton: {
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  hireButtonText: {
+    color: colors.background,
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
   },
 });
 

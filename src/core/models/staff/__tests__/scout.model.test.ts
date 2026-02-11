@@ -36,12 +36,12 @@ import { Position } from '../../player/Position';
 describe('Scout Entity', () => {
   describe('createDefaultScout', () => {
     it('should create a scout with all required fields', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
 
       expect(scout.id).toBe('scout-1');
       expect(scout.firstName).toBe('Mike');
       expect(scout.lastName).toBe('Davis');
-      expect(scout.role).toBe('nationalScout');
+      expect(scout.role).toBe('headScout');
       expect(scout.teamId).toBeNull();
       expect(scout.region).toBeNull(); // National scouts don't have region
       expect(scout.attributes).toBeDefined();
@@ -52,38 +52,26 @@ describe('Scout Entity', () => {
       expect(scout.isAvailable).toBe(true);
       expect(scout.isRetired).toBe(false);
     });
-
-    it('should assign region for regional scouts', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'regionalScout');
-
-      expect(scout.region).toBe('northeast'); // Default region
-    });
   });
 
   describe('validateScout', () => {
     it('should validate a valid scout', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       expect(validateScout(scout)).toBe(true);
     });
 
     it('should reject scout without ID', () => {
-      const scout = createDefaultScout('', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('', 'Mike', 'Davis', 'headScout');
       expect(validateScout(scout)).toBe(false);
     });
 
     it('should reject scout without first name', () => {
-      const scout = createDefaultScout('scout-1', '', 'Davis', 'nationalScout');
-      expect(validateScout(scout)).toBe(false);
-    });
-
-    it('should reject regional scout without region', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'regionalScout');
-      scout.region = null;
+      const scout = createDefaultScout('scout-1', '', 'Davis', 'headScout');
       expect(validateScout(scout)).toBe(false);
     });
 
     it('should reject scout with mismatched track record ID', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       scout.trackRecord.scoutId = 'different-id';
       expect(validateScout(scout)).toBe(false);
     });
@@ -91,14 +79,14 @@ describe('Scout Entity', () => {
 
   describe('getScoutFullName', () => {
     it('should return full name', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       expect(getScoutFullName(scout)).toBe('Mike Davis');
     });
   });
 
   describe('Focus Prospects', () => {
     it('should add focus prospect successfully', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       const updated = addFocusProspect(scout, 'prospect-1');
 
       expect(updated).not.toBeNull();
@@ -106,7 +94,7 @@ describe('Scout Entity', () => {
     });
 
     it('should not add duplicate focus prospect', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       scout.focusProspects = ['prospect-1'];
       const updated = addFocusProspect(scout, 'prospect-1');
 
@@ -114,7 +102,7 @@ describe('Scout Entity', () => {
     });
 
     it('should limit focus prospects to MAX_FOCUS_PROSPECTS', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       scout.focusProspects = ['p1', 'p2', 'p3', 'p4', 'p5'];
 
       expect(scout.focusProspects.length).toBe(MAX_FOCUS_PROSPECTS);
@@ -124,7 +112,7 @@ describe('Scout Entity', () => {
     });
 
     it('should remove focus prospect', () => {
-      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'Mike', 'Davis', 'headScout');
       scout.focusProspects = ['prospect-1', 'prospect-2'];
 
       const updated = removeFocusProspect(scout, 'prospect-1');

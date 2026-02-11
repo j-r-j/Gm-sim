@@ -401,3 +401,179 @@ Strengths: ${candidate.strengths.join(', ')}
 Weaknesses: ${candidate.weaknesses.join(', ')}
 Expected: ${candidate.expectedYears}yr / $${candidate.expectedSalary}K`;
 }
+
+// ============================================
+// COACH CREATION FROM CANDIDATE
+// ============================================
+
+import { Coach, createDefaultCoach } from '../../models/staff/Coach';
+import { CoachRole } from '../../models/staff/StaffSalary';
+import { createCoachContract } from '../../models/staff/CoachContract';
+import {
+  createDefaultCoachingTree,
+  ALL_TREE_NAMES,
+  TreeName,
+  TreeGeneration,
+  RiskTolerance,
+} from '../../models/staff/CoachingTree';
+import {
+  createDefaultPersonality,
+  ALL_PERSONALITY_TYPES,
+  PersonalityType,
+} from '../../models/staff/CoachPersonality';
+import { OffensiveScheme, DefensiveScheme } from '../../models/player/SchemeFit';
+
+/**
+ * Maps candidate scheme string to actual scheme type
+ */
+function mapCandidateSchemeToScheme(
+  scheme: string,
+  role: CoachRole
+): OffensiveScheme | DefensiveScheme | null {
+  // Offensive schemes (matching SchemeFit.ts types)
+  const offensiveSchemeMap: Record<string, OffensiveScheme> = {
+    'West Coast': 'westCoast',
+    'Air Raid': 'airRaid',
+    'Pro Style': 'playAction',
+    Spread: 'spreadOption',
+    'Power Run': 'powerRun',
+    'Zone Run': 'zoneRun',
+    Balanced: 'westCoast',
+    'Offensive-minded': 'westCoast',
+  };
+
+  // Defensive schemes (matching SchemeFit.ts types)
+  const defensiveSchemeMap: Record<string, DefensiveScheme> = {
+    '4-3': 'fourThreeUnder',
+    '3-4': 'threeFour',
+    Multiple: 'coverThree',
+    'Cover 2': 'coverTwo',
+    'Cover 3': 'coverThree',
+    'Press Man': 'manPress',
+    Blitz: 'blitzHeavy',
+    'Defensive-minded': 'fourThreeUnder',
+  };
+
+  // Determine if role is offensive or defensive
+  const offensiveRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator'];
+  const defensiveRoles: CoachRole[] = ['defensiveCoordinator'];
+
+  if (offensiveRoles.includes(role)) {
+    return offensiveSchemeMap[scheme] || 'westCoast';
+  }
+
+  if (defensiveRoles.includes(role)) {
+    return defensiveSchemeMap[scheme] || 'fourThreeUnder';
+  }
+
+  return null;
+}
+
+/**
+ * Creates a full Coach entity from a CoachCandidate
+ */
+export function createCoachFromCandidate(
+  candidate: CoachCandidate,
+  role: CoachRole,
+  teamId: string,
+  currentYear: number
+): Coach {
+  // Parse name
+  const nameParts = candidate.name.split(' ');
+  const firstName = nameParts[0] || 'Coach';
+  const lastName = nameParts.slice(1).join(' ') || 'Unknown';
+
+  // Generate unique ID
+  const coachId = `coach-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Create base coach
+  const coach = createDefaultCoach(coachId, firstName, lastName, role);
+
+  // Randomize coaching tree
+  const randomTreeName = ALL_TREE_NAMES[Math.floor(Math.random() * ALL_TREE_NAMES.length)];
+  const randomGeneration = (Math.floor(Math.random() * 4) + 1) as TreeGeneration;
+  const riskOptions: RiskTolerance[] = ['conservative', 'balanced', 'aggressive'];
+  const randomRiskTolerance = riskOptions[Math.floor(Math.random() * riskOptions.length)];
+
+  // Randomize personality
+  const randomPrimaryPersonality =
+    ALL_PERSONALITY_TYPES[Math.floor(Math.random() * ALL_PERSONALITY_TYPES.length)];
+  const hasSecondary = Math.random() > 0.5;
+  const randomSecondaryPersonality = hasSecondary
+    ? ALL_PERSONALITY_TYPES[Math.floor(Math.random() * ALL_PERSONALITY_TYPES.length)]
+    : null;
+
+  // Create attributes based on candidate data
+  const baseRating = 40 + candidate.experience * 2 + Math.floor(Math.random() * 20);
+  const clampedRating = Math.min(95, Math.max(30, baseRating));
+
+  // Create contract
+  const contract = createCoachContract({
+    id: `contract-${coachId}`,
+    coachId,
+    teamId,
+    yearsTotal: candidate.expectedYears,
+    salaryPerYear: candidate.expectedSalary * 1000, // Convert from K to actual
+    guaranteedMoney: candidate.expectedSalary * 1000 * Math.ceil(candidate.expectedYears / 2),
+    startYear: currentYear,
+    isInterim: false,
+    canBePoached: role !== 'headCoach',
+  });
+
+  // Get scheme
+  const scheme = mapCandidateSchemeToScheme(candidate.scheme, role);
+
+  // Return complete coach
+  return {
+    ...coach,
+    teamId,
+    role,
+    scheme,
+    isAvailable: false,
+    tree: {
+      ...createDefaultCoachingTree(randomTreeName as TreeName),
+      treeName: randomTreeName as TreeName,
+      generation: randomGeneration,
+      philosophy: {
+        offensiveTendency: candidate.scheme,
+        defensiveTendency: 'balanced',
+        riskTolerance: randomRiskTolerance,
+      },
+    },
+    personality: {
+      ...createDefaultPersonality(randomPrimaryPersonality as PersonalityType),
+      primary: randomPrimaryPersonality as PersonalityType,
+      secondary: randomSecondaryPersonality as PersonalityType | null,
+      ego: 30 + Math.floor(Math.random() * 50),
+      adaptability: 30 + Math.floor(Math.random() * 50),
+    },
+    attributes: {
+      development: clampedRating + Math.floor(Math.random() * 10) - 5,
+      gameDayIQ: clampedRating + Math.floor(Math.random() * 10) - 5,
+      schemeTeaching: clampedRating + Math.floor(Math.random() * 10) - 5,
+      playerEvaluation: clampedRating + Math.floor(Math.random() * 10) - 5,
+      talentID: clampedRating + Math.floor(Math.random() * 10) - 5,
+      motivation: clampedRating + Math.floor(Math.random() * 10) - 5,
+      reputation: clampedRating,
+      yearsExperience: candidate.experience,
+      age: candidate.age,
+    },
+    contract,
+    careerHistory: candidate.currentTeam
+      ? [
+          {
+            teamId: 'previous-team',
+            teamName: candidate.currentTeam,
+            role: role,
+            yearStart: currentYear - candidate.experience,
+            yearEnd: currentYear - 1,
+            wins: Math.floor(Math.random() * 50) + 20,
+            losses: Math.floor(Math.random() * 50) + 20,
+            playoffAppearances: Math.floor(Math.random() * 3),
+            championships: Math.random() > 0.9 ? 1 : 0,
+            achievements: candidate.strengths.slice(0, 2),
+          },
+        ]
+      : [],
+  };
+}

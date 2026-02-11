@@ -253,15 +253,12 @@ export function applyFranchiseTag(
   };
 
   // Create one-year contract
+  // Franchise tag is fully guaranteed, so all money is bonus (guaranteed), no salary
   const contractOffer: ContractOffer = {
     years: 1,
-    totalValue: salary,
-    guaranteedMoney: salary, // Fully guaranteed
-    signingBonus: 0,
-    firstYearSalary: salary,
-    annualEscalation: 0,
+    bonusPerYear: salary, // Fully guaranteed
+    salaryPerYear: 0, // No non-guaranteed portion
     noTradeClause: false,
-    voidYears: 0,
   };
 
   const contract = createPlayerContract(

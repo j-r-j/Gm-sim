@@ -1,6 +1,7 @@
 /**
  * Staff Hierarchy Tests
  * Tests for staff hierarchy structure, budget calculations, and reporting structure
+ * Updated for simplified 3 coaches + 3 scouts structure
  */
 
 import {
@@ -29,39 +30,25 @@ import {
 
 describe('Staff Hierarchy', () => {
   describe('Total positions', () => {
-    it('should have 13 coaching positions', () => {
+    it('should have 3 coaching positions', () => {
       const coachingKeys = getCoachingPositionKeys();
-      expect(coachingKeys.length).toBe(13);
+      expect(coachingKeys.length).toBe(3);
     });
 
-    it('should have 8 scouting positions', () => {
+    it('should have 3 scouting positions', () => {
       const scoutingKeys = getScoutingPositionKeys();
-      expect(scoutingKeys.length).toBe(8);
+      expect(scoutingKeys.length).toBe(3);
     });
 
-    it('should have 21 total staff positions', () => {
+    it('should have 6 total staff positions', () => {
       const coachingKeys = getCoachingPositionKeys();
       const scoutingKeys = getScoutingPositionKeys();
-      expect(coachingKeys.length + scoutingKeys.length).toBe(21);
+      expect(coachingKeys.length + scoutingKeys.length).toBe(6);
     });
 
     it('should include all expected coaching positions', () => {
       const coachingKeys = getCoachingPositionKeys();
-      const expectedPositions = [
-        'headCoach',
-        'offensiveCoordinator',
-        'defensiveCoordinator',
-        'specialTeamsCoordinator',
-        'qbCoach',
-        'rbCoach',
-        'wrCoach',
-        'teCoach',
-        'olCoach',
-        'dlCoach',
-        'lbCoach',
-        'dbCoach',
-        'stCoach',
-      ];
+      const expectedPositions = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
       for (const position of expectedPositions) {
         expect(coachingKeys).toContain(position);
@@ -70,16 +57,7 @@ describe('Staff Hierarchy', () => {
 
     it('should include all expected scouting positions', () => {
       const scoutingKeys = getScoutingPositionKeys();
-      const expectedPositions = [
-        'scoutingDirector',
-        'nationalScout',
-        'regionalScoutNortheast',
-        'regionalScoutSoutheast',
-        'regionalScoutMidwest',
-        'regionalScoutWest',
-        'regionalScoutSouthwest',
-        'proScout',
-      ];
+      const expectedPositions = ['headScout', 'offensiveScout', 'defensiveScout'];
 
       for (const position of expectedPositions) {
         expect(scoutingKeys).toContain(position);
@@ -94,8 +72,10 @@ describe('Staff Hierarchy', () => {
       expect(hierarchy.teamId).toBe('team-1');
       expect(hierarchy.headCoach).toBeNull();
       expect(hierarchy.offensiveCoordinator).toBeNull();
-      expect(hierarchy.scoutingDirector).toBeNull();
-      expect(hierarchy.nationalScout).toBeNull();
+      expect(hierarchy.defensiveCoordinator).toBeNull();
+      expect(hierarchy.headScout).toBeNull();
+      expect(hierarchy.offensiveScout).toBeNull();
+      expect(hierarchy.defensiveScout).toBeNull();
     });
 
     it('should set initial budget correctly', () => {
@@ -122,10 +102,9 @@ describe('Staff Hierarchy', () => {
       const hierarchy = createEmptyStaffHierarchy('team-1', 25_000_000);
       expect(countFilledScoutingPositions(hierarchy)).toBe(0);
 
-      hierarchy.scoutingDirector = 'scout-1';
-      hierarchy.nationalScout = 'scout-2';
-      hierarchy.regionalScoutSoutheast = 'scout-3';
-      expect(countFilledScoutingPositions(hierarchy)).toBe(3);
+      hierarchy.headScout = 'scout-1';
+      hierarchy.offensiveScout = 'scout-2';
+      expect(countFilledScoutingPositions(hierarchy)).toBe(2);
     });
   });
 
@@ -134,7 +113,7 @@ describe('Staff Hierarchy', () => {
       const hierarchy = createEmptyStaffHierarchy('team-1', 25_000_000);
       const vacant = getVacantCoachingPositions(hierarchy);
 
-      expect(vacant.length).toBe(13);
+      expect(vacant.length).toBe(3);
       expect(vacant).toContain('headCoach');
     });
 
@@ -144,17 +123,18 @@ describe('Staff Hierarchy', () => {
       hierarchy.offensiveCoordinator = 'coach-2';
 
       const vacant = getVacantCoachingPositions(hierarchy);
-      expect(vacant.length).toBe(11);
+      expect(vacant.length).toBe(1);
       expect(vacant).not.toContain('headCoach');
       expect(vacant).not.toContain('offensiveCoordinator');
+      expect(vacant).toContain('defensiveCoordinator');
     });
 
     it('should return all scouting positions when empty', () => {
       const hierarchy = createEmptyStaffHierarchy('team-1', 25_000_000);
       const vacant = getVacantScoutingPositions(hierarchy);
 
-      expect(vacant.length).toBe(8);
-      expect(vacant).toContain('scoutingDirector');
+      expect(vacant.length).toBe(3);
+      expect(vacant).toContain('headScout');
     });
   });
 
@@ -214,35 +194,15 @@ describe('Staff Hierarchy', () => {
     it('should have coordinators report to head coach', () => {
       expect(COACHING_REPORTS_TO.offensiveCoordinator).toBe('headCoach');
       expect(COACHING_REPORTS_TO.defensiveCoordinator).toBe('headCoach');
-      expect(COACHING_REPORTS_TO.specialTeamsCoordinator).toBe('headCoach');
     });
 
-    it('should have offensive position coaches report to OC', () => {
-      expect(COACHING_REPORTS_TO.qbCoach).toBe('offensiveCoordinator');
-      expect(COACHING_REPORTS_TO.rbCoach).toBe('offensiveCoordinator');
-      expect(COACHING_REPORTS_TO.wrCoach).toBe('offensiveCoordinator');
-      expect(COACHING_REPORTS_TO.teCoach).toBe('offensiveCoordinator');
-      expect(COACHING_REPORTS_TO.olCoach).toBe('offensiveCoordinator');
+    it('should have head scout report to GM', () => {
+      expect(SCOUTING_REPORTS_TO.headScout).toBe('gm');
     });
 
-    it('should have defensive position coaches report to DC', () => {
-      expect(COACHING_REPORTS_TO.dlCoach).toBe('defensiveCoordinator');
-      expect(COACHING_REPORTS_TO.lbCoach).toBe('defensiveCoordinator');
-      expect(COACHING_REPORTS_TO.dbCoach).toBe('defensiveCoordinator');
-    });
-
-    it('should have ST coach report to STC', () => {
-      expect(COACHING_REPORTS_TO.stCoach).toBe('specialTeamsCoordinator');
-    });
-
-    it('should have scouting director report to GM', () => {
-      expect(SCOUTING_REPORTS_TO.scoutingDirector).toBe('gm');
-    });
-
-    it('should have all scouts report to scouting director', () => {
-      expect(SCOUTING_REPORTS_TO.nationalScout).toBe('scoutingDirector');
-      expect(SCOUTING_REPORTS_TO.regionalScout).toBe('scoutingDirector');
-      expect(SCOUTING_REPORTS_TO.proScout).toBe('scoutingDirector');
+    it('should have scouts report to head scout', () => {
+      expect(SCOUTING_REPORTS_TO.offensiveScout).toBe('headScout');
+      expect(SCOUTING_REPORTS_TO.defensiveScout).toBe('headScout');
     });
   });
 
@@ -252,40 +212,14 @@ describe('Staff Hierarchy', () => {
 
       expect(reports).toContain('offensiveCoordinator');
       expect(reports).toContain('defensiveCoordinator');
-      expect(reports).toContain('specialTeamsCoordinator');
-      expect(reports.length).toBe(3);
+      expect(reports.length).toBe(2);
     });
 
-    it('should return offensive position coaches for OC', () => {
-      const reports = getDirectReports('offensiveCoordinator');
-
-      expect(reports).toContain('qbCoach');
-      expect(reports).toContain('rbCoach');
-      expect(reports).toContain('wrCoach');
-      expect(reports).toContain('teCoach');
-      expect(reports).toContain('olCoach');
-      expect(reports.length).toBe(5);
-    });
-
-    it('should return defensive position coaches for DC', () => {
-      const reports = getDirectReports('defensiveCoordinator');
-
-      expect(reports).toContain('dlCoach');
-      expect(reports).toContain('lbCoach');
-      expect(reports).toContain('dbCoach');
-      expect(reports.length).toBe(3);
-    });
-
-    it('should return ST coach for STC', () => {
-      const reports = getDirectReports('specialTeamsCoordinator');
-
-      expect(reports).toContain('stCoach');
-      expect(reports.length).toBe(1);
-    });
-
-    it('should return empty array for position coaches', () => {
-      const reports = getDirectReports('qbCoach');
-      expect(reports.length).toBe(0);
+    it('should return empty array for coordinators', () => {
+      const ocReports = getDirectReports('offensiveCoordinator');
+      const dcReports = getDirectReports('defensiveCoordinator');
+      expect(ocReports.length).toBe(0);
+      expect(dcReports.length).toBe(0);
     });
   });
 
@@ -325,9 +259,9 @@ describe('Staff Hierarchy', () => {
       const summary = getStaffHierarchySummary(hierarchy);
 
       expect(summary.coachingFilled).toBe(0);
-      expect(summary.coachingTotal).toBe(13);
+      expect(summary.coachingTotal).toBe(3);
       expect(summary.scoutingFilled).toBe(0);
-      expect(summary.scoutingTotal).toBe(8);
+      expect(summary.scoutingTotal).toBe(3);
       expect(summary.budgetUsed).toBe(0);
       expect(summary.budgetTotal).toBe(25_000_000);
     });
@@ -337,7 +271,7 @@ describe('Staff Hierarchy', () => {
       hierarchy.headCoach = 'coach-1';
       hierarchy.offensiveCoordinator = 'coach-2';
       hierarchy.defensiveCoordinator = 'coach-3';
-      hierarchy.scoutingDirector = 'scout-1';
+      hierarchy.headScout = 'scout-1';
       hierarchy.coachingSpend = 18_000_000;
       hierarchy.scoutingSpend = 2_000_000;
       hierarchy.remainingBudget = 10_000_000;
@@ -380,12 +314,11 @@ describe('Salary Ranges', () => {
     }
   });
 
-  it('should have scouting director at top of scout salary', () => {
-    const directorMax = SCOUT_SALARY_RANGES.scoutingDirector.max;
+  it('should have head scout at top of scout salary', () => {
+    const headScoutMax = SCOUT_SALARY_RANGES.headScout.max;
 
-    expect(directorMax).toBeGreaterThan(SCOUT_SALARY_RANGES.nationalScout.max);
-    expect(directorMax).toBeGreaterThan(SCOUT_SALARY_RANGES.regionalScout.max);
-    expect(directorMax).toBeGreaterThan(SCOUT_SALARY_RANGES.proScout.max);
+    expect(headScoutMax).toBeGreaterThan(SCOUT_SALARY_RANGES.offensiveScout.max);
+    expect(headScoutMax).toBeGreaterThan(SCOUT_SALARY_RANGES.defensiveScout.max);
   });
 });
 

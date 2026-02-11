@@ -8,7 +8,15 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../../styles';
 
 /**
  * Simulation mode types
@@ -72,7 +80,16 @@ function ControlButton({
   ];
 
   return (
-    <TouchableOpacity style={buttonStyle} onPress={onPress} disabled={disabled} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={buttonStyle}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+      accessibilityLabel={`${label}${sublabel ? `, ${sublabel}` : ''}${isActive ? ', simulating' : ''}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, busy: isActive }}
+      hitSlop={accessibility.hitSlop}
+    >
       {isActive ? (
         <ActivityIndicator size="small" color={colors.textOnPrimary} />
       ) : (

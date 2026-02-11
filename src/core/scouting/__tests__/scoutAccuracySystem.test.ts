@@ -32,7 +32,7 @@ import { Position } from '../../models/player/Position';
 describe('ScoutAccuracySystem', () => {
   // Helper to create scout with track record
   function createScoutWithTrackRecord(evaluations: ScoutEvaluation[], yearsOfData: number): Scout {
-    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+    const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
     const completedCount = evaluations.filter((e) => e.wasHit !== null).length;
 
     return {
@@ -73,7 +73,7 @@ describe('ScoutAccuracySystem', () => {
 
   describe('createAccuracyRevelationState', () => {
     it('should create state for new scout', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       const state = createAccuracyRevelationState(scout);
 
@@ -109,7 +109,7 @@ describe('ScoutAccuracySystem', () => {
 
   describe('recordScoutEvaluation', () => {
     it('should add evaluation to scout track record', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
       const result: EvaluationResult = {
         playerId: 'player-1',
         playerName: 'Test Player',
@@ -236,7 +236,7 @@ describe('ScoutAccuracySystem', () => {
     });
 
     it('should return null hit rate with no completed evaluations', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       const breakdown = getAccuracyBreakdown(scout);
 
@@ -319,7 +319,7 @@ describe('ScoutAccuracySystem', () => {
 
   describe('createScoutAccuracyViewModel', () => {
     it('should show unknown for unrevealed reliability', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       const viewModel = createScoutAccuracyViewModel(scout);
 
@@ -353,8 +353,8 @@ describe('ScoutAccuracySystem', () => {
 
   describe('compareScoutAccuracy', () => {
     it('should not compare unrevealed scouts', () => {
-      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
-      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
+      const scout1 = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
+      const scout2 = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       const result = compareScoutAccuracy(scout1, scout2);
 
@@ -406,7 +406,7 @@ describe('ScoutAccuracySystem', () => {
         .fill(null)
         .map((_, i) => createEvaluation(`p${i}`, Position.QB, { min: 70, max: 80 }, 75, true));
       const revealed = createScoutWithTrackRecord(revealedEvals, 5);
-      const unrevealed = createDefaultScout('scout-2', 'Jane', 'Doe', 'nationalScout');
+      const unrevealed = createDefaultScout('scout-2', 'Jane', 'Doe', 'headScout');
 
       const result = getScoutsByAccuracy([revealed, unrevealed]);
 
@@ -444,7 +444,7 @@ describe('ScoutAccuracySystem', () => {
     });
 
     it('should estimate years for unrevealed scout', () => {
-      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'nationalScout');
+      const scout = createDefaultScout('scout-1', 'John', 'Doe', 'headScout');
 
       const years = getYearsUntilRevelation(scout);
 

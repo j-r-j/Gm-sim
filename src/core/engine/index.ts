@@ -165,3 +165,128 @@ export {
   type DriveResult,
   type PlayResultForDescription,
 } from './PlayDescriptionGenerator';
+
+// ============================================
+// ENHANCED SIMULATION SYSTEMS
+// ============================================
+
+// Team Composite Ratings (with weak link detection)
+export {
+  calculateTeamCompositeRatings,
+  calculatePassProtectionRating,
+  calculateRunBlockingRating,
+  calculateReceivingRating,
+  calculateRushingRating,
+  calculatePassRushRating,
+  calculateRunStoppingRating,
+  calculatePassCoverageRating,
+  getMatchupAdvantage,
+  PASS_PROTECTION_WEIGHTS,
+  RUN_BLOCKING_WEIGHTS,
+  RUN_LEFT_WEIGHTS,
+  RUN_RIGHT_WEIGHTS,
+  type UnitRating,
+  type TeamCompositeRatings,
+  type CompositeRatingParams,
+} from './TeamCompositeRatings';
+
+// Personnel Packages
+export {
+  selectOffensivePersonnel,
+  selectDefensivePersonnel,
+  calculatePersonnelMismatch,
+  getPersonnelTendencyAdjustment,
+  OFFENSIVE_PERSONNEL,
+  DEFENSIVE_PERSONNEL,
+  type OffensivePersonnelPackage,
+  type DefensivePersonnelPackage,
+  type PersonnelInfo,
+  type DefensivePersonnelInfo,
+  type PersonnelMismatch,
+} from './PersonnelPackages';
+
+// Scheme Matchup Effects
+export {
+  getSchemeMatchupEffects,
+  getPlayTypeEffects,
+  applySchemeEffects,
+  getRunSuccessModifier,
+  getPassSuccessModifier,
+  type PlayTypeEffects,
+  type SchemeMatchupEffect,
+} from './SchemeMatchupEffects';
+
+// Play-Action Effectiveness
+export {
+  RunGameTracker,
+  calculatePlayActionEffectiveness,
+  getPlayActionModifier,
+  adjustSackProbability,
+  shouldUsePlayAction,
+  createRunGameTracker,
+  type RunGameStats,
+  type PlayActionEffectiveness,
+} from './PlayActionEffectiveness';
+
+// Pass Rush Phases
+export {
+  resolvePassRushPhase,
+  determinePassRushPhase,
+  calculateScrambleOutcome,
+  getOverallPassRushResult,
+  calculateProtectionTime,
+  calculatePhaseMatchup,
+  PHASE_TIMING,
+  PHASE_WEIGHTS,
+  type PassRushPhase,
+  type PhaseResult,
+  type PhaseMatchupResult,
+  type OLPlayer,
+  type RusherPlayer,
+} from './PassRushPhases';
+
+// Presnap Reads
+export {
+  executePresnapRead,
+  getQBMentalAttributes,
+  estimateBoxCount,
+  getHotRouteBonus,
+  getProtectionChangeBonus,
+  type PresnapReadResult,
+  type QBMentalAttributes,
+} from './PresnapReads';
+
+// Situational Modifiers
+export {
+  determineSituation,
+  getSituationalModifier,
+  calculatePlayerSituationalModifier,
+  getTeamSituationalModifier,
+  isClutchSituation,
+  isPressureSituation,
+  getSituationalPlayCallingAdjustment,
+  type GameSituation,
+  type SituationContext,
+  type SituationalModifier,
+} from './SituationalModifiers';
+
+// Fatigue Curves (Non-linear)
+export {
+  calculateFatigueEffectiveness,
+  getPositionFatigueCurve,
+  shouldSubstituteForFatigue,
+  calculateRBTouchEffectiveness,
+  calculateDLSnapShareEffectiveness,
+  getOptimalRestPlays,
+  getFatigueInjuryRiskMultiplier,
+  type FatigueCurveType,
+  type FatigueCurveParams,
+} from './FatigueCurves';
+
+// Enhanced Play Resolver
+export {
+  resolveEnhancedPlay,
+  createEnhancedGameState,
+  type EnhancedPlayResult,
+  type EnhancedGameState,
+} from './EnhancedPlayResolver';

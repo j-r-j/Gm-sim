@@ -428,4 +428,93 @@ describe('GameResult structure', () => {
     expect(result.notableEvents).toBeDefined();
     expect(result.keyPlays).toBeDefined();
   });
+
+  it('should have playerStats as Map instances with player data', () => {
+    const homeTeamState = createTestTeamGameState('home-1', 'Home City Eagles');
+    const awayTeamState = createTestTeamGameState('away-1', 'Away City Lions');
+
+    const result = runQuickGame(homeTeamState, awayTeamState);
+
+    // Verify playerStats are Maps (not plain objects)
+    expect(result.homeStats.playerStats).toBeInstanceOf(Map);
+    expect(result.awayStats.playerStats).toBeInstanceOf(Map);
+
+    // Verify Maps contain player stats
+    expect(result.homeStats.playerStats.size).toBeGreaterThan(0);
+    expect(result.awayStats.playerStats.size).toBeGreaterThan(0);
+
+    // Verify Map entries have correct structure
+    for (const [playerId, stats] of result.homeStats.playerStats) {
+      expect(typeof playerId).toBe('string');
+      expect(stats.playerId).toBe(playerId);
+      expect(stats.passing).toBeDefined();
+      expect(stats.rushing).toBeDefined();
+      expect(stats.receiving).toBeDefined();
+      expect(stats.defensive).toBeDefined();
+    }
+  });
+
+  it('should have playerStats that can be iterated with for...of', () => {
+    const homeTeamState = createTestTeamGameState('home-1', 'Home City Eagles');
+    const awayTeamState = createTestTeamGameState('away-1', 'Away City Lions');
+
+    const result = runQuickGame(homeTeamState, awayTeamState);
+
+    // This is the exact pattern used by updateSeasonStatsFromGame
+    // If this fails, the skip button save will fail
+    let iterationCount = 0;
+    for (const [playerId, gameStats] of result.homeStats.playerStats) {
+      expect(playerId).toBeDefined();
+      expect(gameStats).toBeDefined();
+      iterationCount++;
+    }
+    expect(iterationCount).toBeGreaterThan(0);
+
+    iterationCount = 0;
+    for (const [playerId, gameStats] of result.awayStats.playerStats) {
+      expect(playerId).toBeDefined();
+      expect(gameStats).toBeDefined();
+      iterationCount++;
+    }
+    expect(iterationCount).toBeGreaterThan(0);
+  });
+});
+
+describe('getResult', () => {
+  it('should return same structure as runToCompletion', () => {
+    const homeTeamState = createTestTeamGameState('home-1', 'Home City Eagles');
+    const awayTeamState = createTestTeamGameState('away-1', 'Away City Lions');
+    const setup = quickSetup(homeTeamState, awayTeamState);
+
+    const runner = new GameRunner(setup);
+    runner.runToCompletion();
+
+    const result = runner.getResult();
+
+    expect(result.homeStats.playerStats).toBeInstanceOf(Map);
+    expect(result.awayStats.playerStats).toBeInstanceOf(Map);
+    expect(result.homeStats.playerStats.size).toBeGreaterThan(0);
+  });
+
+  it('should return valid result after running plays individually', () => {
+    const homeTeamState = createTestTeamGameState('home-1', 'Home City Eagles');
+    const awayTeamState = createTestTeamGameState('away-1', 'Away City Lions');
+    const setup = quickSetup(homeTeamState, awayTeamState);
+
+    const runner = new GameRunner(setup);
+
+    // Simulate skip behavior: run plays until complete
+    while (!runner.getCurrentState().isComplete) {
+      runner.runNextPlay();
+      if (runner.getCurrentState().plays.length > 300) break;
+    }
+
+    // This is what handleGameComplete now calls
+    const result = runner.getResult();
+
+    expect(result.homeStats.playerStats).toBeInstanceOf(Map);
+    expect(result.awayStats.playerStats).toBeInstanceOf(Map);
+    expect(result.homeStats.playerStats.size).toBeGreaterThan(0);
+    expect(result.awayStats.playerStats.size).toBeGreaterThan(0);
+  });
 });

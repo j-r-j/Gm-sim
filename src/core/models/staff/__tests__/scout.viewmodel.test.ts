@@ -15,7 +15,7 @@ describe('ScoutViewModel', () => {
   let testScout: Scout;
 
   beforeEach(() => {
-    testScout = createDefaultScout('scout-1', 'John', 'Smith', 'nationalScout');
+    testScout = createDefaultScout('scout-1', 'John', 'Smith', 'headScout');
     testScout.contract = createScoutContract(600_000, 3);
 
     // Set up attributes
@@ -33,7 +33,7 @@ describe('ScoutViewModel', () => {
 
       expect(viewModel.id).toBe('scout-1');
       expect(viewModel.fullName).toBe('John Smith');
-      expect(viewModel.role).toBe('nationalScout');
+      expect(viewModel.role).toBe('headScout');
     });
 
     it('should include years of experience', () => {
@@ -187,7 +187,7 @@ describe('ScoutViewModel', () => {
 
   describe('Region handling', () => {
     it('should include region for regional scouts', () => {
-      const regionalScout = createDefaultScout('scout-2', 'Bob', 'Jones', 'regionalScout');
+      const regionalScout = createDefaultScout('scout-2', 'Bob', 'Jones', 'offensiveScout');
       regionalScout.region = 'southeast';
 
       const viewModel = createScoutViewModel(regionalScout, true);
@@ -297,7 +297,7 @@ describe('Scout reliability reveal mechanics', () => {
   });
 
   it('should build reliability over time', () => {
-    const scout = createDefaultScout('scout-1', 'Test', 'Scout', 'nationalScout');
+    const scout = createDefaultScout('scout-1', 'Test', 'Scout', 'headScout');
 
     // Initially unrevealed
     expect(scout.trackRecord.reliabilityRevealed).toBe(false);

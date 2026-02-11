@@ -14,9 +14,23 @@ import {
   Modal,
   TextInput,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { Position } from '../core/models/player/Position';
+import { Player } from '../core/models/player/Player';
+import { Avatar } from '../components/avatar';
+import { PlayerDetailCard } from '../components/player/PlayerDetailCard';
 
 /**
  * Free agent for display
@@ -47,6 +61,8 @@ export interface ContractOffer {
 export interface FreeAgencyScreenProps {
   /** Available free agents */
   freeAgents: FreeAgent[];
+  /** Full player data for detailed view (keyed by player ID) */
+  freeAgentPlayers?: Record<string, Player>;
   /** Current cap space */
   capSpace: number;
   /** User's team name */
@@ -86,28 +102,47 @@ function FreeAgentCard({
   onMakeOffer: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.agentCard} onPress={onPress}>
-      <View style={styles.agentHeader}>
-        <View style={styles.positionBadge}>
-          <Text style={styles.positionText}>{agent.position}</Text>
+    <View style={styles.agentCard}>
+      <TouchableOpacity
+        style={styles.agentTappableArea}
+        onPress={onPress}
+        accessibilityLabel={`${agent.firstName} ${agent.lastName}, ${agent.position}, Age ${agent.age}, ${agent.experience} years experience, Estimated value ${formatMoney(agent.estimatedValue)}`}
+        accessibilityRole="button"
+        accessibilityHint="View player details"
+      >
+        <View style={styles.agentHeader}>
+          <View style={styles.avatarContainer}>
+            <Avatar id={agent.id} size="sm" age={agent.age} context="player" />
+            <View style={styles.positionBadge}>
+              <Text style={styles.positionText}>{agent.position}</Text>
+            </View>
+          </View>
+          <View style={styles.agentInfo}>
+            <Text style={styles.agentName}>
+              {agent.firstName} {agent.lastName}
+            </Text>
+            <Text style={styles.agentDetails}>
+              Age {agent.age} • {agent.experience} yrs exp
+            </Text>
+          </View>
+          <View style={styles.valueContainer}>
+            <Text style={styles.valueLabel}>Est. Value</Text>
+            <Text style={styles.valueAmount}>{formatMoney(agent.estimatedValue)}</Text>
+            <Text style={styles.tapHint}>Tap for details</Text>
+          </View>
         </View>
-        <View style={styles.agentInfo}>
-          <Text style={styles.agentName}>
-            {agent.firstName} {agent.lastName}
-          </Text>
-          <Text style={styles.agentDetails}>
-            Age {agent.age} • {agent.experience} yrs exp
-          </Text>
-        </View>
-        <View style={styles.valueContainer}>
-          <Text style={styles.valueLabel}>Est. Value</Text>
-          <Text style={styles.valueAmount}>{formatMoney(agent.estimatedValue)}</Text>
-        </View>
-      </View>
-      <TouchableOpacity style={styles.offerButton} onPress={onMakeOffer}>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.offerButton}
+        onPress={onMakeOffer}
+        accessibilityLabel={`Make offer to ${agent.firstName} ${agent.lastName}`}
+        accessibilityRole="button"
+        accessibilityHint="Opens contract offer screen"
+        hitSlop={accessibility.hitSlop}
+      >
         <Text style={styles.offerButtonText}>Make Offer</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -156,83 +191,98 @@ function OfferModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            Contract Offer for {agent.firstName} {agent.lastName}
-          </Text>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                Contract Offer for {agent.firstName} {agent.lastName}
+              </Text>
 
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>Estimated Value:</Text>
-            <Text style={styles.modalValue}>{formatMoney(agent.estimatedValue)}/yr</Text>
-          </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Estimated Value:</Text>
+                <Text style={styles.modalValue}>{formatMoney(agent.estimatedValue)}/yr</Text>
+              </View>
 
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>Your Cap Space:</Text>
-            <Text style={styles.modalValue}>{formatMoney(capSpace)}</Text>
-          </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Your Cap Space:</Text>
+                <Text style={styles.modalValue}>{formatMoney(capSpace)}</Text>
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Years (1-5)</Text>
-            <View style={styles.yearsContainer}>
-              {[1, 2, 3, 4, 5].map((y) => (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Years (1-5)</Text>
+                <View style={styles.yearsContainer}>
+                  {[1, 2, 3, 4, 5].map((y) => (
+                    <TouchableOpacity
+                      key={y}
+                      style={[styles.yearButton, years === String(y) && styles.yearButtonActive]}
+                      onPress={() => setYears(String(y))}
+                    >
+                      <Text
+                        style={[
+                          styles.yearButtonText,
+                          years === String(y) && styles.yearButtonTextActive,
+                        ]}
+                      >
+                        {y}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Annual Salary ($M)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={salary}
+                  onChangeText={setSalary}
+                  placeholder={`e.g., ${(agent.estimatedValue / 1000000).toFixed(1)}`}
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Guaranteed ($M)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={guaranteed}
+                  onChangeText={setGuaranteed}
+                  placeholder="e.g., 10"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Contract Value:</Text>
+                <Text style={styles.totalValue}>{formatMoney(totalValue)}</Text>
+              </View>
+
+              <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  key={y}
-                  style={[styles.yearButton, years === String(y) && styles.yearButtonActive]}
-                  onPress={() => setYears(String(y))}
+                  style={styles.cancelButton}
+                  onPress={onClose}
+                  accessibilityLabel="Cancel offer"
+                  accessibilityRole="button"
                 >
-                  <Text
-                    style={[
-                      styles.yearButtonText,
-                      years === String(y) && styles.yearButtonTextActive,
-                    ]}
-                  >
-                    {y}
-                  </Text>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleSubmit}
+                  accessibilityLabel="Submit contract offer"
+                  accessibilityRole="button"
+                  accessibilityHint="Submits your contract offer to the free agent"
+                >
+                  <Text style={styles.submitButtonText}>Submit Offer</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Annual Salary ($M)</Text>
-            <TextInput
-              style={styles.textInput}
-              value={salary}
-              onChangeText={setSalary}
-              placeholder={`e.g., ${(agent.estimatedValue / 1000000).toFixed(1)}`}
-              keyboardType="decimal-pad"
-              placeholderTextColor={colors.textLight}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Guaranteed ($M)</Text>
-            <TextInput
-              style={styles.textInput}
-              value={guaranteed}
-              onChangeText={setGuaranteed}
-              placeholder="e.g., 10"
-              keyboardType="decimal-pad"
-              placeholderTextColor={colors.textLight}
-            />
-          </View>
-
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Contract Value:</Text>
-            <Text style={styles.totalValue}>{formatMoney(totalValue)}</Text>
-          </View>
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>Submit Offer</Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -242,6 +292,7 @@ function OfferModal({
  */
 export function FreeAgencyScreen({
   freeAgents,
+  freeAgentPlayers,
   capSpace,
   teamName,
   onMakeOffer,
@@ -251,6 +302,7 @@ export function FreeAgencyScreen({
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [selectedAgent, setSelectedAgent] = useState<FreeAgent | null>(null);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showPlayerCard, setShowPlayerCard] = useState(false);
 
   // Filter and sort agents
   const filteredAgents = useMemo(() => {
@@ -312,19 +364,15 @@ export function FreeAgencyScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Free Agency</Text>
-        <View style={styles.capBadge}>
-          <Text style={styles.capLabel}>Cap Space</Text>
-          <Text style={styles.capValue}>{formatMoney(capSpace)}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Free Agency"
+        subtitle={`Cap: ${formatMoney(capSpace)}`}
+        onBack={onBack}
+        testID="free-agency-header"
+      />
 
       {/* Position Filters */}
-      <View style={styles.filterContainer}>
+      <View style={styles.filterContainer} accessibilityRole="tablist">
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -334,6 +382,10 @@ export function FreeAgencyScreen({
             <TouchableOpacity
               style={[styles.filterChip, positionFilter === item && styles.filterChipActive]}
               onPress={() => setPositionFilter(item as PositionFilter)}
+              accessibilityLabel={`Filter by ${item === 'all' ? 'all positions' : item}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: positionFilter === item }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -349,13 +401,17 @@ export function FreeAgencyScreen({
       </View>
 
       {/* Sort Options */}
-      <View style={styles.sortContainer}>
+      <View style={styles.sortContainer} accessibilityRole="tablist">
         <Text style={styles.sortLabel}>Sort by:</Text>
         {(['value', 'age', 'position'] as SortOption[]).map((option) => (
           <TouchableOpacity
             key={option}
             style={[styles.sortOption, sortBy === option && styles.sortOptionActive]}
             onPress={() => setSortBy(option)}
+            accessibilityLabel={`Sort by ${option}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: sortBy === option }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.sortOptionText, sortBy === option && styles.sortOptionTextActive]}>
               {option.charAt(0).toUpperCase() + option.slice(1)}
@@ -373,8 +429,8 @@ export function FreeAgencyScreen({
           <FreeAgentCard
             agent={item}
             onPress={() => {
-              // Could navigate to player profile
               setSelectedAgent(item);
+              setShowPlayerCard(true);
             }}
             onMakeOffer={() => {
               setSelectedAgent(item);
@@ -400,6 +456,18 @@ export function FreeAgencyScreen({
           setSelectedAgent(null);
         }}
       />
+
+      {/* Player Detail Card Modal */}
+      {showPlayerCard && selectedAgent && freeAgentPlayers?.[selectedAgent.id] && (
+        <PlayerDetailCard
+          player={freeAgentPlayers[selectedAgent.id]}
+          isModal={true}
+          onClose={() => {
+            setShowPlayerCard(false);
+            setSelectedAgent(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -505,22 +573,31 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.sm,
   },
+  agentTappableArea: {
+    marginBottom: spacing.sm,
+  },
   agentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: spacing.md,
   },
   positionBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    minWidth: 22,
+    height: 16,
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    paddingHorizontal: spacing.xxs,
   },
   positionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.textOnPrimary,
   },
@@ -548,6 +625,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.secondary,
+  },
+  tapHint: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    marginTop: spacing.xxs,
   },
   offerButton: {
     backgroundColor: colors.secondary,

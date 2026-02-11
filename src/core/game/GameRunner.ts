@@ -185,6 +185,7 @@ export class GameRunner {
     const config = createDefaultGameConfig(`game-${Date.now()}`);
     config.weather = setup.weather;
     config.stakes = setup.stakes;
+    config.homeFieldAdvantage = setup.homeFieldAdvantage;
 
     this.machine = new GameStateMachine(setup.homeTeamState, setup.awayTeamState, config);
 
@@ -431,6 +432,13 @@ export class GameRunner {
       this.awayTeamInfo,
       this.playerInfo
     );
+  }
+
+  /**
+   * Get current game result (can be called at any time, including when game is complete)
+   */
+  getResult(): GameResult {
+    return this.generateResult();
   }
 
   /**

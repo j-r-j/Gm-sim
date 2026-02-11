@@ -314,3 +314,14 @@ export {
   getHallOfFameStatusDisplay,
   validateRetirementState,
 } from './RetirementSystem';
+
+// Player Progression System
+export {
+  ProgressionResult,
+  ProgressionOptions,
+  DevelopmentNewsItem,
+  applyOffseasonProgression,
+  applySkillChanges,
+  processTeamProgression,
+  generateDevelopmentNews,
+} from './PlayerProgression';

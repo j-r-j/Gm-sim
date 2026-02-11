@@ -292,10 +292,11 @@ describe('Privacy Tests - Engine Internals Not Exposed', () => {
         expect(result.description.length).toBeGreaterThan(0);
 
         // Description should not contain internal terms
+        // Use word boundary matching to avoid false positives (e.g., "carroll" containing "roll")
         const lowerDesc = result.description.toLowerCase();
         expect(lowerDesc).not.toContain('effective');
         expect(lowerDesc).not.toContain('probability');
-        expect(lowerDesc).not.toContain('roll');
+        expect(lowerDesc).not.toMatch(/\broll\b/);
         expect(lowerDesc).not.toContain('rating');
         expect(lowerDesc).not.toContain('modifier');
       }

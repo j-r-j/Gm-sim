@@ -228,19 +228,19 @@ export function identifyBargainOpportunities(
 
 /**
  * Generates a veteran minimum contract offer
+ * Minimum contracts are fully guaranteed
  */
 export function generateMinimumOffer(experience: number): ContractOffer {
   const minSalary = VETERAN_MINIMUM_SALARY[Math.min(experience, 7)] ?? VETERAN_MINIMUM_SALARY[7];
 
   return {
     years: 1,
+    bonusPerYear: minSalary, // Fully guaranteed
+    salaryPerYear: 0, // No non-guaranteed portion
+    noTradeClause: false,
+    // Backward compat
     totalValue: minSalary,
     guaranteedMoney: minSalary,
-    signingBonus: 0,
-    firstYearSalary: minSalary,
-    annualEscalation: 0,
-    noTradeClause: false,
-    voidYears: 0,
   };
 }
 
@@ -252,16 +252,17 @@ export function generateBargainOffer(
   years: number = 1
 ): ContractOffer {
   const aav = opportunity.currentAskingPrice;
+  const bonusPerYear = Math.round(aav * 0.5);
+  const salaryPerYear = aav - bonusPerYear;
 
   return {
     years,
-    totalValue: aav * years,
-    guaranteedMoney: Math.round(aav * 0.5),
-    signingBonus: 0,
-    firstYearSalary: aav,
-    annualEscalation: 0.02,
+    bonusPerYear, // 50% guaranteed
+    salaryPerYear, // 50% non-guaranteed
     noTradeClause: false,
-    voidYears: 0,
+    // Backward compat
+    totalValue: aav * years,
+    guaranteedMoney: bonusPerYear * years,
   };
 }
 
@@ -317,7 +318,7 @@ export function willPlayerAcceptTrickleOffer(
   daysOnMarket: number,
   existingOfferCount: number
 ): { willAccept: boolean; reason: string } {
-  const offerAAV = offer.totalValue / offer.years;
+  const offerAAV = offer.bonusPerYear + offer.salaryPerYear;
   const adjustment = calculateTimeAdjustment(daysOnMarket);
 
   // Adjusted expectations

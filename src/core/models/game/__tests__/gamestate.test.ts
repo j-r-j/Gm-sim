@@ -183,7 +183,7 @@ describe('CareerStats', () => {
   describe('addCareerTeamEntry', () => {
     it('should add first team entry', () => {
       const stats = createDefaultCareerStats();
-      const updated = addCareerTeamEntry(stats, 'team-1', 'Atlantic City Sharks', 2025);
+      const updated = addCareerTeamEntry(stats, 'team-1', 'Buffalo Frontiersmen', 2025);
       expect(updated.teamHistory).toHaveLength(1);
       expect(updated.teamHistory[0].teamId).toBe('team-1');
       expect(updated.teamHistory[0].firedOrQuit).toBe('current');
@@ -377,8 +377,8 @@ describe('getGameStateSummary', () => {
       userTeamId: 'team-1',
       teams: {
         'team-1': {
-          city: 'Atlantic City',
-          nickname: 'Sharks',
+          city: 'Buffalo',
+          nickname: 'Frontiersmen',
           currentRecord: { wins: 10, losses: 6 },
         },
       },
@@ -398,7 +398,7 @@ describe('getGameStateSummary', () => {
     const summary = getGameStateSummary(mockState);
 
     expect(summary.userName).toBe('TestGM');
-    expect(summary.teamName).toBe('Atlantic City Sharks');
+    expect(summary.teamName).toBe('Buffalo Frontiersmen');
     expect(summary.year).toBe(2025);
     expect(summary.week).toBe(12);
     expect(summary.record).toBe('10-6');

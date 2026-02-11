@@ -279,11 +279,13 @@ export function evaluateTamperingOffers(
     if (negotiation.offerHistory.length === 0) continue;
 
     const latestOffer = negotiation.offerHistory[negotiation.offerHistory.length - 1];
-    const offerAAV = latestOffer.totalValue / latestOffer.years;
+    const offerAAV = latestOffer.bonusPerYear + latestOffer.salaryPerYear;
+    const offerTotal = offerAAV * latestOffer.years;
+    const offerGuaranteed = latestOffer.bonusPerYear * latestOffer.years;
 
     // Score based on how close to market value and guarantees
     const aavScore = Math.min(1.2, offerAAV / marketValue.projectedAAV);
-    const guaranteeScore = latestOffer.guaranteedMoney / (latestOffer.totalValue * 0.5);
+    const guaranteeScore = offerGuaranteed / (offerTotal * 0.5);
     const yearsScore = latestOffer.years >= marketValue.projectedYears ? 1.0 : 0.8;
 
     const totalScore = aavScore * 0.5 + guaranteeScore * 0.3 + yearsScore * 0.2;

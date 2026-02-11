@@ -22,11 +22,10 @@ export {
   createPlayerContract,
   getCapHitForYear,
   getCurrentCapHit,
-  getRemainingProration,
+  getRemainingBonus,
   getRemainingGuaranteed,
   calculateDeadMoney,
   calculateCapSavings,
-  calculatePostJune1DeadMoney,
   advanceContractYear,
   isExpiringContract,
   getContractEndYear,
@@ -34,6 +33,16 @@ export {
   validatePlayerContract,
   getMinimumSalary,
   createMinimumContract,
+  // Backward compatibility helpers
+  calculatePostJune1DeadMoney,
+  getOfferTotalValue,
+  getOfferGuaranteedMoney,
+  createContractOffer,
+  // Trade clause enforcement
+  canTradePlayer,
+  hasNoTradeClauseApproval,
+  // Types
+  PostJune1DeadMoney,
 } from './Contract';
 
 // ============================================
@@ -155,3 +164,35 @@ export {
   calculateRecommendedOffer,
   getExtensionSummary,
 } from './ExtensionSystem';
+
+// ============================================
+// Contract Generator
+// ============================================
+export {
+  // Functions
+  determineSkillTierFromPlayer,
+  calculateContractValue,
+  generatePlayerContract,
+  generateRosterContracts,
+  calculateTotalCapUsage,
+  calculateFutureCommitments,
+  getTeamContracts,
+  validateTeamCapUsage,
+} from './ContractGenerator';
+
+// ============================================
+// Offer Evaluation System
+// ============================================
+export {
+  // Types
+  InterestLevel,
+  OfferEvaluation,
+  PlayerExpectations,
+  // Functions
+  calculatePlayerExpectations,
+  evaluateContractOffer,
+  getPlayerPrioritiesDescription,
+  suggestOfferImprovements,
+  formatMoney,
+  getOfferSummary,
+} from './OfferEvaluation';

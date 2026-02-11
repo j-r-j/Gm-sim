@@ -204,12 +204,15 @@ describe('FreeAgencyManager', () => {
 
       const offer: ContractOffer = {
         years: 3,
+        bonusPerYear: Math.round(50000 / 3),
+        salaryPerYear: Math.round((90000 - 50000) / 3),
+        noTradeClause: false,
+        // Backward-compat properties
         totalValue: 90000,
         guaranteedMoney: 50000,
         signingBonus: 20000,
         firstYearSalary: 28000,
         annualEscalation: 0.03,
-        noTradeClause: false,
         voidYears: 0,
       };
 
@@ -249,12 +252,15 @@ describe('FreeAgencyManager', () => {
 
       const offer: ContractOffer = {
         years: 3,
+        bonusPerYear: Math.round(50000 / 3),
+        salaryPerYear: Math.round((90000 - 50000) / 3),
+        noTradeClause: false,
+        // Backward-compat properties
         totalValue: 90000,
         guaranteedMoney: 50000,
         signingBonus: 20000,
         firstYearSalary: 28000,
         annualEscalation: 0.03,
-        noTradeClause: false,
         voidYears: 0,
       };
 
@@ -416,12 +422,15 @@ describe('LegalTamperingPhase', () => {
 
       const offer: ContractOffer = {
         years: 3,
+        bonusPerYear: Math.round(30000 / 3),
+        salaryPerYear: Math.round((60000 - 30000) / 3),
+        noTradeClause: false,
+        // Backward-compat properties
         totalValue: 60000,
         guaranteedMoney: 30000,
         signingBonus: 10000,
         firstYearSalary: 18000,
         annualEscalation: 0.03,
-        noTradeClause: false,
         voidYears: 0,
       };
 
@@ -442,12 +451,15 @@ describe('LegalTamperingPhase', () => {
 
       const offer: ContractOffer = {
         years: 3,
+        bonusPerYear: Math.round(30000 / 3),
+        salaryPerYear: Math.round((60000 - 30000) / 3),
+        noTradeClause: false,
+        // Backward-compat properties
         totalValue: 60000,
         guaranteedMoney: 30000,
         signingBonus: 10000,
         firstYearSalary: 18000,
         annualEscalation: 0.03,
-        noTradeClause: false,
         voidYears: 0,
       };
 
@@ -504,12 +516,15 @@ describe('Day1FrenzySimulator', () => {
       const config = getDefaultFrenzyConfig();
       const initialOffer: ContractOffer = {
         years: 4,
+        bonusPerYear: Math.round(40000 / 4),
+        salaryPerYear: Math.round((80000 - 40000) / 4),
+        noTradeClause: false,
+        // Backward-compat properties
         totalValue: 80000,
         guaranteedMoney: 40000,
         signingBonus: 15000,
         firstYearSalary: 18000,
         annualEscalation: 0.03,
-        noTradeClause: false,
         voidYears: 0,
       };
 
@@ -528,7 +543,12 @@ describe('Day1FrenzySimulator', () => {
 
       const warId = activeWars[0].id;
       const escalatedOffer = generateEscalatedBid(initialOffer, config.escalationRate);
-      expect(escalatedOffer.totalValue).toBeGreaterThan(initialOffer.totalValue);
+      // Use new required properties to calculate total value
+      const escalatedTotal =
+        (escalatedOffer.bonusPerYear + escalatedOffer.salaryPerYear) * escalatedOffer.years;
+      const initialTotal =
+        (initialOffer.bonusPerYear + initialOffer.salaryPerYear) * initialOffer.years;
+      expect(escalatedTotal).toBeGreaterThan(initialTotal);
 
       state = processBiddingWarRound(state, warId, escalatedOffer, 'team2');
 
@@ -635,12 +655,15 @@ describe('RFATenderSystem', () => {
 
       const offer: ContractOffer = {
         years: 4,
+        bonusPerYear: Math.round(30000 / 4),
+        salaryPerYear: Math.round((60000 - 30000) / 4),
+        noTradeClause: false,
+        // Backward-compat properties
         totalValue: 60000,
         guaranteedMoney: 30000,
         signingBonus: 10000,
         firstYearSalary: 14000,
         annualEscalation: 0.03,
-        noTradeClause: false,
         voidYears: 0,
       };
 

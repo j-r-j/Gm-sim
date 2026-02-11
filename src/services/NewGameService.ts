@@ -15,7 +15,7 @@ import { Team, createTeamFromCity } from '../core/models/team/Team';
 import { FAKE_CITIES, FakeCity, getFullTeamName } from '../core/models/team/FakeCities';
 import { Player } from '../core/models/player/Player';
 import { generateRoster } from '../core/generators/player/PlayerGenerator';
-import { Coach, createDefaultCoach } from '../core/models/staff/Coach';
+import { Coach } from '../core/models/staff/Coach';
 import { Scout, createDefaultScout, createScoutContract } from '../core/models/staff/Scout';
 import { Owner, NetWorth } from '../core/models/owner/Owner';
 import { createDefaultOwnerPersonality } from '../core/models/owner/OwnerPersonality';
@@ -26,19 +26,34 @@ import { generateDraftClass } from '../core/draft/DraftClassGenerator';
 import { Prospect } from '../core/draft/Prospect';
 import { generateSeasonSchedule, PreviousYearStandings } from '../core/season/ScheduleGenerator';
 import { CoachRole } from '../core/models/staff/StaffSalary';
-import { ScoutRegion } from '../core/models/staff/ScoutAttributes';
-import { createCoachContract } from '../core/models/staff/CoachContract';
+import { generateCoach } from '../core/coaching/CoachGenerator';
 import { createNewsFeedState } from '../core/news/NewsFeedManager';
 import { createPatienceMeterState } from '../core/career/PatienceMeterManager';
 import { createDefaultTenureStats } from '../core/career/FiringMechanics';
+import { seedInitialFreeAgentPool } from '../core/freeAgency/FreeAgentSeeder';
+import { PlayerContract } from '../core/contracts/Contract';
+import {
+  generateInitialRosterContracts,
+  calculateTotalCapUsage,
+  calculateFutureCommitments,
+} from '../core/contracts/ContractGenerator';
+import { DEFAULT_SALARY_CAP } from '../core/models/team/TeamFinances';
+import { simulateLeagueHistory } from '../core/history/LeagueHistorySimulator';
 
 const SALARY_CAP = 255000000; // $255 million
+
+/** Default number of years to pre-simulate for league history */
+const DEFAULT_HISTORY_YEARS = 20;
 
 interface NewGameOptions {
   saveSlot: SaveSlot;
   gmName: string;
   selectedTeam: FakeCity;
   startYear?: number;
+  /** Number of years of league history to pre-simulate (default: 20, 0 to skip) */
+  historyYears?: number;
+  /** Callback for history simulation progress */
+  onHistoryProgress?: (year: number, totalYears: number, phase: string) => void;
 }
 
 /**
@@ -112,49 +127,17 @@ function createOwnerForTeam(teamId: string): Owner {
 }
 
 /**
- * Creates coaches for a team
+ * Creates coaches for a team (Head Coach, OC, DC)
+ * Uses the new coach generator for varied, realistic attributes.
+ * Coaches start with varied contract years remaining for realism.
  */
-function createCoachesForTeam(teamId: string): Coach[] {
+function createCoachesForTeam(teamId: string, startYear: number = 2025): Coach[] {
   const coaches: Coach[] = [];
 
-  const coachRoles: CoachRole[] = [
-    'headCoach',
-    'offensiveCoordinator',
-    'defensiveCoordinator',
-    'specialTeamsCoordinator',
-    'qbCoach',
-    'rbCoach',
-    'wrCoach',
-    'teCoach',
-    'olCoach',
-    'dlCoach',
-    'lbCoach',
-    'dbCoach',
-  ];
+  const coachRoles: CoachRole[] = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
 
   for (const role of coachRoles) {
-    const { firstName, lastName } = generateFullName();
-    const coachId = generateUUID();
-
-    const coach = createDefaultCoach(coachId, firstName, lastName, role);
-    coach.teamId = teamId;
-    coach.isAvailable = false;
-    coach.attributes = {
-      ...coach.attributes,
-      age: 35 + randomInt(0, 30),
-      yearsExperience: randomInt(3, 25),
-    };
-    const yearsTotal = randomInt(2, 5);
-    coach.contract = createCoachContract({
-      id: generateUUID(),
-      coachId: coachId,
-      teamId: teamId,
-      yearsTotal,
-      salaryPerYear: 500000 + randomInt(0, 5000000),
-      guaranteedMoney: randomInt(500000, 3000000),
-      startYear: 2025,
-    });
-
+    const coach = generateCoach(role, teamId, startYear, { randomizeContractYears: true });
     coaches.push(coach);
   }
 
@@ -162,66 +145,62 @@ function createCoachesForTeam(teamId: string): Coach[] {
 }
 
 /**
- * Creates scouts for a team
+ * Creates scouts for a team (Head Scout, Offensive Scout, Defensive Scout)
+ * Scouts start with varied contract years remaining for realism.
  */
 function createScoutsForTeam(teamId: string): Scout[] {
   const scouts: Scout[] = [];
 
-  // Director of Player Personnel
-  const directorName = generateFullName();
-  const director = createDefaultScout(
+  // Head Scout
+  const headName = generateFullName();
+  const headScout = createDefaultScout(
     generateUUID(),
-    directorName.firstName,
-    directorName.lastName,
-    'scoutingDirector'
+    headName.firstName,
+    headName.lastName,
+    'headScout'
   );
-  director.teamId = teamId;
-  director.isAvailable = false;
-  director.contract = createScoutContract(500000 + randomInt(0, 300000), 3);
-  scouts.push(director);
+  headScout.teamId = teamId;
+  headScout.isAvailable = false;
+  const headYearsTotal = randomInt(2, 4);
+  headScout.contract = {
+    ...createScoutContract(1000000 + randomInt(0, 2000000), headYearsTotal),
+    yearsRemaining: randomInt(1, headYearsTotal),
+  };
+  scouts.push(headScout);
 
-  // National Scout
-  const nationalName = generateFullName();
-  const national = createDefaultScout(
+  // Offensive Scout
+  const offensiveName = generateFullName();
+  const offensiveScout = createDefaultScout(
     generateUUID(),
-    nationalName.firstName,
-    nationalName.lastName,
-    'nationalScout'
+    offensiveName.firstName,
+    offensiveName.lastName,
+    'offensiveScout'
   );
-  national.teamId = teamId;
-  national.isAvailable = false;
-  national.contract = createScoutContract(200000 + randomInt(0, 150000), 3);
-  scouts.push(national);
+  offensiveScout.teamId = teamId;
+  offensiveScout.isAvailable = false;
+  const offYearsTotal = randomInt(2, 4);
+  offensiveScout.contract = {
+    ...createScoutContract(500000 + randomInt(0, 700000), offYearsTotal),
+    yearsRemaining: randomInt(1, offYearsTotal),
+  };
+  scouts.push(offensiveScout);
 
-  // 4 Regional Scouts
-  const regions: ScoutRegion[] = ['northeast', 'southeast', 'midwest', 'west'];
-  for (const region of regions) {
-    const name = generateFullName();
-    const regionalScout = createDefaultScout(
-      generateUUID(),
-      name.firstName,
-      name.lastName,
-      'regionalScout'
-    );
-    regionalScout.teamId = teamId;
-    regionalScout.region = region;
-    regionalScout.isAvailable = false;
-    regionalScout.contract = createScoutContract(100000 + randomInt(0, 100000), 2);
-    scouts.push(regionalScout);
-  }
-
-  // Pro Scout
-  const proName = generateFullName();
-  const proScout = createDefaultScout(
+  // Defensive Scout
+  const defensiveName = generateFullName();
+  const defensiveScout = createDefaultScout(
     generateUUID(),
-    proName.firstName,
-    proName.lastName,
-    'proScout'
+    defensiveName.firstName,
+    defensiveName.lastName,
+    'defensiveScout'
   );
-  proScout.teamId = teamId;
-  proScout.isAvailable = false;
-  proScout.contract = createScoutContract(150000 + randomInt(0, 100000), 2);
-  scouts.push(proScout);
+  defensiveScout.teamId = teamId;
+  defensiveScout.isAvailable = false;
+  const defYearsTotal = randomInt(2, 4);
+  defensiveScout.contract = {
+    ...createScoutContract(500000 + randomInt(0, 700000), defYearsTotal),
+    yearsRemaining: randomInt(1, defYearsTotal),
+  };
+  scouts.push(defensiveScout);
 
   return scouts;
 }
@@ -257,7 +236,14 @@ function createDraftPicks(teamIds: string[], year: number): Record<string, Draft
  * Creates a complete new game state
  */
 export function createNewGame(options: NewGameOptions): GameState {
-  const { saveSlot, gmName, selectedTeam, startYear = 2025 } = options;
+  const {
+    saveSlot,
+    gmName,
+    selectedTeam,
+    startYear = 2025,
+    historyYears = DEFAULT_HISTORY_YEARS,
+    onHistoryProgress,
+  } = options;
 
   // Create all 32 teams
   const teams = createAllTeams();
@@ -273,22 +259,59 @@ export function createNewGame(options: NewGameOptions): GameState {
     gmId: gmName,
   };
 
-  // Create players for all teams
+  // Create players and contracts for all teams
   const players: Record<string, Player> = {};
+  const contracts: Record<string, PlayerContract> = {};
+
   for (const teamId of teamIds) {
     const roster = generateRoster(teamId);
     const playerIds: string[] = [];
 
-    for (const player of roster) {
+    // Generate contracts for the roster with realistic mid-deal diversity
+    const { contracts: teamContracts, updatedPlayers } = generateInitialRosterContracts(
+      roster,
+      teamId,
+      startYear
+    );
+
+    // Add contracts to the contracts collection
+    for (const [contractId, contract] of Object.entries(teamContracts)) {
+      contracts[contractId] = contract;
+    }
+
+    // Add players with their contract IDs
+    for (const player of updatedPlayers) {
       players[player.id] = player;
       playerIds.push(player.id);
     }
 
-    // Assign roster to team
+    // Calculate cap usage from contracts
+    const teamContractsOnly = Object.fromEntries(
+      Object.entries(teamContracts).filter(([, c]) => c.teamId === teamId)
+    );
+    const capUsage = calculateTotalCapUsage(teamContractsOnly, startYear);
+    const futureCommitments = calculateFutureCommitments(teamContractsOnly, startYear);
+
+    // Assign roster to team and update finances
     teams[teamId] = {
       ...teams[teamId],
       rosterPlayerIds: playerIds,
+      finances: {
+        ...teams[teamId].finances,
+        currentCapUsage: capUsage,
+        capSpace: DEFAULT_SALARY_CAP - capUsage,
+        nextYearCommitted: futureCommitments.nextYear,
+        twoYearsOutCommitted: futureCommitments.twoYearsOut,
+        threeYearsOutCommitted: futureCommitments.threeYearsOut,
+      },
     };
+  }
+
+  // Seed initial free agent pool (approximately 250 free agents)
+  // Free agents don't have contracts (they will sign when joining a team)
+  const freeAgents = seedInitialFreeAgentPool(startYear);
+  for (const freeAgent of freeAgents) {
+    players[freeAgent.id] = freeAgent;
   }
 
   // Create owners for all teams
@@ -301,7 +324,7 @@ export function createNewGame(options: NewGameOptions): GameState {
   // Create coaches for all teams
   const coaches: Record<string, Coach> = {};
   for (const teamId of teamIds) {
-    const teamCoaches = createCoachesForTeam(teamId);
+    const teamCoaches = createCoachesForTeam(teamId, startYear);
     for (const coach of teamCoaches) {
       coaches[coach.id] = coach;
     }
@@ -396,7 +419,7 @@ export function createNewGame(options: NewGameOptions): GameState {
   // Initialize tenure stats
   const tenureStats = createDefaultTenureStats();
 
-  return {
+  let baseGameState: GameState = {
     saveSlot,
     createdAt: now,
     lastSavedAt: now,
@@ -410,6 +433,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     owners,
     draftPicks,
     prospects,
+    contracts,
     careerStats,
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
     newsReadStatus: {},
@@ -417,6 +441,40 @@ export function createNewGame(options: NewGameOptions): GameState {
     patienceMeter,
     tenureStats,
   };
+
+  // Pre-simulate league history if requested
+  if (historyYears > 0) {
+    const historyResult = simulateLeagueHistory(baseGameState, {
+      years: historyYears,
+      onProgress: onHistoryProgress,
+    });
+
+    // Use the history-simulated state but preserve user-specific fields
+    baseGameState = {
+      ...historyResult.gameState,
+      saveSlot,
+      createdAt: now,
+      lastSavedAt: now,
+      userTeamId,
+      userName: gmName,
+      careerStats,
+      gameSettings: { ...DEFAULT_GAME_SETTINGS },
+      newsReadStatus: {},
+      newsFeed: createNewsFeedState(startYear, 1),
+      patienceMeter,
+      tenureStats,
+      scouts, // Keep original scouts (not simulated)
+      owners, // Keep original owners (not simulated)
+    };
+
+    // Re-set the user as GM of their team
+    baseGameState.teams[userTeamId] = {
+      ...baseGameState.teams[userTeamId],
+      gmId: gmName,
+    };
+  }
+
+  return baseGameState;
 }
 
 /**

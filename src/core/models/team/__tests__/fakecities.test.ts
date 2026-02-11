@@ -1,25 +1,24 @@
 /**
- * Fake Cities Tests
- * Tests for exactly 32 cities, 4 per division, no duplicates, and no real NFL cities
+ * NFL Cities Tests
+ * Tests for exactly 32 teams, 4 per division, no duplicates
+ * Real NFL cities with fictional nicknames
  */
 
 import {
   FAKE_CITIES,
-  REAL_NFL_CITIES,
   ALL_CONFERENCES,
   ALL_DIVISIONS,
   getCityByAbbreviation,
   getCitiesByDivision,
   getCitiesByConference,
-  validateNoCitiesAreReal,
   validateNoDuplicateAbbreviations,
   validateDivisionSizes,
   getFullTeamName,
 } from '../FakeCities';
 
-describe('FakeCities', () => {
+describe('NFL Cities', () => {
   describe('Total Count', () => {
-    it('should have exactly 32 cities', () => {
+    it('should have exactly 32 teams', () => {
       expect(FAKE_CITIES).toHaveLength(32);
     });
   });
@@ -51,55 +50,22 @@ describe('FakeCities', () => {
       expect(validateNoDuplicateAbbreviations()).toBe(true);
     });
 
-    it('should have all 3-letter abbreviations', () => {
+    it('should have abbreviations between 2-3 characters', () => {
       FAKE_CITIES.forEach((city) => {
-        expect(city.abbreviation).toHaveLength(3);
+        expect(city.abbreviation.length).toBeGreaterThanOrEqual(2);
+        expect(city.abbreviation.length).toBeLessThanOrEqual(3);
       });
     });
 
-    it('should find cities by abbreviation', () => {
-      const city = getCityByAbbreviation('ATC');
+    it('should find teams by abbreviation', () => {
+      const city = getCityByAbbreviation('BUF');
       expect(city).toBeDefined();
-      expect(city?.city).toBe('Atlantic City');
+      expect(city?.city).toBe('Buffalo');
     });
 
     it('should return undefined for unknown abbreviation', () => {
       const city = getCityByAbbreviation('XXX');
       expect(city).toBeUndefined();
-    });
-  });
-
-  describe('No Real NFL Cities', () => {
-    it('should pass validateNoCitiesAreReal', () => {
-      expect(validateNoCitiesAreReal()).toBe(true);
-    });
-
-    it('should not contain any real NFL city names', () => {
-      const fakeCityNames = FAKE_CITIES.map((city) => city.city);
-
-      REAL_NFL_CITIES.forEach((realCity) => {
-        expect(fakeCityNames).not.toContain(realCity);
-      });
-    });
-
-    it('should not include New York', () => {
-      const hasNewYork = FAKE_CITIES.some((city) => city.city === 'New York');
-      expect(hasNewYork).toBe(false);
-    });
-
-    it('should not include Los Angeles', () => {
-      const hasLA = FAKE_CITIES.some((city) => city.city === 'Los Angeles');
-      expect(hasLA).toBe(false);
-    });
-
-    it('should not include Chicago', () => {
-      const hasChicago = FAKE_CITIES.some((city) => city.city === 'Chicago');
-      expect(hasChicago).toBe(false);
-    });
-
-    it('should not include Dallas', () => {
-      const hasDallas = FAKE_CITIES.some((city) => city.city === 'Dallas');
-      expect(hasDallas).toBe(false);
     });
   });
 
@@ -203,33 +169,46 @@ describe('FakeCities', () => {
   });
 
   describe('Known Teams Spot Check', () => {
-    it('should include Atlantic City Sharks', () => {
-      const sharks = FAKE_CITIES.find((c) => c.city === 'Atlantic City' && c.nickname === 'Sharks');
-      expect(sharks).toBeDefined();
-      expect(sharks?.conference).toBe('AFC');
-      expect(sharks?.division).toBe('East');
+    it('should include Buffalo Frontiersmen', () => {
+      const team = FAKE_CITIES.find((c) => c.city === 'Buffalo' && c.nickname === 'Frontiersmen');
+      expect(team).toBeDefined();
+      expect(team?.conference).toBe('AFC');
+      expect(team?.division).toBe('East');
     });
 
-    it('should include Brooklyn Knights', () => {
-      const knights = FAKE_CITIES.find((c) => c.city === 'Brooklyn' && c.nickname === 'Knights');
-      expect(knights).toBeDefined();
-      expect(knights?.conference).toBe('NFC');
-      expect(knights?.division).toBe('East');
+    it('should include Dallas Wranglers', () => {
+      const team = FAKE_CITIES.find((c) => c.city === 'Dallas' && c.nickname === 'Wranglers');
+      expect(team).toBeDefined();
+      expect(team?.conference).toBe('NFC');
+      expect(team?.division).toBe('East');
     });
 
-    it('should include Honolulu Volcanoes', () => {
-      const volcanoes = FAKE_CITIES.find(
-        (c) => c.city === 'Honolulu' && c.nickname === 'Volcanoes'
+    it('should include San Francisco Prospectors', () => {
+      const team = FAKE_CITIES.find(
+        (c) => c.city === 'San Francisco' && c.nickname === 'Prospectors'
       );
-      expect(volcanoes).toBeDefined();
-      expect(volcanoes?.conference).toBe('NFC');
-      expect(volcanoes?.division).toBe('West');
+      expect(team).toBeDefined();
+      expect(team?.conference).toBe('NFC');
+      expect(team?.division).toBe('West');
     });
 
-    it('should include Toronto Huskies', () => {
-      const huskies = FAKE_CITIES.find((c) => c.city === 'Toronto' && c.nickname === 'Huskies');
-      expect(huskies).toBeDefined();
-      expect(huskies?.marketSize).toBe('large');
+    it('should include Kansas City Monarchs', () => {
+      const team = FAKE_CITIES.find((c) => c.city === 'Kansas City' && c.nickname === 'Monarchs');
+      expect(team).toBeDefined();
+      expect(team?.conference).toBe('AFC');
+      expect(team?.division).toBe('West');
+    });
+  });
+
+  describe('Uses Real NFL Cities', () => {
+    it('should use real NFL city locations', () => {
+      const cityNames = FAKE_CITIES.map((c) => c.city);
+      expect(cityNames).toContain('Buffalo');
+      expect(cityNames).toContain('Miami');
+      expect(cityNames).toContain('Dallas');
+      expect(cityNames).toContain('Chicago');
+      expect(cityNames).toContain('Green Bay');
+      expect(cityNames).toContain('Seattle');
     });
   });
 });

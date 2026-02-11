@@ -5,8 +5,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
+import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
+import { ScheduledGame } from '../core/season/ScheduleGenerator';
 import { calculateStandings, StandingsEntry } from '../services/StandingsService';
 
 /**
@@ -17,11 +19,13 @@ export interface StandingsScreenProps {
   teams: Record<string, Team>;
   /** User's team ID */
   userTeamId: string;
+  /** Completed games for head-to-head tiebreaker resolution */
+  completedGames?: ScheduledGame[];
   /** Callback to go back */
   onBack: () => void;
 }
 
-type ViewMode = 'division' | 'conference';
+type ViewMode = 'division' | 'conference' | 'playoff';
 
 /**
  * Team row in standings table
@@ -35,8 +39,12 @@ function StandingsRow({
   rank: number;
   isUserTeam: boolean;
 }) {
+  const record = `${entry.wins}-${entry.losses}${entry.ties > 0 ? `-${entry.ties}` : ''}`;
   return (
-    <View style={[styles.row, isUserTeam && styles.userTeamRow]}>
+    <View
+      style={[styles.row, isUserTeam && styles.userTeamRow]}
+      accessibilityLabel={`${rank}. ${entry.teamName} ${entry.teamAbbr}, Record ${record}, Points for ${entry.pointsFor}, Points against ${entry.pointsAgainst}${isUserTeam ? ', Your team' : ''}`}
+    >
       <Text style={[styles.rankCell, isUserTeam && styles.userTeamText]}>{rank}</Text>
       <View style={styles.teamCell}>
         <Text style={[styles.teamAbbr, isUserTeam && styles.userTeamText]}>{entry.teamAbbr}</Text>
@@ -44,10 +52,7 @@ function StandingsRow({
           {entry.teamName}
         </Text>
       </View>
-      <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>
-        {entry.wins}-{entry.losses}
-        {entry.ties > 0 ? `-${entry.ties}` : ''}
-      </Text>
+      <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>{record}</Text>
       <Text style={[styles.cell, isUserTeam && styles.userTeamText]}>
         {entry.pct.toFixed(3).slice(1)}
       </Text>
@@ -118,41 +123,50 @@ function DivisionSection({
   );
 }
 
-export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenProps) {
+export function StandingsScreen({
+  teams,
+  userTeamId,
+  completedGames,
+  onBack,
+}: StandingsScreenProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('division');
 
-  // Calculate standings
-  const standings = useMemo(() => calculateStandings(teams, userTeamId), [teams, userTeamId]);
+  // Calculate standings with head-to-head tiebreaker support
+  const standings = useMemo(
+    () => calculateStandings(teams, userTeamId, completedGames),
+    [teams, userTeamId, completedGames]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Standings</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Standings" onBack={onBack} testID="standings-header" />
 
       {/* View Mode Toggle */}
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'division' && styles.toggleActive]}
-          onPress={() => setViewMode('division')}
-        >
-          <Text style={[styles.toggleText, viewMode === 'division' && styles.toggleTextActive]}>
-            By Division
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'conference' && styles.toggleActive]}
-          onPress={() => setViewMode('conference')}
-        >
-          <Text style={[styles.toggleText, viewMode === 'conference' && styles.toggleTextActive]}>
-            By Conference
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.toggleContainer} accessibilityRole="tablist">
+        {(['division', 'conference', 'playoff'] as ViewMode[]).map((mode) => {
+          const label =
+            mode === 'division'
+              ? 'Division'
+              : mode === 'conference'
+                ? 'Conference'
+                : 'Playoff Picture';
+          return (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.toggleButton, viewMode === mode && styles.toggleActive]}
+              onPress={() => setViewMode(mode)}
+              accessibilityLabel={`${label} view`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: viewMode === mode }}
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={[styles.toggleText, viewMode === mode && styles.toggleTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Standings Tables */}
@@ -183,7 +197,7 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
               />
             ))}
           </>
-        ) : (
+        ) : viewMode === 'conference' ? (
           <>
             {/* AFC Conference */}
             <View style={styles.conferenceSection}>
@@ -211,6 +225,263 @@ export function StandingsScreen({ teams, userTeamId, onBack }: StandingsScreenPr
                   isUserTeam={team.teamId === userTeamId}
                 />
               ))}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Playoff Picture - AFC */}
+            <View style={styles.playoffSection}>
+              <Text style={styles.conferenceHeader}>AFC Playoff Picture</Text>
+
+              {/* Division Leaders */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Division Leaders (Seeds 1-4)</Text>
+                {['North', 'South', 'East', 'West'].map((div) => {
+                  const leader = standings.byDivision.AFC[div]?.[0];
+                  if (!leader) return null;
+                  return (
+                    <View
+                      key={`afc-${div}`}
+                      style={[
+                        styles.playoffRow,
+                        leader.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <View style={styles.seedBadge}>
+                        <Text style={styles.seedText}>
+                          {['North', 'South', 'East', 'West'].indexOf(div) + 1}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{div}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.wins}-{leader.losses}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Wild Card */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Wild Card (Seeds 5-7)</Text>
+                {standings.byConference.AFC.filter((team) => {
+                  // Exclude division leaders
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.AFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(0, 3)
+                  .map((team, index) => (
+                    <View
+                      key={team.teamId}
+                      style={[styles.playoffRow, team.teamId === userTeamId && styles.userTeamRow]}
+                    >
+                      <View style={[styles.seedBadge, styles.wildcardBadge]}>
+                        <Text style={styles.seedText}>{index + 5}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+
+              {/* In The Hunt */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>In The Hunt</Text>
+                {standings.byConference.AFC.filter((team) => {
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.AFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(3, 6)
+                  .map((team) => (
+                    <View
+                      key={team.teamId}
+                      style={[
+                        styles.playoffRow,
+                        styles.huntRow,
+                        team.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={[styles.playoffDivision, styles.huntText]}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+            </View>
+
+            {/* Playoff Picture - NFC */}
+            <View style={styles.playoffSection}>
+              <Text style={styles.conferenceHeader}>NFC Playoff Picture</Text>
+
+              {/* Division Leaders */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Division Leaders (Seeds 1-4)</Text>
+                {['North', 'South', 'East', 'West'].map((div) => {
+                  const leader = standings.byDivision.NFC[div]?.[0];
+                  if (!leader) return null;
+                  return (
+                    <View
+                      key={`nfc-${div}`}
+                      style={[
+                        styles.playoffRow,
+                        leader.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <View style={styles.seedBadge}>
+                        <Text style={styles.seedText}>
+                          {['North', 'South', 'East', 'West'].indexOf(div) + 1}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{div}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          leader.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {leader.wins}-{leader.losses}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Wild Card */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>Wild Card (Seeds 5-7)</Text>
+                {standings.byConference.NFC.filter((team) => {
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.NFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(0, 3)
+                  .map((team, index) => (
+                    <View
+                      key={team.teamId}
+                      style={[styles.playoffRow, team.teamId === userTeamId && styles.userTeamRow]}
+                    >
+                      <View style={[styles.seedBadge, styles.wildcardBadge]}>
+                        <Text style={styles.seedText}>{index + 5}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={styles.playoffDivision}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+
+              {/* In The Hunt */}
+              <View style={styles.playoffGroup}>
+                <Text style={styles.playoffGroupTitle}>In The Hunt</Text>
+                {standings.byConference.NFC.filter((team) => {
+                  const isDivLeader = ['North', 'South', 'East', 'West'].some(
+                    (div) => standings.byDivision.NFC[div]?.[0]?.teamId === team.teamId
+                  );
+                  return !isDivLeader;
+                })
+                  .slice(3, 6)
+                  .map((team) => (
+                    <View
+                      key={team.teamId}
+                      style={[
+                        styles.playoffRow,
+                        styles.huntRow,
+                        team.teamId === userTeamId && styles.userTeamRow,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.playoffTeamAbbr,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.teamAbbr}
+                      </Text>
+                      <Text style={[styles.playoffDivision, styles.huntText]}>{team.division}</Text>
+                      <Text
+                        style={[
+                          styles.playoffRecord,
+                          styles.huntText,
+                          team.teamId === userTeamId && styles.userTeamText,
+                        ]}
+                      >
+                        {team.wins}-{team.losses}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
             </View>
           </>
         )}
@@ -393,6 +664,76 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: spacing.xl,
+  },
+  // Playoff picture styles
+  playoffSection: {
+    marginBottom: spacing.lg,
+  },
+  playoffGroup: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  playoffGroupTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    backgroundColor: colors.surfaceLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  playoffRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  huntRow: {
+    opacity: 0.7,
+  },
+  seedBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  wildcardBadge: {
+    backgroundColor: colors.warning,
+  },
+  seedText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  playoffTeamAbbr: {
+    width: 50,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  playoffDivision: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  playoffRecord: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  huntText: {
+    color: colors.textSecondary,
   },
 });
 

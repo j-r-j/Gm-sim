@@ -54,24 +54,6 @@ export interface DefensivePlayCall {
 }
 
 /**
- * Run play types (used for play selection)
- */
-const _RUN_PLAY_TYPES: PlayType[] = ['run_inside', 'run_outside', 'run_draw', 'run_sweep'];
-
-/**
- * Pass play types by depth (used for play selection)
- */
-const _SHORT_PASS_TYPES: PlayType[] = ['pass_short', 'pass_screen', 'play_action_short'];
-const _MEDIUM_PASS_TYPES: PlayType[] = ['pass_medium'];
-const _DEEP_PASS_TYPES: PlayType[] = ['pass_deep', 'play_action_deep'];
-
-// Ensure TypeScript knows these are intentionally defined for future use
-void _RUN_PLAY_TYPES;
-void _SHORT_PASS_TYPES;
-void _MEDIUM_PASS_TYPES;
-void _DEEP_PASS_TYPES;
-
-/**
  * Calculate run probability based on tendencies and situation
  */
 function calculateRunProbability(

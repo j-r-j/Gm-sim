@@ -59,6 +59,35 @@ export const REGULAR_SEASON_WEEKS = 18;
 export const PLAYOFF_WEEKS = 4;
 
 /**
+ * Trade deadline - trades are blocked after this week during regular season
+ * The NFL trade deadline is typically after Week 8 (so Week 9+ trades are blocked)
+ */
+export const TRADE_DEADLINE_WEEK = 8;
+
+/**
+ * Checks if the trade deadline has passed
+ * Trades are only allowed during regular season up to and including the deadline week
+ */
+export function isTradeDeadlinePassed(calendar: SeasonCalendar): boolean {
+  // Trades are only allowed during regular season
+  if (calendar.currentPhase !== 'regularSeason') {
+    // During offseason, trades are allowed (free agency, draft)
+    if (calendar.currentPhase === 'offseason') {
+      return false;
+    }
+    // During preseason, trades are allowed
+    if (calendar.currentPhase === 'preseason') {
+      return false;
+    }
+    // During playoffs, trades are NOT allowed
+    return true;
+  }
+
+  // During regular season, check if we're past the deadline week
+  return calendar.currentWeek > TRADE_DEADLINE_WEEK;
+}
+
+/**
  * League settings
  */
 export interface LeagueSettings {

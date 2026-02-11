@@ -32,7 +32,7 @@ function createMockScout(
   region: string | null = 'northeast',
   positionSpecialty: Position | null = null
 ): Scout {
-  const scout = createDefaultScout('scout-1', 'John', 'Smith', 'regionalScout');
+  const scout = createDefaultScout('scout-1', 'John', 'Smith', 'offensiveScout');
   return {
     ...scout,
     region: region as Scout['region'],

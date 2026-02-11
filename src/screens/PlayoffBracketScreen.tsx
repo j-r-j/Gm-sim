@@ -4,8 +4,9 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { ScreenHeader } from '../components';
 import { Team } from '../core/models/team/Team';
 
 /**
@@ -249,13 +250,23 @@ export function PlayoffBracketScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Playoff Bracket</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Playoff Bracket" onBack={onBack} testID="playoff-bracket-header" />
+
+      {/* Current Round Banner */}
+      {currentRound !== 'complete' && (
+        <View style={styles.currentRoundBanner}>
+          <Text style={styles.currentRoundLabel}>CURRENT ROUND</Text>
+          <Text style={styles.currentRoundName}>
+            {currentRound === 'wildCard'
+              ? 'Wild Card Round'
+              : currentRound === 'divisional'
+                ? 'Divisional Round'
+                : currentRound === 'conference'
+                  ? 'Conference Championships'
+                  : 'Super Bowl'}
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={styles.content}>
         {/* Champion display if complete */}
@@ -270,7 +281,12 @@ export function PlayoffBracketScreen({
 
         {/* Super Bowl */}
         {superBowlMatchup && (
-          <View style={styles.superBowlSection}>
+          <View
+            style={[
+              styles.superBowlSection,
+              currentRound === 'superBowl' && styles.currentRoundSection,
+            ]}
+          >
             <Text style={styles.superBowlTitle}>SUPER BOWL</Text>
             <MatchupCard matchup={superBowlMatchup} teams={teams} userTeamId={userTeamId} />
           </View>
@@ -294,15 +310,12 @@ export function PlayoffBracketScreen({
           />
         </View>
 
-        {/* Current round indicator */}
-        <View style={styles.roundIndicator}>
-          <Text style={styles.roundIndicatorText}>
-            Current Round:{' '}
-            {currentRound === 'complete'
-              ? 'Season Complete'
-              : currentRound.replace(/([A-Z])/g, ' $1').trim()}
-          </Text>
-        </View>
+        {/* Season Complete Banner */}
+        {currentRound === 'complete' && (
+          <View style={styles.completeContainer}>
+            <Text style={styles.completeText}>Season Complete</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -522,15 +535,38 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textLight,
   },
-  // Round indicator
-  roundIndicator: {
-    padding: spacing.lg,
+  // Current round banner
+  currentRoundBanner: {
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
   },
-  roundIndicatorText: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
+  currentRoundLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textOnPrimary,
+    opacity: 0.8,
+    letterSpacing: 1,
+  },
+  currentRoundName: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    marginTop: spacing.xxs,
+  },
+  currentRoundSection: {
+    borderWidth: 2,
+    borderColor: colors.secondary,
+    borderRadius: borderRadius.lg,
+  },
+  completeContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  completeText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.success,
   },
 });
 

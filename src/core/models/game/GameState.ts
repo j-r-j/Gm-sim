@@ -11,6 +11,7 @@ import { Scout, validateScout } from '../staff/Scout';
 import { Owner, validateOwner } from '../owner/Owner';
 import { DraftPick, validateDraftPick } from '../league/DraftPick';
 import { Prospect as DraftProspect, validateProspect } from '../../draft/Prospect';
+import { PlayerContract, validatePlayerContract } from '../../contracts/Contract';
 
 /**
  * Save slot options (3 slots supported)
@@ -97,6 +98,9 @@ export interface GameState {
   // Prospects (pre-draft players)
   prospects: Record<string, Prospect>;
 
+  // Player contracts
+  contracts: Record<string, PlayerContract>;
+
   // Career stats
   careerStats: CareerStats;
 
@@ -117,6 +121,43 @@ export interface GameState {
 
   // Offseason state (optional for backward compatibility)
   offseasonState?: import('../../offseason/OffSeasonPhaseManager').OffSeasonState;
+
+  // Depth charts (optional for backward compatibility)
+  depthCharts?: Record<string, import('../../roster/DepthChartManager').DepthChart>;
+
+  // Season stats for players (optional for backward compatibility)
+  seasonStats?: Record<string, import('../../game/SeasonStatsAggregator').PlayerSeasonStats>;
+
+  // Offseason persistent data (carries across phases)
+  offseasonData?: import('../../offseason/OffseasonPersistentData').OffseasonPersistentData;
+
+  // ========================================
+  // NEW WEEKLY DECISION SYSTEMS
+  // ========================================
+
+  // Weekly game plan / practice focus
+  weeklyGamePlan?: import('../../gameplan/GamePlanManager').WeeklyGamePlan;
+
+  // AI-initiated trade offers
+  tradeOffers?: import('../../trade/AITradeOfferGenerator').TradeOffersState;
+
+  // Start/sit decisions for questionable players
+  startSitDecisions?: import('../../roster/StartSitManager').StartSitState;
+
+  // Weekly awards, power rankings, milestones
+  weeklyAwards?: import('../../season/WeeklyAwards').WeeklyAwardsState;
+
+  // Waiver wire state
+  waiverWire?: import('../../roster/WaiverWireManager').WaiverWireState;
+
+  // Halftime decisions (transient, only set during active game)
+  halftimeDecisions?: import('../../game/HalftimeAdjustments').HalftimeDecisions;
+
+  // Week flow flags (already used via cast, now formal)
+  weekFlags?: import('../../../services/flow/WeekFlowManager').WeekFlowFlags;
+
+  // Player career history (season logs, transactions, injuries, awards)
+  playerHistory?: Record<string, import('../../history/PlayerHistoryTracker').PlayerCareerHistory>;
 }
 
 /**
@@ -258,6 +299,12 @@ export function validateGameState(state: GameState): boolean {
     if (!validateProspect(prospect)) return false;
   }
 
+  // Contracts validation
+  if (typeof state.contracts !== 'object' || state.contracts === null) return false;
+  for (const contract of Object.values(state.contracts)) {
+    if (!validatePlayerContract(contract)) return false;
+  }
+
   // Career stats validation
   if (!validateCareerStats(state.careerStats)) return false;
 
@@ -294,6 +341,7 @@ export function createGameStateSkeleton(
     owners: {},
     draftPicks: {},
     prospects: {},
+    contracts: {},
     careerStats: createDefaultCareerStats(),
     gameSettings: { ...DEFAULT_GAME_SETTINGS },
   };

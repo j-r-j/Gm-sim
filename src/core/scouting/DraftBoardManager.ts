@@ -136,6 +136,11 @@ export interface DraftBoardProspectView {
 
   // Notes
   userNotes: string;
+
+  // Scout info
+  latestScoutId: string;
+  latestScoutName: string;
+  latestReportSummary: string;
 }
 
 /**
@@ -665,6 +670,12 @@ export function getDraftBoardView(state: DraftBoardState): DraftBoardViewModel {
   // Create prospect views
   const prospectViews: DraftBoardProspectView[] = sortedProspects.map((prospect, index) => {
     const tier = prospect.userTier ?? determineDraftTier(prospect.consensusRound);
+    const latestReport = prospect.latestReport;
+
+    // Create a brief summary from the latest report
+    const reportSummary = latestReport
+      ? `OVR ${latestReport.skillRanges.overall.min}-${latestReport.skillRanges.overall.max} | Rd ${latestReport.draftProjection.roundMin}-${latestReport.draftProjection.roundMax}`
+      : '';
 
     return {
       prospectId: prospect.prospectId,
@@ -688,6 +699,10 @@ export function getDraftBoardView(state: DraftBoardState): DraftBoardViewModel {
       isLocked: prospect.isLocked,
 
       userNotes: prospect.userNotes,
+
+      latestScoutId: latestReport?.scoutId ?? '',
+      latestScoutName: latestReport?.scoutName ?? 'Unknown',
+      latestReportSummary: reportSummary,
     };
   });
 

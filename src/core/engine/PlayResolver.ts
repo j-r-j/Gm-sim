@@ -31,6 +31,14 @@ import {
 import { generatePlayDescription, PlayResultForDescription } from './PlayDescriptionGenerator';
 import { Player } from '../models/player/Player';
 import { RoleType } from '../models/player/RoleFit';
+import {
+  selectPassTarget,
+  selectRunningBack,
+  selectPrimaryTackler,
+  TargetSituationContext,
+  RBRotationContext,
+  TackleContext,
+} from './StatDistribution';
 
 /**
  * Penalty details
@@ -281,39 +289,104 @@ function updatePlayFatigue(
 }
 
 /**
- * Get primary players for display
+ * Get primary players for display using weighted stat distribution
+ * This is the key function that determines who gets credited with the play
  */
 function getPrimaryPlayers(
   offensivePlayers: PlayerWithEffective[],
   defensivePlayers: PlayerWithEffective[],
-  playType: PlayType
-): { offensive: string; defensive: string | null } {
-  // For run plays, RB is primary
+  playType: PlayType,
+  targetPosition: string,
+  context: PlayCallContext,
+  offensiveTeam: TeamGameState,
+  defensiveTeam: TeamGameState,
+  yardsGained: number,
+  outcome: string
+): { offensive: string; defensive: string | null; receiver: string | null } {
+  const qb = offensivePlayers.find((p) => p.player.position === 'QB');
+
+  // For run plays - use weighted RB selection
   if (playType.startsWith('run') || playType === 'qb_sneak' || playType === 'qb_scramble') {
-    const rb = offensivePlayers.find((p) => p.player.position === 'RB');
-    const qb = offensivePlayers.find((p) => p.player.position === 'QB');
-    const tackler = defensivePlayers.length > 0 ? defensivePlayers[0] : null;
+    let ballCarrier: Player | null = null;
+
+    if (playType === 'qb_sneak' || playType === 'qb_scramble') {
+      ballCarrier = qb?.player ?? null;
+    } else {
+      // Get all RBs and use weighted selection based on fatigue
+      const runningBacks = offensivePlayers
+        .filter((p) => p.player.position === 'RB')
+        .map((p) => p.player);
+
+      const rbContext: RBRotationContext = {
+        currentGameCarries: offensiveTeam.snapCounts.get(runningBacks[0]?.id ?? '') ?? 0,
+        currentGameSnaps: offensiveTeam.snapCounts.get(runningBacks[0]?.id ?? '') ?? 0,
+        down: context.down,
+        distance: context.distance,
+        isRedZone: context.isRedZone,
+        isGoalLine: context.fieldPosition >= 95,
+        isTwoMinuteDrill: context.isTwoMinuteWarning,
+      };
+
+      ballCarrier = selectRunningBack(runningBacks, offensiveTeam, rbContext);
+    }
+
+    // Select tackler using weighted distribution based on play result
+    const defenders = defensivePlayers.map((p) => p.player);
+    const tackleContext: TackleContext = {
+      playType,
+      yardsGained,
+      outcome,
+    };
+
+    const tackler = selectPrimaryTackler(defenders, tackleContext, defensiveTeam);
 
     return {
-      offensive:
-        (playType === 'qb_sneak' || playType === 'qb_scramble' ? qb?.player.id : rb?.player.id) ||
-        offensivePlayers[0]?.player.id ||
-        '',
-      defensive: tackler?.player.id || null,
+      offensive: ballCarrier?.id || offensivePlayers[0]?.player.id || '',
+      defensive: tackler?.id || null,
+      receiver: null,
     };
   }
 
-  // For pass plays, QB is primary offensive, receiver/defender are secondary
-  const qb = offensivePlayers.find((p) => p.player.position === 'QB');
-  const receiver = offensivePlayers.find((p) => ['WR', 'TE', 'RB'].includes(p.player.position));
-  const defender = defensivePlayers.find((p) =>
-    ['CB', 'FS', 'SS', 'OLB', 'ILB'].includes(p.player.position)
-  );
+  // For pass plays - use weighted target selection
+  const receivers = offensivePlayers
+    .filter((p) => ['WR', 'TE', 'RB'].includes(p.player.position))
+    .map((p) => p.player);
+
+  const targetSituation: TargetSituationContext = {
+    down: context.down,
+    distance: context.distance,
+    isRedZone: context.isRedZone,
+    isTwoMinuteDrill: context.isTwoMinuteWarning,
+    scoreDifferential: context.scoreDifferential,
+  };
+
+  // Use the targetPosition hint to weight selection, but still use weighted random
+  // This creates realistic distribution while respecting play design
+  const selectedReceiver = selectPassTarget(receivers, playType, targetSituation, offensiveTeam);
+
+  // Select tackler/defender based on outcome
+  const defenders = defensivePlayers.map((p) => p.player);
+  const tackleContext: TackleContext = {
+    playType,
+    yardsGained,
+    outcome,
+  };
+
+  const tackler = selectPrimaryTackler(defenders, tackleContext, defensiveTeam);
 
   return {
     offensive: qb?.player.id || offensivePlayers[0]?.player.id || '',
-    defensive: receiver?.player.id || defender?.player.id || null,
+    defensive: tackler?.id || null,
+    receiver: selectedReceiver?.id || receivers[0]?.id || null,
   };
+}
+
+/**
+ * Home field context for play resolution
+ */
+export interface HomeFieldContext {
+  isOffenseHome: boolean;
+  homeFieldAdvantage: number; // Points equivalent (typically 2.5-3.5)
 }
 
 /**
@@ -323,16 +396,17 @@ function getPrimaryPlayers(
  * @param defensiveTeam - Defensive team game state
  * @param playCall - The offensive and defensive play calls
  * @param context - Play call context (down, distance, etc.)
- * @param weeklyVariances - Pre-calculated weekly variances
+ * @param homeFieldContext - Optional home field advantage context
  * @returns The result of the play
  */
 export function resolvePlay(
   offensiveTeam: TeamGameState,
   defensiveTeam: TeamGameState,
   playCall: { offensive: OffensivePlayCall; defensive: DefensivePlayCall },
-  context: PlayCallContext
+  context: PlayCallContext,
+  homeFieldContext?: HomeFieldContext
 ): PlayResult {
-  const { playType } = playCall.offensive;
+  const { playType, targetPosition } = playCall.offensive;
 
   // Determine stakes
   const stakes: GameStakes =
@@ -364,12 +438,23 @@ export function resolvePlay(
   resolvePlayMatchup(offensiveEffectives, defensiveEffectives, playType);
 
   // Calculate average ratings for outcome table
-  const avgOffRating =
+  let avgOffRating =
     offensiveEffectives.reduce((sum, p) => sum + p.effective, 0) /
     (offensiveEffectives.length || 1);
-  const avgDefRating =
+  let avgDefRating =
     defensiveEffectives.reduce((sum, p) => sum + p.effective, 0) /
     (defensiveEffectives.length || 1);
+
+  // Apply home field advantage (converted from points to rating boost)
+  // 2.5 point advantage = ~5 rating point boost (2 rating points per point)
+  if (homeFieldContext) {
+    const ratingBoost = homeFieldContext.homeFieldAdvantage * 2;
+    if (homeFieldContext.isOffenseHome) {
+      avgOffRating += ratingBoost;
+    } else {
+      avgDefRating += ratingBoost;
+    }
+  }
 
   // Generate outcome table and roll
   const situation = {
@@ -429,12 +514,14 @@ export function resolvePlay(
   // Calculate new game state
   let yardsGained = roll.yards;
   const turnover = roll.outcome === 'interception' || roll.outcome === 'fumble_lost';
-  const touchdown =
-    roll.outcome === 'touchdown' || (yardsGained > 0 && context.fieldPosition + yardsGained >= 100);
 
-  // Adjust yards for touchdown
-  if (touchdown && roll.outcome !== 'touchdown') {
-    yardsGained = 100 - context.fieldPosition;
+  // Only explicit touchdown outcomes count as touchdowns
+  // Big gains that would reach the endzone are capped at the 1-yard line instead
+  let touchdown = roll.outcome === 'touchdown';
+
+  // Cap non-touchdown gains at the 1-yard line
+  if (!touchdown && yardsGained > 0 && context.fieldPosition + yardsGained >= 100) {
+    yardsGained = 99 - context.fieldPosition; // Stop at the 1-yard line
   }
 
   // Calculate new field position
@@ -504,21 +591,44 @@ export function resolvePlay(
     }
   }
 
-  // Get primary players for description
-  const primaryPlayers = getPrimaryPlayers(offensiveEffectives, defensiveEffectives, playType);
+  // Get primary players for description using weighted stat distribution
+  const primaryPlayers = getPrimaryPlayers(
+    offensiveEffectives,
+    defensiveEffectives,
+    playType,
+    targetPosition,
+    context,
+    offensiveTeam,
+    defensiveTeam,
+    yardsGained,
+    roll.outcome
+  );
 
   // Build all players map for description
   const allPlayers = new Map<string, Player>();
   offensivePlayers.forEach((p) => allPlayers.set(p.id, p));
   defensivePlayers.forEach((p) => allPlayers.set(p.id, p));
 
+  // For pass plays:
+  // - primaryOffensivePlayer = QB (StatisticsTracker credits passing stats here)
+  // - primaryDefensivePlayer = receiver (StatisticsTracker credits receiving stats here)
+  // For run plays:
+  // - primaryOffensivePlayer = ball carrier
+  // - primaryDefensivePlayer = tackler
+  const isPassPlay =
+    !playType.startsWith('run') && playType !== 'qb_sneak' && primaryPlayers.receiver;
+  const primaryOffensivePlayerId = primaryPlayers.offensive;
+  const primaryDefensivePlayerId = isPassPlay
+    ? primaryPlayers.receiver // Receiver for pass plays (StatisticsTracker expects this)
+    : primaryPlayers.defensive; // Tackler for run plays
+
   // Generate description
   const descResult: PlayResultForDescription = {
     playType,
     outcome: roll.outcome,
     yardsGained,
-    primaryOffensivePlayer: primaryPlayers.offensive,
-    primaryDefensivePlayer: primaryPlayers.defensive,
+    primaryOffensivePlayer: primaryOffensivePlayerId,
+    primaryDefensivePlayer: primaryDefensivePlayerId,
     turnover,
     touchdown,
     firstDown,
@@ -532,8 +642,8 @@ export function resolvePlay(
     playType,
     outcome: roll.outcome,
     yardsGained,
-    primaryOffensivePlayer: primaryPlayers.offensive,
-    primaryDefensivePlayer: primaryPlayers.defensive,
+    primaryOffensivePlayer: primaryOffensivePlayerId,
+    primaryDefensivePlayer: primaryDefensivePlayerId,
     newDown,
     newDistance,
     newFieldPosition,

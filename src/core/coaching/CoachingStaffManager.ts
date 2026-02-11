@@ -167,16 +167,6 @@ function getCoachRoleDisplayName(role: CoachRole): string {
     headCoach: 'Head Coach',
     offensiveCoordinator: 'Offensive Coordinator',
     defensiveCoordinator: 'Defensive Coordinator',
-    specialTeamsCoordinator: 'Special Teams Coordinator',
-    qbCoach: 'Quarterbacks Coach',
-    rbCoach: 'Running Backs Coach',
-    wrCoach: 'Wide Receivers Coach',
-    teCoach: 'Tight Ends Coach',
-    olCoach: 'Offensive Line Coach',
-    dlCoach: 'Defensive Line Coach',
-    lbCoach: 'Linebackers Coach',
-    dbCoach: 'Defensive Backs Coach',
-    stCoach: 'Special Teams Coach',
   };
   return displayNames[role];
 }

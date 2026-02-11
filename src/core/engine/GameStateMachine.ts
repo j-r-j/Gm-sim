@@ -5,16 +5,16 @@
  */
 
 import { TeamGameState } from './TeamGameState';
-import { PlayResult, resolvePlay, resolveSpecialTeamsPlay } from './PlayResolver';
-import {
-  PlayCallContext,
-  selectOffensivePlay,
-  selectDefensivePlay,
-  shouldAttemptFieldGoal,
-  shouldPunt,
-} from './PlayCaller';
+import { PlayResult, resolvePlay, resolveSpecialTeamsPlay, HomeFieldContext } from './PlayResolver';
+import { PlayCallContext, shouldAttemptFieldGoal, shouldPunt } from './PlayCaller';
 import { WeatherCondition, GameStakes } from './EffectiveRatingCalculator';
 import { DriveResult } from './PlayDescriptionGenerator';
+// Import sophisticated play calling that uses coordinator tendencies and scheme adjustments
+import {
+  selectOffensivePlayWithTendencies,
+  selectDefensivePlayWithTendencies,
+  PlayCallingDecisionContext,
+} from '../coaching/PlayCallingIntegration';
 
 /**
  * Game clock state
@@ -60,6 +60,7 @@ export interface LiveGameState {
   // Game situation
   weather: WeatherCondition;
   stakes: GameStakes;
+  homeFieldAdvantage: number;
 
   // History (for stats, play-by-play)
   plays: PlayResult[];
@@ -81,6 +82,7 @@ export interface GameConfig {
   weather: WeatherCondition;
   stakes: GameStakes;
   quarterLength: number; // Seconds (default 900 = 15 min)
+  homeFieldAdvantage: number; // Points equivalent (typically 2.5-3.5)
 }
 
 /**
@@ -108,6 +110,7 @@ export function createDefaultGameConfig(gameId: string): GameConfig {
     },
     stakes: 'regular',
     quarterLength: 900,
+    homeFieldAdvantage: 2.5,
   };
 }
 
@@ -149,6 +152,7 @@ export class GameStateMachine {
 
       weather: config.weather,
       stakes: config.stakes,
+      homeFieldAdvantage: config.homeFieldAdvantage,
 
       plays: [],
 
@@ -364,22 +368,46 @@ export class GameStateMachine {
       distance: 2,
     };
 
-    // Select plays
-    const offensivePlay = selectOffensivePlay(offensiveTeam.offensiveTendencies, context);
-    const defensivePlay = selectDefensivePlay(
-      defensiveTeam.defensiveTendencies,
-      context,
-      offensivePlay.formation
+    // Create play calling decision context with coaching info for offense
+    const offensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: offensiveTeam.coaches.offensiveCoordinator,
+      defensiveCoordinator: null,
+      headCoach: offensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession === 'home',
+    };
+
+    // Create play calling decision context with coaching info for defense
+    const defensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: null,
+      defensiveCoordinator: defensiveTeam.coaches.defensiveCoordinator,
+      headCoach: defensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession !== 'home',
+    };
+
+    // Select plays using sophisticated tendency-based play calling
+    const offensiveResult = selectOffensivePlayWithTendencies(offensivePlayCallingContext);
+    const defensiveResult = selectDefensivePlayWithTendencies(
+      defensivePlayCallingContext,
+      offensiveResult.playCall.formation
     );
+
+    // Create home field context
+    const homeFieldContext: HomeFieldContext = {
+      isOffenseHome: field.possession === 'home',
+      homeFieldAdvantage: this.state.homeFieldAdvantage,
+    };
 
     const result = resolvePlay(
       offensiveTeam,
       defensiveTeam,
       {
-        offensive: offensivePlay,
-        defensive: defensivePlay,
+        offensive: offensiveResult.playCall,
+        defensive: defensiveResult.playCall,
       },
-      context
+      context,
+      homeFieldContext
     );
 
     if (result.touchdown) {
@@ -432,20 +460,44 @@ export class GameStateMachine {
       }
     }
 
-    // Select plays
-    const offensivePlay = selectOffensivePlay(offensiveTeam.offensiveTendencies, context);
-    const defensivePlay = selectDefensivePlay(
-      defensiveTeam.defensiveTendencies,
-      context,
-      offensivePlay.formation
+    // Create play calling decision context with coaching info for offense
+    const offensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: offensiveTeam.coaches.offensiveCoordinator,
+      defensiveCoordinator: null,
+      headCoach: offensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession === 'home',
+    };
+
+    // Create play calling decision context with coaching info for defense
+    const defensivePlayCallingContext: PlayCallingDecisionContext = {
+      offensiveCoordinator: null,
+      defensiveCoordinator: defensiveTeam.coaches.defensiveCoordinator,
+      headCoach: defensiveTeam.coaches.headCoach ?? null,
+      gameContext: context,
+      isHometeam: field.possession !== 'home',
+    };
+
+    // Select plays using sophisticated tendency-based play calling
+    const offensiveResult = selectOffensivePlayWithTendencies(offensivePlayCallingContext);
+    const defensiveResult = selectDefensivePlayWithTendencies(
+      defensivePlayCallingContext,
+      offensiveResult.playCall.formation
     );
+
+    // Create home field context
+    const homeFieldContext: HomeFieldContext = {
+      isOffenseHome: field.possession === 'home',
+      homeFieldAdvantage: this.state.homeFieldAdvantage,
+    };
 
     // Resolve the play
     const result = resolvePlay(
       offensiveTeam,
       defensiveTeam,
-      { offensive: offensivePlay, defensive: defensivePlay },
-      context
+      { offensive: offensiveResult.playCall, defensive: defensiveResult.playCall },
+      context,
+      homeFieldContext
     );
 
     // Update game state
@@ -508,19 +560,29 @@ export class GameStateMachine {
 
   /**
    * Calculate how much time a play takes off the clock
+   * NFL plays typically take 25-40 seconds including huddle and play clock
    */
   private calculateClockTime(result: PlayResult): number {
-    // Base time per play
-    let time = 5 + Math.floor(Math.random() * 10); // 5-15 seconds
+    // Base time per play: 25-40 seconds (realistic NFL timing)
+    let time = 25 + Math.floor(Math.random() * 16); // 25-40 seconds
 
-    // Incomplete passes stop the clock
+    // Incomplete passes stop the clock (only count the play itself, ~5-8 seconds)
     if (result.outcome === 'incomplete') {
-      time = 5;
+      time = 5 + Math.floor(Math.random() * 4); // 5-8 seconds
     }
 
-    // Out of bounds stops clock (simulate some plays)
+    // Out of bounds stops clock (play time only, ~6-10 seconds)
     if (result.yardsGained > 10 && Math.random() < 0.3) {
-      time = Math.min(time, 7);
+      time = 6 + Math.floor(Math.random() * 5); // 6-10 seconds
+    }
+
+    // Touchdowns and turnovers have variable time
+    if (
+      result.outcome === 'touchdown' ||
+      result.outcome === 'interception' ||
+      result.outcome === 'fumble'
+    ) {
+      time = 8 + Math.floor(Math.random() * 8); // 8-15 seconds
     }
 
     return time;
@@ -706,6 +768,7 @@ export function createGame(
     },
     stakes: config?.stakes || 'regular',
     quarterLength: config?.quarterLength || 900,
+    homeFieldAdvantage: config?.homeFieldAdvantage ?? 2.5,
   };
 
   return new GameStateMachine(homeTeam, awayTeam, fullConfig);

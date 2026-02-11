@@ -25,29 +25,15 @@ export interface ScoutingPosition {
 /**
  * Total scouting department positions
  */
-export const TOTAL_SCOUTING_POSITIONS = 8;
+export const TOTAL_SCOUTING_POSITIONS = 3;
 
 /**
- * Department structure: 1 Director, 2 National, 4 Regional, 1 Pro
+ * Department structure: 1 Head Scout, 1 Offensive Scout, 1 Defensive Scout
  */
 export const SCOUTING_DEPARTMENT_STRUCTURE: ScoutingPosition[] = [
-  { role: 'scoutingDirector', displayName: 'Director of Scouting', count: 1 },
-  { role: 'nationalScout', displayName: 'National Scout', count: 2 },
-  {
-    role: 'regionalScout',
-    displayName: 'Regional Scout (Northeast)',
-    count: 1,
-    region: 'northeast',
-  },
-  {
-    role: 'regionalScout',
-    displayName: 'Regional Scout (Southeast)',
-    count: 1,
-    region: 'southeast',
-  },
-  { role: 'regionalScout', displayName: 'Regional Scout (Midwest)', count: 1, region: 'midwest' },
-  { role: 'regionalScout', displayName: 'Regional Scout (West)', count: 1, region: 'west' },
-  { role: 'proScout', displayName: 'Pro Scout', count: 1 },
+  { role: 'headScout', displayName: 'Head Scout', count: 1 },
+  { role: 'offensiveScout', displayName: 'Offensive Scout', count: 1 },
+  { role: 'defensiveScout', displayName: 'Defensive Scout', count: 1 },
 ];
 
 /**
@@ -127,11 +113,11 @@ export function getScoutsByRole(state: ScoutingDepartmentState, role: ScoutRole)
 }
 
 /**
- * Gets the scouting director
+ * Gets the head scout
  */
-export function getScoutingDirector(state: ScoutingDepartmentState): Scout | null {
-  const directors = getScoutsByRole(state, 'scoutingDirector');
-  return directors.length > 0 ? directors[0] : null;
+export function getHeadScout(state: ScoutingDepartmentState): Scout | null {
+  const headScouts = getScoutsByRole(state, 'headScout');
+  return headScouts.length > 0 ? headScouts[0] : null;
 }
 
 /**
@@ -162,76 +148,43 @@ export function getScoutingVacancies(state: ScoutingDepartmentState): ScoutingVa
   const vacancies: ScoutingVacancy[] = [];
   const scouts = getDepartmentScouts(state);
 
-  // Check director
-  const hasDirector = scouts.some((s) => s.role === 'scoutingDirector');
-  if (!hasDirector) {
+  // Check head scout
+  const hasHeadScout = scouts.some((s) => s.role === 'headScout');
+  if (!hasHeadScout) {
     vacancies.push({
-      role: 'scoutingDirector',
-      displayName: 'Director of Scouting',
+      role: 'headScout',
+      displayName: 'Head Scout',
       region: null,
-      salaryRange: SCOUT_SALARY_RANGES.scoutingDirector,
+      salaryRange: SCOUT_SALARY_RANGES.headScout,
       priority: 'critical',
     });
   }
 
-  // Check national scouts (need 2)
-  const nationalScouts = scouts.filter((s) => s.role === 'nationalScout');
-  const nationalVacancies = 2 - nationalScouts.length;
-  for (let i = 0; i < nationalVacancies; i++) {
+  // Check offensive scout
+  const hasOffensiveScout = scouts.some((s) => s.role === 'offensiveScout');
+  if (!hasOffensiveScout) {
     vacancies.push({
-      role: 'nationalScout',
-      displayName: 'National Scout',
+      role: 'offensiveScout',
+      displayName: 'Offensive Scout',
       region: null,
-      salaryRange: SCOUT_SALARY_RANGES.nationalScout,
+      salaryRange: SCOUT_SALARY_RANGES.offensiveScout,
       priority: 'important',
     });
   }
 
-  // Check regional scouts (1 per region as defined in structure)
-  const structureRegions = SCOUTING_DEPARTMENT_STRUCTURE.filter(
-    (pos) => pos.role === 'regionalScout' && pos.region
-  ).map((pos) => pos.region!);
-
-  for (const region of structureRegions) {
-    const regionScout = scouts.find((s) => s.role === 'regionalScout' && s.region === region);
-    if (!regionScout) {
-      vacancies.push({
-        role: 'regionalScout',
-        displayName: `Regional Scout (${getRegionDisplayNameForVacancy(region)})`,
-        region,
-        salaryRange: SCOUT_SALARY_RANGES.regionalScout,
-        priority: 'normal',
-      });
-    }
-  }
-
-  // Check pro scout
-  const hasProScout = scouts.some((s) => s.role === 'proScout');
-  if (!hasProScout) {
+  // Check defensive scout
+  const hasDefensiveScout = scouts.some((s) => s.role === 'defensiveScout');
+  if (!hasDefensiveScout) {
     vacancies.push({
-      role: 'proScout',
-      displayName: 'Pro Scout',
+      role: 'defensiveScout',
+      displayName: 'Defensive Scout',
       region: null,
-      salaryRange: SCOUT_SALARY_RANGES.proScout,
+      salaryRange: SCOUT_SALARY_RANGES.defensiveScout,
       priority: 'important',
     });
   }
 
   return vacancies;
-}
-
-/**
- * Helper to get region display name
- */
-function getRegionDisplayNameForVacancy(region: ScoutRegion): string {
-  const displayNames: Record<ScoutRegion, string> = {
-    northeast: 'Northeast',
-    southeast: 'Southeast',
-    midwest: 'Midwest',
-    west: 'West Coast',
-    southwest: 'Southwest',
-  };
-  return displayNames[region];
 }
 
 /**
@@ -284,15 +237,8 @@ export function hireScout(
   const newScouts = new Map(state.scouts);
   newScouts.set(scout.id, updatedScout);
 
-  // Create regional assignment if regional scout
+  // Regional assignments not used in simplified scout structure
   const newAssignments = [...state.regionalAssignments];
-  if (scout.role === 'regionalScout' && scout.region) {
-    newAssignments.push({
-      scoutId: scout.id,
-      region: scout.region,
-      isPrimary: true,
-    });
-  }
 
   return {
     ...state,
@@ -334,6 +280,7 @@ export function fireScout(
 
 /**
  * Assigns a scout to a region
+ * Note: In simplified structure, region assignments are not used
  */
 export function assignScoutToRegion(
   state: ScoutingDepartmentState,
@@ -346,10 +293,8 @@ export function assignScoutToRegion(
     return null;
   }
 
-  // Only national scouts and regional scouts can be assigned to regions
-  if (scout.role !== 'nationalScout' && scout.role !== 'regionalScout') {
-    return null;
-  }
+  // In simplified structure, all scouts can cover any region
+  // This function is kept for API compatibility
 
   // Check if this scout already has an assignment to this region
   const existingAssignment = state.regionalAssignments.find(
@@ -393,16 +338,8 @@ export function assignScoutToRegion(
     isPrimary,
   });
 
-  // Update scout's region if regional scout
-  let updatedScouts = state.scouts;
-  if (scout.role === 'regionalScout') {
-    updatedScouts = new Map(state.scouts);
-    updatedScouts.set(scoutId, { ...scout, region });
-  }
-
   return {
     ...state,
-    scouts: updatedScouts,
     regionalAssignments: newAssignments,
   };
 }
@@ -505,23 +442,9 @@ export function getScoutingDepartmentSummary(
   const scouts = getDepartmentScouts(state);
   const vacancies = getScoutingVacancies(state);
 
-  // Get covered regions
-  const coveredRegions = new Set<ScoutRegion>();
-  for (const scout of scouts) {
-    if (scout.role === 'regionalScout' && scout.region) {
-      coveredRegions.add(scout.region);
-    }
-  }
-  // National scouts also provide coverage
-  const nationalScouts = scouts.filter((s) => s.role === 'nationalScout');
-  if (nationalScouts.length > 0) {
-    for (const region of ALL_SCOUT_REGIONS) {
-      coveredRegions.add(region);
-    }
-  }
-
-  const regionsCovered = Array.from(coveredRegions);
-  const regionsUncovered = ALL_SCOUT_REGIONS.filter((r) => !coveredRegions.has(r));
+  // In simplified structure, all scouts cover all regions
+  const regionsCovered: ScoutRegion[] = scouts.length > 0 ? [...ALL_SCOUT_REGIONS] : [];
+  const regionsUncovered: ScoutRegion[] = scouts.length === 0 ? [...ALL_SCOUT_REGIONS] : [];
 
   const budgetRemaining = state.budget - state.spentBudget;
   const budgetUsedPercent = state.budget > 0 ? (state.spentBudget / state.budget) * 100 : 0;
@@ -530,8 +453,8 @@ export function getScoutingDepartmentSummary(
     totalPositions: TOTAL_SCOUTING_POSITIONS,
     filledPositions: scouts.length,
     vacancies: vacancies.length,
-    hasDirector: scouts.some((s) => s.role === 'scoutingDirector'),
-    hasProScout: scouts.some((s) => s.role === 'proScout'),
+    hasDirector: scouts.some((s) => s.role === 'headScout'),
+    hasProScout: false, // Pro scout role removed in simplified structure
     regionsCovered,
     regionsUncovered,
     budgetRemaining,
@@ -545,11 +468,10 @@ export function getScoutingDepartmentSummary(
 export function hasMinimumScoutingStaff(state: ScoutingDepartmentState): boolean {
   const scouts = getDepartmentScouts(state);
 
-  // Must have at least director or one national scout
-  const hasDirector = scouts.some((s) => s.role === 'scoutingDirector');
-  const hasNationalScout = scouts.some((s) => s.role === 'nationalScout');
+  // Must have at least head scout
+  const hasHeadScout = scouts.some((s) => s.role === 'headScout');
 
-  return hasDirector || hasNationalScout;
+  return hasHeadScout;
 }
 
 /**

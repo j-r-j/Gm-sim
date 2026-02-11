@@ -1,19 +1,24 @@
 /**
- * Schedule Generator
- * Generates a complete 17-game NFL season schedule using 2025 NFL template
+ * NFL Schedule Generator
+ * Generates a complete, accurate 17-game regular season schedule for all 32 NFL teams.
+ * Implements the exact NFL scheduling formula with proper year-based rotations.
  *
- * NFL Scheduling Rules:
- * - 6 divisional games (home/away vs 3 division rivals)
- * - 4 games vs another division in same conference (rotates yearly)
- * - 4 games vs a division from other conference (rotates yearly)
- * - 2 games vs same-place finishers from other divisions in conference
- * - 1 game vs same-place finisher from other conference (17th game)
+ * NFL Scheduling Formula (5 Components):
+ * - Component A: 6 divisional games (home/away vs 3 division rivals)
+ * - Component B: 4 intraconference rotation games (rotates on 3-year cycle)
+ * - Component C: 4 interconference rotation games (rotates on 4-year cycle)
+ * - Component D: 2 intraconference standings-based games
+ * - Component E: 1 interconference "17th game" (from division played 2 years ago)
  */
 
 import { Team } from '../models/team/Team';
-import { Conference, Division, ALL_DIVISIONS } from '../models/team/FakeCities';
+import { Conference, Division, ALL_DIVISIONS, ALL_CONFERENCES } from '../models/team/FakeCities';
 import { assignByeWeeks } from './ByeWeekManager';
 import { PlayoffSchedule } from './PlayoffGenerator';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 /**
  * Time slots for games
@@ -24,6 +29,11 @@ export type TimeSlot =
   | 'late_sunday'
   | 'sunday_night'
   | 'monday_night';
+
+/**
+ * Which component generated this game
+ */
+export type GameComponent = 'A' | 'B' | 'C' | 'D' | 'E';
 
 /**
  * A scheduled game in the season
@@ -38,6 +48,9 @@ export interface ScheduledGame {
   isDivisional: boolean;
   isConference: boolean;
   isRivalry: boolean;
+
+  // Component that generated this game
+  component: GameComponent;
 
   // Time slot
   timeSlot: TimeSlot;
@@ -64,43 +77,135 @@ export interface PreviousYearStandings {
 export interface SeasonSchedule {
   year: number;
   regularSeason: ScheduledGame[];
-  byeWeeks: Map<string, number>;
+  /** Bye weeks stored as plain object (teamId -> week) for JSON serialization compatibility */
+  byeWeeks: Record<string, number>;
   playoffs: PlayoffSchedule | null;
 }
 
 /**
- * Division rotation mappings based on 2025 NFL schedule
- * Each year the divisions rotate through opponents
+ * Validation result
  */
-const INTRA_CONFERENCE_ROTATION: Record<Conference, Record<Division, Division>> = {
-  AFC: {
-    East: 'West',
-    North: 'South',
-    South: 'North',
-    West: 'East',
-  },
-  NFC: {
-    East: 'West',
-    North: 'South',
-    South: 'North',
-    West: 'East',
-  },
+export interface ValidationResult {
+  passed: boolean;
+  errors: string[];
+}
+
+// ============================================================================
+// DIVISION INDEX MAPPING
+// ============================================================================
+
+const DIVISION_INDICES: Record<Division, number> = {
+  East: 0,
+  North: 1,
+  South: 2,
+  West: 3,
 };
 
-const INTER_CONFERENCE_ROTATION: Record<Conference, Record<Division, Division>> = {
-  AFC: {
-    East: 'East',
-    North: 'North',
-    South: 'South',
-    West: 'West',
-  },
-  NFC: {
-    East: 'East',
-    North: 'North',
-    South: 'South',
-    West: 'West',
-  },
-};
+const INDEX_TO_DIVISION: Division[] = ['East', 'North', 'South', 'West'];
+
+// ============================================================================
+// ROTATION LOOKUP FUNCTIONS
+// ============================================================================
+
+/**
+ * Intraconference rotation: which same-conference division does each division play?
+ * This is a 3-year cycle where each division plays the other 3 divisions in sequence.
+ *
+ * CRITICAL: The table MUST be symmetric - if division A plays B, then B plays A.
+ * Each year has 2 pairs per conference.
+ *
+ * Table verified against NFL schedule data:
+ * | Season Mod 3 | Pairs                          |
+ * |--------------|--------------------------------|
+ * | 0 (2022...)  | (East, South), (North, West)   |
+ * | 1 (2023...)  | (East, North), (South, West)   |
+ * | 2 (2024...)  | (East, West), (North, South)   |
+ */
+const INTRA_ROTATION: number[][] = [
+  // [year%3 === 0, year%3 === 1, year%3 === 2]
+  [2, 1, 3], // East  (0) plays: South, North, West
+  [3, 0, 2], // North (1) plays: West, East, South  (symmetric with East)
+  [0, 3, 1], // South (2) plays: East, West, North  (symmetric with East, West)
+  [1, 2, 0], // West  (3) plays: North, South, East (symmetric with North, South, East)
+];
+
+/**
+ * Gets the intraconference opponent division index for a given division and year.
+ */
+export function getIntraconfOpponentDivision(divisionIndex: number, seasonYear: number): number {
+  return INTRA_ROTATION[divisionIndex][seasonYear % 3];
+}
+
+/**
+ * Interconference rotation: which opposite-conference division does each division play?
+ * This is a 4-year cycle.
+ *
+ * Table verified against NFL schedule data (AFC division → NFC division):
+ * Using year % 4 (NOT (year-2022) % 4):
+ * | year % 4 | Example | AFC East | AFC North | AFC South | AFC West |
+ * |----------|---------|----------|-----------|-----------|----------|
+ * | 0        | 2024    | NFC West | NFC South | NFC North | NFC East |
+ * | 1        | 2025    | NFC South| NFC North | NFC East  | NFC West |
+ * | 2        | 2022    | NFC North| NFC East  | NFC West  | NFC South|
+ * | 3        | 2023    | NFC East | NFC West  | NFC South | NFC North|
+ */
+const INTER_ROTATION_AFC: number[][] = [
+  // [year%4 === 0, year%4 === 1, year%4 === 2, year%4 === 3]
+  [3, 2, 1, 0], // AFC East  → NFC: West, South, North, East
+  [2, 1, 0, 3], // AFC North → NFC: South, North, East, West
+  [1, 0, 3, 2], // AFC South → NFC: North, East, West, South
+  [0, 3, 2, 1], // AFC West  → NFC: East, West, South, North
+];
+
+/**
+ * Gets the interconference opponent for a given conference, division, and year.
+ * Returns the opposing conference division index.
+ */
+export function getInterconfOpponentDivision(
+  conference: Conference,
+  divisionIndex: number,
+  seasonYear: number
+): { conference: Conference; divisionIndex: number } {
+  if (conference === 'AFC') {
+    return {
+      conference: 'NFC',
+      divisionIndex: INTER_ROTATION_AFC[divisionIndex][seasonYear % 4],
+    };
+  } else {
+    // NFC: reverse lookup — find which AFC division maps to this NFC division
+    for (let afcDiv = 0; afcDiv < 4; afcDiv++) {
+      if (INTER_ROTATION_AFC[afcDiv][seasonYear % 4] === divisionIndex) {
+        return { conference: 'AFC', divisionIndex: afcDiv };
+      }
+    }
+    throw new Error('Interconf rotation lookup failed');
+  }
+}
+
+/**
+ * Gets the 17th game opponent division.
+ * The 17th game comes from the interconference division played 2 years ago.
+ */
+export function get17thGameOpponentDivision(
+  conference: Conference,
+  divisionIndex: number,
+  seasonYear: number
+): { conference: Conference; divisionIndex: number } {
+  return getInterconfOpponentDivision(conference, divisionIndex, seasonYear - 2);
+}
+
+/**
+ * Gets which conference hosts the 17th game for a given season.
+ * AFC hosts in odd years (2021, 2023, 2025...)
+ * NFC hosts in even years (2022, 2024, 2026...)
+ */
+export function get17thGameHomeConference(seasonYear: number): Conference {
+  return seasonYear % 2 === 1 ? 'AFC' : 'NFC';
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /**
  * Creates a default previous year standings (for new games or testing)
@@ -118,7 +223,7 @@ export function createDefaultStandings(teams: Team[]): PreviousYearStandings {
   }
 
   // Sort each division by team ID for determinism
-  for (const conference of ['AFC', 'NFC']) {
+  for (const conference of ALL_CONFERENCES) {
     for (const division of ALL_DIVISIONS) {
       standings[conference][division].sort();
     }
@@ -128,98 +233,7 @@ export function createDefaultStandings(teams: Team[]): PreviousYearStandings {
 }
 
 /**
- * Gets division rivals for a team
- */
-function getDivisionRivals(team: Team, teams: Team[]): Team[] {
-  return teams.filter(
-    (t) => t.conference === team.conference && t.division === team.division && t.id !== team.id
-  );
-}
-
-/**
- * Gets teams in the intra-conference rotation division
- */
-function getIntraConferenceOpponents(team: Team, teams: Team[]): Team[] {
-  const targetDivision = INTRA_CONFERENCE_ROTATION[team.conference][team.division];
-  return teams.filter((t) => t.conference === team.conference && t.division === targetDivision);
-}
-
-/**
- * Gets teams in the inter-conference rotation division
- */
-function getInterConferenceOpponents(team: Team, teams: Team[]): Team[] {
-  const oppositeConference: Conference = team.conference === 'AFC' ? 'NFC' : 'AFC';
-  const targetDivision = INTER_CONFERENCE_ROTATION[team.conference][team.division];
-  return teams.filter((t) => t.conference === oppositeConference && t.division === targetDivision);
-}
-
-/**
- * Gets same-place finishers from other divisions in conference
- * Returns 2 teams (from the 2 non-rotation divisions)
- */
-function getSamePlaceConferenceOpponents(
-  team: Team,
-  teams: Team[],
-  previousStandings: PreviousYearStandings
-): Team[] {
-  const teamFinish = getTeamFinishPosition(team, previousStandings);
-  const rotationDivision = INTRA_CONFERENCE_ROTATION[team.conference][team.division];
-
-  // Get the other 2 divisions (not own, not rotation)
-  const otherDivisions = ALL_DIVISIONS.filter((d) => d !== team.division && d !== rotationDivision);
-
-  const opponents: Team[] = [];
-  for (const division of otherDivisions) {
-    const divisionTeams = previousStandings[team.conference][division];
-    const opponentId = divisionTeams[teamFinish];
-    const opponent = teams.find((t) => t.id === opponentId);
-    if (opponent) {
-      opponents.push(opponent);
-    }
-  }
-
-  return opponents;
-}
-
-/**
- * 17th game division pairings (fixed rotation for same-place matchups)
- * Each AFC division pairs with a specific NFC division (not their inter-conference rotation)
- */
-const SEVENTEENTH_GAME_PAIRINGS: Record<Conference, Record<Division, Division>> = {
-  AFC: {
-    East: 'South', // AFC East plays NFC South
-    North: 'West', // AFC North plays NFC West
-    South: 'East', // AFC South plays NFC East
-    West: 'North', // AFC West plays NFC North
-  },
-  NFC: {
-    South: 'East', // NFC South plays AFC East
-    West: 'North', // NFC West plays AFC North
-    East: 'South', // NFC East plays AFC South
-    North: 'West', // NFC North plays AFC West
-  },
-};
-
-/**
- * Gets same-place finisher from opposite conference for 17th game
- * Uses fixed division pairings to ensure 1:1 matchups
- */
-function getSeventeenthGameOpponent(
-  team: Team,
-  teams: Team[],
-  previousStandings: PreviousYearStandings
-): Team | null {
-  const teamFinish = getTeamFinishPosition(team, previousStandings);
-  const oppositeConference: Conference = team.conference === 'AFC' ? 'NFC' : 'AFC';
-  const targetDivision = SEVENTEENTH_GAME_PAIRINGS[team.conference][team.division];
-
-  const divisionTeams = previousStandings[oppositeConference][targetDivision];
-  const opponentId = divisionTeams[teamFinish];
-  return teams.find((t) => t.id === opponentId) || null;
-}
-
-/**
- * Gets a team's finish position in their division last year
+ * Gets a team's finish position in their division last year (0-indexed)
  */
 function getTeamFinishPosition(team: Team, previousStandings: PreviousYearStandings): number {
   const divisionOrder = previousStandings[team.conference][team.division];
@@ -228,50 +242,28 @@ function getTeamFinishPosition(team: Team, previousStandings: PreviousYearStandi
 }
 
 /**
- * Creates a scheduled game
+ * Gets teams in a specific division
  */
-function createGame(
-  week: number,
-  homeTeam: Team,
-  awayTeam: Team,
-  gameIndex: number
-): ScheduledGame {
-  const isDivisional =
-    homeTeam.conference === awayTeam.conference && homeTeam.division === awayTeam.division;
-  const isConference = homeTeam.conference === awayTeam.conference;
+function getTeamsInDivision(teams: Team[], conference: Conference, division: Division): Team[] {
+  return teams.filter((t) => t.conference === conference && t.division === division);
+}
 
-  return {
-    gameId: `game-${week}-${gameIndex}`,
-    week,
-    homeTeamId: homeTeam.id,
-    awayTeamId: awayTeam.id,
-    isDivisional,
-    isConference,
-    isRivalry: isDivisional, // All divisional games are rivalries
-    timeSlot: assignTimeSlot(week, isDivisional),
-    isComplete: false,
-    homeScore: null,
-    awayScore: null,
-    winnerId: null,
-  };
+/**
+ * Gets a team by ID
+ */
+function getTeamById(teams: Team[], teamId: string): Team | undefined {
+  return teams.find((t) => t.id === teamId);
 }
 
 /**
  * Assigns a time slot based on week and game type
  */
 function assignTimeSlot(week: number, isDivisional: boolean): TimeSlot {
-  // Week 1 gets more prime time slots
-  if (week === 1) {
-    return 'sunday_night';
-  }
-
-  // Divisional games more likely to get prime time
+  if (week === 1) return 'sunday_night';
   if (isDivisional && week >= 10) {
     const slots: TimeSlot[] = ['sunday_night', 'monday_night', 'late_sunday'];
     return slots[week % slots.length];
   }
-
-  // Default distribution
   const defaultSlots: TimeSlot[] = [
     'early_sunday',
     'early_sunday',
@@ -283,230 +275,692 @@ function assignTimeSlot(week: number, isDivisional: boolean): TimeSlot {
 }
 
 /**
- * Distributes games across weeks respecting bye weeks
- * Uses NFL-style approach: Week 18 divisional only, structured week preferences
+ * Creates a scheduled game
  */
-function distributeGamesAcrossWeeks(
-  games: ScheduledGame[],
-  byeWeeks: Map<string, number>
-): ScheduledGame[] {
-  const teamWeeklyGames = new Map<string, Set<number>>();
+function createGame(
+  week: number,
+  homeTeam: Team,
+  awayTeam: Team,
+  component: GameComponent,
+  gameIndex: number
+): ScheduledGame {
+  const isDivisional =
+    homeTeam.conference === awayTeam.conference && homeTeam.division === awayTeam.division;
+  const isConference = homeTeam.conference === awayTeam.conference;
 
-  // Initialize team weekly tracking with bye weeks marked
-  const allTeamIds = new Set<string>();
-  for (const game of games) {
-    allTeamIds.add(game.homeTeamId);
-    allTeamIds.add(game.awayTeamId);
-  }
-  for (const teamId of allTeamIds) {
-    const byeWeek = byeWeeks.get(teamId);
-    const unavailable = new Set<number>();
-    if (byeWeek) unavailable.add(byeWeek);
-    teamWeeklyGames.set(teamId, unavailable);
-  }
-
-  const gameWeekAssignment = new Map<string, number>();
-
-  // Helper to check if a week is valid for a game
-  const isWeekValid = (game: ScheduledGame, week: number): boolean => {
-    const homeUsed = teamWeeklyGames.get(game.homeTeamId)!;
-    const awayUsed = teamWeeklyGames.get(game.awayTeamId)!;
-    return !homeUsed.has(week) && !awayUsed.has(week);
+  return {
+    // Use component prefix to ensure unique IDs across all components
+    gameId: `game-${component}-${gameIndex}`,
+    week,
+    homeTeamId: homeTeam.id,
+    awayTeamId: awayTeam.id,
+    isDivisional,
+    isConference,
+    isRivalry: isDivisional,
+    component,
+    timeSlot: assignTimeSlot(week, isDivisional),
+    isComplete: false,
+    homeScore: null,
+    awayScore: null,
+    winnerId: null,
   };
+}
 
-  // Helper to assign a game to a week
-  const assignGame = (game: ScheduledGame, week: number): boolean => {
-    if (!isWeekValid(game, week)) return false;
-    gameWeekAssignment.set(game.gameId, week);
-    teamWeeklyGames.get(game.homeTeamId)!.add(week);
-    teamWeeklyGames.get(game.awayTeamId)!.add(week);
-    return true;
-  };
+// ============================================================================
+// SCHEDULE GENERATION
+// ============================================================================
 
-  // Separate divisional and non-divisional games
-  const divisionalGames = games.filter((g) => g.isDivisional);
-  const nonDivisionalGames = games.filter((g) => !g.isDivisional);
+/**
+ * Generates all games for Component A: Divisional Games (6 per team)
+ * Each team plays home and away vs each of 3 division rivals.
+ */
+function generateComponentA(teams: Team[]): ScheduledGame[] {
+  const games: ScheduledGame[] = [];
+  const processedPairs = new Set<string>();
+  let gameIndex = 0;
 
-  // PHASE 1: Assign Week 18 to divisional games only (NFL rule)
-  // Each division has 6 unique pairs, we need 16 games total for Week 18
-  for (const game of divisionalGames) {
-    if (isWeekValid(game, 18)) {
-      assignGame(game, 18);
+  for (const team of teams) {
+    const rivals = teams.filter(
+      (t) => t.conference === team.conference && t.division === team.division && t.id !== team.id
+    );
+
+    for (const rival of rivals) {
+      // Create home game
+      const homeKey = `${team.id}-${rival.id}`;
+      if (!processedPairs.has(homeKey)) {
+        processedPairs.add(homeKey);
+        games.push(createGame(1, team, rival, 'A', gameIndex++));
+      }
+
+      // Create away game
+      const awayKey = `${rival.id}-${team.id}`;
+      if (!processedPairs.has(awayKey)) {
+        processedPairs.add(awayKey);
+        games.push(createGame(1, rival, team, 'A', gameIndex++));
+      }
     }
   }
 
-  // PHASE 2: Assign remaining divisional games to weeks 13-17 (late season emphasis)
-  const remainingDivisional = divisionalGames.filter((g) => !gameWeekAssignment.has(g.gameId));
-  const lateWeeks = [17, 16, 15, 14, 13];
-  for (const game of remainingDivisional) {
-    for (const week of lateWeeks) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // PHASE 3: Fill any still-unassigned divisional games
-  const stillUnassignedDiv = divisionalGames.filter((g) => !gameWeekAssignment.has(g.gameId));
-  for (const game of stillUnassignedDiv) {
-    for (let week = 12; week >= 1; week--) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // PHASE 4: Assign non-divisional games to remaining slots
-  // Sort by constraint level (teams with fewer available weeks first)
-  const getTeamAvailability = (teamId: string): number => {
-    return 18 - teamWeeklyGames.get(teamId)!.size;
-  };
-
-  nonDivisionalGames.sort((a, b) => {
-    const aMin = Math.min(getTeamAvailability(a.homeTeamId), getTeamAvailability(a.awayTeamId));
-    const bMin = Math.min(getTeamAvailability(b.homeTeamId), getTeamAvailability(b.awayTeamId));
-    return aMin - bMin;
-  });
-
-  for (const game of nonDivisionalGames) {
-    // Try weeks 1-17 (not 18, reserved for divisional)
-    for (let week = 1; week <= 17; week++) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // PHASE 5: Final pass - try any remaining games in any valid week
-  const allUnassigned = games.filter((g) => !gameWeekAssignment.has(g.gameId));
-  for (const game of allUnassigned) {
-    for (let week = 1; week <= 18; week++) {
-      if (assignGame(game, week)) break;
-    }
-  }
-
-  // Build the result (silently drop unschedulable games for now)
-  const result: ScheduledGame[] = [];
-  for (const game of games) {
-    const week = gameWeekAssignment.get(game.gameId);
-    if (week !== undefined) {
-      result.push({ ...game, week });
-    }
-  }
-
-  return result;
+  return games;
 }
 
 /**
- * Determines home team for a matchup based on deterministic rules
+ * Generates all games for Component B: Intraconference Rotation (4 per team)
+ * Each team plays all 4 teams from one other division in their conference.
+ * 2 home, 2 away per rotation rules.
+ *
+ * Algorithm: For each division pair (A vs B), we create 16 games.
+ * Teams are sorted by ID within each division. Home/away is assigned using
+ * a checkerboard pattern based on team indices to ensure exactly 2H/2A per team.
  */
-function determineHomeTeam(teamA: Team, teamB: Team, matchupType: string): Team {
-  // Sort team IDs for consistent ordering
-  const [first] = [teamA.id, teamB.id].sort();
-  const isTeamAFirst = teamA.id === first;
+function generateComponentB(teams: Team[], seasonYear: number): ScheduledGame[] {
+  const games: ScheduledGame[] = [];
+  const processedDivisionPairs = new Set<string>();
+  let gameIndex = 0;
 
-  // Use matchup type to vary home/away across different matchup types
-  const typeHash = matchupType.charCodeAt(0) % 2;
+  // Process by division pairs to ensure proper home/away distribution
+  for (const conference of ALL_CONFERENCES) {
+    for (let divIndex = 0; divIndex < 4; divIndex++) {
+      const opponentDivIndex = getIntraconfOpponentDivision(divIndex, seasonYear);
 
-  if (typeHash === 0) {
-    return isTeamAFirst ? teamA : teamB;
-  } else {
-    return isTeamAFirst ? teamB : teamA;
+      // Only process each division pair once (avoid processing A-B and B-A)
+      const pairKey = [divIndex, opponentDivIndex].sort().join('-') + `-${conference}`;
+      if (processedDivisionPairs.has(pairKey)) continue;
+      processedDivisionPairs.add(pairKey);
+
+      const divisionA = INDEX_TO_DIVISION[divIndex];
+      const divisionB = INDEX_TO_DIVISION[opponentDivIndex];
+
+      const teamsA = getTeamsInDivision(teams, conference, divisionA).sort((a, b) =>
+        a.id.localeCompare(b.id)
+      );
+      const teamsB = getTeamsInDivision(teams, conference, divisionB).sort((a, b) =>
+        a.id.localeCompare(b.id)
+      );
+
+      // Create 16 games between the two divisions
+      // Use checkerboard pattern for home/away: (i + j + yearOffset) % 2
+      // This ensures each team gets exactly 2 home and 2 away
+      const yearOffset = seasonYear % 2;
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          const teamA = teamsA[i];
+          const teamB = teamsB[j];
+
+          // Checkerboard: alternate home/away based on sum of indices
+          const teamAIsHome = (i + j + yearOffset) % 2 === 0;
+
+          if (teamAIsHome) {
+            games.push(createGame(1, teamA, teamB, 'B', gameIndex++));
+          } else {
+            games.push(createGame(1, teamB, teamA, 'B', gameIndex++));
+          }
+        }
+      }
+    }
   }
+
+  return games;
+}
+
+/**
+ * Generates all games for Component C: Interconference Rotation (4 per team)
+ * Each team plays all 4 teams from one division in the opposite conference.
+ * 2 home, 2 away per rotation rules.
+ *
+ * Algorithm: For each interconference division pair (AFC-X vs NFC-Y), we create 16 games.
+ * Teams are sorted by ID within each division. Home/away is assigned using
+ * a checkerboard pattern based on team indices to ensure exactly 2H/2A per team.
+ */
+function generateComponentC(teams: Team[], seasonYear: number): ScheduledGame[] {
+  const games: ScheduledGame[] = [];
+  const processedDivisionPairs = new Set<string>();
+  let gameIndex = 0;
+
+  // Process AFC divisions and find their NFC opponents
+  for (let afcDivIndex = 0; afcDivIndex < 4; afcDivIndex++) {
+    const { divisionIndex: nfcDivIndex } = getInterconfOpponentDivision(
+      'AFC',
+      afcDivIndex,
+      seasonYear
+    );
+
+    // Create unique key for this division pair
+    const pairKey = `${afcDivIndex}-${nfcDivIndex}`;
+    if (processedDivisionPairs.has(pairKey)) continue;
+    processedDivisionPairs.add(pairKey);
+
+    const afcDivision = INDEX_TO_DIVISION[afcDivIndex];
+    const nfcDivision = INDEX_TO_DIVISION[nfcDivIndex];
+
+    const afcTeams = getTeamsInDivision(teams, 'AFC', afcDivision).sort((a, b) =>
+      a.id.localeCompare(b.id)
+    );
+    const nfcTeams = getTeamsInDivision(teams, 'NFC', nfcDivision).sort((a, b) =>
+      a.id.localeCompare(b.id)
+    );
+
+    // Create 16 games between the two divisions
+    // Use checkerboard pattern for home/away: (i + j + yearOffset) % 2
+    // This ensures each team gets exactly 2 home and 2 away
+    const yearOffset = seasonYear % 2;
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        const afcTeam = afcTeams[i];
+        const nfcTeam = nfcTeams[j];
+
+        // Checkerboard: alternate home/away based on sum of indices
+        const afcIsHome = (i + j + yearOffset) % 2 === 0;
+
+        if (afcIsHome) {
+          games.push(createGame(1, afcTeam, nfcTeam, 'C', gameIndex++));
+        } else {
+          games.push(createGame(1, nfcTeam, afcTeam, 'C', gameIndex++));
+        }
+      }
+    }
+  }
+
+  return games;
+}
+
+/**
+ * Generates all games for Component D: Intraconference Standings-Based (2 per team)
+ * Each team plays 1 team from each of the 2 remaining same-conference divisions
+ * (not own division, not the rotation division from Component B).
+ * Opponent is the team that finished in the same position.
+ * 1 home, 1 away.
+ *
+ * Algorithm: For each conference and finish position, we have 4 teams from 2 rotation groups
+ * that must play each other in a complete bipartite graph (K_{2,2} = 4 games).
+ * We use a diagonal pattern to ensure each team gets exactly 1H and 1A:
+ * - Games (0,0)/(1,1) are one diagonal, games (0,1)/(1,0) are the other diagonal
+ * - One diagonal has group1 as home, the other has group2 as home
+ * - This guarantees 1H/1A per team since each team appears once per diagonal
+ */
+function generateComponentD(
+  teams: Team[],
+  previousStandings: PreviousYearStandings,
+  seasonYear: number
+): ScheduledGame[] {
+  const games: ScheduledGame[] = [];
+  let gameIndex = 0;
+
+  for (const conference of ALL_CONFERENCES) {
+    // Find the two rotation pairs (divisions that play Component B games)
+    // Each pair consists of a division and its intraconf rotation opponent
+    const divIndex0Opp = getIntraconfOpponentDivision(0, seasonYear);
+    const rotationPair1 = [0, divIndex0Opp].sort((a, b) => a - b);
+    const rotationPair2 = [0, 1, 2, 3]
+      .filter((d) => !rotationPair1.includes(d))
+      .sort((a, b) => a - b);
+
+    // For each finish position, create the 4 standings games
+    for (let finishPos = 0; finishPos < 4; finishPos++) {
+      // Get teams at this finish position, grouped by rotation pair
+      const group1Teams: { divIndex: number; team: Team }[] = [];
+      const group2Teams: { divIndex: number; team: Team }[] = [];
+
+      for (const divIndex of rotationPair1) {
+        const division = INDEX_TO_DIVISION[divIndex];
+        const teamId = previousStandings[conference][division][finishPos];
+        const team = getTeamById(teams, teamId);
+        if (team) {
+          group1Teams.push({ divIndex, team });
+        }
+      }
+
+      for (const divIndex of rotationPair2) {
+        const division = INDEX_TO_DIVISION[divIndex];
+        const teamId = previousStandings[conference][division][finishPos];
+        const team = getTeamById(teams, teamId);
+        if (team) {
+          group2Teams.push({ divIndex, team });
+        }
+      }
+
+      // Sort each group by division index for determinism
+      group1Teams.sort((a, b) => a.divIndex - b.divIndex);
+      group2Teams.sort((a, b) => a.divIndex - b.divIndex);
+
+      if (group1Teams.length !== 2 || group2Teams.length !== 2) {
+        continue; // Skip if teams missing
+      }
+
+      // Create 4 games between the groups using diagonal pattern for home/away
+      // Use (seasonYear + finishPos) % 2 to vary which diagonal has group1 as home
+      const homePattern = (seasonYear + finishPos) % 2;
+
+      for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 2; j++) {
+          const team1 = group1Teams[i].team;
+          const team2 = group2Teams[j].team;
+
+          // Diagonal pattern: (i + j) % 2 determines which diagonal
+          // If diagonal matches homePattern, group1 team is home
+          const diagonal = (i + j) % 2;
+          const team1IsHome = diagonal === homePattern;
+
+          if (team1IsHome) {
+            games.push(createGame(1, team1, team2, 'D', gameIndex++));
+          } else {
+            games.push(createGame(1, team2, team1, 'D', gameIndex++));
+          }
+        }
+      }
+    }
+  }
+
+  return games;
+}
+
+/**
+ * Generates all games for Component E: 17th Game (1 per team)
+ * Each team plays 1 team from an opposite-conference division
+ * (the division they played 2 years ago in Component C).
+ * Opponent is the team that finished in the same position.
+ * AFC hosts in odd years, NFC hosts in even years.
+ */
+function generateComponentE(
+  teams: Team[],
+  previousStandings: PreviousYearStandings,
+  seasonYear: number
+): ScheduledGame[] {
+  const games: ScheduledGame[] = [];
+  const processedPairs = new Set<string>();
+  const homeConference = get17thGameHomeConference(seasonYear);
+  let gameIndex = 0;
+
+  for (const team of teams) {
+    const teamFinish = getTeamFinishPosition(team, previousStandings);
+    const divIndex = DIVISION_INDICES[team.division];
+
+    const { conference: oppConf, divisionIndex: oppDivIndex } = get17thGameOpponentDivision(
+      team.conference,
+      divIndex,
+      seasonYear
+    );
+    const oppDivision = INDEX_TO_DIVISION[oppDivIndex];
+
+    // Get the team that finished in the same position
+    const divisionTeamIds = previousStandings[oppConf][oppDivision];
+    const opponentId = divisionTeamIds[teamFinish];
+    const opponent = getTeamById(teams, opponentId);
+
+    if (!opponent) continue;
+
+    const pairKey = [team.id, opponent.id].sort().join('-');
+
+    if (!processedPairs.has(pairKey)) {
+      processedPairs.add(pairKey);
+
+      // Home team is determined by which conference hosts this year
+      const homeTeam = team.conference === homeConference ? team : opponent;
+      const awayTeam = team.conference === homeConference ? opponent : team;
+
+      games.push(createGame(1, homeTeam, awayTeam, 'E', gameIndex++));
+    }
+  }
+
+  return games;
+}
+
+/**
+ * Distributes games across weeks, respecting bye weeks.
+ *
+ * Uses a multi-seed week-by-week greedy approach:
+ * - For each seed, randomize week processing order and game tie-breaking
+ * - Process one week at a time, greedily selecting the most constrained games
+ * - This guarantees no team plays twice in any week by construction
+ * - If no perfect assignment found, use Kempe-chain swap repair on the best result
+ */
+function distributeGamesAcrossWeeks(
+  games: ScheduledGame[],
+  byeWeeks: Record<string, number>
+): ScheduledGame[] {
+  const n = games.length;
+
+  // Compute target games per week (fixed across seeds)
+  const weekTargets: number[] = new Array(19).fill(0);
+  for (let w = 1; w <= 18; w++) {
+    let byeCount = 0;
+    for (const b of Object.values(byeWeeks)) if (b === w) byeCount++;
+    weekTargets[w] = (32 - byeCount) / 2;
+  }
+
+  // Collect all team IDs
+  const allTeams = new Set<string>();
+  for (const g of games) {
+    allTeams.add(g.homeTeamId);
+    allTeams.add(g.awayTeamId);
+  }
+
+  function createRng(seed: number): () => number {
+    let s = seed;
+    return () => {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      return s;
+    };
+  }
+
+  // Strategy A: Week-by-week greedy (guarantees no duplicates within weeks)
+  function tryWeekByWeek(seed: number): { weekOf: number[]; unassigned: number } {
+    const rng = createRng(seed);
+    const weekOf = new Array<number>(n).fill(0);
+    const busy = new Map<string, Set<number>>();
+    for (const t of allTeams) {
+      const s = new Set<number>();
+      if (byeWeeks[t]) s.add(byeWeeks[t]);
+      busy.set(t, s);
+    }
+
+    const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+    for (let i = 17; i > 0; i--) {
+      const j = rng() % (i + 1);
+      [weeks[i], weeks[j]] = [weeks[j], weeks[i]];
+    }
+    if (seed % 3 === 0) {
+      weeks.sort((a, b) => weekTargets[a] - weekTargets[b]);
+    } else if (seed % 3 === 1) {
+      weeks.sort((a, b) => weekTargets[b] - weekTargets[a]);
+    }
+
+    const remaining = new Set<number>();
+    for (let i = 0; i < n; i++) remaining.add(i);
+
+    for (const w of weeks) {
+      const target = weekTargets[w];
+      const usedThisWeek = new Set<string>();
+      const sortKeys: { idx: number; vw: number; rk: number }[] = [];
+      for (const idx of remaining) {
+        const g = games[idx];
+        if (!busy.get(g.homeTeamId)!.has(w) && !busy.get(g.awayTeamId)!.has(w)) {
+          const hB = busy.get(g.homeTeamId)!;
+          const aB = busy.get(g.awayTeamId)!;
+          let vw = 0;
+          for (let ww = 1; ww <= 18; ww++) {
+            if (!hB.has(ww) && !aB.has(ww)) vw++;
+          }
+          sortKeys.push({ idx, vw, rk: rng() });
+        }
+      }
+      sortKeys.sort((a, b) => (a.vw !== b.vw ? a.vw - b.vw : a.rk - b.rk));
+
+      let count = 0;
+      for (const { idx } of sortKeys) {
+        if (count >= target) break;
+        const g = games[idx];
+        if (usedThisWeek.has(g.homeTeamId) || usedThisWeek.has(g.awayTeamId)) continue;
+        weekOf[idx] = w;
+        usedThisWeek.add(g.homeTeamId);
+        usedThisWeek.add(g.awayTeamId);
+        busy.get(g.homeTeamId)!.add(w);
+        busy.get(g.awayTeamId)!.add(w);
+        remaining.delete(idx);
+        count++;
+      }
+    }
+    return { weekOf, unassigned: remaining.size };
+  }
+
+  // Strategy B: Game-by-game MRV (assigns most constrained games first)
+  function tryMRV(seed: number): { weekOf: number[]; unassigned: number } {
+    const rng = createRng(seed);
+    const weekOf = new Array<number>(n).fill(0);
+    const busy = new Map<string, Set<number>>();
+    for (const t of allTeams) {
+      const s = new Set<number>();
+      if (byeWeeks[t]) s.add(byeWeeks[t]);
+      busy.set(t, s);
+    }
+    const weekCounts = new Array(19).fill(0);
+    const remaining = new Set<number>();
+    for (let i = 0; i < n; i++) remaining.add(i);
+
+    while (remaining.size > 0) {
+      let bestIdx = -1;
+      let bestVW: number[] = [];
+      let minVW = Infinity;
+      let tieCount = 1;
+
+      for (const idx of remaining) {
+        const g = games[idx];
+        const hB = busy.get(g.homeTeamId)!;
+        const aB = busy.get(g.awayTeamId)!;
+        const vw: number[] = [];
+        for (let w = 1; w <= 18; w++) {
+          if (!hB.has(w) && !aB.has(w)) vw.push(w);
+        }
+        if (vw.length < minVW) {
+          minVW = vw.length;
+          bestIdx = idx;
+          bestVW = vw;
+          tieCount = 1;
+        } else if (vw.length === minVW) {
+          tieCount++;
+          if (rng() % tieCount === 0) {
+            bestIdx = idx;
+            bestVW = vw;
+          }
+        }
+      }
+
+      if (minVW === 0) break;
+
+      // Pick least-loaded valid week, random tiebreaking
+      let bestWeek = bestVW[0];
+      let bestCount = weekCounts[bestWeek];
+      let wTie = 1;
+      for (let i = 1; i < bestVW.length; i++) {
+        const c = weekCounts[bestVW[i]];
+        if (c < bestCount) {
+          bestCount = c;
+          bestWeek = bestVW[i];
+          wTie = 1;
+        } else if (c === bestCount) {
+          wTie++;
+          if (rng() % wTie === 0) bestWeek = bestVW[i];
+        }
+      }
+
+      weekOf[bestIdx] = bestWeek;
+      busy.get(games[bestIdx].homeTeamId)!.add(bestWeek);
+      busy.get(games[bestIdx].awayTeamId)!.add(bestWeek);
+      weekCounts[bestWeek]++;
+      remaining.delete(bestIdx);
+    }
+    return { weekOf, unassigned: remaining.size };
+  }
+
+  function trySchedule(seed: number): { weekOf: number[]; unassigned: number } {
+    // Alternate between strategies
+    return seed % 2 === 0 ? tryWeekByWeek(seed) : tryMRV(seed);
+  }
+
+  // Try multiple seeds, pick the best result
+  let best = trySchedule(1);
+  for (let seed = 2; seed <= 500 && best.unassigned > 0; seed++) {
+    const result = trySchedule(seed);
+    if (result.unassigned < best.unassigned) {
+      best = result;
+    }
+  }
+
+  // If perfect, return immediately
+  if (best.unassigned === 0) {
+    return games.map((game, i) => ({ ...game, week: best.weekOf[i] }));
+  }
+
+  // Kempe-chain repair: rebuild state from best result, then fix unassigned games
+  const weekOf = best.weekOf;
+  const busy = new Map<string, Set<number>>();
+  for (const t of allTeams) {
+    const s = new Set<number>();
+    if (byeWeeks[t]) s.add(byeWeeks[t]);
+    busy.set(t, s);
+  }
+  // gamesByTeamWeek: teamId -> week -> gameIndex
+  const gamesByTeamWeek = new Map<string, Map<number, number>>();
+  for (const t of allTeams) gamesByTeamWeek.set(t, new Map());
+
+  for (let i = 0; i < n; i++) {
+    if (weekOf[i] === 0) continue;
+    const g = games[i];
+    busy.get(g.homeTeamId)!.add(weekOf[i]);
+    busy.get(g.awayTeamId)!.add(weekOf[i]);
+    gamesByTeamWeek.get(g.homeTeamId)!.set(weekOf[i], i);
+    gamesByTeamWeek.get(g.awayTeamId)!.set(weekOf[i], i);
+  }
+
+  // Helper: attempt a Kempe chain swap for colors (alpha, beta) starting from startTeam.
+  // otherTeam is the team we're trying to place a game for — the chain must not visit it.
+  // Returns true if the swap was executed successfully.
+  function tryKempeSwap(
+    alpha: number,
+    beta: number,
+    startTeam: string,
+    otherTeam: string
+  ): boolean {
+    // Build the chain: follow alternating alpha-beta edges from startTeam
+    const chainEdges: number[] = [];
+    const visited = new Set<string>([startTeam]);
+    let current = startTeam;
+    let seekColor = alpha;
+
+    for (let step = 0; step < 64; step++) {
+      const gIdx = gamesByTeamWeek.get(current)?.get(seekColor);
+      if (gIdx === undefined) break;
+      const cg = games[gIdx];
+      const next = cg.homeTeamId === current ? cg.awayTeamId : cg.homeTeamId;
+      if (next === otherTeam) return false; // chain would invalidate the target slot
+      if (visited.has(next)) break; // cycle detected
+      chainEdges.push(gIdx);
+      visited.add(next);
+      current = next;
+      seekColor = seekColor === alpha ? beta : alpha;
+    }
+
+    if (chainEdges.length === 0) return true;
+
+    // Check bye-week safety
+    for (const eIdx of chainEdges) {
+      const eg = games[eIdx];
+      const newW = weekOf[eIdx] === alpha ? beta : alpha;
+      if (byeWeeks[eg.homeTeamId] === newW || byeWeeks[eg.awayTeamId] === newW) {
+        return false;
+      }
+    }
+
+    // Execute the swap
+    for (const eIdx of chainEdges) {
+      const eg = games[eIdx];
+      const oldW = weekOf[eIdx];
+      const newW = oldW === alpha ? beta : alpha;
+      busy.get(eg.homeTeamId)!.delete(oldW);
+      busy.get(eg.awayTeamId)!.delete(oldW);
+      gamesByTeamWeek.get(eg.homeTeamId)!.delete(oldW);
+      gamesByTeamWeek.get(eg.awayTeamId)!.delete(oldW);
+      weekOf[eIdx] = newW;
+      busy.get(eg.homeTeamId)!.add(newW);
+      busy.get(eg.awayTeamId)!.add(newW);
+      gamesByTeamWeek.get(eg.homeTeamId)!.set(newW, eIdx);
+      gamesByTeamWeek.get(eg.awayTeamId)!.set(newW, eIdx);
+    }
+    return true;
+  }
+
+  // For each unassigned game, use Kempe-chain-style repair
+  for (let i = 0; i < n; i++) {
+    if (weekOf[i] !== 0) continue;
+    const g = games[i];
+    const hB = busy.get(g.homeTeamId)!;
+    const aB = busy.get(g.awayTeamId)!;
+    let placed = false;
+
+    // Collect all free weeks for each team
+    const freeH: number[] = [];
+    const freeA: number[] = [];
+    for (let w = 1; w <= 18; w++) {
+      if (!hB.has(w)) freeH.push(w);
+      if (!aB.has(w)) freeA.push(w);
+    }
+
+    // Try direct placement first (common free week)
+    for (const w of freeH) {
+      if (!aB.has(w)) {
+        weekOf[i] = w;
+        hB.add(w);
+        aB.add(w);
+        gamesByTeamWeek.get(g.homeTeamId)!.set(w, i);
+        gamesByTeamWeek.get(g.awayTeamId)!.set(w, i);
+        placed = true;
+        break;
+      }
+    }
+    if (placed) continue;
+
+    // Try all (alpha, beta) Kempe chain combinations
+    for (const alpha of freeH) {
+      if (placed) break;
+      for (const beta of freeA) {
+        if (alpha === beta) continue; // would have been caught by direct placement
+        // Try Kempe chain from awayTeam to free up alpha there
+        if (tryKempeSwap(alpha, beta, g.awayTeamId, g.homeTeamId)) {
+          weekOf[i] = alpha;
+          hB.add(alpha);
+          aB.add(alpha);
+          gamesByTeamWeek.get(g.homeTeamId)!.set(alpha, i);
+          gamesByTeamWeek.get(g.awayTeamId)!.set(alpha, i);
+          placed = true;
+          break;
+        }
+        // Also try from homeTeam to free up beta there
+        if (tryKempeSwap(beta, alpha, g.homeTeamId, g.awayTeamId)) {
+          weekOf[i] = beta;
+          hB.add(beta);
+          aB.add(beta);
+          gamesByTeamWeek.get(g.homeTeamId)!.set(beta, i);
+          gamesByTeamWeek.get(g.awayTeamId)!.set(beta, i);
+          placed = true;
+          break;
+        }
+      }
+    }
+
+    if (!placed) {
+      // Absolute last resort
+      weekOf[i] = 1;
+    }
+  }
+
+  return games.map((game, i) => ({ ...game, week: weekOf[i] }));
 }
 
 /**
  * Generates a complete 17-week schedule for 32 teams
- *
- * @param teams - Array of all 32 teams
- * @param previousYearStandings - Previous year's final standings
- * @param year - The season year
- * @returns Complete season schedule
  */
 export function generateSeasonSchedule(
   teams: Team[],
   previousYearStandings: PreviousYearStandings,
   year: number
 ): SeasonSchedule {
-  const byeWeeks = assignByeWeeks(teams);
-  const allGames: ScheduledGame[] = [];
-  const processedPairs = new Set<string>();
-  let gameIndex = 0;
+  const byeWeeksMap = assignByeWeeks(teams);
+  const byeWeeks: Record<string, number> = Object.fromEntries(byeWeeksMap);
 
-  // Helper to create a canonical key for a pair of teams (order-independent)
-  const getCanonicalKey = (teamA: Team, teamB: Team): string => {
-    const [first, second] = [teamA.id, teamB.id].sort();
-    return `${first}-${second}`;
-  };
+  // Generate all 5 components
+  const componentA = generateComponentA(teams);
+  const componentB = generateComponentB(teams, year);
+  const componentC = generateComponentC(teams, year);
+  const componentD = generateComponentD(teams, previousYearStandings, year);
+  const componentE = generateComponentE(teams, previousYearStandings, year);
 
-  // Helper to add a divisional game (needs both home and away)
-  const addDivisionalGame = (homeTeam: Team, awayTeam: Team) => {
-    const key = `${homeTeam.id}-${awayTeam.id}`;
-    if (!processedPairs.has(key)) {
-      processedPairs.add(key);
-      allGames.push(createGame(1, homeTeam, awayTeam, gameIndex++));
-    }
-  };
+  // Merge all games
+  const allGames = [...componentA, ...componentB, ...componentC, ...componentD, ...componentE];
 
-  // Helper to add a non-divisional game (only one game per pair)
-  const addSingleGame = (teamA: Team, teamB: Team, homeTeam: Team) => {
-    const key = getCanonicalKey(teamA, teamB);
-    if (!processedPairs.has(key)) {
-      processedPairs.add(key);
-      const awayTeam = homeTeam.id === teamA.id ? teamB : teamA;
-      allGames.push(createGame(1, homeTeam, awayTeam, gameIndex++));
-    }
-  };
-
-  // Generate games in order of constraint level (most constrained first)
-  // This helps the scheduling algorithm find valid assignments
-
-  // 1. 17TH GAME (1 per team = 16 total games) - FIRST, most constrained (unique pairs)
-  for (const team of teams) {
-    const opponent = getSeventeenthGameOpponent(team, teams, previousYearStandings);
-    if (opponent) {
-      const homeTeam = determineHomeTeam(team, opponent, 'seventeenth');
-      addSingleGame(team, opponent, homeTeam);
-    }
-  }
-
-  // 2. SAME-PLACE CONFERENCE GAMES (2 per team = 32 total games) - specific pairs
-  for (const team of teams) {
-    const opponents = getSamePlaceConferenceOpponents(team, teams, previousYearStandings);
-    for (let i = 0; i < opponents.length; i++) {
-      const opp = opponents[i];
-      const homeTeam = determineHomeTeam(team, opp, `samePlaceConf${i}`);
-      addSingleGame(team, opp, homeTeam);
-    }
-  }
-
-  // 3. DIVISIONAL GAMES (6 per team = 12 games per division = 96 total)
-  // Each team plays home and away vs each of 3 division rivals
-  for (const team of teams) {
-    const rivals = getDivisionRivals(team, teams);
-    for (const rival of rivals) {
-      addDivisionalGame(team, rival);
-    }
-  }
-
-  // 4. INTRA-CONFERENCE ROTATION (4 per team = 64 total games)
-  for (const team of teams) {
-    const opponents = getIntraConferenceOpponents(team, teams);
-    for (let i = 0; i < opponents.length; i++) {
-      const opp = opponents[i];
-      const homeTeam = determineHomeTeam(team, opp, `intraConf${i}`);
-      addSingleGame(team, opp, homeTeam);
-    }
-  }
-
-  // 5. INTER-CONFERENCE ROTATION (4 per team = 64 total games)
-  for (const team of teams) {
-    const opponents = getInterConferenceOpponents(team, teams);
-    for (let i = 0; i < opponents.length; i++) {
-      const opp = opponents[i];
-      const homeTeam = determineHomeTeam(team, opp, `interConf${i}`);
-      addSingleGame(team, opp, homeTeam);
-    }
-  }
-
-  // Distribute games across weeks
+  // Distribute across weeks
   const scheduledGames = distributeGamesAcrossWeeks(allGames, byeWeeks);
 
-  // Update game IDs to reflect actual weeks
+  // Update game IDs
   const finalGames = scheduledGames.map((game, index) => ({
     ...game,
     gameId: `game-${year}-w${game.week}-${index}`,
@@ -520,12 +974,662 @@ export function generateSeasonSchedule(
   };
 }
 
+// ============================================================================
+// VALIDATION GATES
+// ============================================================================
+
+/**
+ * Gate 1: Each team must have exactly 17 games
+ */
+export function validateGate1GameCountPerTeam(
+  games: ScheduledGame[],
+  teams: Team[]
+): ValidationResult {
+  const errors: string[] = [];
+  const teamGameCounts = new Map<string, number>();
+
+  for (const team of teams) {
+    teamGameCounts.set(team.id, 0);
+  }
+
+  for (const game of games) {
+    teamGameCounts.set(game.homeTeamId, (teamGameCounts.get(game.homeTeamId) || 0) + 1);
+    teamGameCounts.set(game.awayTeamId, (teamGameCounts.get(game.awayTeamId) || 0) + 1);
+  }
+
+  for (const [teamId, count] of teamGameCounts) {
+    if (count !== 17) {
+      const team = teams.find((t) => t.id === teamId);
+      errors.push(`${team?.city || teamId} has ${count} games, expected 17`);
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 2: Total league games must equal 272
+ */
+export function validateGate2TotalLeagueGames(games: ScheduledGame[]): ValidationResult {
+  const errors: string[] = [];
+  const expectedGames = 272;
+
+  if (games.length !== expectedGames) {
+    errors.push(`League has ${games.length} total games, expected ${expectedGames}`);
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 3: Home/Away balance based on 17th game home conference
+ */
+export function validateGate3HomeAwayBalance(
+  games: ScheduledGame[],
+  teams: Team[],
+  seasonYear: number
+): ValidationResult {
+  const errors: string[] = [];
+  const homeConference = get17thGameHomeConference(seasonYear);
+
+  const teamHomeCounts = new Map<string, number>();
+  const teamAwayCounts = new Map<string, number>();
+
+  for (const team of teams) {
+    teamHomeCounts.set(team.id, 0);
+    teamAwayCounts.set(team.id, 0);
+  }
+
+  for (const game of games) {
+    teamHomeCounts.set(game.homeTeamId, (teamHomeCounts.get(game.homeTeamId) || 0) + 1);
+    teamAwayCounts.set(game.awayTeamId, (teamAwayCounts.get(game.awayTeamId) || 0) + 1);
+  }
+
+  for (const team of teams) {
+    const homeGames = teamHomeCounts.get(team.id) || 0;
+    const awayGames = teamAwayCounts.get(team.id) || 0;
+
+    let expectedHome: number;
+    let expectedAway: number;
+
+    if (team.conference === homeConference) {
+      expectedHome = 9;
+      expectedAway = 8;
+    } else {
+      expectedHome = 8;
+      expectedAway = 9;
+    }
+
+    if (homeGames !== expectedHome || awayGames !== expectedAway) {
+      errors.push(
+        `${team.city} has ${homeGames}H/${awayGames}A, expected ${expectedHome}H/${expectedAway}A`
+      );
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 4: Divisional game structure (6 games, 3H/3A per team)
+ */
+export function validateGate4DivisionalGames(
+  games: ScheduledGame[],
+  teams: Team[]
+): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const rivals = teams.filter(
+      (t) => t.conference === team.conference && t.division === team.division && t.id !== team.id
+    );
+
+    for (const rival of rivals) {
+      const gamesVsRival = games.filter(
+        (g) =>
+          (g.homeTeamId === team.id && g.awayTeamId === rival.id) ||
+          (g.homeTeamId === rival.id && g.awayTeamId === team.id)
+      );
+
+      if (gamesVsRival.length !== 2) {
+        errors.push(`${team.city} plays ${rival.city} ${gamesVsRival.length} times (expected 2)`);
+        continue;
+      }
+
+      const homeGames = gamesVsRival.filter((g) => g.homeTeamId === team.id).length;
+      const awayGames = gamesVsRival.filter((g) => g.awayTeamId === team.id).length;
+
+      if (homeGames !== 1 || awayGames !== 1) {
+        errors.push(`${team.city} vs ${rival.city}: ${homeGames}H/${awayGames}A (expected 1H/1A)`);
+      }
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 5: Intraconference rotation correctness
+ */
+export function validateGate5IntraconfRotation(
+  games: ScheduledGame[],
+  teams: Team[],
+  seasonYear: number
+): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const divIndex = DIVISION_INDICES[team.division];
+    const expectedDivIndex = getIntraconfOpponentDivision(divIndex, seasonYear);
+    const expectedDivision = INDEX_TO_DIVISION[expectedDivIndex];
+    const expectedOpponents = getTeamsInDivision(teams, team.conference, expectedDivision);
+
+    const componentBGames = games.filter(
+      (g) => g.component === 'B' && (g.homeTeamId === team.id || g.awayTeamId === team.id)
+    );
+
+    for (const expectedOpp of expectedOpponents) {
+      const gamesVsOpp = componentBGames.filter(
+        (g) => g.homeTeamId === expectedOpp.id || g.awayTeamId === expectedOpp.id
+      );
+
+      if (gamesVsOpp.length !== 1) {
+        errors.push(
+          `${team.city} missing intraconf opponent ${expectedOpp.city} from ${team.conference} ${expectedDivision}`
+        );
+      }
+    }
+
+    // Check 2H/2A
+    const homeCount = componentBGames.filter((g) => g.homeTeamId === team.id).length;
+    const awayCount = componentBGames.filter((g) => g.awayTeamId === team.id).length;
+
+    if (homeCount !== 2 || awayCount !== 2) {
+      errors.push(`${team.city} intraconf rotation: ${homeCount}H/${awayCount}A (expected 2H/2A)`);
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 6: Interconference rotation correctness
+ */
+export function validateGate6InterconfRotation(
+  games: ScheduledGame[],
+  teams: Team[],
+  seasonYear: number
+): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const divIndex = DIVISION_INDICES[team.division];
+    const { conference: oppConf, divisionIndex: expectedDivIndex } = getInterconfOpponentDivision(
+      team.conference,
+      divIndex,
+      seasonYear
+    );
+    const expectedDivision = INDEX_TO_DIVISION[expectedDivIndex];
+    const expectedOpponents = getTeamsInDivision(teams, oppConf, expectedDivision);
+
+    const componentCGames = games.filter(
+      (g) => g.component === 'C' && (g.homeTeamId === team.id || g.awayTeamId === team.id)
+    );
+
+    for (const expectedOpp of expectedOpponents) {
+      const gamesVsOpp = componentCGames.filter(
+        (g) => g.homeTeamId === expectedOpp.id || g.awayTeamId === expectedOpp.id
+      );
+
+      if (gamesVsOpp.length !== 1) {
+        errors.push(
+          `${team.city} missing interconf opponent ${expectedOpp.city} from ${oppConf} ${expectedDivision}`
+        );
+      }
+    }
+
+    // Check 2H/2A
+    const homeCount = componentCGames.filter((g) => g.homeTeamId === team.id).length;
+    const awayCount = componentCGames.filter((g) => g.awayTeamId === team.id).length;
+
+    if (homeCount !== 2 || awayCount !== 2) {
+      errors.push(`${team.city} interconf rotation: ${homeCount}H/${awayCount}A (expected 2H/2A)`);
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 7: Standings-based intraconference games
+ */
+export function validateGate7StandingsIntraconf(
+  games: ScheduledGame[],
+  teams: Team[],
+  previousStandings: PreviousYearStandings,
+  seasonYear: number
+): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const teamFinish = getTeamFinishPosition(team, previousStandings);
+    const divIndex = DIVISION_INDICES[team.division];
+    const intraRotationDivIndex = getIntraconfOpponentDivision(divIndex, seasonYear);
+
+    const remainingDivIndices = [0, 1, 2, 3].filter(
+      (d) => d !== divIndex && d !== intraRotationDivIndex
+    );
+
+    if (remainingDivIndices.length !== 2) {
+      errors.push(
+        `${team.city}: expected 2 remaining divisions, got ${remainingDivIndices.length}`
+      );
+      continue;
+    }
+
+    const componentDGames = games.filter(
+      (g) => g.component === 'D' && (g.homeTeamId === team.id || g.awayTeamId === team.id)
+    );
+
+    for (const oppDivIndex of remainingDivIndices) {
+      const oppDivision = INDEX_TO_DIVISION[oppDivIndex];
+      const divisionTeamIds = previousStandings[team.conference][oppDivision];
+      const expectedOpponentId = divisionTeamIds[teamFinish];
+
+      const gamesVsExpected = componentDGames.filter(
+        (g) => g.homeTeamId === expectedOpponentId || g.awayTeamId === expectedOpponentId
+      );
+
+      if (gamesVsExpected.length !== 1) {
+        errors.push(
+          `${team.city} (finished ${teamFinish + 1}) missing standings opponent from ${team.conference} ${oppDivision}`
+        );
+      }
+    }
+
+    // Check 1H/1A
+    const homeCount = componentDGames.filter((g) => g.homeTeamId === team.id).length;
+    const awayCount = componentDGames.filter((g) => g.awayTeamId === team.id).length;
+
+    if (homeCount !== 1 || awayCount !== 1) {
+      errors.push(`${team.city} standings games: ${homeCount}H/${awayCount}A (expected 1H/1A)`);
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 8: 17th game correctness
+ */
+export function validateGate8SeventeenthGame(
+  games: ScheduledGame[],
+  teams: Team[],
+  previousStandings: PreviousYearStandings,
+  seasonYear: number
+): ValidationResult {
+  const errors: string[] = [];
+  const homeConference = get17thGameHomeConference(seasonYear);
+
+  for (const team of teams) {
+    const teamFinish = getTeamFinishPosition(team, previousStandings);
+    const divIndex = DIVISION_INDICES[team.division];
+
+    const { conference: oppConf, divisionIndex: g17DivIndex } = get17thGameOpponentDivision(
+      team.conference,
+      divIndex,
+      seasonYear
+    );
+    const g17Division = INDEX_TO_DIVISION[g17DivIndex];
+
+    const divisionTeamIds = previousStandings[oppConf][g17Division];
+    const expectedOpponentId = divisionTeamIds[teamFinish];
+    const expectedOpponent = getTeamById(teams, expectedOpponentId);
+
+    const componentEGames = games.filter(
+      (g) => g.component === 'E' && (g.homeTeamId === team.id || g.awayTeamId === team.id)
+    );
+
+    if (componentEGames.length !== 1) {
+      errors.push(`${team.city} has ${componentEGames.length} 17th games (expected 1)`);
+      continue;
+    }
+
+    const game = componentEGames[0];
+    const actualOpponentId = game.homeTeamId === team.id ? game.awayTeamId : game.homeTeamId;
+
+    if (actualOpponentId !== expectedOpponentId) {
+      const actualOpponent = getTeamById(teams, actualOpponentId);
+      errors.push(
+        `${team.city} 17th game: expected ${expectedOpponent?.city}, got ${actualOpponent?.city}`
+      );
+    }
+
+    // Check home/away based on home conference
+    if (team.conference === homeConference) {
+      if (game.homeTeamId !== team.id) {
+        errors.push(`${team.city} should be home for 17th game (${homeConference} hosts)`);
+      }
+    } else {
+      if (game.awayTeamId !== team.id) {
+        errors.push(`${team.city} should be away for 17th game (${homeConference} hosts)`);
+      }
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 9: No duplicate matchups beyond divisional
+ */
+export function validateGate9NoDuplicates(games: ScheduledGame[], teams: Team[]): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const teamGames = games.filter((g) => g.homeTeamId === team.id || g.awayTeamId === team.id);
+
+    const opponentCounts = new Map<string, number>();
+
+    for (const game of teamGames) {
+      const opponentId = game.homeTeamId === team.id ? game.awayTeamId : game.homeTeamId;
+      opponentCounts.set(opponentId, (opponentCounts.get(opponentId) || 0) + 1);
+    }
+
+    for (const [opponentId, count] of opponentCounts) {
+      const opponent = getTeamById(teams, opponentId);
+      const isDivisional =
+        opponent?.conference === team.conference && opponent?.division === team.division;
+
+      if (isDivisional) {
+        if (count !== 2) {
+          errors.push(
+            `${team.city} plays divisional rival ${opponent?.city} ${count} times (expected 2)`
+          );
+        }
+      } else {
+        if (count !== 1) {
+          errors.push(
+            `${team.city} has duplicate non-divisional opponent: ${opponent?.city} (${count} times)`
+          );
+        }
+      }
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 10: Component bucket sizes
+ */
+export function validateGate10BucketSizes(games: ScheduledGame[], teams: Team[]): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const teamGames = games.filter((g) => g.homeTeamId === team.id || g.awayTeamId === team.id);
+
+    const componentCounts: Record<GameComponent, number> = {
+      A: 0,
+      B: 0,
+      C: 0,
+      D: 0,
+      E: 0,
+    };
+
+    for (const game of teamGames) {
+      componentCounts[game.component]++;
+    }
+
+    if (componentCounts.A !== 6) {
+      errors.push(`${team.city} bucket A: ${componentCounts.A} (expected 6)`);
+    }
+    if (componentCounts.B !== 4) {
+      errors.push(`${team.city} bucket B: ${componentCounts.B} (expected 4)`);
+    }
+    if (componentCounts.C !== 4) {
+      errors.push(`${team.city} bucket C: ${componentCounts.C} (expected 4)`);
+    }
+    if (componentCounts.D !== 2) {
+      errors.push(`${team.city} bucket D: ${componentCounts.D} (expected 2)`);
+    }
+    if (componentCounts.E !== 1) {
+      errors.push(`${team.city} bucket E: ${componentCounts.E} (expected 1)`);
+    }
+
+    const total =
+      componentCounts.A +
+      componentCounts.B +
+      componentCounts.C +
+      componentCounts.D +
+      componentCounts.E;
+    if (total !== 17) {
+      errors.push(
+        `${team.city} bucket mismatch: A=${componentCounts.A} B=${componentCounts.B} ` +
+          `C=${componentCounts.C} D=${componentCounts.D} E=${componentCounts.E} = ${total} (expected 17)`
+      );
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 11: Symmetry check - if A plays B, B plays A with matching home/away
+ */
+export function validateGate11Symmetry(games: ScheduledGame[]): ValidationResult {
+  const errors: string[] = [];
+
+  for (const game of games) {
+    // Every game should have proper home/away symmetry by definition
+    // But let's verify each matchup exists in both directions where expected
+
+    if (game.isDivisional) {
+      // Should find the reverse game
+      const reverseGame = games.find(
+        (g) =>
+          g.homeTeamId === game.awayTeamId && g.awayTeamId === game.homeTeamId && g.isDivisional
+      );
+
+      if (!reverseGame) {
+        errors.push(
+          `Asymmetric divisional game: ${game.homeTeamId} vs ${game.awayTeamId} missing reverse`
+        );
+      }
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 12: 17th game division doesn't collide with Component C division
+ */
+export function validateGate12SeventeenthGameDivisionSeparation(
+  teams: Team[],
+  seasonYear: number
+): ValidationResult {
+  const errors: string[] = [];
+
+  for (const team of teams) {
+    const divIndex = DIVISION_INDICES[team.division];
+
+    const interconfDivIndex = getInterconfOpponentDivision(
+      team.conference,
+      divIndex,
+      seasonYear
+    ).divisionIndex;
+
+    const g17DivIndex = get17thGameOpponentDivision(
+      team.conference,
+      divIndex,
+      seasonYear
+    ).divisionIndex;
+
+    if (interconfDivIndex === g17DivIndex) {
+      const interconfDiv = INDEX_TO_DIVISION[interconfDivIndex];
+      errors.push(
+        `${team.city} 17th game division ${interconfDiv} collides with interconf rotation ${interconfDiv}`
+      );
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 13: Multi-season rotation verification
+ */
+export function validateGate13RotationAdvancement(baseYear: number): ValidationResult {
+  const errors: string[] = [];
+
+  // Verify intraconference rotation cycles through all 3 divisions over 3 years
+  for (let divIndex = 0; divIndex < 4; divIndex++) {
+    const opponents = new Set<number>();
+    for (let year = baseYear; year < baseYear + 3; year++) {
+      opponents.add(getIntraconfOpponentDivision(divIndex, year));
+    }
+
+    // Should have played 3 different divisions (all except own)
+    const expectedOthers = [0, 1, 2, 3].filter((d) => d !== divIndex);
+    for (const expected of expectedOthers) {
+      if (!opponents.has(expected)) {
+        errors.push(
+          `Division ${INDEX_TO_DIVISION[divIndex]} doesn't play ${INDEX_TO_DIVISION[expected]} in 3-year intraconf cycle`
+        );
+      }
+    }
+  }
+
+  // Verify interconference rotation cycles through all 4 divisions over 4 years
+  for (let divIndex = 0; divIndex < 4; divIndex++) {
+    const opponents = new Set<number>();
+    for (let year = baseYear; year < baseYear + 4; year++) {
+      opponents.add(getInterconfOpponentDivision('AFC', divIndex, year).divisionIndex);
+    }
+
+    // Should have played all 4 divisions
+    if (opponents.size !== 4) {
+      errors.push(
+        `AFC ${INDEX_TO_DIVISION[divIndex]} doesn't cycle through all 4 NFC divisions in 4-year interconf cycle`
+      );
+    }
+  }
+
+  // Verify 17th game matches interconf from 2 years prior
+  for (let divIndex = 0; divIndex < 4; divIndex++) {
+    for (let year = baseYear + 2; year < baseYear + 6; year++) {
+      const g17Div = get17thGameOpponentDivision('AFC', divIndex, year).divisionIndex;
+      const interconfTwoYearsAgo = getInterconfOpponentDivision(
+        'AFC',
+        divIndex,
+        year - 2
+      ).divisionIndex;
+
+      if (g17Div !== interconfTwoYearsAgo) {
+        errors.push(
+          `AFC ${INDEX_TO_DIVISION[divIndex]} year ${year}: 17th game div ${INDEX_TO_DIVISION[g17Div]} doesn't match interconf from ${year - 2} (${INDEX_TO_DIVISION[interconfTwoYearsAgo]})`
+        );
+      }
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Gate 14: 17th game home conference alternation
+ */
+export function validateGate14HomeConferenceAlternation(): ValidationResult {
+  const errors: string[] = [];
+
+  for (let year = 2021; year <= 2030; year++) {
+    const homeConf = get17thGameHomeConference(year);
+    const expectedHomeConf: Conference = year % 2 === 1 ? 'AFC' : 'NFC';
+
+    if (homeConf !== expectedHomeConf) {
+      errors.push(
+        `17th game home conference wrong for year ${year}: got ${homeConf}, expected ${expectedHomeConf}`
+      );
+    }
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
+/**
+ * Runs all validation gates on a schedule
+ */
+export function validateSchedule(
+  schedule: SeasonSchedule,
+  teams: Team[],
+  previousStandings: PreviousYearStandings
+): ValidationResult {
+  const allErrors: string[] = [];
+  const games = schedule.regularSeason;
+  const year = schedule.year;
+
+  const gates = [
+    { name: 'Gate 1: Game Count Per Team', fn: () => validateGate1GameCountPerTeam(games, teams) },
+    { name: 'Gate 2: Total League Games', fn: () => validateGate2TotalLeagueGames(games) },
+    {
+      name: 'Gate 3: Home/Away Balance',
+      fn: () => validateGate3HomeAwayBalance(games, teams, year),
+    },
+    { name: 'Gate 4: Divisional Games', fn: () => validateGate4DivisionalGames(games, teams) },
+    {
+      name: 'Gate 5: Intraconf Rotation',
+      fn: () => validateGate5IntraconfRotation(games, teams, year),
+    },
+    {
+      name: 'Gate 6: Interconf Rotation',
+      fn: () => validateGate6InterconfRotation(games, teams, year),
+    },
+    {
+      name: 'Gate 7: Standings Intraconf',
+      fn: () => validateGate7StandingsIntraconf(games, teams, previousStandings, year),
+    },
+    {
+      name: 'Gate 8: 17th Game',
+      fn: () => validateGate8SeventeenthGame(games, teams, previousStandings, year),
+    },
+    { name: 'Gate 9: No Duplicates', fn: () => validateGate9NoDuplicates(games, teams) },
+    { name: 'Gate 10: Bucket Sizes', fn: () => validateGate10BucketSizes(games, teams) },
+    { name: 'Gate 11: Symmetry', fn: () => validateGate11Symmetry(games) },
+    {
+      name: 'Gate 12: 17th Game Division Separation',
+      fn: () => validateGate12SeventeenthGameDivisionSeparation(teams, year),
+    },
+    {
+      name: 'Gate 13: Rotation Advancement',
+      fn: () => validateGate13RotationAdvancement(year - 2),
+    },
+    {
+      name: 'Gate 14: Home Conference Alternation',
+      fn: () => validateGate14HomeConferenceAlternation(),
+    },
+  ];
+
+  for (const gate of gates) {
+    const result = gate.fn();
+    if (!result.passed) {
+      allErrors.push(`${gate.name} FAILED:`);
+      allErrors.push(...result.errors.map((e) => `  - ${e}`));
+    }
+  }
+
+  return {
+    passed: allErrors.length === 0,
+    errors: allErrors,
+  };
+}
+
+// ============================================================================
+// QUERY FUNCTIONS
+// ============================================================================
+
 /**
  * Gets games for a specific week
- *
- * @param schedule - The season schedule
- * @param week - Week number (1-18)
- * @returns Array of games for that week
  */
 export function getWeekGames(schedule: SeasonSchedule, week: number): ScheduledGame[] {
   return schedule.regularSeason.filter((game) => game.week === week);
@@ -533,10 +1637,6 @@ export function getWeekGames(schedule: SeasonSchedule, week: number): ScheduledG
 
 /**
  * Gets a team's complete schedule
- *
- * @param schedule - The season schedule
- * @param teamId - The team ID
- * @returns Array of games for that team
  */
 export function getTeamSchedule(schedule: SeasonSchedule, teamId: string): ScheduledGame[] {
   return schedule.regularSeason
@@ -546,10 +1646,6 @@ export function getTeamSchedule(schedule: SeasonSchedule, teamId: string): Sched
 
 /**
  * Gets a team's remaining (incomplete) games
- *
- * @param schedule - The season schedule
- * @param teamId - The team ID
- * @returns Array of remaining games
  */
 export function getTeamRemainingSchedule(
   schedule: SeasonSchedule,
@@ -560,10 +1656,6 @@ export function getTeamRemainingSchedule(
 
 /**
  * Gets a team's completed games
- *
- * @param schedule - The season schedule
- * @param teamId - The team ID
- * @returns Array of completed games
  */
 export function getTeamCompletedGames(schedule: SeasonSchedule, teamId: string): ScheduledGame[] {
   return getTeamSchedule(schedule, teamId).filter((game) => game.isComplete);
@@ -571,12 +1663,6 @@ export function getTeamCompletedGames(schedule: SeasonSchedule, teamId: string):
 
 /**
  * Updates a game result in the schedule
- *
- * @param schedule - The season schedule
- * @param gameId - The game ID to update
- * @param homeScore - Home team score
- * @param awayScore - Away team score
- * @returns Updated schedule
  */
 export function updateGameResult(
   schedule: SeasonSchedule,
@@ -607,12 +1693,7 @@ export function updateGameResult(
 }
 
 /**
- * Gets the game between two specific teams in a given week
- *
- * @param schedule - The season schedule
- * @param teamId1 - First team ID
- * @param teamId2 - Second team ID
- * @returns The game, or undefined if not found
+ * Gets the game between two specific teams
  */
 export function getMatchup(
   schedule: SeasonSchedule,

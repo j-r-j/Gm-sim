@@ -1,9 +1,14 @@
 /**
  * TraitBadges Component
- * Displays revealed traits as colored badges and unknown traits as "???" placeholders.
+ * Displays revealed traits as colored badges and unknown traits as placeholders.
+ *
+ * Design inspired by:
+ * - Madden NFL X-Factor and Superstar abilities
+ * - NBA 2K badges system
+ * - FIFA PlayStyles icons
  *
  * BRAND GUIDELINE: Only show revealed traits. Unknown traits appear as "???" badges.
- * Positive traits are green, negative traits are red.
+ * Positive traits are styled as "Superstar" abilities, negative as "Concerns".
  */
 
 import React from 'react';
@@ -20,13 +25,17 @@ export interface TraitBadgesProps {
   compact?: boolean;
   /** Whether to show unknown placeholders */
   showUnknownPlaceholders?: boolean;
+  /** Display variant */
+  variant?: 'default' | 'minimal' | 'grid';
 }
+
+/** Trait tier for Madden-style badge levels */
+type TraitTier = 'superstar' | 'elite' | 'standard';
 
 /**
  * Format trait name from camelCase to display format
  */
 function formatTraitName(trait: string): string {
-  // Handle special cases
   const specialCases: Record<string, string> = {
     clutch: 'Clutch',
     filmJunkie: 'Film Junkie',
@@ -53,71 +62,188 @@ function formatTraitName(trait: string): string {
 }
 
 /**
- * Get icon for trait (using emoji as placeholder - would use proper icons in production)
+ * Get short name for compact display
+ */
+function getShortTraitName(trait: string): string {
+  const shortNames: Record<string, string> = {
+    clutch: 'CLT',
+    filmJunkie: 'FLM',
+    ironMan: 'IRN',
+    leader: 'LDR',
+    coolUnderPressure: 'CUP',
+    motor: 'MTR',
+    routeTechnician: 'RTE',
+    brickWall: 'BRK',
+    schemeVersatile: 'SCH',
+    teamFirst: 'TM1',
+    chokes: 'CHK',
+    lazy: 'LZY',
+    injuryProne: 'INJ',
+    lockerRoomCancer: 'LRC',
+    hotHead: 'HOT',
+    glassHands: 'GLS',
+    disappears: 'DSP',
+    systemDependent: 'SYS',
+    diva: 'DVA',
+  };
+  return shortNames[trait] || trait.substring(0, 3).toUpperCase();
+}
+
+/**
+ * Get icon for trait (Madden/2K style badge icons)
  */
 function getTraitIcon(trait: string, isPositive: boolean): string {
   if (isPositive) {
     const icons: Record<string, string> = {
-      clutch: '★',
-      filmJunkie: '📚',
-      ironMan: '💪',
+      clutch: '⚡',
+      filmJunkie: '🎬',
+      ironMan: '🛡️',
       leader: '👑',
-      coolUnderPressure: '❄️',
-      motor: '⚡',
-      routeTechnician: '✓',
+      coolUnderPressure: '🧊',
+      motor: '⚙️',
+      routeTechnician: '📐',
       brickWall: '🧱',
       schemeVersatile: '🔄',
       teamFirst: '🤝',
     };
-    return icons[trait] || '✓';
+    return icons[trait] || '★';
   } else {
     const icons: Record<string, string> = {
       chokes: '😰',
       lazy: '💤',
       injuryProne: '🩹',
-      lockerRoomCancer: '⚠️',
+      lockerRoomCancer: '☠️',
       hotHead: '🔥',
-      glassHands: '🧈',
+      glassHands: '🫳',
       disappears: '👻',
       systemDependent: '🔗',
-      diva: '💅',
+      diva: '💎',
     };
-    return icons[trait] || '✗';
+    return icons[trait] || '⚠️';
   }
 }
 
 /**
- * Individual Trait Badge
+ * Get trait tier based on impact
  */
-function TraitBadge({
+function getTraitTier(trait: string): TraitTier {
+  const superstarTraits = ['clutch', 'leader', 'coolUnderPressure'];
+  const eliteTraits = ['ironMan', 'motor', 'brickWall', 'routeTechnician'];
+
+  if (superstarTraits.includes(trait)) return 'superstar';
+  if (eliteTraits.includes(trait)) return 'elite';
+  return 'standard';
+}
+
+/**
+ * Superstar Badge - Enhanced positive trait badge (Madden X-Factor style)
+ */
+function SuperstarBadge({
   trait,
-  isPositive,
   compact,
+  variant,
 }: {
   trait: string;
-  isPositive: boolean;
   compact?: boolean;
+  variant?: 'default' | 'minimal' | 'grid';
 }): React.JSX.Element {
-  const icon = getTraitIcon(trait, isPositive);
+  const icon = getTraitIcon(trait, true);
+  const tier = getTraitTier(trait);
+
+  if (variant === 'minimal') {
+    return (
+      <View style={[styles.minimalBadge, styles.minimalBadgePositive]}>
+        <Text style={styles.minimalIcon}>{icon}</Text>
+      </View>
+    );
+  }
+
+  if (variant === 'grid') {
+    return (
+      <View style={[styles.gridBadge, styles.gridBadgePositive]}>
+        <View style={styles.gridIconContainer}>
+          <Text style={styles.gridIcon}>{icon}</Text>
+        </View>
+        <Text style={styles.gridLabel} numberOfLines={2}>
+          {formatTraitName(trait)}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
       style={[
         styles.badge,
-        isPositive ? styles.badgePositive : styles.badgeNegative,
+        styles.badgePositive,
+        tier === 'superstar' && styles.badgeSuperstar,
+        tier === 'elite' && styles.badgeElite,
         compact && styles.badgeCompact,
       ]}
     >
-      <Text style={styles.badgeIcon}>{icon}</Text>
-      <Text
-        style={[
-          styles.badgeText,
-          isPositive ? styles.badgeTextPositive : styles.badgeTextNegative,
-          compact && styles.badgeTextCompact,
-        ]}
-      >
-        {formatTraitName(trait)}
-      </Text>
+      <View style={[styles.badgeIconContainer, tier === 'superstar' && styles.badgeIconSuperstar]}>
+        <Text style={styles.badgeIcon}>{icon}</Text>
+      </View>
+      {!compact && (
+        <Text
+          style={[
+            styles.badgeText,
+            styles.badgeTextPositive,
+            tier === 'superstar' && styles.badgeTextSuperstar,
+          ]}
+        >
+          {formatTraitName(trait)}
+        </Text>
+      )}
+      {compact && <Text style={styles.badgeShortText}>{getShortTraitName(trait)}</Text>}
+    </View>
+  );
+}
+
+/**
+ * Concern Badge - Negative trait badge
+ */
+function ConcernBadge({
+  trait,
+  compact,
+  variant,
+}: {
+  trait: string;
+  compact?: boolean;
+  variant?: 'default' | 'minimal' | 'grid';
+}): React.JSX.Element {
+  const icon = getTraitIcon(trait, false);
+
+  if (variant === 'minimal') {
+    return (
+      <View style={[styles.minimalBadge, styles.minimalBadgeNegative]}>
+        <Text style={styles.minimalIcon}>{icon}</Text>
+      </View>
+    );
+  }
+
+  if (variant === 'grid') {
+    return (
+      <View style={[styles.gridBadge, styles.gridBadgeNegative]}>
+        <View style={styles.gridIconContainer}>
+          <Text style={styles.gridIcon}>{icon}</Text>
+        </View>
+        <Text style={styles.gridLabel} numberOfLines={2}>
+          {formatTraitName(trait)}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.badge, styles.badgeNegative, compact && styles.badgeCompact]}>
+      <View style={styles.badgeIconContainer}>
+        <Text style={styles.badgeIcon}>{icon}</Text>
+      </View>
+      {!compact && (
+        <Text style={[styles.badgeText, styles.badgeTextNegative]}>{formatTraitName(trait)}</Text>
+      )}
+      {compact && <Text style={styles.badgeShortText}>{getShortTraitName(trait)}</Text>}
     </View>
   );
 }
@@ -125,12 +251,49 @@ function TraitBadge({
 /**
  * Unknown Trait Placeholder Badge
  */
-function UnknownBadge({ compact }: { compact?: boolean }): React.JSX.Element {
+function UnknownBadge({
+  compact,
+  variant,
+}: {
+  compact?: boolean;
+  variant?: 'default' | 'minimal' | 'grid';
+}): React.JSX.Element {
+  if (variant === 'minimal') {
+    return (
+      <View style={[styles.minimalBadge, styles.minimalBadgeUnknown]}>
+        <Text style={styles.minimalIconUnknown}>?</Text>
+      </View>
+    );
+  }
+
+  if (variant === 'grid') {
+    return (
+      <View style={[styles.gridBadge, styles.gridBadgeUnknown]}>
+        <View style={styles.gridIconContainer}>
+          <Text style={styles.gridIconUnknown}>?</Text>
+        </View>
+        <Text style={styles.gridLabelUnknown}>Unknown</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.badge, styles.badgeUnknown, compact && styles.badgeCompact]}>
-      <Text style={[styles.badgeText, styles.badgeTextUnknown, compact && styles.badgeTextCompact]}>
-        ???
-      </Text>
+      <Text style={[styles.badgeText, styles.badgeTextUnknown]}>???</Text>
+    </View>
+  );
+}
+
+/**
+ * Section Header
+ */
+function SectionHeader({ title, count }: { title: string; count: number }): React.JSX.Element {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionCount}>
+        <Text style={styles.sectionCountText}>{count}</Text>
+      </View>
     </View>
   );
 }
@@ -143,6 +306,7 @@ export function TraitBadges({
   maxUnknownPlaceholders = 3,
   compact = false,
   showUnknownPlaceholders = true,
+  variant = 'default',
 }: TraitBadgesProps): React.JSX.Element {
   // Get revealed positive and negative traits
   const revealedPositive = hiddenTraits.positive.filter((trait) =>
@@ -169,20 +333,32 @@ export function TraitBadges({
   if (hasNoTraits) {
     return (
       <View style={styles.container}>
-        <Text style={styles.noTraitsText}>No traits discovered yet</Text>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyText}>No traits discovered yet</Text>
+          <Text style={styles.emptyHint}>Play games to reveal player traits</Text>
+        </View>
       </View>
     );
   }
 
+  // Sort positive traits by tier (superstar first)
+  const sortedPositive = [...revealedPositive].sort((a, b) => {
+    const tierOrder = { superstar: 0, elite: 1, standard: 2 };
+    return tierOrder[getTraitTier(a)] - tierOrder[getTraitTier(b)];
+  });
+
   return (
     <View style={styles.container}>
       {/* Positive traits section */}
-      {revealedPositive.length > 0 && (
+      {sortedPositive.length > 0 && (
         <View style={styles.section}>
-          {!compact && <Text style={styles.sectionTitle}>Strengths</Text>}
-          <View style={styles.badgesContainer}>
-            {revealedPositive.map((trait) => (
-              <TraitBadge key={trait} trait={trait} isPositive={true} compact={compact} />
+          {!compact && variant === 'default' && (
+            <SectionHeader title="Abilities" count={sortedPositive.length} />
+          )}
+          <View style={[styles.badgesContainer, variant === 'grid' && styles.badgesGrid]}>
+            {sortedPositive.map((trait) => (
+              <SuperstarBadge key={trait} trait={trait} compact={compact} variant={variant} />
             ))}
           </View>
         </View>
@@ -191,10 +367,12 @@ export function TraitBadges({
       {/* Negative traits section */}
       {revealedNegative.length > 0 && (
         <View style={styles.section}>
-          {!compact && <Text style={styles.sectionTitle}>Concerns</Text>}
-          <View style={styles.badgesContainer}>
+          {!compact && variant === 'default' && (
+            <SectionHeader title="Concerns" count={revealedNegative.length} />
+          )}
+          <View style={[styles.badgesContainer, variant === 'grid' && styles.badgesGrid]}>
             {revealedNegative.map((trait) => (
-              <TraitBadge key={trait} trait={trait} isPositive={false} compact={compact} />
+              <ConcernBadge key={trait} trait={trait} compact={compact} variant={variant} />
             ))}
           </View>
         </View>
@@ -203,21 +381,29 @@ export function TraitBadges({
       {/* Unknown traits placeholders */}
       {unknownCount > 0 && (
         <View style={styles.section}>
-          {!compact && <Text style={styles.sectionTitle}>Unknown</Text>}
-          <View style={styles.badgesContainer}>
+          {!compact && variant === 'default' && (
+            <SectionHeader title="Undiscovered" count={unrevealedCount} />
+          )}
+          <View style={[styles.badgesContainer, variant === 'grid' && styles.badgesGrid]}>
             {Array.from({ length: unknownCount }, (_, i) => (
-              <UnknownBadge key={`unknown-${i}`} compact={compact} />
+              <UnknownBadge key={`unknown-${i}`} compact={compact} variant={variant} />
             ))}
           </View>
         </View>
       )}
 
-      {/* Discovery hint */}
-      {!compact && unrevealedCount > 0 && (
-        <Text style={styles.hintText}>
-          {unrevealedCount} trait{unrevealedCount !== 1 ? 's' : ''} yet to be discovered through
-          gameplay
-        </Text>
+      {/* Discovery progress */}
+      {!compact && variant === 'default' && totalTraits > 0 && (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View
+              style={[styles.progressFill, { width: `${(revealedCount / totalTraits) * 100}%` }]}
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {revealedCount}/{totalTraits} traits discovered
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -228,48 +414,89 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   section: {
+    marginBottom: spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   sectionTitle: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  sectionCount: {
+    backgroundColor: colors.border,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  sectionCountText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
   },
   badgesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
+  badgesGrid: {
+    gap: spacing.md,
+  },
+
+  // Badge styles (default variant)
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    gap: spacing.xxs,
+    borderRadius: borderRadius.lg,
+    gap: spacing.xs,
   },
   badgeCompact: {
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
   },
   badgePositive: {
-    backgroundColor: `${colors.success}20`,
+    backgroundColor: `${colors.success}15`,
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: `${colors.success}40`,
+  },
+  badgeSuperstar: {
+    backgroundColor: `${colors.tierElite}20`,
+    borderColor: colors.tierElite,
+    borderWidth: 2,
+  },
+  badgeElite: {
+    backgroundColor: `${colors.tierExcellent}15`,
+    borderColor: colors.tierExcellent,
   },
   badgeNegative: {
-    backgroundColor: `${colors.error}20`,
+    backgroundColor: `${colors.error}15`,
     borderWidth: 1,
-    borderColor: colors.error,
+    borderColor: `${colors.error}40`,
   },
   badgeUnknown: {
     backgroundColor: colors.border,
     borderWidth: 1,
     borderColor: colors.textLight,
     borderStyle: 'dashed',
+  },
+  badgeIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeIconSuperstar: {
+    backgroundColor: colors.tierElite,
+    borderRadius: borderRadius.full,
   },
   badgeIcon: {
     fontSize: fontSize.sm,
@@ -278,11 +505,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
-  badgeTextCompact: {
+  badgeShortText: {
     fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
   },
   badgeTextPositive: {
     color: colors.success,
+  },
+  badgeTextSuperstar: {
+    color: colors.tierElite,
+    fontWeight: fontWeight.bold,
   },
   badgeTextNegative: {
     color: colors.error,
@@ -291,16 +524,126 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     fontStyle: 'italic',
   },
-  noTraitsText: {
-    fontSize: fontSize.sm,
-    color: colors.textLight,
-    fontStyle: 'italic',
+
+  // Minimal variant styles
+  minimalBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  hintText: {
+  minimalBadgePositive: {
+    backgroundColor: `${colors.success}20`,
+  },
+  minimalBadgeNegative: {
+    backgroundColor: `${colors.error}20`,
+  },
+  minimalBadgeUnknown: {
+    backgroundColor: colors.border,
+  },
+  minimalIcon: {
+    fontSize: fontSize.md,
+  },
+  minimalIconUnknown: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textLight,
+  },
+
+  // Grid variant styles
+  gridBadge: {
+    width: 72,
+    alignItems: 'center',
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  gridBadgePositive: {
+    backgroundColor: `${colors.success}10`,
+    borderWidth: 1,
+    borderColor: `${colors.success}30`,
+  },
+  gridBadgeNegative: {
+    backgroundColor: `${colors.error}10`,
+    borderWidth: 1,
+    borderColor: `${colors.error}30`,
+  },
+  gridBadgeUnknown: {
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  gridIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  gridIcon: {
+    fontSize: fontSize.xl,
+  },
+  gridIconUnknown: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textLight,
+  },
+  gridLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  gridLabelUnknown: {
     fontSize: fontSize.xs,
     color: colors.textLight,
-    fontStyle: 'italic',
+  },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: colors.surfaceLight,
+    borderRadius: borderRadius.md,
+  },
+  emptyIcon: {
+    fontSize: fontSize.xxl,
+    marginBottom: spacing.sm,
+  },
+  emptyText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  emptyHint: {
+    fontSize: fontSize.sm,
+    color: colors.textLight,
+  },
+
+  // Progress bar
+  progressContainer: {
     marginTop: spacing.sm,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.info,
+    borderRadius: borderRadius.full,
+  },
+  progressText: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    textAlign: 'center',
   },
 });
 

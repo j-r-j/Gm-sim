@@ -89,46 +89,62 @@ const BASE_RUN_OUTCOMES: Partial<Record<PlayOutcome, number>> = {
   penalty_defense: 0.01,
 };
 
+/**
+ * Base pass outcomes adjusted for realistic ~65% completion rate
+ * NFL average: 63-67% completion
+ * Previous: 30% incomplete = 70% completion (too high)
+ * New: 37% incomplete = ~63% completion (realistic)
+ */
 const BASE_PASS_OUTCOMES: Partial<Record<PlayOutcome, number>> = {
-  touchdown: 0.03,
-  big_gain: 0.1,
-  good_gain: 0.12,
-  moderate_gain: 0.15,
+  touchdown: 0.025,
+  big_gain: 0.08,
+  good_gain: 0.1,
+  moderate_gain: 0.13,
   short_gain: 0.08,
-  incomplete: 0.3,
-  sack: 0.06,
-  interception: 0.025,
+  incomplete: 0.37, // Increased from 0.30 for realistic 63% completion
+  sack: 0.07, // Increased slightly - NFL average ~6.5%
+  interception: 0.03, // Increased slightly - NFL average ~2.5%
   fumble: 0.01,
   fumble_lost: 0.005,
   penalty_offense: 0.02,
   penalty_defense: 0.02,
 };
 
+/**
+ * Deep pass outcomes - realistic 40-50% completion rate
+ * Deep passes (20+ yards) are much harder to complete
+ * Higher risk/reward: more TDs and INTs, more incompletions
+ */
 const BASE_DEEP_PASS_OUTCOMES: Partial<Record<PlayOutcome, number>> = {
-  touchdown: 0.08,
-  big_gain: 0.12,
-  good_gain: 0.05,
-  moderate_gain: 0.03,
-  short_gain: 0.02,
-  incomplete: 0.45,
-  sack: 0.08,
-  interception: 0.04,
+  touchdown: 0.06,
+  big_gain: 0.1,
+  good_gain: 0.04,
+  moderate_gain: 0.02,
+  short_gain: 0.01,
+  incomplete: 0.52, // Increased from 0.45 for realistic ~45% completion
+  sack: 0.09, // Longer developing plays = more sacks
+  interception: 0.05, // Higher INT rate on deep balls
   fumble: 0.01,
   fumble_lost: 0.005,
   penalty_offense: 0.02,
-  penalty_defense: 0.025,
+  penalty_defense: 0.03, // PI more common on deep balls
 };
 
+/**
+ * Screen pass outcomes - realistic ~78% completion rate
+ * Previous: 5% incomplete = 95% completion (way too high)
+ * Screens are high percentage but can result in big losses if read
+ */
 const BASE_SCREEN_OUTCOMES: Partial<Record<PlayOutcome, number>> = {
-  touchdown: 0.03,
-  big_gain: 0.12,
-  good_gain: 0.18,
+  touchdown: 0.02,
+  big_gain: 0.08,
+  good_gain: 0.15,
   moderate_gain: 0.15,
-  short_gain: 0.15,
-  no_gain: 0.08,
-  loss: 0.1,
-  big_loss: 0.08,
-  incomplete: 0.05,
+  short_gain: 0.18,
+  no_gain: 0.1,
+  loss: 0.08,
+  big_loss: 0.06,
+  incomplete: 0.12, // Increased from 0.05 for realistic 78% completion
   sack: 0.02,
   fumble: 0.015,
   fumble_lost: 0.005,
@@ -481,12 +497,108 @@ export function generateOutcomeTable(
 }
 
 /**
+ * Truncated Gaussian distribution for more realistic yard outcomes
+ * Uses Box-Muller transform with truncation and skew
+ */
+function truncatedGaussian(
+  mean: number,
+  stdDev: number,
+  min: number,
+  max: number,
+  skew: number = 0
+): number {
+  // Box-Muller transform
+  const u1 = Math.random();
+  const u2 = Math.random();
+  let z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+
+  // Apply skew (positive skew = more likely to be above mean)
+  if (skew !== 0) {
+    z = z + skew * Math.abs(z) * (z > 0 ? 1 : -1);
+  }
+
+  let value = mean + z * stdDev;
+
+  // Truncate to range
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+/**
+ * Calculate yards using position-based Gaussian distribution
+ * Different play types have different expected distributions
+ */
+function calculateYardsGaussian(
+  min: number,
+  max: number,
+  outcome: PlayOutcome,
+  matchupAdvantage: number
+): number {
+  if (min === max) return min;
+
+  // Base mean and standard deviation
+  let mean = (min + max) / 2;
+  let stdDev = (max - min) / 4;
+  let skew = 0;
+
+  // Adjust based on outcome type - some outcomes cluster differently
+  switch (outcome) {
+    case 'big_gain':
+      // Big gains cluster toward the lower end with occasional explosives
+      mean = min + (max - min) * 0.35;
+      stdDev = (max - min) / 3;
+      skew = 0.3; // Right skew for occasional big plays
+      break;
+
+    case 'good_gain':
+      // Good gains are fairly normally distributed
+      mean = (min + max) / 2;
+      stdDev = (max - min) / 4;
+      break;
+
+    case 'moderate_gain':
+    case 'short_gain':
+      // Short gains cluster toward expected value
+      mean = (min + max) / 2;
+      stdDev = (max - min) / 5; // Tighter distribution
+      break;
+
+    case 'loss':
+    case 'big_loss':
+      // Losses cluster toward smaller losses
+      mean = max - (max - min) * 0.3; // Closer to max (smaller loss)
+      stdDev = (max - min) / 3;
+      skew = -0.2; // Left skew for occasional big losses
+      break;
+
+    case 'sack':
+      // Sacks cluster around -6 to -8 yards
+      mean = min + (max - min) * 0.4;
+      stdDev = (max - min) / 4;
+      break;
+
+    default:
+      break;
+  }
+
+  // Matchup advantage shifts the distribution
+  // Positive advantage = offense winning = better outcomes
+  const advantageShift = (matchupAdvantage / 40) * (max - min) * 0.2;
+  mean += advantageShift;
+
+  return truncatedGaussian(mean, stdDev, min, max, skew);
+}
+
+/**
  * Roll against outcome table and return result
  *
  * @param table - Outcome table to roll against
+ * @param matchupAdvantage - Optional matchup advantage for yard calculation (-40 to +40)
  * @returns The selected outcome with yards and effects
  */
-export function rollOutcome(table: OutcomeTableEntry[]): {
+export function rollOutcome(
+  table: OutcomeTableEntry[],
+  matchupAdvantage: number = 0
+): {
   outcome: PlayOutcome;
   yards: number;
   secondaryEffects: SecondaryEffect[];
@@ -511,25 +623,9 @@ export function rollOutcome(table: OutcomeTableEntry[]): {
     selectedEntry = table[table.length - 1];
   }
 
-  // Calculate yards within range
+  // Calculate yards using enhanced Gaussian distribution
   const { min, max } = selectedEntry.yardsRange;
-  let yards: number;
-
-  if (min === max) {
-    yards = min;
-  } else {
-    // Use normal distribution for more realistic yard distribution
-    const mean = (min + max) / 2;
-    const stdDev = (max - min) / 4;
-
-    // Box-Muller transform
-    const u1 = Math.random();
-    const u2 = Math.random();
-    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-
-    yards = Math.round(mean + z * stdDev);
-    yards = Math.max(min, Math.min(max, yards));
-  }
+  const yards = calculateYardsGaussian(min, max, selectedEntry.outcome, matchupAdvantage);
 
   return {
     outcome: selectedEntry.outcome,

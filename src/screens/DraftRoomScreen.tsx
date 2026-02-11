@@ -18,14 +18,26 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { Button, ScreenHeader } from '../components';
 import { Position } from '../core/models/player/Position';
 import {
   DraftPickCard,
   TradeOfferCard,
   ProspectListItem,
+  WarRoomFeed,
   type TradeAsset,
 } from '../components/draft';
+import { WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';
 
 /**
  * Draft pick information
@@ -113,6 +125,8 @@ export interface DraftRoomScreenProps {
   onToggleAutoPick: () => void;
   /** Callback to pause/resume draft */
   onTogglePause: () => void;
+  /** War room feed events */
+  feedEvents?: WarRoomFeedEvent[];
   /** Callback to go back */
   onBack?: () => void;
 }
@@ -120,7 +134,7 @@ export interface DraftRoomScreenProps {
 /**
  * Tab options for the draft room
  */
-type DraftRoomTab = 'board' | 'trades' | 'picks';
+type DraftRoomTab = 'board' | 'feed' | 'trades' | 'picks';
 
 /**
  * DraftRoomScreen Component
@@ -143,13 +157,15 @@ export function DraftRoomScreen({
   onProposeTrade,
   onToggleAutoPick,
   onTogglePause,
+  feedEvents = [],
   onBack,
 }: DraftRoomScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<DraftRoomTab>('board');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
   const isUserPick = currentPick.teamId === userTeamId;
-  const pendingTradeOffers = tradeOffers.filter((t) => t.status === 'pending');
+  const safeTradeOffers = tradeOffers ?? [];
+  const pendingTradeOffers = safeTradeOffers.filter((t) => t.status === 'pending');
 
   // Filter available prospects
   const filteredProspects = useMemo(() => {
@@ -249,22 +265,16 @@ export function DraftRoomScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>Exit</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>Draft Room</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.pauseButton, isPaused && styles.pauseButtonActive]}
-            onPress={onTogglePause}
-          >
-            <Text style={styles.pauseButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Draft Room"
+        onBack={onBack}
+        rightAction={{
+          icon: isPaused ? 'play' : 'pause',
+          onPress: onTogglePause,
+          accessibilityLabel: isPaused ? 'Resume draft' : 'Pause draft',
+        }}
+        testID="draft-room-header"
+      />
 
       {/* Current Pick Card */}
       <View style={styles.currentPickContainer}>
@@ -286,6 +296,11 @@ export function DraftRoomScreen({
           <TouchableOpacity
             style={[styles.autoPickToggle, autoPickEnabled && styles.autoPickToggleActive]}
             onPress={onToggleAutoPick}
+            accessibilityLabel={`Auto-pick ${autoPickEnabled ? 'enabled' : 'disabled'}`}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: autoPickEnabled }}
+            accessibilityHint="Toggle automatic player selection"
+            hitSlop={accessibility.hitSlop}
           >
             <Text
               style={[
@@ -296,24 +311,59 @@ export function DraftRoomScreen({
               {autoPickEnabled ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
-          {isUserPick && !autoPickEnabled && (
+          {!autoPickEnabled && (
             <Text style={styles.instructionText}>Long press a prospect to draft</Text>
           )}
         </View>
       )}
 
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <View style={styles.tabContainer} accessibilityRole="tablist">
         <TouchableOpacity
           style={[styles.tab, activeTab === 'board' && styles.tabActive]}
           onPress={() => setActiveTab('board')}
+          accessibilityLabel="Draft board"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'board' }}
+          hitSlop={accessibility.hitSlop}
         >
+          <Ionicons
+            name="list"
+            size={16}
+            color={activeTab === 'board' ? colors.textOnPrimary : colors.textSecondary}
+          />
           <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>Board</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'feed' && styles.tabActive]}
+          onPress={() => setActiveTab('feed')}
+          accessibilityLabel={`War room feed${feedEvents.length > 0 ? `, ${feedEvents.length} events` : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'feed' }}
+          hitSlop={accessibility.hitSlop}
+        >
+          <Ionicons
+            name="radio"
+            size={16}
+            color={activeTab === 'feed' ? colors.textOnPrimary : colors.textSecondary}
+          />
+          <Text style={[styles.tabText, activeTab === 'feed' && styles.tabTextActive]}>
+            Feed {feedEvents.length > 0 && `(${feedEvents.length})`}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'trades' && styles.tabActive]}
           onPress={() => setActiveTab('trades')}
+          accessibilityLabel={`Trades${pendingTradeOffers.length > 0 ? `, ${pendingTradeOffers.length} pending` : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'trades' }}
+          hitSlop={accessibility.hitSlop}
         >
+          <Ionicons
+            name="swap-horizontal"
+            size={16}
+            color={activeTab === 'trades' ? colors.textOnPrimary : colors.textSecondary}
+          />
           <Text style={[styles.tabText, activeTab === 'trades' && styles.tabTextActive]}>
             Trades {pendingTradeOffers.length > 0 && `(${pendingTradeOffers.length})`}
           </Text>
@@ -321,7 +371,16 @@ export function DraftRoomScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'picks' && styles.tabActive]}
           onPress={() => setActiveTab('picks')}
+          accessibilityLabel="Pick history"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'picks' }}
+          hitSlop={accessibility.hitSlop}
         >
+          <Ionicons
+            name="time"
+            size={16}
+            color={activeTab === 'picks' ? colors.textOnPrimary : colors.textSecondary}
+          />
           <Text style={[styles.tabText, activeTab === 'picks' && styles.tabTextActive]}>Picks</Text>
         </TouchableOpacity>
       </View>
@@ -334,9 +393,18 @@ export function DraftRoomScreen({
             <TouchableOpacity
               style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
               onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
+              accessibilityLabel={`Show ${showFlaggedOnly ? 'all prospects' : 'flagged only'}`}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: showFlaggedOnly }}
+              hitSlop={accessibility.hitSlop}
             >
+              <Ionicons
+                name={showFlaggedOnly ? 'star' : 'star-outline'}
+                size={16}
+                color={showFlaggedOnly ? colors.secondary : colors.textSecondary}
+              />
               <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
-                * Flagged Only
+                Flagged Only
               </Text>
             </TouchableOpacity>
             <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
@@ -355,14 +423,27 @@ export function DraftRoomScreen({
         </View>
       )}
 
+      {activeTab === 'feed' && (
+        <View style={styles.tabContent}>
+          <WarRoomFeed events={feedEvents} />
+        </View>
+      )}
+
       {activeTab === 'trades' && (
         <View style={styles.tabContent}>
-          <TouchableOpacity style={styles.proposeTradeButton} onPress={onProposeTrade}>
-            <Text style={styles.proposeTradeButtonText}>Propose Trade</Text>
-          </TouchableOpacity>
+          <View style={styles.proposeTradeContainer}>
+            <Button
+              label="Propose Trade"
+              onPress={onProposeTrade}
+              variant="primary"
+              leftIcon={<Ionicons name="add-circle" size={18} color={colors.textOnPrimary} />}
+              accessibilityHint="Opens trade proposal interface"
+              testID="propose-trade-button"
+            />
+          </View>
 
           <FlatList
-            data={tradeOffers}
+            data={safeTradeOffers}
             keyExtractor={(item) => item.tradeId}
             renderItem={renderTradeOffer}
             contentContainerStyle={styles.tradeListContent}
@@ -379,7 +460,9 @@ export function DraftRoomScreen({
         <ScrollView style={styles.tabContent}>
           {/* Recent Picks */}
           <View style={styles.picksSection}>
-            <Text style={styles.picksSectionTitle}>Recent Picks</Text>
+            <Text style={styles.picksSectionTitle} accessibilityRole="header">
+              Recent Picks
+            </Text>
             {recentPicks.length > 0 ? (
               recentPicks.map((pick, index) => renderPickItem(pick, index, true))
             ) : (
@@ -389,8 +472,14 @@ export function DraftRoomScreen({
 
           {/* Upcoming Picks */}
           <View style={styles.picksSection}>
-            <Text style={styles.picksSectionTitle}>Upcoming</Text>
-            {upcomingPicks.map((pick, index) => renderPickItem(pick, index, false))}
+            <Text style={styles.picksSectionTitle} accessibilityRole="header">
+              Upcoming
+            </Text>
+            {upcomingPicks && upcomingPicks.length > 0 ? (
+              upcomingPicks.map((pick, index) => renderPickItem(pick, index, false))
+            ) : (
+              <Text style={styles.noPicksText}>No upcoming picks</Text>
+            )}
           </View>
         </ScrollView>
       )}
@@ -413,8 +502,12 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   backButtonText: {
     color: colors.textOnPrimary,
@@ -431,10 +524,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pauseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.primaryLight,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   pauseButtonActive: {
     backgroundColor: colors.warning,
@@ -491,9 +588,13 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
     paddingVertical: spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: borderRadius.md,
+    minHeight: accessibility.minTouchTarget,
   },
   tabActive: {
     backgroundColor: colors.primary,
@@ -521,9 +622,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   flagFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
   },
   flagFilterButtonActive: {
     backgroundColor: colors.secondary + '20',
@@ -540,18 +645,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textLight,
   },
-  proposeTradeButton: {
-    backgroundColor: colors.info,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-  },
-  proposeTradeButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+  proposeTradeContainer: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   tradeListContent: {
     padding: spacing.md,

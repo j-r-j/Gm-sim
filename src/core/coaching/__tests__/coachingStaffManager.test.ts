@@ -66,7 +66,7 @@ describe('Coaching Staff Manager', () => {
     it('should return all positions as vacant for empty hierarchy', () => {
       const vacancies = getVacancies(hierarchy);
 
-      expect(vacancies.length).toBe(13); // All coaching positions
+      expect(vacancies.length).toBe(3); // All coaching positions
       expect(vacancies.find((v) => v.role === 'headCoach')).toBeDefined();
       expect(vacancies.find((v) => v.role === 'offensiveCoordinator')).toBeDefined();
     });
@@ -99,7 +99,7 @@ describe('Coaching Staff Manager', () => {
     });
 
     it('should update coach role and team', () => {
-      const coach = createTestCoach('coach-1', 'John', 'Smith', 'qbCoach');
+      const coach = createTestCoach('coach-1', 'John', 'Smith', 'offensiveCoordinator');
 
       const result = hireCoach(state, hierarchy, coach, 'headCoach');
       const hiredCoach = result.state.coaches.get('coach-1');
@@ -196,20 +196,20 @@ describe('Coaching Staff Manager', () => {
 
   describe('Interim Assignments', () => {
     it('should assign interim coach', () => {
-      const coach = createTestCoach('coach-1', 'John', 'Smith', 'qbCoach');
-      const result = hireCoach(state, hierarchy, coach, 'qbCoach');
+      const coach = createTestCoach('coach-1', 'John', 'Smith', 'offensiveCoordinator');
+      const result = hireCoach(state, hierarchy, coach, 'offensiveCoordinator');
 
       const newState = assignInterim(result.state, 'offensiveCoordinator', 'coach-1');
 
       expect(newState.interimAssignments.length).toBe(1);
       expect(newState.interimAssignments[0].vacantRole).toBe('offensiveCoordinator');
       expect(newState.interimAssignments[0].interimCoachId).toBe('coach-1');
-      expect(newState.interimAssignments[0].originalRole).toBe('qbCoach');
+      expect(newState.interimAssignments[0].originalRole).toBe('offensiveCoordinator');
     });
 
     it('should remove interim assignment', () => {
-      const coach = createTestCoach('coach-1', 'John', 'Smith', 'qbCoach');
-      const result = hireCoach(state, hierarchy, coach, 'qbCoach');
+      const coach = createTestCoach('coach-1', 'John', 'Smith', 'offensiveCoordinator');
+      const result = hireCoach(state, hierarchy, coach, 'offensiveCoordinator');
 
       let newState = assignInterim(result.state, 'offensiveCoordinator', 'coach-1');
       newState = removeInterim(newState, 'offensiveCoordinator');
@@ -218,8 +218,8 @@ describe('Coaching Staff Manager', () => {
     });
 
     it('should get interim for role', () => {
-      const coach = createTestCoach('coach-1', 'John', 'Smith', 'qbCoach');
-      const result = hireCoach(state, hierarchy, coach, 'qbCoach');
+      const coach = createTestCoach('coach-1', 'John', 'Smith', 'offensiveCoordinator');
+      const result = hireCoach(state, hierarchy, coach, 'offensiveCoordinator');
 
       const newState = assignInterim(result.state, 'offensiveCoordinator', 'coach-1');
       const interim = getInterimForRole(newState, 'offensiveCoordinator');
@@ -368,9 +368,9 @@ describe('Coaching Staff Manager', () => {
     it('should return summary for empty staff', () => {
       const summary = getCoachingStaffSummary(state, hierarchy);
 
-      expect(summary.totalPositions).toBe(13);
+      expect(summary.totalPositions).toBe(3);
       expect(summary.filledPositions).toBe(0);
-      expect(summary.vacancies).toBe(13);
+      expect(summary.vacancies).toBe(3);
       expect(summary.hasHeadCoach).toBe(false);
     });
 
@@ -384,7 +384,7 @@ describe('Coaching Staff Manager', () => {
       const summary = getCoachingStaffSummary(result.state, result.hierarchy);
 
       expect(summary.filledPositions).toBe(2);
-      expect(summary.vacancies).toBe(11);
+      expect(summary.vacancies).toBe(1);
       expect(summary.hasHeadCoach).toBe(true);
       expect(summary.hasOffensiveCoordinator).toBe(true);
       expect(summary.hasDefensiveCoordinator).toBe(false);

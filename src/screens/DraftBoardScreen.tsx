@@ -16,8 +16,18 @@ import {
   SafeAreaView,
   TouchableOpacity,
   TextInput,
+  Keyboard,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
+import { ScreenHeader } from '../components';
 import { Position } from '../core/models/player/Position';
 import { ProspectListItem } from '../components/draft';
 import { ComparisonModal, type ComparisonProspect } from '../components/draft/ComparisonModal';
@@ -272,15 +282,7 @@ export function DraftBoardScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.headerTitle}>{draftYear} Draft Board</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title={`${draftYear} Big Board`} onBack={onBack} testID="draft-board-header" />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -294,7 +296,7 @@ export function DraftBoardScreen({
       </View>
 
       {/* Position Filter */}
-      <View style={styles.filterContainer}>
+      <View style={styles.filterContainer} accessibilityRole="tablist">
         <FlatList
           horizontal
           data={POSITION_FILTERS}
@@ -305,6 +307,10 @@ export function DraftBoardScreen({
             <TouchableOpacity
               style={[styles.filterChip, positionFilter === item.value && styles.filterChipActive]}
               onPress={() => setPositionFilter(item.value)}
+              accessibilityLabel={`Filter by ${item.label}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: positionFilter === item.value }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -324,18 +330,26 @@ export function DraftBoardScreen({
         <TouchableOpacity
           style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
           onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
+          accessibilityLabel={`Show ${showFlaggedOnly ? 'all prospects' : 'flagged only'}`}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: showFlaggedOnly }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
             * Flagged Only
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.sortOptions}>
+        <View style={styles.sortOptions} accessibilityRole="tablist">
           {SORT_OPTIONS.map((option) => (
             <TouchableOpacity
               key={option.value}
               style={[styles.sortButton, sortBy === option.value && styles.sortButtonActive]}
               onPress={() => setSortBy(option.value)}
+              accessibilityLabel={`Sort by ${option.label}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: sortBy === option.value }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -382,6 +396,8 @@ export function DraftBoardScreen({
         keyExtractor={(item) => item.id}
         renderItem={renderProspect}
         contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No prospects match your filters</Text>

@@ -7,8 +7,9 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../../styles';
 import { Position } from '../../core/models/player/Position';
+import { Avatar } from '../avatar';
 
 export interface ProspectListItemProps {
   /** Prospect's unique ID */
@@ -68,7 +69,7 @@ function getRoundColor(round: number | null): string {
  * ProspectListItem Component
  */
 export function ProspectListItem({
-  id: _id,
+  id,
   name,
   position,
   collegeName,
@@ -84,6 +85,7 @@ export function ProspectListItem({
   onToggleFlag,
 }: ProspectListItemProps): React.JSX.Element {
   const roundColor = getRoundColor(projectedRound);
+  const projection = formatProjection(projectedRound, projectedPickRange);
 
   return (
     <TouchableOpacity
@@ -91,7 +93,15 @@ export function ProspectListItem({
       onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${overallRank ? `#${overallRank} ` : ''}${name}, ${position}, ${collegeName}, Projected ${projection}${flagged ? ', Flagged' : ''}${isSelected ? ', Selected' : ''}`}
+      accessibilityRole="button"
+      accessibilityHint="Tap for details, long press to compare"
+      accessibilityState={{ selected: isSelected }}
+      hitSlop={accessibility.hitSlop}
     >
+      {/* Avatar */}
+      <Avatar id={id} size="xs" context="prospect" accentColor={colors.info} />
+
       {/* Rank Column */}
       <View style={styles.rankColumn}>
         {overallRank !== null && <Text style={styles.overallRank}>#{overallRank}</Text>}
@@ -171,6 +181,7 @@ const styles = StyleSheet.create({
   rankColumn: {
     width: 50,
     alignItems: 'center',
+    marginLeft: spacing.sm,
   },
   overallRank: {
     fontSize: fontSize.md,

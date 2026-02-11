@@ -248,3 +248,77 @@ export {
   wouldCreateConflict,
   isValidPersonalityType,
 } from './PersonalityEffects';
+
+// Coach Revelation System
+export {
+  // Types
+  AttributeVisibility,
+  AttributeRevelation,
+  CoachRevelationState,
+  // Functions
+  calculateCoachRevelation,
+  getAttributeDisplayValue,
+  getQualitativeDescriptor,
+  getAttributeColor,
+  getAttributeDisplayName,
+  getAttributeDescription,
+} from './CoachRevelationSystem';
+
+// Coach Management Actions
+export {
+  // Types
+  CoachActionResult,
+  ExtensionOffer,
+  CoachActionValidation,
+  // Functions
+  canFireCoach,
+  canPromoteCoach,
+  canExtendCoach,
+  fireCoachAction,
+  promoteCoachAction,
+  extendCoachAction,
+  getExtensionRecommendation,
+  getExtensionEligibleCoaches,
+  getExpiringContractCoaches,
+} from './CoachManagementActions';
+
+// Coach Generator
+export {
+  // Types
+  CoachGenerationConfig,
+  // Functions
+  generateRandomReputationTier,
+  generateCoachAttributes,
+  generateCoachingTree,
+  generateCoachPersonality,
+  getSchemeForRole,
+  generateCoach,
+  generateCoachingStaff,
+} from './CoachGenerator';
+
+// Coach Writeup Generator
+export {
+  // Functions
+  generateCoachWriteup,
+  generateCoachSummary,
+  generateCoachStrengths,
+  generateCoachWeaknesses,
+  getSchemeDisplayName as getCoachSchemeDisplayName,
+  getTreeDisplayName,
+  getPersonalityDisplayName,
+  getReputationDisplayName,
+} from './CoachWriteupGenerator';
+
+// New Game Candidate Generator
+export {
+  // Types
+  HiringCandidate,
+  CandidateGenerationOptions,
+  // Functions
+  generateHiringCandidates,
+  createCandidateContract,
+  calculateTotalStaffSalary,
+  candidateFitsInBudget,
+  getMinimumSalaryForRole,
+  getMinimumTotalBudget,
+} from './NewGameCandidateGenerator';

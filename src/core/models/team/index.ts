@@ -46,7 +46,7 @@ export {
   getSurfaceInjuryModifier,
 } from './Stadium';
 
-// Fake Cities
+// NFL Cities
 export {
   Conference,
   Division,
@@ -56,12 +56,10 @@ export {
   ALL_MARKET_SIZES,
   FakeCity,
   FAKE_CITIES,
-  REAL_NFL_CITIES,
   getCityByAbbreviation,
   getCitiesByDivision,
   getCitiesByConference,
   getCitiesByMarketSize,
-  validateNoCitiesAreReal,
   validateNoDuplicateAbbreviations,
   validateDivisionSizes,
   getFullTeamName,
@@ -75,6 +73,9 @@ export {
   MAX_ACTIVE_ROSTER_SIZE,
   MAX_PRACTICE_SQUAD_SIZE,
   MAX_IR_SIZE,
+  IR_MINIMUM_GAMES,
+  IRPlacement,
+  canReturnFromIR,
   Team,
   createEmptyTeamRecord,
   validateTeamRecord,
