@@ -872,7 +872,10 @@ function buildPlayerTeamMap(teams: Record<string, Team>): Map<string, string> {
 /**
  * Find which team a player is on using a pre-built lookup map.
  */
-function findPlayerTeamFromMap(playerId: string, playerTeamMap: Map<string, string>): string | null {
+function findPlayerTeamFromMap(
+  playerId: string,
+  playerTeamMap: Map<string, string>
+): string | null {
   return playerTeamMap.get(playerId) ?? null;
 }
 

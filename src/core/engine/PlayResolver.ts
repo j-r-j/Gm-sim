@@ -15,6 +15,9 @@ import {
   getSnapCount,
   getPlayersForPlayType,
   getPositionCoach,
+  getActiveOffensivePlayers,
+  getActiveDefensivePlayers,
+  swapActivePlayer,
 } from './TeamGameState';
 import {
   calculateEffectiveRating,
@@ -27,6 +30,7 @@ import {
   calculateFatigueIncrease,
   determinePlayIntensity,
   calculateBetweenPlayRecovery,
+  selectFatigueSubstitute,
 } from './FatigueSystem';
 import { generatePlayDescription, PlayResultForDescription } from './PlayDescriptionGenerator';
 import { Player } from '../models/player/Player';
@@ -80,6 +84,12 @@ export interface PlayResult {
 
   // Safety
   safety: boolean;
+
+  // Fatigue substitutions made before this play
+  substitutions?: { outId: string; inId: string; position: string }[];
+
+  // Key matchup result from MatchupResolver
+  keyMatchup?: { offensePlayer: string; defensePlayer: string; winner: string };
 
   // For display (user sees this)
   description: string;
@@ -266,7 +276,8 @@ function updatePlayFatigue(
   teamState: TeamGameState,
   playType: PlayType,
   outcome: PlayOutcome,
-  weather: WeatherCondition
+  weather: WeatherCondition,
+  fatigueMultiplier: number = 1.0
 ): void {
   const intensity = determinePlayIntensity(playType, outcome);
 
@@ -282,8 +293,8 @@ function updatePlayFatigue(
       playIntensity: intensity,
     });
 
-    // Apply fatigue increase then between-play recovery
-    let newFatigue = currentFatigue + fatigueIncrease;
+    // Apply fatigue increase (reduced by game plan conditioning) then between-play recovery
+    let newFatigue = currentFatigue + fatigueIncrease * fatigueMultiplier;
     newFatigue = calculateBetweenPlayRecovery(newFatigue);
 
     updatePlayerFatigue(teamState, player.id, newFatigue);
@@ -410,6 +421,17 @@ export interface HomeFieldContext {
 }
 
 /**
+ * Game plan modifiers applied to play resolution
+ */
+export interface GamePlanPlayModifiers {
+  passOffenseBonus?: number;
+  rushOffenseBonus?: number;
+  passDefenseBonus?: number;
+  rushDefenseBonus?: number;
+  fatigueReduction?: number; // 0-1 multiplier (e.g. 0.85 means 15% less fatigue)
+}
+
+/**
  * Resolve a single play
  *
  * @param offensiveTeam - Offensive team game state
@@ -417,6 +439,7 @@ export interface HomeFieldContext {
  * @param playCall - The offensive and defensive play calls
  * @param context - Play call context (down, distance, etc.)
  * @param homeFieldContext - Optional home field advantage context
+ * @param gamePlanModifiers - Optional game plan modifiers from weekly practice focus
  * @returns The result of the play
  */
 export function resolvePlay(
@@ -424,7 +447,8 @@ export function resolvePlay(
   defensiveTeam: TeamGameState,
   playCall: { offensive: OffensivePlayCall; defensive: DefensivePlayCall },
   context: PlayCallContext,
-  homeFieldContext?: HomeFieldContext
+  homeFieldContext?: HomeFieldContext,
+  gamePlanModifiers?: GamePlanPlayModifiers
 ): PlayResult {
   const { playType, targetPosition } = playCall.offensive;
 
@@ -435,6 +459,33 @@ export function resolvePlay(
   // Get players involved in the play
   const offensivePlayers = getPlayersForPlayType(offensiveTeam, true, playType);
   const defensivePlayers = getPlayersForPlayType(defensiveTeam, false, playType);
+
+  // --- Fatigue substitutions ---
+  const substitutions: { outId: string; inId: string; position: string }[] = [];
+
+  const allActiveOffIds = getActiveOffensivePlayers(offensiveTeam.offense).map((p) => p.id);
+  const allActiveDefIds = getActiveDefensivePlayers(defensiveTeam.defense).map((p) => p.id);
+
+  for (const player of offensivePlayers) {
+    const sub = selectFatigueSubstitute(offensiveTeam.allPlayers, allActiveOffIds, player);
+    if (sub) {
+      swapActivePlayer(offensiveTeam, player.id, sub.id, 'offense');
+      substitutions.push({ outId: player.id, inId: sub.id, position: player.position });
+      // Replace player in the local array so effective ratings use the sub
+      const idx = offensivePlayers.indexOf(player);
+      if (idx !== -1) offensivePlayers[idx] = sub;
+    }
+  }
+
+  for (const player of defensivePlayers) {
+    const sub = selectFatigueSubstitute(defensiveTeam.allPlayers, allActiveDefIds, player);
+    if (sub) {
+      swapActivePlayer(defensiveTeam, player.id, sub.id, 'defense');
+      substitutions.push({ outId: player.id, inId: sub.id, position: player.position });
+      const idx = defensivePlayers.indexOf(player);
+      if (idx !== -1) defensivePlayers[idx] = sub;
+    }
+  }
 
   // Calculate effective ratings for all players
   const offensiveEffectives = calculatePlayersEffective(
@@ -454,8 +505,8 @@ export function resolvePlay(
     false
   );
 
-  // Resolve the matchup (result used implicitly through player ratings)
-  resolvePlayMatchup(offensiveEffectives, defensiveEffectives, playType);
+  // Resolve the matchup and capture the result
+  const matchupResult = resolvePlayMatchup(offensiveEffectives, defensiveEffectives, playType);
 
   // Calculate average ratings for outcome table
   let avgOffRating =
@@ -465,6 +516,14 @@ export function resolvePlay(
     defensiveEffectives.reduce((sum, p) => sum + p.effective, 0) /
     (defensiveEffectives.length || 1);
 
+  // Apply matchup margin as a shift to offensive rating
+  // Positive margin when offense wins matchup, negative when defense wins
+  const signedMargin =
+    matchupResult.overallWinner === 'offense'
+      ? matchupResult.aggregateMargin
+      : -matchupResult.aggregateMargin;
+  avgOffRating += signedMargin * 0.3;
+
   // Apply home field advantage (converted from points to rating boost)
   // 2.5 point advantage = ~5 rating point boost (2 rating points per point)
   if (homeFieldContext) {
@@ -473,6 +532,24 @@ export function resolvePlay(
       avgOffRating += ratingBoost;
     } else {
       avgDefRating += ratingBoost;
+    }
+  }
+
+  // Apply game plan modifiers from weekly practice focus
+  if (gamePlanModifiers) {
+    const isPassPlay =
+      playType.includes('pass') || playType.includes('action') || playType === 'qb_scramble';
+    if (isPassPlay && gamePlanModifiers.passOffenseBonus) {
+      avgOffRating += gamePlanModifiers.passOffenseBonus;
+    }
+    if (!isPassPlay && gamePlanModifiers.rushOffenseBonus) {
+      avgOffRating += gamePlanModifiers.rushOffenseBonus;
+    }
+    if (isPassPlay && gamePlanModifiers.passDefenseBonus) {
+      avgDefRating += gamePlanModifiers.passDefenseBonus;
+    }
+    if (!isPassPlay && gamePlanModifiers.rushDefenseBonus) {
+      avgDefRating += gamePlanModifiers.rushDefenseBonus;
     }
   }
 
@@ -491,7 +568,7 @@ export function resolvePlay(
     context.fieldPosition
   );
 
-  const roll = rollOutcome(outcomeTable);
+  const roll = rollOutcome(outcomeTable, signedMargin);
 
   // Check for secondary effects
   const hadBigHit = roll.secondaryEffects.includes('big_hit');
@@ -527,9 +604,24 @@ export function resolvePlay(
     }
   }
 
-  // Update fatigue
-  updatePlayFatigue(offensivePlayers, offensiveTeam, playType, roll.outcome, context.weather);
-  updatePlayFatigue(defensivePlayers, defensiveTeam, playType, roll.outcome, context.weather);
+  // Update fatigue (apply conditioning reduction from game plan if present)
+  const fatigueMult = gamePlanModifiers?.fatigueReduction ?? 1.0;
+  updatePlayFatigue(
+    offensivePlayers,
+    offensiveTeam,
+    playType,
+    roll.outcome,
+    context.weather,
+    fatigueMult
+  );
+  updatePlayFatigue(
+    defensivePlayers,
+    defensiveTeam,
+    playType,
+    roll.outcome,
+    context.weather,
+    fatigueMult
+  );
 
   // Calculate new game state
   let yardsGained = roll.yards;
@@ -701,6 +793,18 @@ export function resolvePlay(
     penaltyOccurred,
     penaltyDetails,
     safety,
+    substitutions: substitutions.length > 0 ? substitutions : undefined,
+    keyMatchup:
+      matchupResult.keyMatchup.offense !== 'Unknown'
+        ? {
+            offensePlayer: matchupResult.keyMatchup.offense,
+            defensePlayer: matchupResult.keyMatchup.defense,
+            winner:
+              matchupResult.overallWinner === 'offense'
+                ? matchupResult.keyMatchup.offense
+                : matchupResult.keyMatchup.defense,
+          }
+        : undefined,
     description: finalDescription,
   };
 }

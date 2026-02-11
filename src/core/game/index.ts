@@ -74,6 +74,7 @@ export {
   applyPlayerUpdates,
   createEmptyCareerStats,
   updateCareerStats,
+  generateGamePlanFeedback,
   type PostGameUpdates,
   type PlayerUpdate,
   type TeamUpdate,
@@ -81,6 +82,7 @@ export {
   type InjuryUpdate,
   type NewsEvent,
   type PlayerCareerStats,
+  type GamePlanFeedback,
 } from './PostGameProcessor';
 
 // Season Stats Aggregator

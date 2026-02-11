@@ -182,6 +182,8 @@ describe('Privacy Tests - Engine Internals Not Exposed', () => {
         'penaltyDetails',
         'safety',
         'description',
+        'substitutions',
+        'keyMatchup',
       ];
 
       const resultKeys = Object.keys(result);

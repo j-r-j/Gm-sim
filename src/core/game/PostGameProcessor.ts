@@ -5,7 +5,8 @@
  */
 
 import { GameResult, GameInjury, NotableEvent } from './GameRunner';
-import { PlayerGameStats } from './StatisticsTracker';
+import { PlayerGameStats, TeamGameStats } from './StatisticsTracker';
+import { WeeklyGamePlan, GamePlanEmphasis } from '../gameplan/GamePlanManager';
 
 /**
  * Injury update for a player
@@ -573,5 +574,264 @@ export function updateCareerStats(
     sacks: career.sacks + game.defensive.sacks,
     interceptions: career.interceptions + game.defensive.interceptions,
     gamesPlayed: career.gamesPlayed + (game.snapsPlayed > 0 ? 1 : 0),
+  };
+}
+
+/**
+ * Game plan feedback after a game
+ */
+export interface GamePlanFeedback {
+  overallEffectiveness: 'very_effective' | 'effective' | 'neutral' | 'ineffective';
+  insights: string[];
+}
+
+// -- Feedback template arrays --
+
+const EFFECTIVE_PASS_OFFENSE_TEMPLATES = [
+  'Your focus on the passing game paid dividends — {passingYards} yards through the air',
+  'Extra pass reps showed results with {passingYards} passing yards',
+];
+
+const INEFFECTIVE_PASS_OFFENSE_TEMPLATES = [
+  'Despite emphasizing the passing game, only {passingYards} yards through the air',
+  "The passing focus didn't translate — only {passingYards} passing yards",
+];
+
+const EFFECTIVE_RUSH_OFFENSE_TEMPLATES = [
+  'The ground game was dominant — {rushingYards} rushing yards',
+  'Pounding the rock worked with {rushingYards} yards on the ground',
+];
+
+const INEFFECTIVE_RUSH_OFFENSE_TEMPLATES = [
+  'Despite emphasizing the run game, the ground attack only managed {rushingYards} yards',
+  "The rushing focus didn't translate — only {rushingYards} yards on the ground",
+];
+
+const EFFECTIVE_PASS_DEFENSE_TEMPLATES = [
+  'Your pass defense focus held them to just {oppPassingYards} passing yards',
+  'Secondary preparation paid off — opponents managed only {oppPassingYards} through the air',
+];
+
+const INEFFECTIVE_PASS_DEFENSE_TEMPLATES = [
+  'Despite focusing on pass defense, they threw for {oppPassingYards} yards',
+  "Pass coverage prep wasn't enough — {oppPassingYards} passing yards allowed",
+];
+
+const EFFECTIVE_RUSH_DEFENSE_TEMPLATES = [
+  'Run defense preparation worked — held them to {oppRushingYards} rushing yards',
+  'Your emphasis on stopping the run paid off with only {oppRushingYards} yards allowed',
+];
+
+const INEFFECTIVE_RUSH_DEFENSE_TEMPLATES = [
+  'Despite focusing on run defense, they ran for {oppRushingYards} yards',
+  'Run defense prep fell short — {oppRushingYards} rushing yards allowed',
+];
+
+const CONDITIONING_EFFECTIVE_TEMPLATES = [
+  'Smart rotation management — your starters stayed fresh throughout',
+  'Conditioning focus paid off with strong fourth quarter play',
+];
+
+const EMPHASIS_EFFECTIVE_TEMPLATES: Partial<Record<GamePlanEmphasis, string[]>> = {
+  attackWeakSecondary: [
+    'Targeting their secondary worked — {passingYards} passing yards',
+    'You exposed their weak secondary for {passingYards} yards through the air',
+  ],
+  attackWeakFront: [
+    'Running at their weak front seven produced {rushingYards} rushing yards',
+    "Their defensive front couldn't handle your ground game — {rushingYards} yards",
+  ],
+  establishRun: [
+    'Ball control approach worked — {rushingYards} rushing yards and clock management',
+    'Establishing the run set the tone with {rushingYards} yards on the ground',
+  ],
+  blitzHeavy: [
+    'Aggressive blitzing rattled their QB — {sacks} sacks on the day',
+    'The blitz-heavy approach generated {sacks} sacks',
+  ],
+  coverageShells: [
+    'Conservative coverage limited their big plays to {oppPassingYards} passing yards',
+    'Playing coverage shells kept them in check — {oppPassingYards} passing yards allowed',
+  ],
+  ballControl: [
+    'Ball control strategy kept turnovers low with only {turnovers} giveaways',
+    'Protecting the football worked — just {turnovers} turnovers',
+  ],
+};
+
+/**
+ * Pick a random template and fill in stat placeholders
+ */
+function fillTemplate(templates: string[], stats: Record<string, string | number>): string {
+  const template = templates[Math.floor(Math.random() * templates.length)];
+  return template.replace(/\{(\w+)\}/g, (_, key) => String(stats[key] ?? '?'));
+}
+
+/**
+ * Generate post-game feedback about how well the game plan worked
+ */
+export function generateGamePlanFeedback(
+  gamePlan: WeeklyGamePlan | null,
+  gameResult: GameResult,
+  teamId: string
+): GamePlanFeedback {
+  // No game plan set
+  if (!gamePlan || !gamePlan.isSet) {
+    return {
+      overallEffectiveness: 'neutral',
+      insights: ['No specific game plan was set for this game.'],
+    };
+  }
+
+  const isHome = gameResult.homeTeamId === teamId;
+  const teamStats: TeamGameStats = isHome ? gameResult.homeStats : gameResult.awayStats;
+  const oppStats: TeamGameStats = isHome ? gameResult.awayStats : gameResult.homeStats;
+
+  const insights: string[] = [];
+  let positiveCount = 0;
+  let totalChecked = 0;
+
+  const baseline = 12.5;
+  const stats = {
+    passingYards: teamStats.passingYards,
+    rushingYards: teamStats.rushingYards,
+    oppPassingYards: oppStats.passingYards,
+    oppRushingYards: oppStats.rushingYards,
+    turnovers: teamStats.turnovers,
+    sacks: 0,
+  };
+
+  // Sum sacks from player stats
+  for (const [, playerStats] of teamStats.playerStats) {
+    stats.sacks += playerStats.defensive.sacks;
+  }
+
+  // Check pass offense focus
+  if (gamePlan.practiceFocus.passOffense > baseline + 5) {
+    totalChecked++;
+    if (teamStats.passingYards >= 220) {
+      positiveCount++;
+      insights.push(fillTemplate(EFFECTIVE_PASS_OFFENSE_TEMPLATES, stats));
+    } else {
+      insights.push(fillTemplate(INEFFECTIVE_PASS_OFFENSE_TEMPLATES, stats));
+    }
+  }
+
+  // Check rush offense focus
+  if (gamePlan.practiceFocus.rushOffense > baseline + 5) {
+    totalChecked++;
+    if (teamStats.rushingYards >= 110) {
+      positiveCount++;
+      insights.push(fillTemplate(EFFECTIVE_RUSH_OFFENSE_TEMPLATES, stats));
+    } else {
+      insights.push(fillTemplate(INEFFECTIVE_RUSH_OFFENSE_TEMPLATES, stats));
+    }
+  }
+
+  // Check pass defense focus
+  if (gamePlan.practiceFocus.passDefense > baseline + 5) {
+    totalChecked++;
+    if (oppStats.passingYards <= 200) {
+      positiveCount++;
+      insights.push(fillTemplate(EFFECTIVE_PASS_DEFENSE_TEMPLATES, stats));
+    } else {
+      insights.push(fillTemplate(INEFFECTIVE_PASS_DEFENSE_TEMPLATES, stats));
+    }
+  }
+
+  // Check rush defense focus
+  if (gamePlan.practiceFocus.rushDefense > baseline + 5) {
+    totalChecked++;
+    if (oppStats.rushingYards <= 90) {
+      positiveCount++;
+      insights.push(fillTemplate(EFFECTIVE_RUSH_DEFENSE_TEMPLATES, stats));
+    } else {
+      insights.push(fillTemplate(INEFFECTIVE_RUSH_DEFENSE_TEMPLATES, stats));
+    }
+  }
+
+  // Check conditioning focus
+  if (gamePlan.practiceFocus.conditioning > 15) {
+    totalChecked++;
+    const teamInjuries = gameResult.injuries.filter((inj) => {
+      if (isHome) {
+        return gameResult.homeStats.playerStats.has(inj.playerId);
+      }
+      return gameResult.awayStats.playerStats.has(inj.playerId);
+    });
+    if (teamInjuries.length === 0) {
+      positiveCount++;
+      insights.push(fillTemplate(CONDITIONING_EFFECTIVE_TEMPLATES, stats));
+    }
+  }
+
+  // Check emphasis-specific feedback
+  if (gamePlan.gamePlanEmphasis !== 'balanced') {
+    const emphasisTemplates = EMPHASIS_EFFECTIVE_TEMPLATES[gamePlan.gamePlanEmphasis];
+    if (emphasisTemplates) {
+      totalChecked++;
+      let emphasisWorked = false;
+
+      switch (gamePlan.gamePlanEmphasis) {
+        case 'attackWeakSecondary':
+          emphasisWorked = teamStats.passingYards >= 250;
+          break;
+        case 'attackWeakFront':
+        case 'establishRun':
+          emphasisWorked = teamStats.rushingYards >= 120;
+          break;
+        case 'blitzHeavy':
+          emphasisWorked = stats.sacks >= 3;
+          break;
+        case 'coverageShells':
+          emphasisWorked = oppStats.passingYards <= 180;
+          break;
+        case 'ballControl':
+          emphasisWorked = teamStats.turnovers <= 1;
+          break;
+      }
+
+      if (emphasisWorked) {
+        positiveCount++;
+        insights.push(fillTemplate(emphasisTemplates, stats));
+      }
+    }
+  }
+
+  // If no specific focus areas were above threshold, provide generic feedback
+  if (insights.length === 0) {
+    const won = isHome
+      ? gameResult.homeScore > gameResult.awayScore
+      : gameResult.awayScore > gameResult.homeScore;
+    insights.push(
+      won
+        ? 'Your balanced game plan allowed the team to execute across the board.'
+        : "The balanced approach didn't give your team a clear edge today."
+    );
+  }
+
+  // Cap at 4 insights
+  const finalInsights = insights.slice(0, 4);
+
+  // Determine overall effectiveness
+  let overallEffectiveness: GamePlanFeedback['overallEffectiveness'];
+  if (totalChecked === 0) {
+    overallEffectiveness = 'neutral';
+  } else {
+    const ratio = positiveCount / totalChecked;
+    if (ratio >= 0.75) {
+      overallEffectiveness = 'very_effective';
+    } else if (ratio >= 0.5) {
+      overallEffectiveness = 'effective';
+    } else if (ratio >= 0.25) {
+      overallEffectiveness = 'neutral';
+    } else {
+      overallEffectiveness = 'ineffective';
+    }
+  }
+
+  return {
+    overallEffectiveness,
+    insights: finalInsights,
   };
 }

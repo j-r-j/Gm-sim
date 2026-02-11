@@ -55,9 +55,7 @@ export function SeasonOverScreen({
         <View style={styles.recordHeader}>
           <Text style={styles.yearText}>{seasonYear} Season</Text>
           <Text style={styles.recordValue}>{recordString}</Text>
-          <Text style={styles.playoffText}>
-            {playoffResult || 'Did not qualify for playoffs'}
-          </Text>
+          <Text style={styles.playoffText}>{playoffResult || 'Did not qualify for playoffs'}</Text>
         </View>
 
         {/* Season Highlights */}

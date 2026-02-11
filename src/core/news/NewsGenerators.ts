@@ -16,6 +16,11 @@ import {
   MILESTONE_TEMPLATES,
   DRAFT_TEMPLATES,
   LEAGUE_TEMPLATES,
+  STREAK_TEMPLATES,
+  RIVALRY_TEMPLATES,
+  CONTRACT_YEAR_TEMPLATES,
+  AI_TEAM_STORYLINE_TEMPLATES,
+  TRADE_DEADLINE_TEMPLATES,
   replacePlaceholders,
   getTemplatesBySentiment,
 } from './StoryTemplates';
@@ -627,6 +632,203 @@ export function generatePlayoffClinchNews(
   };
 
   return generateFromTemplate(templates, storyContext, season, week, undefined, context.teamId);
+}
+
+// ============================================================================
+// STREAK NEWS GENERATOR
+// ============================================================================
+
+/**
+ * Generates news for a team on a winning or losing streak
+ */
+export function generateStreakNews(
+  teamName: string,
+  teamId: string,
+  streakType: 'winning' | 'losing',
+  streakLength: number,
+  season: number,
+  week: number
+): NewsItem {
+  const template = randomElement(STREAK_TEMPLATES);
+  const context: StoryContext = { teamName, count: streakLength };
+  const headline = replacePlaceholders(template, context);
+
+  const isPositive = streakType === 'winning';
+  const body = isPositive
+    ? `The ${teamName} have won ${streakLength} games in a row and are one of the hottest teams in the league right now.`
+    : `It has been a rough stretch for the ${teamName}, who have now dropped ${streakLength} straight games. The pressure is mounting.`;
+
+  return {
+    id: generateNewsItemId(),
+    category: 'league',
+    headline,
+    body,
+    priority: streakLength >= 5 ? 'high' : 'medium',
+    isPositive,
+    timestamp: Date.now(),
+    season,
+    week,
+    teamId,
+    isRead: false,
+    revealsTraitHint: false,
+  };
+}
+
+// ============================================================================
+// RIVALRY NEWS GENERATOR
+// ============================================================================
+
+/**
+ * Generates news for an upcoming division rivalry game
+ */
+export function generateRivalryNews(
+  team1Name: string,
+  team2Name: string,
+  divisionName: string,
+  season: number,
+  week: number
+): NewsItem {
+  const template = randomElement(RIVALRY_TEMPLATES);
+  const context: StoryContext = {
+    team1: team1Name,
+    team2: team2Name,
+    division: divisionName,
+  };
+  const headline = replacePlaceholders(template, context);
+  const body = `A key divisional matchup this week features the ${team1Name} against the ${team2Name}. Division games always carry extra weight in the standings race.`;
+
+  return {
+    id: generateNewsItemId(),
+    category: 'league',
+    headline,
+    body,
+    priority: 'medium',
+    isPositive: true,
+    timestamp: Date.now(),
+    season,
+    week,
+    isRead: false,
+    revealsTraitHint: false,
+  };
+}
+
+// ============================================================================
+// CONTRACT YEAR NEWS GENERATOR
+// ============================================================================
+
+/**
+ * Generates news for a player in a contract year
+ */
+export function generateContractYearNews(
+  playerName: string,
+  teamName: string,
+  performance: 'strong' | 'struggling',
+  season: number,
+  week: number
+): NewsItem {
+  const template = randomElement(CONTRACT_YEAR_TEMPLATES);
+  const context: StoryContext = { playerName, teamName };
+  const headline = replacePlaceholders(template, context);
+
+  const isPositive = performance === 'strong';
+  const body = isPositive
+    ? `${playerName} is making the most of a contract year, posting impressive numbers for the ${teamName}. The front office will have a decision to make this offseason.`
+    : `${playerName} has not lived up to expectations in a contract year with the ${teamName}. This could significantly impact his market value this offseason.`;
+
+  return {
+    id: generateNewsItemId(),
+    category: 'performance',
+    headline,
+    body,
+    priority: 'medium',
+    isPositive,
+    timestamp: Date.now(),
+    season,
+    week,
+    isRead: false,
+    revealsTraitHint: false,
+  };
+}
+
+// ============================================================================
+// AI TEAM STORYLINE GENERATOR
+// ============================================================================
+
+/**
+ * Generates a storyline news item for an AI-controlled team
+ */
+export function generateAITeamStoryline(
+  teamName: string,
+  teamId: string,
+  record: string,
+  narrativeType: 'surprise_contender' | 'disappointing' | 'rebuilding' | 'rising',
+  season: number,
+  week: number
+): NewsItem {
+  const template = randomElement(AI_TEAM_STORYLINE_TEMPLATES);
+  const context: StoryContext = { teamName, record };
+  const headline = replacePlaceholders(template, context);
+
+  const bodyMap: Record<typeof narrativeType, string> = {
+    surprise_contender: `The ${teamName} came into the season with low expectations but sit at ${record} and look like legitimate playoff contenders.`,
+    disappointing: `Expectations were high for the ${teamName} this season, but a ${record} record has fans and analysts questioning the direction of the franchise.`,
+    rebuilding: `At ${record}, the ${teamName} appear to be heading toward a long offseason. The front office may be looking to the future.`,
+    rising: `The ${teamName} are quietly putting together a solid season at ${record}. They may not grab headlines, but they are earning respect around the league.`,
+  };
+
+  const isPositive = narrativeType === 'surprise_contender' || narrativeType === 'rising';
+
+  return {
+    id: generateNewsItemId(),
+    category: 'league',
+    headline,
+    body: bodyMap[narrativeType],
+    priority: 'medium',
+    isPositive,
+    timestamp: Date.now(),
+    season,
+    week,
+    teamId,
+    isRead: false,
+    revealsTraitHint: false,
+  };
+}
+
+// ============================================================================
+// TRADE DEADLINE NEWS GENERATOR
+// ============================================================================
+
+/**
+ * Generates trade deadline buzz news
+ */
+export function generateTradeDeadlineNews(
+  week: number,
+  deadlineWeek: number,
+  season: number
+): NewsItem {
+  const template = randomElement(TRADE_DEADLINE_TEMPLATES);
+  const context: StoryContext = { deadlineWeek };
+  const headline = replacePlaceholders(template, context);
+
+  const weeksUntil = deadlineWeek - week;
+  const body =
+    weeksUntil <= 0
+      ? `The trade deadline has arrived. Expect a flurry of moves as contenders and pretenders sort themselves out.`
+      : `With the trade deadline just ${weeksUntil} week${weeksUntil === 1 ? '' : 's'} away, front offices around the league are making their final evaluations on whether to buy or sell.`;
+
+  return {
+    id: generateNewsItemId(),
+    category: 'trade',
+    headline,
+    body,
+    priority: weeksUntil <= 1 ? 'high' : 'medium',
+    isPositive: true,
+    timestamp: Date.now(),
+    season,
+    week,
+    isRead: false,
+    revealsTraitHint: false,
+  };
 }
 
 // ============================================================================

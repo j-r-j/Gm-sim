@@ -6,7 +6,15 @@
  */
 
 import { generateUUID, randomElement } from '../generators/utils/RandomUtils';
-import { NewsItem, sortNewsByPriorityAndTime } from './NewsGenerators';
+import {
+  NewsItem,
+  sortNewsByPriorityAndTime,
+  generateStreakNews,
+  generateRivalryNews,
+  generateContractYearNews,
+  generateAITeamStoryline,
+  generateTradeDeadlineNews,
+} from './NewsGenerators';
 import { Rumor, sortRumors } from './RumorMill';
 import { NewsFeedCategory, StoryPriority } from './StoryTemplates';
 
@@ -393,4 +401,142 @@ export function getLatestDigest(digests: WeeklyDigest[]): WeeklyDigest | null {
     if (current.season === latest.season && current.week > latest.week) return current;
     return latest;
   });
+}
+
+// ============================================================================
+// MID-SEASON NARRATIVE GENERATION
+// ============================================================================
+
+/** Minimal team info needed for narrative generation */
+export interface NarrativeTeamInfo {
+  teamId: string;
+  teamName: string;
+  conference: string;
+  division: string;
+  wins: number;
+  losses: number;
+  /** Positive = win streak, negative = loss streak */
+  currentStreak: number;
+}
+
+/** Upcoming game info for rivalry detection */
+export interface NarrativeGameInfo {
+  homeTeamId: string;
+  awayTeamId: string;
+  isDivisional: boolean;
+}
+
+/** Contract year player info */
+export interface NarrativeContractPlayerInfo {
+  playerName: string;
+  teamName: string;
+  performance: 'strong' | 'struggling';
+}
+
+/** Trade deadline week constant */
+const TRADE_DEADLINE_WEEK = 9;
+
+/**
+ * Generates mid-season narrative news items for the "living world" feel.
+ *
+ * Call this each week with data about all 32 teams. It returns a batch of
+ * NewsItems covering streaks, AI team storylines, division rivalries,
+ * contract year drama, and trade deadline buzz.
+ *
+ * The function limits output to avoid flooding the news feed.
+ */
+export function generateMidSeasonNarratives(
+  allTeams: NarrativeTeamInfo[],
+  userTeamId: string,
+  season: number,
+  week: number,
+  upcomingGames: NarrativeGameInfo[],
+  contractYearPlayers: NarrativeContractPlayerInfo[]
+): NewsItem[] {
+  const news: NewsItem[] = [];
+
+  // --- Streak detection (limit to 2-3) ---
+  const streakTeams = allTeams.filter(
+    (t) => Math.abs(t.currentStreak) >= 3 && t.teamId !== userTeamId
+  );
+  // Sort by streak magnitude descending to pick the most notable
+  const sortedStreakTeams = [...streakTeams].sort(
+    (a, b) => Math.abs(b.currentStreak) - Math.abs(a.currentStreak)
+  );
+  const streakLimit = Math.min(sortedStreakTeams.length, 3);
+  for (let i = 0; i < streakLimit; i++) {
+    const team = sortedStreakTeams[i];
+    const streakType = team.currentStreak > 0 ? 'winning' : 'losing';
+    news.push(
+      generateStreakNews(
+        team.teamName,
+        team.teamId,
+        streakType,
+        Math.abs(team.currentStreak),
+        season,
+        week
+      )
+    );
+  }
+
+  // --- AI team storylines (1-2 per week) ---
+  // Find teams performing significantly above or below .500
+  const aiTeams = allTeams.filter((t) => {
+    if (t.teamId === userTeamId) return false;
+    const totalGames = t.wins + t.losses;
+    if (totalGames < 3) return false; // Too early to tell
+    const winPct = t.wins / totalGames;
+    return winPct >= 0.7 || winPct <= 0.3;
+  });
+
+  const shuffledAiTeams = [...aiTeams].sort(() => Math.random() - 0.5);
+  const storylineLimit = Math.min(shuffledAiTeams.length, 2);
+  for (let i = 0; i < storylineLimit; i++) {
+    const team = shuffledAiTeams[i];
+    const totalGames = team.wins + team.losses;
+    const winPct = team.wins / totalGames;
+    const record = `${team.wins}-${team.losses}`;
+
+    let narrativeType: 'surprise_contender' | 'disappointing' | 'rebuilding' | 'rising';
+    if (winPct >= 0.7) {
+      narrativeType = Math.random() > 0.5 ? 'surprise_contender' : 'rising';
+    } else {
+      narrativeType = Math.random() > 0.5 ? 'disappointing' : 'rebuilding';
+    }
+
+    news.push(
+      generateAITeamStoryline(team.teamName, team.teamId, record, narrativeType, season, week)
+    );
+  }
+
+  // --- Rivalry previews (1-2 division matchups from upcoming schedule) ---
+  const divisionalGames = upcomingGames.filter((g) => g.isDivisional);
+  const shuffledDivisional = [...divisionalGames].sort(() => Math.random() - 0.5);
+  const rivalryLimit = Math.min(shuffledDivisional.length, 2);
+  for (let i = 0; i < rivalryLimit; i++) {
+    const game = shuffledDivisional[i];
+    const homeTeam = allTeams.find((t) => t.teamId === game.homeTeamId);
+    const awayTeam = allTeams.find((t) => t.teamId === game.awayTeamId);
+    if (homeTeam && awayTeam) {
+      const divisionName = `${homeTeam.conference} ${homeTeam.division}`;
+      news.push(
+        generateRivalryNews(homeTeam.teamName, awayTeam.teamName, divisionName, season, week)
+      );
+    }
+  }
+
+  // --- Contract year drama (1 per week) ---
+  if (contractYearPlayers.length > 0) {
+    const player = randomElement(contractYearPlayers);
+    news.push(
+      generateContractYearNews(player.playerName, player.teamName, player.performance, season, week)
+    );
+  }
+
+  // --- Trade deadline buzz (weeks 7-9) ---
+  if (week >= 7 && week <= TRADE_DEADLINE_WEEK) {
+    news.push(generateTradeDeadlineNews(week, TRADE_DEADLINE_WEEK, season));
+  }
+
+  return news;
 }

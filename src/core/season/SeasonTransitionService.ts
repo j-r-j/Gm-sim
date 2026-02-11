@@ -10,14 +10,8 @@ import { createEmptyTeamRecord } from '@core/models/team/Team';
 import { advanceContractYear } from '@core/contracts/Contract';
 import { generateDraftClass } from '@core/draft/DraftClassGenerator';
 import { generateDraftPicksForYear } from '@core/models/league/DraftPick';
-import {
-  generateSeasonSchedule,
-  PreviousYearStandings,
-} from '@core/season/ScheduleGenerator';
-import {
-  applySkillChanges,
-  applyOffseasonProgression,
-} from '@core/career/PlayerProgression';
+import { generateSeasonSchedule, PreviousYearStandings } from '@core/season/ScheduleGenerator';
+import { applySkillChanges, applyOffseasonProgression } from '@core/career/PlayerProgression';
 import { createHealthyStatus } from '@core/models/player/InjuryStatus';
 import { Player } from '@core/models/player/Player';
 import { Team } from '@core/models/team/Team';
@@ -341,8 +335,7 @@ function updateCareerStats(state: GameState): GameState {
   const madePlayoffs = userTeam.playoffSeed !== null;
 
   // Determine if user won championship
-  const wonChampionship =
-    state.league.playoffBracket?.superBowl?.winnerId === state.userTeamId;
+  const wonChampionship = state.league.playoffBracket?.superBowl?.winnerId === state.userTeamId;
 
   const updatedCareerStats = updateCareerStatsAfterSeason(
     state.careerStats,

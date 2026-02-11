@@ -6,7 +6,8 @@
 
 import { Player } from '../models/player/Player';
 import { Coach } from '../models/staff/Coach';
-import { TechnicalSkills } from '../models/player/TechnicalSkills';
+import { TechnicalSkills, SKILL_NAMES_BY_POSITION } from '../models/player/TechnicalSkills';
+import { Position } from '../models/player/Position';
 import { FitLevel } from '../models/player/SchemeFit';
 import {
   calculateDevelopmentImpact,
@@ -366,4 +367,243 @@ export function generateDevelopmentNews(
   }
 
   return newsItems;
+}
+
+// ============================================================
+// Mid-Season Progression & Breakout Mechanic
+// ============================================================
+
+/**
+ * Result of applying mid-season progression to a player after a game
+ */
+export interface MidSeasonProgressionResult {
+  updatedPlayer: Player;
+  skillChanges: Array<{ skill: string; change: number }>;
+  description: string;
+  isBreakout: boolean;
+  breakoutDescription?: string;
+}
+
+/**
+ * Returns position-relevant skill names for mid-season progression.
+ * Maps individual positions to SKILL_NAMES_BY_POSITION groups.
+ */
+function getPositionRelevantSkills(position: Position): readonly string[] {
+  switch (position) {
+    case Position.QB:
+      return SKILL_NAMES_BY_POSITION.QB;
+    case Position.RB:
+      return SKILL_NAMES_BY_POSITION.RB;
+    case Position.WR:
+      return SKILL_NAMES_BY_POSITION.WR;
+    case Position.TE:
+      return SKILL_NAMES_BY_POSITION.TE;
+    case Position.LT:
+    case Position.LG:
+    case Position.C:
+    case Position.RG:
+    case Position.RT:
+      return SKILL_NAMES_BY_POSITION.OL;
+    case Position.DE:
+    case Position.DT:
+      return SKILL_NAMES_BY_POSITION.DL;
+    case Position.OLB:
+    case Position.ILB:
+      return SKILL_NAMES_BY_POSITION.LB;
+    case Position.CB:
+    case Position.FS:
+    case Position.SS:
+      return SKILL_NAMES_BY_POSITION.DB;
+    case Position.K:
+      return SKILL_NAMES_BY_POSITION.K;
+    case Position.P:
+      return SKILL_NAMES_BY_POSITION.P;
+    default:
+      return [];
+  }
+}
+
+/**
+ * Gets the mid-season age modifier.
+ * Young players develop faster, older players slower.
+ */
+function getMidSeasonAgeModifier(age: number): number {
+  if (age <= 24) return 1.3;
+  if (age <= 28) return 1.0;
+  return 0.7;
+}
+
+/**
+ * Gets a coach development quality bonus (0 to 0.3) based on coach development attribute.
+ */
+function getCoachDevelopmentBonus(coach: Coach | null): number {
+  if (!coach) return 0;
+  // coach.attributes.development is 1-100; scale to 0-0.3
+  return (coach.attributes.development / 100) * 0.3;
+}
+
+/**
+ * Simple seeded-ish random helper to get a random number in a range.
+ * Uses Math.random — determinism is not required here.
+ */
+function randomInRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+/**
+ * Picks N random items from an array (without replacement).
+ */
+function pickRandom<T>(arr: readonly T[], count: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+/**
+ * Applies mid-season progression to a player after a game.
+ *
+ * - Standout games (score >= 85) can boost 1-2 skills
+ * - Poor games (score <= 25) can cause regression (not implemented as consecutive tracking
+ *   would require external state — instead a single poor game has a small negative effect)
+ * - Breakout mechanic for young players: builds breakoutMeter on standout games,
+ *   triggers a large skill boost when the meter hits 100
+ *
+ * @param player - The player to progress (immutable — returns new object)
+ * @param gamePerformanceScore - 0-100 score derived from game stats by caller
+ * @param coach - The player's position coach or head coach (nullable)
+ * @param currentWeek - Current week number (unused currently, reserved for future use)
+ */
+export function applyMidSeasonProgression(
+  player: Player,
+  gamePerformanceScore: number,
+  coach: Coach | null,
+  _currentWeek: number
+): MidSeasonProgressionResult {
+  const skillChanges: Array<{ skill: string; change: number }> = [];
+  let description = '';
+  let isBreakout = false;
+  let breakoutDescription: string | undefined;
+
+  // Start with current mid-season tracking values
+  let breakoutMeter = player.breakoutMeter ?? 0;
+  const hasHadBreakout = player.hasHadBreakout ?? false;
+  let midSeasonDevTotal = player.midSeasonDevTotal ?? 0;
+
+  // Clone skills for mutation
+  const newSkills: TechnicalSkills = {};
+  for (const [skillName, skillValue] of Object.entries(player.skills)) {
+    newSkills[skillName] = { ...skillValue };
+  }
+
+  const relevantSkills = getPositionRelevantSkills(player.position);
+  // Filter to skills the player actually has
+  const applicableSkills = relevantSkills.filter((s) => newSkills[s] !== undefined);
+
+  const ageMod = getMidSeasonAgeModifier(player.age);
+  const coachBonus = getCoachDevelopmentBonus(coach);
+
+  // ---- Performance-based skill changes ----
+  if (
+    gamePerformanceScore >= 85 &&
+    Math.abs(midSeasonDevTotal) < 3 &&
+    applicableSkills.length > 0
+  ) {
+    // Standout game: +0.5 to +1.5 to 1-2 relevant skills
+    const numSkills = Math.min(applicableSkills.length, Math.random() < 0.5 ? 1 : 2);
+    const chosen = pickRandom(applicableSkills, numSkills);
+
+    for (const skillName of chosen) {
+      const baseChange = randomInRange(0.5, 1.5);
+      const adjustedChange = Math.round((baseChange * ageMod + coachBonus) * 10) / 10;
+      // Clamp so we don't exceed the mid-season cap
+      const remainingBudget = 3 - Math.abs(midSeasonDevTotal);
+      const finalChange = Math.min(adjustedChange, remainingBudget);
+
+      if (finalChange > 0) {
+        const skill = newSkills[skillName];
+        skill.trueValue = Math.max(1, Math.min(99, Math.round(skill.trueValue + finalChange)));
+        midSeasonDevTotal += finalChange;
+        skillChanges.push({ skill: skillName, change: Math.round(finalChange * 10) / 10 });
+      }
+    }
+
+    if (skillChanges.length > 0) {
+      const skillList = skillChanges.map((sc) => sc.skill).join(', ');
+      description = `${player.firstName} ${player.lastName} showed improvement in ${skillList} after a standout performance.`;
+    } else {
+      description = `${player.firstName} ${player.lastName} had a standout game but has reached the mid-season development cap.`;
+    }
+  } else if (
+    gamePerformanceScore <= 25 &&
+    Math.abs(midSeasonDevTotal) < 3 &&
+    applicableSkills.length > 0
+  ) {
+    // Poor game: small regression to 1 skill
+    const chosen = pickRandom(applicableSkills, 1);
+    const skillName = chosen[0];
+    const baseChange = randomInRange(0.3, 0.8);
+    const adjustedChange = Math.round(baseChange * ageMod * 10) / 10;
+    const remainingBudget = 3 - Math.abs(midSeasonDevTotal);
+    const finalChange = Math.min(adjustedChange, remainingBudget);
+
+    if (finalChange > 0) {
+      const skill = newSkills[skillName];
+      skill.trueValue = Math.max(1, Math.min(99, Math.round(skill.trueValue - finalChange)));
+      midSeasonDevTotal -= finalChange;
+      skillChanges.push({ skill: skillName, change: -Math.round(finalChange * 10) / 10 });
+    }
+
+    description = `${player.firstName} ${player.lastName} struggled, showing some regression in ${chosen[0]}.`;
+  } else {
+    // Normal game (26-84) or capped — no skill change
+    description = `${player.firstName} ${player.lastName} had a standard game with no notable development changes.`;
+  }
+
+  // ---- Breakout mechanic ----
+  if (player.age <= 25 && !hasHadBreakout) {
+    if (gamePerformanceScore >= 85) {
+      breakoutMeter += Math.round(randomInRange(15, 25));
+    } else if (gamePerformanceScore <= 25) {
+      breakoutMeter -= Math.round(randomInRange(5, 10));
+    }
+    breakoutMeter = Math.max(0, breakoutMeter);
+
+    if (breakoutMeter >= 100) {
+      // BREAKOUT triggered
+      isBreakout = true;
+      const numBoostSkills = Math.min(applicableSkills.length, Math.random() < 0.4 ? 2 : 3);
+      const boostSkills = pickRandom(applicableSkills, numBoostSkills);
+
+      for (const skillName of boostSkills) {
+        const boost = Math.round(randomInRange(3, 5));
+        const skill = newSkills[skillName];
+        skill.trueValue = Math.max(1, Math.min(99, skill.trueValue + boost));
+        // Check if we already tracked this skill in skillChanges
+        const existing = skillChanges.find((sc) => sc.skill === skillName);
+        if (existing) {
+          existing.change += boost;
+        } else {
+          skillChanges.push({ skill: skillName, change: boost });
+        }
+      }
+
+      breakoutDescription = `BREAKOUT: ${player.firstName} ${player.lastName} is emerging as a force at ${player.position}`;
+    }
+  }
+
+  // Build the updated player (immutable)
+  const updatedPlayer: Player = {
+    ...player,
+    skills: newSkills,
+    breakoutMeter,
+    hasHadBreakout: hasHadBreakout || isBreakout,
+    midSeasonDevTotal: Math.round(midSeasonDevTotal * 10) / 10,
+  };
+
+  return {
+    updatedPlayer,
+    skillChanges,
+    description,
+    isBreakout,
+    breakoutDescription,
+  };
 }

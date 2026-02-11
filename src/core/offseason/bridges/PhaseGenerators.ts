@@ -29,22 +29,42 @@ import {
   generateSeasonGoals,
 } from '../phases/SeasonStartPhase';
 import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../../models/player/Position';
+import type { PlayerSeasonStats } from '../../game/SeasonStatsAggregator';
 
 // =============================================================================
 // Season End Phase Generators
 // =============================================================================
 
 /**
- * Generates awards based on season performance
- * Simplified version that picks top performers
+ * Generates awards based on season performance.
+ * Uses actual accumulated stats (blended with skill ratings) when available.
  */
-export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
+export function generateSeasonAwards(
+  gameState: GameState,
+  seasonStats?: Record<string, PlayerSeasonStats>
+): AwardWinner[] {
   const awards: AwardWinner[] = [];
   const players = Object.values(gameState.players);
   const teams = Object.values(gameState.teams);
 
-  // Find best player for MVP (simplified - highest perceived skills average)
-  const mvpCandidate = findTopPlayerByPosition(players, null);
+  // Build team win-percentage lookup
+  const teamWinPct: Record<string, number> = {};
+  for (const team of teams) {
+    const totalGames =
+      team.currentRecord.wins + team.currentRecord.losses + team.currentRecord.ties;
+    teamWinPct[team.id] = totalGames > 0 ? team.currentRecord.wins / totalGames : 0.5;
+  }
+
+  // Helper: get the team id for a player
+  const getTeamId = (playerId: string): string | undefined =>
+    teams.find((t) => t.rosterPlayerIds.includes(playerId))?.id;
+
+  // Find best player for MVP — stat score weighted by team win%
+  const mvpCandidate = findTopPlayerByPosition(players, null, seasonStats, (player, score) => {
+    const teamId = getTeamId(player.id);
+    const winPct = teamId ? (teamWinPct[teamId] ?? 0.5) : 0.5;
+    return score * winPct * 1.5;
+  });
   if (mvpCandidate) {
     const team = teams.find((t) => t.rosterPlayerIds.includes(mvpCandidate.id));
     awards.push({
@@ -57,7 +77,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   }
 
   // Offensive Player of the Year
-  const opoy = findTopPlayerByPosition(players, 'offense');
+  const opoy = findTopPlayerByPosition(players, 'offense', seasonStats);
   if (opoy) {
     const team = teams.find((t) => t.rosterPlayerIds.includes(opoy.id));
     awards.push({
@@ -70,7 +90,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   }
 
   // Defensive Player of the Year
-  const dpoy = findTopPlayerByPosition(players, 'defense');
+  const dpoy = findTopPlayerByPosition(players, 'defense', seasonStats);
   if (dpoy) {
     const team = teams.find((t) => t.rosterPlayerIds.includes(dpoy.id));
     awards.push({
@@ -83,7 +103,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   }
 
   // Offensive Rookie of the Year
-  const oroy = findTopRookie(players, 'offense');
+  const oroy = findTopRookie(players, 'offense', seasonStats);
   if (oroy) {
     const team = teams.find((t) => t.rosterPlayerIds.includes(oroy.id));
     awards.push({
@@ -96,7 +116,7 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   }
 
   // Defensive Rookie of the Year
-  const droy = findTopRookie(players, 'defense');
+  const droy = findTopRookie(players, 'defense', seasonStats);
   if (droy) {
     const team = teams.find((t) => t.rosterPlayerIds.includes(droy.id));
     awards.push({
@@ -111,9 +131,71 @@ export function generateSeasonAwards(gameState: GameState): AwardWinner[] {
   return awards;
 }
 
+/**
+ * Calculates an award score blending actual stats (60%) with skill ratings (40%).
+ * Falls back to pure skill-rating average when no stats are available.
+ */
+function getStatBasedScore(
+  player: Player,
+  stats: PlayerSeasonStats | undefined,
+  side: 'offense' | 'defense' | null
+): number {
+  const ratingScore = getPlayerScore(player);
+
+  if (!stats || stats.gamesPlayed === 0) {
+    return ratingScore;
+  }
+
+  let rawStatScore = 0;
+
+  if (side !== 'defense') {
+    // Offensive / MVP scoring by position
+    if (player.position === Position.QB) {
+      rawStatScore =
+        stats.passing.yards * 0.01 +
+        stats.passing.touchdowns * 3 -
+        stats.passing.interceptions * 3 +
+        stats.passing.rating * 0.2;
+    } else if (player.position === Position.RB) {
+      rawStatScore =
+        stats.rushing.yards * 0.01 + stats.rushing.touchdowns * 3 + stats.receiving.yards * 0.005;
+    } else if (player.position === Position.WR || player.position === Position.TE) {
+      rawStatScore =
+        stats.receiving.yards * 0.01 +
+        stats.receiving.touchdowns * 3 +
+        stats.receiving.receptions * 0.1;
+    }
+  }
+
+  if (side !== 'offense') {
+    // Defensive scoring
+    const defScore =
+      stats.defensive.tackles * 0.3 +
+      stats.defensive.sacks * 3 +
+      stats.defensive.interceptions * 5 +
+      stats.defensive.forcedFumbles * 2;
+
+    // For pure defense side, use defensive score; for MVP (null side) pick the higher
+    if (side === 'defense') {
+      rawStatScore = defScore;
+    } else {
+      rawStatScore = Math.max(rawStatScore, defScore);
+    }
+  }
+
+  // Normalize raw stat score to roughly 0-100 to blend with ratings.
+  // Typical elite season ~60-80 raw points, so cap at 100.
+  const normalizedStatScore = Math.min(100, rawStatScore);
+
+  // Blend: 60% stats, 40% skill rating
+  return normalizedStatScore * 0.6 + ratingScore * 0.4;
+}
+
 function findTopPlayerByPosition(
   players: Player[],
-  side: 'offense' | 'defense' | null
+  side: 'offense' | 'defense' | null,
+  seasonStats?: Record<string, PlayerSeasonStats>,
+  modifier?: (player: Player, score: number) => number
 ): Player | undefined {
   const filtered = players.filter((p) => {
     if (side === 'offense') return OFFENSIVE_POSITIONS.includes(p.position);
@@ -121,10 +203,22 @@ function findTopPlayerByPosition(
     return true;
   });
 
-  return filtered.sort((a, b) => getPlayerScore(b) - getPlayerScore(a))[0];
+  return filtered.sort((a, b) => {
+    let scoreA = getStatBasedScore(a, seasonStats?.[a.id], side);
+    let scoreB = getStatBasedScore(b, seasonStats?.[b.id], side);
+    if (modifier) {
+      scoreA = modifier(a, scoreA);
+      scoreB = modifier(b, scoreB);
+    }
+    return scoreB - scoreA;
+  })[0];
 }
 
-function findTopRookie(players: Player[], side: 'offense' | 'defense'): Player | undefined {
+function findTopRookie(
+  players: Player[],
+  side: 'offense' | 'defense',
+  seasonStats?: Record<string, PlayerSeasonStats>
+): Player | undefined {
   const rookies = players.filter((p) => {
     const isRookie = p.experience === 0;
     const matchesSide =
@@ -134,7 +228,11 @@ function findTopRookie(players: Player[], side: 'offense' | 'defense'): Player |
     return isRookie && matchesSide;
   });
 
-  return rookies.sort((a, b) => getPlayerScore(b) - getPlayerScore(a))[0];
+  return rookies.sort(
+    (a, b) =>
+      getStatBasedScore(b, seasonStats?.[b.id], side) -
+      getStatBasedScore(a, seasonStats?.[a.id], side)
+  )[0];
 }
 
 function getPlayerScore(player: Player): number {

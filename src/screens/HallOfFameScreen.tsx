@@ -5,14 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  shadows,
-} from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { ScreenHeader } from '../components';
 
 interface HallOfFameInductee {
@@ -50,10 +43,7 @@ function isFirstBallot(tier: string): boolean {
   return tier === 'first-ballot';
 }
 
-export function HallOfFameScreen({
-  inductees,
-  onBack,
-}: HallOfFameScreenProps): React.JSX.Element {
+export function HallOfFameScreen({ inductees, onBack }: HallOfFameScreenProps): React.JSX.Element {
   const firstBallot = inductees.filter((i) => isFirstBallot(i.legacyTier));
   const hallOfFamers = inductees.filter((i) => !isFirstBallot(i.legacyTier));
 

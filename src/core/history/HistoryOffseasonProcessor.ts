@@ -751,10 +751,24 @@ export function processRosterMaintenance(
 
       // Generate only the exact number of players needed
       const fillerPositions: Position[] = [
-        Position.WR, Position.CB, Position.DE, Position.OLB, Position.DT,
-        Position.RB, Position.TE, Position.ILB, Position.FS, Position.SS,
-        Position.LG, Position.RG, Position.LT, Position.RT, Position.C,
-        Position.QB, Position.K, Position.P,
+        Position.WR,
+        Position.CB,
+        Position.DE,
+        Position.OLB,
+        Position.DT,
+        Position.RB,
+        Position.TE,
+        Position.ILB,
+        Position.FS,
+        Position.SS,
+        Position.LG,
+        Position.RG,
+        Position.LT,
+        Position.RT,
+        Position.C,
+        Position.QB,
+        Position.K,
+        Position.P,
       ];
 
       for (let i = 0; i < needed; i++) {

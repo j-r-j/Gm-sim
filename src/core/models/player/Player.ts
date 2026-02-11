@@ -83,6 +83,18 @@ export interface Player {
   morale: number;
 
   // ==================
+  // Mid-season progression
+  // ==================
+  /** Breakout meter (0-100), tracks toward breakout threshold */
+  breakoutMeter?: number;
+
+  /** Set to true when a breakout event triggers */
+  hasHadBreakout?: boolean;
+
+  /** Cumulative mid-season skill changes this season (capped at +/-3) */
+  midSeasonDevTotal?: number;
+
+  // ==================
   // Metadata
   // ==================
   /** College ID (for draft/history) */

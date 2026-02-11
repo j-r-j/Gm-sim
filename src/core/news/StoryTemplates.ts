@@ -445,6 +445,75 @@ export const LEAGUE_TEMPLATES: StoryTemplate[] = [
 ];
 
 // ============================================================================
+// STREAK TEMPLATES
+// ============================================================================
+
+export const STREAK_TEMPLATES: string[] = [
+  '{teamName} have won {count} straight — are they for real?',
+  '{teamName} riding high on a {count}-game winning streak',
+  'Wheels are falling off for {teamName} — {count} straight losses',
+  "{teamName} can't find a win — losing streak hits {count}",
+  'Hot streak alert: {teamName} winners of {count} in a row',
+  '{teamName} in freefall with {count} consecutive losses',
+  'Is this the year? {teamName} rolling with {count} straight wins',
+  'Crisis mode for {teamName} after {count} straight defeats',
+];
+
+// ============================================================================
+// RIVALRY TEMPLATES
+// ============================================================================
+
+export const RIVALRY_TEMPLATES: string[] = [
+  'Division showdown: {team1} vs {team2} this week',
+  'Bad blood brewing? {team1} and {team2} meet in a crucial divisional clash',
+  'All eyes on the {division} as {team1} hosts {team2}',
+  'Divisional grudge match: {team1} and {team2} square off',
+  'Bragging rights on the line as {team1} faces {team2} in {division} action',
+  '{division} battle: {team1} and {team2} renew their rivalry',
+];
+
+// ============================================================================
+// CONTRACT YEAR TEMPLATES
+// ============================================================================
+
+export const CONTRACT_YEAR_TEMPLATES: string[] = [
+  '{playerName} is playing for his next contract — and it shows',
+  'Contract year magic? {playerName} is having a career year for {teamName}',
+  '{playerName} struggling in a contract year — tough timing for {teamName}',
+  'Playing for a payday: {playerName} raising his stock with {teamName}',
+  '{playerName} looking to cash in with strong play in a walk year',
+  'Contract year pressure getting to {playerName}? Production dipping for {teamName}',
+];
+
+// ============================================================================
+// AI TEAM STORYLINE TEMPLATES
+// ============================================================================
+
+export const AI_TEAM_STORYLINE_TEMPLATES: string[] = [
+  'Nobody saw this coming: {teamName} are {record} and in the playoff hunt',
+  '{teamName} were supposed to contend — instead they sit at {record}',
+  'Rebuild ahead? {teamName} at {record} with tough schedule remaining',
+  '{teamName} quietly building something — currently sitting at {record}',
+  'Surprise squad: {teamName} defying expectations at {record}',
+  'What happened to {teamName}? Sitting at {record} and searching for answers',
+  '{teamName} making noise at {record} — league better take notice',
+  'Disappointing season continues for {teamName} who sit at {record}',
+];
+
+// ============================================================================
+// TRADE DEADLINE TEMPLATES
+// ============================================================================
+
+export const TRADE_DEADLINE_TEMPLATES: string[] = [
+  'Trade deadline approaches — who is buying and who is selling?',
+  'Teams making calls as the trade deadline looms in week {deadlineWeek}',
+  'Contenders looking to add pieces before the week {deadlineWeek} deadline',
+  'The trade deadline is near — expect fireworks around week {deadlineWeek}',
+  'Buy or sell? Front offices weighing options ahead of week {deadlineWeek} deadline',
+  'Phones ringing across the league with week {deadlineWeek} trade deadline approaching',
+];
+
+// ============================================================================
 // ALL TEMPLATES COMBINED BY CATEGORY
 // ============================================================================
 

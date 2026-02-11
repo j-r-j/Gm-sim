@@ -12,6 +12,36 @@ import type { SeasonRecap } from './OffSeasonPhaseManager';
 import type { Prospect } from '../draft/Prospect';
 
 /**
+ * User decision during OTAs phase
+ */
+export interface OTADecision {
+  playerId: string;
+  playerName: string;
+  decisionType: 'rest_or_push' | 'assign_mentor';
+  choice: 'rest' | 'push' | 'mentor_assigned' | null; // null = not yet decided
+  mentorPlayerId?: string; // for mentor assignments
+  mentorPlayerName?: string;
+}
+
+/**
+ * Cross-phase storyline that threads narratives across multiple offseason phases
+ */
+export interface CrossPhaseStoryline {
+  id: string;
+  type:
+    | 'holdout'
+    | 'position_battle'
+    | 'rookie_emergence'
+    | 'veteran_decline'
+    | 'scheme_transition';
+  playerIds: string[];
+  phaseStarted: string; // phase name where it began
+  currentNarrative: string;
+  isResolved: boolean;
+  resolution?: string;
+}
+
+/**
  * Owner expectations for the season
  */
 export interface OwnerExpectations {
@@ -220,6 +250,8 @@ export interface OffseasonPersistentData {
   // Phase 8: OTAs
   otaReports: OTAReport[];
   rookieIntegrationReports: RookieIntegrationReport[];
+  otaDecisions?: OTADecision[];
+  crossPhaseStorylines?: CrossPhaseStoryline[];
 
   // Phase 9: Training Camp
   positionBattles: PositionBattle[];
@@ -286,6 +318,8 @@ export function createEmptyOffseasonData(): OffseasonPersistentData {
     // Phase 8
     otaReports: [],
     rookieIntegrationReports: [],
+    otaDecisions: [],
+    crossPhaseStorylines: [],
 
     // Phase 9
     positionBattles: [],

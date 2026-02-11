@@ -4,9 +4,10 @@
  */
 
 import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
-import { Player } from '../../models/player/Player';
+import { Player, getPlayerFullName } from '../../models/player/Player';
 import { Coach } from '../../models/staff/Coach';
 import { processTeamProgression, ProgressionResult } from '../../career/PlayerProgression';
+import type { OTADecision, CrossPhaseStoryline } from '../OffseasonPersistentData';
 
 /**
  * Position battle status
@@ -490,5 +491,241 @@ export function processTrainingCampProgression(
     progressionResults: results,
     notableImprovements,
     developmentNews,
+  };
+}
+
+/**
+ * Helper to compute a rough overall skill average for a player
+ */
+function getAverageSkill(player: Player): number {
+  const skillKeys = Object.keys(player.skills);
+  if (skillKeys.length === 0) return 50;
+  const sum = skillKeys.reduce((acc, key) => acc + player.skills[key].trueValue, 0);
+  return sum / skillKeys.length;
+}
+
+/**
+ * Result of applying OTA outcomes to training camp
+ */
+export interface OTAOutcomeResult {
+  updatedPlayers: Player[];
+  resolvedStorylines: CrossPhaseStoryline[];
+  campNotes: string[];
+}
+
+/**
+ * Applies OTA decisions and cross-phase storylines to training camp.
+ * Modifies player skills and fatigue based on user choices, and advances storylines.
+ */
+export function applyOTAOutcomes(
+  players: Player[],
+  otaDecisions: OTADecision[],
+  storylines: CrossPhaseStoryline[]
+): OTAOutcomeResult {
+  const campNotes: string[] = [];
+  let updatedPlayers = [...players];
+
+  // Apply each OTA decision
+  for (const decision of otaDecisions) {
+    if (decision.choice === null) continue;
+
+    const playerIndex = updatedPlayers.findIndex((p) => p.id === decision.playerId);
+    if (playerIndex === -1) continue;
+    const player = updatedPlayers[playerIndex];
+
+    if (decision.decisionType === 'rest_or_push') {
+      if (decision.choice === 'push') {
+        // Push: +1 to +2 in scheme-relevant skills, but +15% injury risk
+        const skillKeys = Object.keys(player.skills);
+        const boost = 1 + Math.floor(Math.random() * 2); // 1 or 2
+        const updatedSkills = { ...player.skills };
+
+        // Boost 1-2 random skills
+        const skillsToBoost = skillKeys.slice(0, Math.min(2, skillKeys.length));
+        for (const skillName of skillsToBoost) {
+          const skill = updatedSkills[skillName];
+          updatedSkills[skillName] = {
+            ...skill,
+            trueValue: Math.min(100, skill.trueValue + boost),
+          };
+        }
+
+        updatedPlayers[playerIndex] = {
+          ...player,
+          skills: updatedSkills,
+          // Fatigue slightly elevated from being pushed
+          fatigue: Math.min(100, player.fatigue + 15),
+        };
+
+        campNotes.push(
+          `${getPlayerFullName(player)} was pushed hard in OTAs and arrived at camp with improved scheme grasp (+${boost}), but is carrying extra fatigue.`
+        );
+      } else if (decision.choice === 'rest') {
+        // Rest: fatigue = 0 but -1 to first scheme skill
+        const skillKeys = Object.keys(player.skills);
+        const updatedSkills = { ...player.skills };
+
+        if (skillKeys.length > 0) {
+          const firstSkill = skillKeys[0];
+          const skill = updatedSkills[firstSkill];
+          updatedSkills[firstSkill] = {
+            ...skill,
+            trueValue: Math.max(1, skill.trueValue - 1),
+          };
+        }
+
+        updatedPlayers[playerIndex] = {
+          ...player,
+          skills: updatedSkills,
+          fatigue: 0,
+        };
+
+        campNotes.push(
+          `${getPlayerFullName(player)} rested during OTAs and arrives at camp fresh, but is a step behind in the playbook.`
+        );
+      }
+    } else if (decision.decisionType === 'assign_mentor' && decision.choice === 'mentor_assigned') {
+      // Mentor: rookie gets +2 to +3 in 1-2 skills; mentor gets +1 leadership
+      const rookieIndex = playerIndex;
+      const rookie = updatedPlayers[rookieIndex];
+      const mentorIndex = decision.mentorPlayerId
+        ? updatedPlayers.findIndex((p) => p.id === decision.mentorPlayerId)
+        : -1;
+
+      // Boost rookie skills
+      const rookieSkillKeys = Object.keys(rookie.skills);
+      const rookieBoost = 2 + Math.floor(Math.random() * 2); // 2 or 3
+      const updatedRookieSkills = { ...rookie.skills };
+      const skillsToBoost = rookieSkillKeys.slice(0, Math.min(2, rookieSkillKeys.length));
+
+      for (const skillName of skillsToBoost) {
+        const skill = updatedRookieSkills[skillName];
+        updatedRookieSkills[skillName] = {
+          ...skill,
+          trueValue: Math.min(100, skill.trueValue + rookieBoost),
+        };
+      }
+
+      updatedPlayers[rookieIndex] = {
+        ...rookie,
+        skills: updatedRookieSkills,
+      };
+
+      campNotes.push(
+        `${getPlayerFullName(rookie)} benefited from the mentorship program, gaining +${rookieBoost} in key skills.`
+      );
+
+      // Boost mentor's leadership if they have it
+      if (mentorIndex !== -1) {
+        const mentor = updatedPlayers[mentorIndex];
+        const mentorSkills = { ...mentor.skills };
+
+        if (mentorSkills['leadership']) {
+          mentorSkills['leadership'] = {
+            ...mentorSkills['leadership'],
+            trueValue: Math.min(100, mentorSkills['leadership'].trueValue + 1),
+          };
+        }
+
+        updatedPlayers[mentorIndex] = {
+          ...mentor,
+          skills: mentorSkills,
+          morale: Math.min(100, mentor.morale + 5),
+        };
+
+        campNotes.push(
+          `${getPlayerFullName(mentor)} embraced the mentor role and grew as a leader.`
+        );
+      }
+    }
+  }
+
+  // Update storylines based on camp developments
+  const resolvedStorylines: CrossPhaseStoryline[] = storylines.map((storyline) => {
+    if (storyline.isResolved) return storyline;
+
+    if (storyline.type === 'rookie_emergence') {
+      const rookie = updatedPlayers.find((p) => p.id === storyline.playerIds[0]);
+      if (!rookie) return storyline;
+
+      const avgSkill = getAverageSkill(rookie);
+      if (avgSkill >= 70) {
+        campNotes.push(
+          `${getPlayerFullName(rookie)} is living up to the hype and pushing for the starting job.`
+        );
+        return {
+          ...storyline,
+          currentNarrative: `${getPlayerFullName(rookie)} has been dominant in camp. The starting job is within reach.`,
+        };
+      } else {
+        campNotes.push(`${getPlayerFullName(rookie)} is showing promise but still has work to do.`);
+        return {
+          ...storyline,
+          currentNarrative: `${getPlayerFullName(rookie)} has flashed potential in camp but needs more consistency.`,
+        };
+      }
+    }
+
+    if (storyline.type === 'veteran_decline') {
+      const veteran = updatedPlayers.find((p) => p.id === storyline.playerIds[0]);
+      if (!veteran) return storyline;
+
+      const avgSkill = getAverageSkill(veteran);
+      if (avgSkill < 55) {
+        campNotes.push(
+          `${getPlayerFullName(veteran)}'s struggles continued through camp. His roster spot is in jeopardy.`
+        );
+        return {
+          ...storyline,
+          currentNarrative: `${getPlayerFullName(veteran)} has not improved in camp. The writing may be on the wall.`,
+          isResolved: true,
+          resolution: `${getPlayerFullName(veteran)} could not reverse the decline and faces an uncertain future.`,
+        };
+      } else {
+        campNotes.push(
+          `${getPlayerFullName(veteran)} showed some fight in camp, quieting doubters for now.`
+        );
+        return {
+          ...storyline,
+          currentNarrative: `${getPlayerFullName(veteran)} responded well in camp, buying himself more time.`,
+        };
+      }
+    }
+
+    if (storyline.type === 'position_battle') {
+      const player1 = updatedPlayers.find((p) => p.id === storyline.playerIds[0]);
+      const player2 = updatedPlayers.find((p) => p.id === storyline.playerIds[1]);
+      if (!player1 || !player2) return storyline;
+
+      const gap = Math.abs(getAverageSkill(player1) - getAverageSkill(player2));
+      if (gap > 8) {
+        const winner = getAverageSkill(player1) > getAverageSkill(player2) ? player1 : player2;
+        campNotes.push(
+          `${getPlayerFullName(winner)} separated himself in the position battle at ${winner.position}.`
+        );
+        return {
+          ...storyline,
+          currentNarrative: `${getPlayerFullName(winner)} has emerged as the clear starter.`,
+          isResolved: true,
+          resolution: `${getPlayerFullName(winner)} won the starting job at ${winner.position}.`,
+        };
+      } else {
+        campNotes.push(
+          `The ${player1.position} battle between ${getPlayerFullName(player1)} and ${getPlayerFullName(player2)} remains too close to call.`
+        );
+        return {
+          ...storyline,
+          currentNarrative: `The battle at ${player1.position} rages on. Neither player has been able to pull away.`,
+        };
+      }
+    }
+
+    return storyline;
+  });
+
+  return {
+    updatedPlayers,
+    resolvedStorylines,
+    campNotes,
   };
 }

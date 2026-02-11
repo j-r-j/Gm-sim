@@ -1118,7 +1118,11 @@ export function validateOffSeasonState(state: OffSeasonState): boolean {
   if (!PHASE_ORDER.includes(state.currentPhase)) return false;
   if (typeof state.phaseDay !== 'number' || state.phaseDay < 1) return false;
 
-  if (typeof state.phaseTasks !== 'object' || state.phaseTasks === null || Array.isArray(state.phaseTasks))
+  if (
+    typeof state.phaseTasks !== 'object' ||
+    state.phaseTasks === null ||
+    Array.isArray(state.phaseTasks)
+  )
     return false;
   if (!Array.isArray(state.events)) return false;
   if (!Array.isArray(state.completedPhases)) return false;

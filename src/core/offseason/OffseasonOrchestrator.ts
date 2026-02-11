@@ -128,7 +128,7 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
       }
       // Auto-generate season awards
       if (!newOffseasonData.awards || newOffseasonData.awards.length === 0) {
-        const awards = generateSeasonAwards(newGameState);
+        const awards = generateSeasonAwards(newGameState, newGameState.seasonStats);
         newOffseasonData.awards = awards;
         changes.push(`Generated ${awards.length} season awards`);
       }

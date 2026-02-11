@@ -292,6 +292,44 @@ export function shouldSubForFatigue(fatigue: number, position: string): boolean 
 }
 
 /**
+ * Select a substitute player when a player is too fatigued.
+ * Searches the full roster for a same-position player not currently active
+ * with the lowest fatigue.
+ *
+ * @param allPlayers - Map of all players on the roster
+ * @param activePlayerIds - IDs of currently active players on the field
+ * @param fatiguedPlayer - The player who may need to be subbed out
+ * @returns A substitute player, or null if none available
+ */
+export function selectFatigueSubstitute(
+  allPlayers: Map<string, Player>,
+  activePlayerIds: string[],
+  fatiguedPlayer: Player
+): Player | null {
+  if (!shouldSubForFatigue(fatiguedPlayer.fatigue, fatiguedPlayer.position)) {
+    return null;
+  }
+
+  const activeSet = new Set(activePlayerIds);
+  let bestSub: Player | null = null;
+  let bestFatigue = Infinity;
+
+  for (const [id, player] of allPlayers) {
+    if (
+      id !== fatiguedPlayer.id &&
+      !activeSet.has(id) &&
+      player.position === fatiguedPlayer.position &&
+      player.fatigue < bestFatigue
+    ) {
+      bestSub = player;
+      bestFatigue = player.fatigue;
+    }
+  }
+
+  return bestSub;
+}
+
+/**
  * Get fatigue level description (for debugging, not UI)
  */
 export function getFatigueDescription(fatigue: number): string {

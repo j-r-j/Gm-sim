@@ -8,6 +8,15 @@ import { Player } from '../models/player/Player';
 import { PlayType, PlayOutcome } from './OutcomeTables';
 
 /**
+ * Optional context for richer play descriptions
+ */
+export interface PlayDescriptionContext {
+  fatiguedPlayers?: string[];
+  keyMatchup?: { offensePlayer: string; defensePlayer: string; winner: string };
+  driveMomentum?: 'hot' | 'stalled' | 'neutral';
+}
+
+/**
  * Drive result types
  */
 export type DriveResult =
@@ -18,6 +27,13 @@ export type DriveResult =
   | 'turnover_on_downs'
   | 'end_of_half'
   | 'safety';
+
+/**
+ * Pick a random element from an array
+ */
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 /**
  * Play result structure (subset needed for description)
@@ -103,26 +119,54 @@ function generateRunDescription(
   const direction = getRunDirection(result.playType);
 
   if (result.outcome === 'touchdown') {
-    return `${rusher} rush ${direction} for ${result.yardsGained} yards, TOUCHDOWN!`;
+    const variants = [
+      `${rusher} powers in ${direction} from ${result.yardsGained} out, TOUCHDOWN!`,
+      `${rusher} punches it in for a ${result.yardsGained}-yard score!`,
+      `${rusher} walks in untouched ${direction} from ${result.yardsGained} yards, TOUCHDOWN!`,
+      `${rusher} dives into the end zone from ${result.yardsGained} yards out!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'fumble') {
-    return `${rusher} rush ${direction} for ${formatYards(result.yardsGained)}, FUMBLE recovered by offense`;
+    const variants = [
+      `${rusher} rush ${direction} for ${formatYards(result.yardsGained)}, coughs it up! Recovered by offense`,
+      `${rusher} rush ${direction} for ${formatYards(result.yardsGained)}, FUMBLE recovered by offense`,
+      `${rusher} has the ball stripped after ${formatYards(result.yardsGained)}, recovered by offense`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'fumble_lost') {
     const defender = result.primaryDefensivePlayer
       ? getPlayerNameById(result.primaryDefensivePlayer, players)
       : 'defense';
-    return `${rusher} rush ${direction} for ${formatYards(result.yardsGained)}, FUMBLE recovered by ${defender}`;
+    const variants = [
+      `${rusher} rush ${direction} for ${formatYards(result.yardsGained)}, FUMBLE recovered by ${defender}`,
+      `${rusher} coughs it up after ${formatYards(result.yardsGained)}! ${defender} recovers`,
+      `${rusher} loses the handle, ${defender} pounces on the loose ball`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'big_gain') {
-    return `${rusher} rush ${direction} for ${result.yardsGained} yards`;
+    const variants = [
+      `${rusher} bursts through ${direction} for ${result.yardsGained} yards!`,
+      `${rusher} breaks loose for ${result.yardsGained} yards!`,
+      `${rusher} explodes through the hole for ${result.yardsGained} yards!`,
+      `${rusher} finds daylight ${direction} for ${result.yardsGained} yards!`,
+    ];
+    return pickRandom(variants);
   }
 
   // Standard run
-  let desc = `${rusher} rush ${direction} for ${formatYards(result.yardsGained)}`;
+  const standardVariants = [
+    `${rusher} rushes ${direction} for ${formatYards(result.yardsGained)}`,
+    `${rusher} picks up ${formatYards(result.yardsGained)} on the ground`,
+    `${rusher} gains ${formatYards(result.yardsGained)} ${direction}`,
+    `${rusher} runs ${direction} for ${formatYards(result.yardsGained)}`,
+  ];
+  let desc = pickRandom(standardVariants);
 
   if (result.firstDown && result.yardsGained > 0) {
     desc += ' (First Down)';
@@ -141,10 +185,21 @@ function generateSneakDescription(
   const qb = getPlayerNameById(result.primaryOffensivePlayer, players);
 
   if (result.outcome === 'touchdown') {
-    return `${qb} QB sneak for ${result.yardsGained} yards, TOUCHDOWN!`;
+    const variants = [
+      `${qb} QB sneak for ${result.yardsGained} yards, TOUCHDOWN!`,
+      `${qb} pushes his way in on the sneak, TOUCHDOWN!`,
+      `${qb} dives over the pile for the score!`,
+    ];
+    return pickRandom(variants);
   }
 
-  let desc = `${qb} QB sneak for ${formatYards(result.yardsGained)}`;
+  const variants = [
+    `${qb} pushes forward for ${formatYards(result.yardsGained)} on the sneak`,
+    `${qb} muscles ahead for ${formatYards(result.yardsGained)}`,
+    `${qb} dives forward for ${formatYards(result.yardsGained)} on the QB sneak`,
+    `${qb} QB sneak for ${formatYards(result.yardsGained)}`,
+  ];
+  let desc = pickRandom(variants);
 
   if (result.firstDown && result.yardsGained > 0) {
     desc += ' (First Down)';
@@ -166,7 +221,13 @@ function generatePassDescription(
     : 'receiver';
 
   if (result.outcome === 'incomplete') {
-    return `${qb} pass incomplete`;
+    const variants = [
+      `${qb} throws it away`,
+      `${qb} can't connect with ${receiver}`,
+      `${qb} pass falls incomplete`,
+      `${qb} just misses ${receiver}`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'sack') {
@@ -174,34 +235,71 @@ function generatePassDescription(
       ? getPlayerNameById(result.primaryDefensivePlayer, players)
       : '';
     if (defender) {
-      return `${qb} sacked by ${defender} for ${formatYards(result.yardsGained)}`;
+      const variants = [
+        `${qb} brought down by ${defender}!`,
+        `${qb} sacked by ${defender} for ${formatYards(result.yardsGained)}`,
+        `${qb} dragged down by ${defender} behind the line!`,
+        `${qb} buried by ${defender} for a ${Math.abs(result.yardsGained)}-yard loss!`,
+      ];
+      return pickRandom(variants);
     }
-    return `${qb} sacked for ${formatYards(result.yardsGained)}`;
+    const variants = [
+      `${qb} sacked for ${formatYards(result.yardsGained)}`,
+      `${qb} can't escape the rush!`,
+      `${qb} dragged down behind the line!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'interception') {
     const defender = result.primaryDefensivePlayer
       ? getPlayerNameById(result.primaryDefensivePlayer, players)
       : 'defense';
-    return `${qb} pass INTERCEPTED by ${defender}`;
+    const variants = [
+      `${qb} pass INTERCEPTED by ${defender}!`,
+      `${qb} picked off by ${defender}!`,
+      `${qb} throws it right to ${defender}!`,
+      `INTERCEPTED! ${defender} comes away with the ball!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'touchdown') {
     const direction = getPassDirection();
-    return `${qb} pass ${direction} to ${receiver} for ${result.yardsGained} yards, TOUCHDOWN!`;
+    const variants = [
+      `${qb} fires ${direction} to ${receiver} for the TOUCHDOWN!`,
+      `${qb} connects with ${receiver} for a ${result.yardsGained}-yard score!`,
+      `${qb} hits ${receiver} in stride ${direction}, TOUCHDOWN!`,
+      `${qb} delivers to ${receiver} in the end zone, TOUCHDOWN!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'fumble_lost') {
-    return `${qb} pass complete to ${receiver}, FUMBLE lost`;
+    const variants = [
+      `${qb} pass complete to ${receiver}, FUMBLE lost`,
+      `${qb} finds ${receiver} but the ball is stripped! Turnover`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'fumble') {
-    return `${qb} pass complete to ${receiver}, FUMBLE recovered by offense`;
+    const variants = [
+      `${qb} pass complete to ${receiver}, FUMBLE recovered by offense`,
+      `${qb} hits ${receiver} who loses the handle, but offense recovers`,
+    ];
+    return pickRandom(variants);
   }
 
   // Completed pass
   const direction = getPassDirection();
-  let desc = `${qb} pass ${direction} to ${receiver} for ${formatYards(result.yardsGained)}`;
+  const variants = [
+    `${qb} finds ${receiver} ${direction} for ${formatYards(result.yardsGained)}`,
+    `${qb} delivers to ${receiver} for ${formatYards(result.yardsGained)}`,
+    `${qb} hits ${receiver} ${direction} for ${formatYards(result.yardsGained)}`,
+    `${qb} connects with ${receiver} for a ${formatYards(result.yardsGained)} gain`,
+  ];
+  let desc = pickRandom(variants);
 
   if (result.firstDown && result.yardsGained > 0) {
     desc += ' (First Down)';
@@ -223,18 +321,47 @@ function generateScreenDescription(
     : 'receiver';
 
   if (result.outcome === 'touchdown') {
-    return `${qb} screen pass to ${receiver} for ${result.yardsGained} yards, TOUCHDOWN!`;
+    const variants = [
+      `${qb} screen pass to ${receiver} for ${result.yardsGained} yards, TOUCHDOWN!`,
+      `${qb} dumps it off to ${receiver} who takes it ${result.yardsGained} yards to the house!`,
+      `${qb} flips the screen to ${receiver}, ${receiver} breaks free for the TOUCHDOWN!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'incomplete') {
-    return `${qb} screen pass incomplete`;
+    const variants = [
+      `${qb} screen pass incomplete`,
+      `${qb} flips the screen but it falls incomplete`,
+      `${qb} tosses the screen, but it's batted down`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'loss' || result.outcome === 'big_loss') {
-    return `${qb} screen pass to ${receiver} for ${formatYards(result.yardsGained)}`;
+    const variants = [
+      `${qb} screen pass to ${receiver} for ${formatYards(result.yardsGained)}`,
+      `${qb} dumps it off to ${receiver} who is swallowed up for ${formatYards(result.yardsGained)}`,
+    ];
+    return pickRandom(variants);
   }
 
-  let desc = `${qb} screen pass to ${receiver} for ${formatYards(result.yardsGained)}`;
+  if (result.outcome === 'big_gain') {
+    const variants = [
+      `${qb} dumps it off to ${receiver}, ${receiver} turns the corner for ${result.yardsGained} yards!`,
+      `${qb} tosses the screen to ${receiver}, ${receiver} breaks free for ${result.yardsGained} yards!`,
+      `${qb} flips it to ${receiver} who finds room to run for ${result.yardsGained} yards!`,
+    ];
+    return pickRandom(variants);
+  }
+
+  const variants = [
+    `${qb} dumps it off to ${receiver} for ${formatYards(result.yardsGained)}`,
+    `${qb} flips it to ${receiver} for ${formatYards(result.yardsGained)}`,
+    `${qb} tosses the screen to ${receiver} for ${formatYards(result.yardsGained)}`,
+    `${qb} screen pass to ${receiver} for ${formatYards(result.yardsGained)}`,
+  ];
+  let desc = pickRandom(variants);
 
   if (result.firstDown && result.yardsGained > 0) {
     desc += ' (First Down)';
@@ -255,26 +382,58 @@ function generatePlayActionDescription(
     ? getPlayerNameById(result.primaryDefensivePlayer, players)
     : 'receiver';
 
+  const fakePrefix = pickRandom([
+    `${qb} fakes the handoff and`,
+    `${qb} sells the play-action,`,
+    `${qb} boots out after the fake,`,
+    `${qb} play action,`,
+  ]);
+
   if (result.outcome === 'incomplete') {
-    return `${qb} play action, pass incomplete`;
+    const variants = [
+      `${fakePrefix} throws it away`,
+      `${fakePrefix} pass falls incomplete`,
+      `${fakePrefix} can't find anyone open`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'sack') {
-    return `${qb} play action, sacked for ${formatYards(result.yardsGained)}`;
+    const variants = [
+      `${fakePrefix} but is brought down for ${formatYards(result.yardsGained)}`,
+      `${fakePrefix} sacked for ${formatYards(result.yardsGained)}`,
+      `${fakePrefix} can't escape the rush!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'interception') {
     const defender = result.primaryDefensivePlayer
       ? getPlayerNameById(result.primaryDefensivePlayer, players)
       : 'defense';
-    return `${qb} play action, pass INTERCEPTED by ${defender}`;
+    const variants = [
+      `${fakePrefix} INTERCEPTED by ${defender}!`,
+      `${fakePrefix} throws it right to ${defender}!`,
+      `${fakePrefix} picked off by ${defender}!`,
+    ];
+    return pickRandom(variants);
   }
 
   if (result.outcome === 'touchdown') {
-    return `${qb} play action pass to ${receiver} for ${result.yardsGained} yards, TOUCHDOWN!`;
+    const variants = [
+      `${fakePrefix} fires to ${receiver} for the TOUCHDOWN!`,
+      `${fakePrefix} hits ${receiver} in stride for a ${result.yardsGained}-yard score!`,
+      `${fakePrefix} delivers to ${receiver} in the end zone!`,
+    ];
+    return pickRandom(variants);
   }
 
-  let desc = `${qb} play action pass to ${receiver} for ${formatYards(result.yardsGained)}`;
+  const variants = [
+    `${fakePrefix} finds ${receiver} for ${formatYards(result.yardsGained)}`,
+    `${fakePrefix} connects with ${receiver} for ${formatYards(result.yardsGained)}`,
+    `${fakePrefix} delivers to ${receiver} for ${formatYards(result.yardsGained)}`,
+  ];
+  let desc = pickRandom(variants);
 
   if (result.firstDown && result.yardsGained > 0) {
     desc += ' (First Down)';
@@ -306,21 +465,63 @@ function generatePenaltyDescription(
 }
 
 /**
+ * Append optional context-aware flavor to a play description
+ */
+function applyContextFlavor(
+  desc: string,
+  result: PlayResultForDescription,
+  context?: PlayDescriptionContext
+): string {
+  if (!context) return desc;
+
+  // Check if a fatigued player is involved (~20% chance to mention)
+  if (context.fatiguedPlayers && Math.random() < 0.2) {
+    const involvedPlayers = [result.primaryOffensivePlayer, result.primaryDefensivePlayer].filter(
+      Boolean
+    ) as string[];
+    const fatigued = involvedPlayers.find((p) => context.fatiguedPlayers!.includes(p));
+    if (fatigued) {
+      const fatiguePhrase = pickRandom([', despite looking gassed', ', visibly tiring']);
+      desc += fatiguePhrase;
+    }
+  }
+
+  // Check if key matchup was decisive (~30% chance to mention)
+  if (context.keyMatchup && Math.random() < 0.3) {
+    const { offensePlayer, defensePlayer, winner } = context.keyMatchup;
+    const involvedPlayers = [result.primaryOffensivePlayer, result.primaryDefensivePlayer];
+    if (involvedPlayers.includes(offensePlayer) || involvedPlayers.includes(defensePlayer)) {
+      if (winner === offensePlayer) {
+        desc += pickRandom([', easily beating his man', ', winning the matchup decisively']);
+      } else {
+        desc += pickRandom([', despite strong coverage', ', against tight coverage']);
+      }
+    }
+  }
+
+  return desc;
+}
+
+/**
  * Generate human-readable play description
  * This is what users actually see
  *
  * @param result - The play result
  * @param players - Map of player IDs to Player objects
+ * @param context - Optional context for richer descriptions
  * @returns Human-readable description string
  */
 export function generatePlayDescription(
   result: PlayResultForDescription,
-  players: Map<string, Player>
+  players: Map<string, Player>,
+  context?: PlayDescriptionContext
 ): string {
   // Handle penalties first
   if (result.penaltyOccurred && result.penaltyDetails) {
     return generatePenaltyDescription(result, players);
   }
+
+  let desc: string;
 
   // Generate based on play type
   switch (result.playType) {
@@ -329,38 +530,65 @@ export function generatePlayDescription(
     case 'run_draw':
     case 'run_sweep':
     case 'qb_scramble':
-      return generateRunDescription(result, players);
+      desc = generateRunDescription(result, players);
+      break;
 
     case 'qb_sneak':
-      return generateSneakDescription(result, players);
+      desc = generateSneakDescription(result, players);
+      break;
 
     case 'pass_short':
     case 'pass_medium':
     case 'pass_deep':
-      return generatePassDescription(result, players);
+      desc = generatePassDescription(result, players);
+      break;
 
     case 'pass_screen':
-      return generateScreenDescription(result, players);
+      desc = generateScreenDescription(result, players);
+      break;
 
     case 'play_action_short':
     case 'play_action_deep':
-      return generatePlayActionDescription(result, players);
+      desc = generatePlayActionDescription(result, players);
+      break;
 
     case 'field_goal':
       if (result.outcome === 'field_goal_made') {
-        return 'Field goal is GOOD!';
+        desc = pickRandom([
+          'Field goal is GOOD!',
+          "The kick is up... and it's GOOD!",
+          'Splits the uprights! Field goal is GOOD!',
+        ]);
+      } else {
+        desc = pickRandom([
+          'Field goal attempt is NO GOOD',
+          'The kick is wide! No good',
+          'Misses! Field goal attempt is no good',
+        ]);
       }
-      return 'Field goal attempt is NO GOOD';
+      return desc;
 
     case 'punt':
-      return `Punt for ${result.yardsGained} yards`;
+      desc = pickRandom([
+        `Punt for ${result.yardsGained} yards`,
+        `Punts it ${result.yardsGained} yards downfield`,
+        `Booms the punt ${result.yardsGained} yards`,
+      ]);
+      return desc;
 
     case 'kickoff':
-      return `Kickoff returned for ${result.yardsGained} yards`;
+      desc = pickRandom([
+        `Kickoff returned for ${result.yardsGained} yards`,
+        `Brings the kickoff back ${result.yardsGained} yards`,
+        `Kickoff return of ${result.yardsGained} yards`,
+      ]);
+      return desc;
 
     default:
       return `Play result: ${formatYards(result.yardsGained)}`;
   }
+
+  return applyContextFlavor(desc, result, context);
 }
 
 /**

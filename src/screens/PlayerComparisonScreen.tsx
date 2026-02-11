@@ -5,14 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  shadows,
-} from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
 import { ScreenHeader } from '../components';
 
 interface PlayerData {
@@ -93,19 +86,13 @@ export function PlayerComparisonScreen({
           {/* Age */}
           <View style={styles.compRow}>
             <Text
-              style={[
-                styles.compValue,
-                { color: getComparisonColor(player2.age, player1.age, 1) },
-              ]}
+              style={[styles.compValue, { color: getComparisonColor(player2.age, player1.age, 1) }]}
             >
               {player1.age}
             </Text>
             <Text style={styles.compLabel}>Age</Text>
             <Text
-              style={[
-                styles.compValue,
-                { color: getComparisonColor(player2.age, player1.age, 2) },
-              ]}
+              style={[styles.compValue, { color: getComparisonColor(player2.age, player1.age, 2) }]}
             >
               {player2.age}
             </Text>
@@ -149,29 +136,18 @@ export function PlayerComparisonScreen({
                         styles.skillBarLeft,
                         {
                           width: `${val1}%`,
-                          backgroundColor:
-                            val1 >= val2 ? colors.success : colors.primary + '40',
+                          backgroundColor: val1 >= val2 ? colors.success : colors.primary + '40',
                         },
                       ]}
                     />
                   </View>
-                  <Text
-                    style={[
-                      styles.skillValue,
-                      { color: getComparisonColor(val1, val2, 1) },
-                    ]}
-                  >
+                  <Text style={[styles.skillValue, { color: getComparisonColor(val1, val2, 1) }]}>
                     {val1}
                   </Text>
                   <Text style={styles.skillLabel} numberOfLines={1}>
                     {formatSkillName(skill)}
                   </Text>
-                  <Text
-                    style={[
-                      styles.skillValue,
-                      { color: getComparisonColor(val1, val2, 2) },
-                    ]}
-                  >
+                  <Text style={[styles.skillValue, { color: getComparisonColor(val1, val2, 2) }]}>
                     {val2}
                   </Text>
                   <View style={styles.skillBarContainer}>
@@ -180,8 +156,7 @@ export function PlayerComparisonScreen({
                         styles.skillBarRight,
                         {
                           width: `${val2}%`,
-                          backgroundColor:
-                            val2 >= val1 ? colors.success : colors.primary + '40',
+                          backgroundColor: val2 >= val1 ? colors.success : colors.primary + '40',
                         },
                       ]}
                     />
@@ -202,21 +177,11 @@ export function PlayerComparisonScreen({
 
               return (
                 <View key={stat} style={styles.compRow}>
-                  <Text
-                    style={[
-                      styles.compValue,
-                      { color: getComparisonColor(val1, val2, 1) },
-                    ]}
-                  >
+                  <Text style={[styles.compValue, { color: getComparisonColor(val1, val2, 1) }]}>
                     {val1}
                   </Text>
                   <Text style={styles.compLabel}>{formatSkillName(stat)}</Text>
-                  <Text
-                    style={[
-                      styles.compValue,
-                      { color: getComparisonColor(val1, val2, 2) },
-                    ]}
-                  >
+                  <Text style={[styles.compValue, { color: getComparisonColor(val1, val2, 2) }]}>
                     {val2}
                   </Text>
                 </View>
@@ -231,15 +196,11 @@ export function PlayerComparisonScreen({
             <Text style={styles.sectionTitle}>Contract</Text>
             <View style={styles.compRow}>
               <Text style={styles.compValue}>
-                {player1.contract
-                  ? `${player1.contract.yearsRemaining}yr`
-                  : 'N/A'}
+                {player1.contract ? `${player1.contract.yearsRemaining}yr` : 'N/A'}
               </Text>
               <Text style={styles.compLabel}>Years Left</Text>
               <Text style={styles.compValue}>
-                {player2.contract
-                  ? `${player2.contract.yearsRemaining}yr`
-                  : 'N/A'}
+                {player2.contract ? `${player2.contract.yearsRemaining}yr` : 'N/A'}
               </Text>
             </View>
             <View style={styles.compRow}>

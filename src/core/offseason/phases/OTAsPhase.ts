@@ -4,6 +4,8 @@
  */
 
 import { OffSeasonState, addEvent, completeTask } from '../OffSeasonPhaseManager';
+import { Player, getPlayerFullName } from '../../models/player/Player';
+import type { OTADecision, CrossPhaseStoryline } from '../OffseasonPersistentData';
 
 /**
  * OTA report for a player
@@ -334,4 +336,147 @@ Mental Readiness: ${report.mentalReadiness}
 
 Notes:
 ${report.adjustmentNotes.map((n) => `- ${n}`).join('\n')}`;
+}
+
+/**
+ * Helper to compute a rough overall skill average for a player
+ */
+function getAverageSkill(player: Player): number {
+  const skillKeys = Object.keys(player.skills);
+  if (skillKeys.length === 0) return 50;
+  const sum = skillKeys.reduce((acc, key) => acc + player.skills[key].trueValue, 0);
+  return sum / skillKeys.length;
+}
+
+/**
+ * Generates OTA decisions for user interaction.
+ * Returns 2-3 decisions: 1-2 rest-vs-push for veterans, 1 mentor assignment for a young player.
+ */
+export function generateOTADecisions(players: Player[], teamId: string): OTADecision[] {
+  const decisions: OTADecision[] = [];
+
+  // Find veteran candidates for rest vs push (age >= 29, high skill)
+  const veterans = players
+    .filter((p) => p.age >= 29 && getAverageSkill(p) >= 65)
+    .sort((a, b) => getAverageSkill(b) - getAverageSkill(a));
+
+  // Pick 1-2 veterans for rest vs push
+  const restPushCount = Math.min(veterans.length, Math.random() < 0.5 ? 1 : 2);
+  for (let i = 0; i < restPushCount; i++) {
+    const vet = veterans[i];
+    decisions.push({
+      playerId: vet.id,
+      playerName: getPlayerFullName(vet),
+      decisionType: 'rest_or_push',
+      choice: null,
+    });
+  }
+
+  // Find mentor assignment candidates
+  const youngPlayers = players
+    .filter((p) => p.experience <= 1)
+    .sort((a, b) => getAverageSkill(b) - getAverageSkill(a));
+
+  if (youngPlayers.length > 0) {
+    const rookie = youngPlayers[0];
+    // Find a veteran at the same position
+    const mentorCandidate = players.find(
+      (p) =>
+        p.position === rookie.position &&
+        p.experience >= 5 &&
+        p.id !== rookie.id &&
+        !decisions.some((d) => d.playerId === p.id)
+    );
+
+    if (mentorCandidate) {
+      decisions.push({
+        playerId: rookie.id,
+        playerName: getPlayerFullName(rookie),
+        decisionType: 'assign_mentor',
+        choice: null,
+        mentorPlayerId: mentorCandidate.id,
+        mentorPlayerName: getPlayerFullName(mentorCandidate),
+      });
+    }
+  }
+
+  // teamId is accepted for future filtering but currently all players belong to the user's team
+  void teamId;
+
+  return decisions;
+}
+
+/**
+ * Generates cross-phase storylines that begin during OTAs.
+ * Returns 1-2 storylines based on roster composition.
+ */
+export function generateOTAStorylines(players: Player[], teamId: string): CrossPhaseStoryline[] {
+  const storylines: CrossPhaseStoryline[] = [];
+
+  void teamId;
+
+  // Rookie emergence: highly-rated rookie could earn a starting spot
+  const topRookie = players
+    .filter((p) => p.experience === 0)
+    .sort((a, b) => getAverageSkill(b) - getAverageSkill(a))[0];
+
+  if (topRookie && getAverageSkill(topRookie) >= 65) {
+    storylines.push({
+      id: `storyline-rookie-${topRookie.id}`,
+      type: 'rookie_emergence',
+      playerIds: [topRookie.id],
+      phaseStarted: 'otas',
+      currentNarrative: `${getPlayerFullName(topRookie)} is turning heads in OTAs. Can the ${topRookie.position} earn a starting spot by Week 1?`,
+      isResolved: false,
+    });
+  }
+
+  // Veteran decline: older player with declining skills fighting for roster spot
+  const decliningVet = players
+    .filter((p) => p.age >= 30 && getAverageSkill(p) < 65 && getAverageSkill(p) >= 45)
+    .sort((a, b) => a.age - b.age)[0]; // Youngest of the older vets first (most interesting)
+
+  if (decliningVet && storylines.length < 2) {
+    storylines.push({
+      id: `storyline-decline-${decliningVet.id}`,
+      type: 'veteran_decline',
+      playerIds: [decliningVet.id],
+      phaseStarted: 'otas',
+      currentNarrative: `${getPlayerFullName(decliningVet)}, now ${decliningVet.age}, is fighting to prove he still belongs. Early OTA returns are mixed.`,
+      isResolved: false,
+    });
+  }
+
+  // Position battle: two players at same position close in skill
+  if (storylines.length < 2) {
+    const positionGroups: Record<string, Player[]> = {};
+    for (const p of players) {
+      if (!positionGroups[p.position]) positionGroups[p.position] = [];
+      positionGroups[p.position].push(p);
+    }
+
+    for (const pos of Object.keys(positionGroups)) {
+      const group = positionGroups[pos];
+      if (group.length < 2) continue;
+
+      const sorted = group.sort((a, b) => getAverageSkill(b) - getAverageSkill(a));
+      const first = sorted[0];
+      const second = sorted[1];
+      const gap = Math.abs(getAverageSkill(first) - getAverageSkill(second));
+
+      if (gap <= 5) {
+        storylines.push({
+          id: `storyline-battle-${first.id}-${second.id}`,
+          type: 'position_battle',
+          playerIds: [first.id, second.id],
+          phaseStarted: 'otas',
+          currentNarrative: `${getPlayerFullName(first)} and ${getPlayerFullName(second)} are neck and neck at ${pos}. This battle will heat up in camp.`,
+          isResolved: false,
+        });
+        break;
+      }
+    }
+  }
+
+  return storylines;
 }

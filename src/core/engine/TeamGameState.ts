@@ -119,6 +119,47 @@ export function createEmptySpecialTeamsPersonnel(): SpecialTeamsPersonnel {
 }
 
 /**
+ * Swap an active player with a substitute on the given side of the ball.
+ * Mutates the personnel arrays in place.
+ *
+ * @param state - Team game state
+ * @param outId - ID of the player being subbed out
+ * @param inId - ID of the player being subbed in
+ * @param side - Which side of the ball ('offense' or 'defense')
+ */
+export function swapActivePlayer(
+  state: TeamGameState,
+  outId: string,
+  inId: string,
+  side: 'offense' | 'defense'
+): void {
+  const inPlayer = state.allPlayers.get(inId);
+  if (!inPlayer) return;
+
+  if (side === 'offense') {
+    if (state.offense.qb.id === outId) {
+      state.offense.qb = inPlayer;
+      return;
+    }
+    for (const arr of [state.offense.rb, state.offense.wr, state.offense.te, state.offense.ol]) {
+      const idx = arr.findIndex((p) => p.id === outId);
+      if (idx !== -1) {
+        arr[idx] = inPlayer;
+        return;
+      }
+    }
+  } else {
+    for (const arr of [state.defense.dl, state.defense.lb, state.defense.db]) {
+      const idx = arr.findIndex((p) => p.id === outId);
+      if (idx !== -1) {
+        arr[idx] = inPlayer;
+        return;
+      }
+    }
+  }
+}
+
+/**
  * Get all active offensive players as an array
  */
 export function getActiveOffensivePlayers(personnel: OffensivePersonnel): Player[] {

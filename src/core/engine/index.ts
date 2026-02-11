@@ -86,6 +86,7 @@ export {
   resolveSpecialTeamsPlay,
   type PlayResult,
   type PenaltyDetails,
+  type GamePlanPlayModifiers,
 } from './PlayResolver';
 
 // Team Game State
@@ -165,6 +166,7 @@ export {
   generateScoringPlayDescription,
   type DriveResult,
   type PlayResultForDescription,
+  type PlayDescriptionContext,
 } from './PlayDescriptionGenerator';
 
 // ============================================

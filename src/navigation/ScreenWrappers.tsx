@@ -3054,10 +3054,32 @@ export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.
       draftPicks={gameState.draftPicks}
       onBack={() => navigation.goBack()}
       onSubmitTrade={async (proposal) => {
-        const offeredValue = proposal.assetsOffered.reduce((sum, a) => sum + a.value, 0);
-        const requestedValue = proposal.assetsRequested.reduce((sum, a) => sum + a.value, 0);
+        // Build a UserTradeProposal for the AI evaluator
+        const { evaluateUserTradeProposal } = require('../core/trade/AITradeOfferGenerator') as {
+          evaluateUserTradeProposal: typeof import('../core/trade/AITradeOfferGenerator').evaluateUserTradeProposal;
+        };
 
-        if (offeredValue >= requestedValue * 0.85) {
+        const userTradeProposal: import('../core/trade/AITradeOfferGenerator').UserTradeProposal = {
+          userTeamId: proposal.offeringTeamId,
+          aiTeamId: proposal.receivingTeamId,
+          playersOffered: proposal.assetsOffered
+            .filter((a): a is Extract<typeof a, { type: 'player' }> => a.type === 'player')
+            .map((a) => a.playerId),
+          playersRequested: proposal.assetsRequested
+            .filter((a): a is Extract<typeof a, { type: 'player' }> => a.type === 'player')
+            .map((a) => a.playerId),
+          picksOffered: proposal.assetsOffered
+            .filter((a): a is Extract<typeof a, { type: 'pick' }> => a.type === 'pick')
+            .map((a) => a.pickId),
+          picksRequested: proposal.assetsRequested
+            .filter((a): a is Extract<typeof a, { type: 'pick' }> => a.type === 'pick')
+            .map((a) => a.pickId),
+        };
+
+        const aiResponse = evaluateUserTradeProposal(gameState, userTradeProposal);
+
+        if (aiResponse.decision === 'accept') {
+          // Execute the trade: swap players and picks
           const updatedTeams = { ...gameState.teams };
           const userTeamCopy = { ...updatedTeams[proposal.offeringTeamId] };
           const partnerTeamCopy = { ...updatedTeams[proposal.receivingTeamId] };
@@ -3110,10 +3132,13 @@ export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.
           };
           setGameState(updatedState);
           await saveGameState(updatedState);
+          Alert.alert('Trade Accepted', aiResponse.reason);
           return 'accepted';
-        } else if (offeredValue >= requestedValue * 0.7) {
+        } else if (aiResponse.decision === 'counter') {
+          Alert.alert('Counter Offer', aiResponse.reason);
           return 'counter';
         }
+        Alert.alert('Trade Rejected', aiResponse.reason);
         return 'rejected';
       }}
     />
@@ -3977,7 +4002,20 @@ export function SeasonRecapScreenWrapper({
       playoffResult: null,
       draftPosition,
       topPerformers,
-      awards: [], // No awards system yet
+      awards: (() => {
+        try {
+          const { generateSeasonAwards } = require('../core/offseason/bridges/PhaseGenerators') as {
+            generateSeasonAwards: typeof import('../core/offseason/bridges/PhaseGenerators').generateSeasonAwards;
+          };
+          return generateSeasonAwards(gameState, gameState.seasonStats).map((a) => ({
+            award: a.award,
+            playerId: a.playerId,
+            playerName: a.playerName,
+          }));
+        } catch {
+          return [];
+        }
+      })(),
       seasonWriteUp: '',
       playerImprovements: [],
     };
@@ -6931,6 +6969,66 @@ export function LiveGameSimulationScreenWrapper({
       onGameComplete={async (result, updatedState) => {
         // Store the game result in context for WeekSummary to access
         setLastGameResult(result);
+
+        // Apply mid-season progression to user's team players
+        try {
+          const { applyMidSeasonProgression } = require('../core/career/PlayerProgression') as {
+            applyMidSeasonProgression: typeof import('../core/career/PlayerProgression').applyMidSeasonProgression;
+          };
+
+          const userTeamForProg = updatedState.teams[updatedState.userTeamId];
+          if (userTeamForProg) {
+            const isHome = result.homeTeamId === updatedState.userTeamId;
+            const uScore = isHome ? result.homeScore : result.awayScore;
+            const oScore = isHome ? result.awayScore : result.homeScore;
+            const scoreDiff = uScore - oScore;
+
+            // Derive a simple game performance score (0-100)
+            let gamePerformanceScore: number;
+            if (scoreDiff >= 14)
+              gamePerformanceScore = 75 + Math.floor(Math.random() * 16); // 75-90
+            else if (scoreDiff > 0)
+              gamePerformanceScore = 60 + Math.floor(Math.random() * 16); // 60-75
+            else if (scoreDiff >= -7)
+              gamePerformanceScore = 40 + Math.floor(Math.random() * 16); // 40-55
+            else gamePerformanceScore = 20 + Math.floor(Math.random() * 21); // 20-40
+
+            const headCoachId = userTeamForProg.staffHierarchy?.headCoach;
+            const headCoach = headCoachId ? (updatedState.coaches[headCoachId] ?? null) : null;
+            const currentWeek = updatedState.league.calendar.currentWeek;
+
+            const updatedPlayers = { ...updatedState.players };
+            const breakoutNames: string[] = [];
+
+            for (const playerId of userTeamForProg.rosterPlayerIds) {
+              const player = updatedPlayers[playerId];
+              if (!player) continue;
+              const progResult = applyMidSeasonProgression(
+                player,
+                gamePerformanceScore,
+                headCoach,
+                currentWeek
+              );
+              updatedPlayers[playerId] = progResult.updatedPlayer;
+              if (progResult.isBreakout && progResult.breakoutDescription) {
+                breakoutNames.push(`${player.firstName} ${player.lastName}`);
+              }
+            }
+
+            updatedState = { ...updatedState, players: updatedPlayers };
+
+            // Show breakout alert if any players broke out
+            if (breakoutNames.length > 0) {
+              const names = breakoutNames.join(', ');
+              Alert.alert(
+                'Breakout Performance!',
+                `${names} ${breakoutNames.length === 1 ? 'is' : 'are'} having a breakout season!`
+              );
+            }
+          }
+        } catch {
+          // Mid-season progression is non-critical
+        }
 
         setGameState(updatedState);
         await saveGameState(updatedState);
