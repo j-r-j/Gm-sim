@@ -330,29 +330,41 @@ export function StartScreenWrapper({ navigation }: ScreenProps<'Start'>): React.
 export function TeamSelectionScreenWrapper({
   navigation,
 }: ScreenProps<'TeamSelection'>): React.JSX.Element {
-  const { setPendingNewGame } = useGame();
+  const { setPendingNewGame, setIsLoading } = useGame();
 
   const handleTeamSelected = useCallback(
     (team: FakeCity, gmName: string, saveSlot: SaveSlot) => {
-      // Generate the game state ONCE and store in context
-      const newGameState = createNewGame({
-        saveSlot,
-        gmName,
-        selectedTeam: team,
-        startYear: 2025,
-      });
+      setIsLoading(true);
 
-      // Store in context so it persists across navigation
-      setPendingNewGame(newGameState);
+      // Defer heavy work so the loading overlay renders first
+      setTimeout(() => {
+        try {
+          // Generate the game state ONCE and store in context
+          const newGameState = createNewGame({
+            saveSlot,
+            gmName,
+            selectedTeam: team,
+            startYear: 2025,
+          });
 
-      // Navigate to staff decision screen
-      navigation.navigate('StaffDecision', {
-        teamCity: team.abbreviation,
-        gmName,
-        saveSlot,
-      });
+          // Store in context so it persists across navigation
+          setPendingNewGame(newGameState);
+
+          // Navigate to staff decision screen
+          navigation.navigate('StaffDecision', {
+            teamCity: team.abbreviation,
+            gmName,
+            saveSlot,
+          });
+        } catch (error) {
+          console.error('Error creating new game:', error);
+          Alert.alert('Error', 'Failed to create new game. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      }, 50);
     },
-    [navigation, setPendingNewGame]
+    [navigation, setPendingNewGame, setIsLoading]
   );
 
   const handleBack = useCallback(() => {
