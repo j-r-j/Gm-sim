@@ -685,6 +685,7 @@ export function resolveEnhancedPlay(
     injuredPlayerId: injuryInfo.playerId,
     penaltyOccurred,
     penaltyDetails,
+    safety: false,
     description,
     // Enhanced fields
     personnelMatchup: {

@@ -50,6 +50,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Complete pass for 12 yards',
       };
 
@@ -89,6 +90,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Rush for 5 yards',
       };
 
@@ -126,6 +128,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Sacked for -7 yards',
       };
 
@@ -162,6 +165,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Pass intercepted',
       };
 
@@ -201,6 +205,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'First down',
       };
 
@@ -228,6 +233,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Incomplete',
       };
 
@@ -266,6 +272,7 @@ describe('StatisticsTracker', () => {
           playerId: 'ol-1',
           declined: false,
         },
+        safety: false,
         description: 'Holding penalty',
       };
 
@@ -341,6 +348,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Run for 5 yards',
       };
 
@@ -361,6 +369,7 @@ describe('StatisticsTracker', () => {
         injuredPlayerId: null,
         penaltyOccurred: false,
         penaltyDetails: null,
+        safety: false,
         description: 'Run for 8 yards',
       };
 

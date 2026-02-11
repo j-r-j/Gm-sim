@@ -159,6 +159,7 @@ describe('Privacy Audit Integration Tests', () => {
         const violations = auditViewModel(viewModel);
 
         if (violations.length > 0) {
+          // eslint-disable-next-line no-console
           console.error(`Player ${player.firstName} ${player.lastName} violations:`, violations);
         }
 

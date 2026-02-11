@@ -180,6 +180,7 @@ describe('Privacy Tests - Engine Internals Not Exposed', () => {
         'injuredPlayerId',
         'penaltyOccurred',
         'penaltyDetails',
+        'safety',
         'description',
       ];
 

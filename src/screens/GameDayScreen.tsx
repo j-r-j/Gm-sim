@@ -624,6 +624,7 @@ export function GameDayScreen({
       const schedule = originalGameState.league.schedule;
 
       if (!schedule) {
+        // eslint-disable-next-line no-console
         console.error('No schedule found in game state');
         setIsContinuing(false);
         return;
@@ -642,6 +643,7 @@ export function GameDayScreen({
       const awayTeam = originalGameState.teams[result.awayTeamId];
 
       if (!homeTeam || !awayTeam) {
+        // eslint-disable-next-line no-console
         console.error('Teams not found');
         setIsContinuing(false);
         return;
@@ -705,6 +707,7 @@ export function GameDayScreen({
       // 5. Call onGameComplete with the updated state
       onGameComplete(result, updatedGameState);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error processing game result:', error);
       setIsContinuing(false);
     }

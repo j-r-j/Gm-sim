@@ -8,6 +8,7 @@ import { type DraftBoardProspect } from '../screens/DraftBoardScreen';
 import { type PlayerProfileScreenProps } from '../screens/PlayerProfileScreen';
 import { type GameSetupResult } from '../core/game/GameSetup';
 import { type TeamGameState } from '../core/engine/TeamGameState';
+import { type Coach } from '../core/models/staff/Coach';
 
 /**
  * Create a mock skill value
@@ -426,8 +427,8 @@ function createMockTeamGameState(teamId: string, teamName: string): TeamGameStat
     },
     allPlayers,
     coaches: {
-      offensiveCoordinator: { id: 'mock-oc', playerChemistry: {} } as any,
-      defensiveCoordinator: { id: 'mock-dc', playerChemistry: {} } as any,
+      offensiveCoordinator: { id: 'mock-oc', playerChemistry: {} } as unknown as Coach,
+      defensiveCoordinator: { id: 'mock-dc', playerChemistry: {} } as unknown as Coach,
       positionCoaches: new Map(),
     },
     offensiveScheme: 'westCoast',

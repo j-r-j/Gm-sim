@@ -235,6 +235,7 @@ export class GameFlowEventBus {
         try {
           listener(event);
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error(`Error in event listener for ${event.type}:`, error);
         }
       });
@@ -245,6 +246,7 @@ export class GameFlowEventBus {
       try {
         listener(event);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(`Error in all-events listener:`, error);
       }
     });

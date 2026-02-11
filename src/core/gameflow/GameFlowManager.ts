@@ -662,6 +662,7 @@ export class GameFlowManager {
         break;
 
       default:
+        // eslint-disable-next-line no-console
         console.warn('Unknown action:', action);
     }
   }

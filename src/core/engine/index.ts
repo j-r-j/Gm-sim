@@ -124,6 +124,7 @@ export {
   type ScoreState,
   type GameConfig,
   type DriveResultWithPlays,
+  type OvertimeState,
 } from './GameStateMachine';
 
 // Injury Processor

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Coach Model Tests
  * Tests for Coach entity validation, coaching tree chemistry, and personality conflicts

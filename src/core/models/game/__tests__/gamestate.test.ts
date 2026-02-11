@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * GameState Tests
  * Tests for GameState serialization, 3 save slots, and entity references

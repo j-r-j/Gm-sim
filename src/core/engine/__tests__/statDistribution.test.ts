@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Stat Distribution Tests
  * Validates realistic distribution of targets, carries, and tackles

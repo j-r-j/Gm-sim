@@ -320,6 +320,7 @@ export function advanceWeek(gameState: GameState): GameState | null {
   const flowState = getWeekFlowState(gameState);
 
   if (!flowState.canAdvanceWeek) {
+    // eslint-disable-next-line no-console
     console.warn('Cannot advance week - not all steps completed');
     return null;
   }

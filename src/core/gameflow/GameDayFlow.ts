@@ -221,6 +221,7 @@ export class GameDayFlow {
    */
   startGame(): void {
     if (!this.gameState || !this.scheduledGame || !this.state.preGameInfo) {
+      // eslint-disable-next-line no-console
       console.error('Game day not initialized');
       return;
     }

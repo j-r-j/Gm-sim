@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Coach ViewModel Tests
  * Tests that CoachViewModel properly hides sensitive attributes

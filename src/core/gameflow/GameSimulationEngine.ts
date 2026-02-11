@@ -282,6 +282,7 @@ export class GameSimulationEngine {
     isComplete: boolean;
   } | null> {
     if (!this.runner) {
+      // eslint-disable-next-line no-console
       console.error('Engine not initialized');
       return null;
     }
@@ -317,6 +318,7 @@ export class GameSimulationEngine {
    */
   async runToCompletion(includeDelays: boolean = true): Promise<GameResult | null> {
     if (!this.runner) {
+      // eslint-disable-next-line no-console
       console.error('Engine not initialized');
       return null;
     }
@@ -350,6 +352,7 @@ export class GameSimulationEngine {
 
         // Check safety limit
         if (this.playCount >= this.config.maxPlays) {
+          // eslint-disable-next-line no-console
           console.warn('Max plays reached, ending simulation');
           break;
         }

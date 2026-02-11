@@ -78,6 +78,9 @@ export interface PlayResult {
   penaltyOccurred: boolean;
   penaltyDetails: PenaltyDetails | null;
 
+  // Safety
+  safety: boolean;
+
   // For display (user sees this)
   description: string;
 }
@@ -382,6 +385,23 @@ function getPrimaryPlayers(
 }
 
 /**
+ * Get a relevant player name for safety description
+ */
+function getRelevantPlayerName(
+  offensivePlayers: Player[],
+  playType: PlayType,
+  outcome: PlayOutcome
+): string {
+  if (outcome === 'sack' || playType.includes('pass')) {
+    const qb = offensivePlayers.find((p) => p.position === 'QB');
+    if (qb) return `${qb.firstName.charAt(0)}. ${qb.lastName}`;
+  }
+  const rb = offensivePlayers.find((p) => p.position === 'RB');
+  if (rb) return `${rb.firstName.charAt(0)}. ${rb.lastName}`;
+  return 'Ball carrier';
+}
+
+/**
  * Home field context for play resolution
  */
 export interface HomeFieldContext {
@@ -519,6 +539,27 @@ export function resolvePlay(
   // Big gains that would reach the endzone are capped at the 1-yard line instead
   let touchdown = roll.outcome === 'touchdown';
 
+  // Safety check: sack or loss near own end zone
+  let safety = false;
+  if (!turnover && !touchdown && yardsGained < 0) {
+    const newPos = context.fieldPosition + yardsGained;
+    if (newPos <= 0) {
+      // Ball pushed behind own end zone
+      const isSack = roll.outcome === 'sack';
+      // ~3% base chance on runs, ~5% on sacks when inside 5-yard line
+      if (context.fieldPosition <= 5) {
+        const safetyChance = isSack ? 0.05 : 0.03;
+        if (Math.random() < safetyChance) {
+          safety = true;
+        }
+      }
+      // If pushed all the way back (field position would be 0 or less), always a safety
+      if (newPos <= 0) {
+        safety = true;
+      }
+    }
+  }
+
   // Cap non-touchdown gains at the 1-yard line
   if (!touchdown && yardsGained > 0 && context.fieldPosition + yardsGained >= 100) {
     yardsGained = 99 - context.fieldPosition; // Stop at the 1-yard line
@@ -638,6 +679,11 @@ export function resolvePlay(
 
   const description = generatePlayDescription(descResult, allPlayers);
 
+  // Override description for safety
+  const finalDescription = safety
+    ? `SAFETY! ${getRelevantPlayerName(offensivePlayers, playType, roll.outcome)} tackled in the end zone`
+    : description;
+
   return {
     playType,
     outcome: roll.outcome,
@@ -654,7 +700,8 @@ export function resolvePlay(
     injuredPlayerId: injuryInfo.playerId,
     penaltyOccurred,
     penaltyDetails,
-    description,
+    safety,
+    description: finalDescription,
   };
 }
 
@@ -679,6 +726,54 @@ export function resolveSpecialTeamsPlay(
   if (playType === 'field_goal') {
     // Calculate field goal distance
     const distance = 100 - context.fieldPosition + 17;
+
+    // Blocked kick check (~2% chance)
+    if (Math.random() < 0.02) {
+      // Blocked FG - returned for TD ~10% of blocks
+      const returnedForTD = Math.random() < 0.1;
+      if (returnedForTD) {
+        return {
+          playType: 'field_goal',
+          outcome: 'field_goal_missed',
+          yardsGained: 0,
+          primaryOffensivePlayer: kicker.id,
+          primaryDefensivePlayer: returner.id,
+          newDown: 1,
+          newDistance: 10,
+          newFieldPosition: 25, // Kickoff position after TD
+          turnover: true,
+          touchdown: true,
+          firstDown: false,
+          injuryOccurred: false,
+          injuredPlayerId: null,
+          penaltyOccurred: false,
+          penaltyDetails: null,
+          safety: false,
+          description: `${distance}-yard field goal BLOCKED and returned for a TOUCHDOWN!`,
+        };
+      }
+      // Blocked, defense recovers at line of scrimmage
+      const losPosition = Math.min(80, 100 - context.fieldPosition + 7);
+      return {
+        playType: 'field_goal',
+        outcome: 'field_goal_missed',
+        yardsGained: 0,
+        primaryOffensivePlayer: kicker.id,
+        primaryDefensivePlayer: null,
+        newDown: 1,
+        newDistance: 10,
+        newFieldPosition: losPosition,
+        turnover: true,
+        touchdown: false,
+        firstDown: false,
+        injuryOccurred: false,
+        injuredPlayerId: null,
+        penaltyOccurred: false,
+        penaltyDetails: null,
+        safety: false,
+        description: `${distance}-yard field goal BLOCKED! Defense recovers.`,
+      };
+    }
 
     // Get kicker rating
     const kickerVariance = getPlayerWeeklyVariance(kickingTeam, kicker.id);
@@ -722,6 +817,7 @@ export function resolveSpecialTeamsPlay(
       injuredPlayerId: null,
       penaltyOccurred: false,
       penaltyDetails: null,
+      safety: false,
       description: made
         ? `${distance}-yard field goal is GOOD!`
         : `${distance}-yard field goal attempt NO GOOD`,
@@ -729,6 +825,54 @@ export function resolveSpecialTeamsPlay(
   }
 
   if (playType === 'punt') {
+    // Blocked punt check (~1% chance)
+    if (Math.random() < 0.01) {
+      // Blocked punt - returned for TD ~15% of blocks
+      const returnedForTD = Math.random() < 0.15;
+      if (returnedForTD) {
+        return {
+          playType: 'punt',
+          outcome: 'good_gain',
+          yardsGained: 0,
+          primaryOffensivePlayer: kickingTeam.specialTeams.p.id,
+          primaryDefensivePlayer: returner.id,
+          newDown: 1,
+          newDistance: 10,
+          newFieldPosition: 25,
+          turnover: true,
+          touchdown: true,
+          firstDown: false,
+          injuryOccurred: false,
+          injuredPlayerId: null,
+          penaltyOccurred: false,
+          penaltyDetails: null,
+          safety: false,
+          description: 'Punt BLOCKED and returned for a TOUCHDOWN!',
+        };
+      }
+      // Blocked, defense recovers at spot
+      const blockPosition = 100 - context.fieldPosition;
+      return {
+        playType: 'punt',
+        outcome: 'good_gain',
+        yardsGained: 0,
+        primaryOffensivePlayer: kickingTeam.specialTeams.p.id,
+        primaryDefensivePlayer: returner.id,
+        newDown: 1,
+        newDistance: 10,
+        newFieldPosition: Math.max(1, Math.min(99, blockPosition)),
+        turnover: true,
+        touchdown: false,
+        firstDown: false,
+        injuryOccurred: false,
+        injuredPlayerId: null,
+        penaltyOccurred: false,
+        penaltyDetails: null,
+        safety: false,
+        description: 'Punt BLOCKED! Defense recovers.',
+      };
+    }
+
     // Punt distance based on punter rating
     const basePuntDistance = 42 + Math.floor(Math.random() * 12);
     const puntDistance = Math.min(basePuntDistance, 100 - context.fieldPosition - 10);
@@ -754,11 +898,69 @@ export function resolveSpecialTeamsPlay(
       injuredPlayerId: null,
       penaltyOccurred: false,
       penaltyDetails: null,
+      safety: false,
       description: `Punt for ${puntDistance} yards, returned for ${returnYards} yards`,
     };
   }
 
-  // Kickoff
+  // Kickoff - check for onside kick attempt
+  // Onside kick: trailing by 1-16 points with < 5 minutes left in 4th quarter
+  const shouldOnsideKick =
+    context.quarter === 4 &&
+    context.timeRemaining < 300 &&
+    context.scoreDifferential < 0 &&
+    context.scoreDifferential >= -16;
+
+  if (shouldOnsideKick) {
+    // Onside kick attempt - ~10% recovery rate
+    const recovered = Math.random() < 0.1;
+    const recoverySpot = 45 + Math.floor(Math.random() * 10); // ~own 45-55
+
+    if (recovered) {
+      return {
+        playType: 'kickoff',
+        outcome: 'good_gain',
+        yardsGained: 0,
+        primaryOffensivePlayer: kicker.id,
+        primaryDefensivePlayer: returner.id,
+        newDown: 1,
+        newDistance: 10,
+        newFieldPosition: recoverySpot,
+        turnover: false, // Kicking team recovers, no possession change
+        touchdown: false,
+        firstDown: false,
+        injuryOccurred: false,
+        injuredPlayerId: null,
+        penaltyOccurred: false,
+        penaltyDetails: null,
+        safety: false,
+        description: `Onside kick RECOVERED by the kicking team at the ${recoverySpot}!`,
+      };
+    }
+
+    // Not recovered - receiving team gets good field position
+    return {
+      playType: 'kickoff',
+      outcome: 'good_gain',
+      yardsGained: 0,
+      primaryOffensivePlayer: kicker.id,
+      primaryDefensivePlayer: returner.id,
+      newDown: 1,
+      newDistance: 10,
+      newFieldPosition: 100 - recoverySpot, // Good position for receiving team
+      turnover: true,
+      touchdown: false,
+      firstDown: false,
+      injuryOccurred: false,
+      injuredPlayerId: null,
+      penaltyOccurred: false,
+      penaltyDetails: null,
+      safety: false,
+      description: `Onside kick attempt fails. Receiving team takes over at the ${100 - recoverySpot}.`,
+    };
+  }
+
+  // Normal kickoff
   const returnYards = 20 + Math.floor(Math.random() * 15);
 
   return {
@@ -777,6 +979,7 @@ export function resolveSpecialTeamsPlay(
     injuredPlayerId: null,
     penaltyOccurred: false,
     penaltyDetails: null,
+    safety: false,
     description: `Kickoff returned to the ${25 + returnYards - 5} yard line`,
   };
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Scout ViewModel Tests
  * Tests that ScoutViewModel properly hides evaluation until reliability revealed

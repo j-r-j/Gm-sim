@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Owner Model Tests
  * Tests for Owner entity validation, patience meter, and demand system

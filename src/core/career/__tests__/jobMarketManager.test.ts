@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Job Market Manager Tests
  * Tests for job openings and market state

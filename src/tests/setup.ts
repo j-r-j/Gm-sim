@@ -4,6 +4,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 // Silence console warnings during tests
+// eslint-disable-next-line no-console
 const originalWarn = console.warn;
 beforeAll(() => {
   // eslint-disable-next-line no-console

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Team Model Tests
  * Tests for Team entity validation, conference/division assignments, and roster limits

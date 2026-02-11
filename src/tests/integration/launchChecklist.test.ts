@@ -320,6 +320,7 @@ describe('Launch Checklist', () => {
       expect(report.checkpoints.length).toBeGreaterThan(0);
       expect(report.summary).toBeDefined();
 
+      /* eslint-disable no-console */
       console.log('\n=== LAUNCH READINESS REPORT ===');
       console.log(`Timestamp: ${report.timestamp}`);
       console.log(`Status: ${report.allCheckpointsPassed ? 'READY' : 'NOT READY'}`);
@@ -329,6 +330,7 @@ describe('Launch Checklist', () => {
       }
       console.log(`\nSummary: ${report.summary}`);
       console.log('================================\n');
+      /* eslint-enable no-console */
 
       expect(report.allCheckpointsPassed).toBe(true);
     });
@@ -447,6 +449,7 @@ describe('Final Verification', () => {
     const retirement = createRetirementState();
     expect(validateRetirementState(retirement)).toBe(true);
 
+    // eslint-disable-next-line no-console
     console.log('\n🚀 ALL SYSTEMS GO - Ready for launch!\n');
   });
 });

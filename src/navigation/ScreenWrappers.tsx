@@ -16,6 +16,9 @@ import { CommonActions } from '@react-navigation/native';
 import { useGame } from './GameContext';
 import { ScreenProps } from './types';
 import { colors, spacing, fontSize } from '../styles';
+import { type WeeklyGamePlan } from '../core/gameplan/GamePlanManager';
+import { type StartSitState } from '../core/roster/StartSitManager';
+import { type WaiverWireState } from '../core/roster/WaiverWireManager';
 
 // Import all existing screens
 import { StartScreen } from '../screens/StartScreen';
@@ -301,6 +304,7 @@ export function StartScreenWrapper({ navigation }: ScreenProps<'Start'>): React.
           Alert.alert('Error', 'Could not load save file.');
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Error loading game:', error);
         Alert.alert('Error', 'Failed to load game. The save file may be corrupted.');
       } finally {
@@ -1220,6 +1224,7 @@ export function DashboardScreenWrapper({
         newPhase === 'offseason' ? `Offseason Phase ${offseasonPhase}` : `Week ${newWeek}`;
       Alert.alert('Week Advanced', `Now in ${phaseLabel}`);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error advancing week:', error);
       Alert.alert('Error', 'Failed to advance week');
     } finally {
@@ -1508,6 +1513,7 @@ export function DashboardScreenWrapper({
                 `Your final record: ${record}\n\nThe offseason begins now.`
               );
             } catch (error) {
+              // eslint-disable-next-line no-console
               console.error('Error simulating season:', error);
               Alert.alert('Error', 'Failed to simulate season');
             } finally {
@@ -5989,6 +5995,7 @@ export function WeeklyScheduleScreenWrapper({
 
       return result.result;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error simulating user game:', error);
       setIsLoading(false);
       return null;
@@ -6113,6 +6120,7 @@ export function WeeklyScheduleScreenWrapper({
 
       return simulatedGames;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error simulating other games:', error);
       setIsLoading(false);
       return [];
@@ -6190,6 +6198,7 @@ export function WeeklyScheduleScreenWrapper({
         navigation.navigate('Dashboard');
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error advancing week:', error);
       Alert.alert('Error', 'Failed to advance week');
     } finally {
@@ -6424,7 +6433,7 @@ export function GamePlanScreenWrapper({ navigation }: ScreenProps<'GamePlan'>): 
       week={week}
       opponentAnalysis={opponentAnalysis}
       existingPlan={gameState.weeklyGamePlan || null}
-      onConfirm={async (plan: any) => {
+      onConfirm={async (plan: WeeklyGamePlan) => {
         const updated = applyGamePlan(gameState, plan);
         setGameState(updated);
         await saveGameState(updated);
@@ -6489,7 +6498,7 @@ export function StartSitScreenWrapper({ navigation }: ScreenProps<'StartSit'>): 
   return (
     <StartSitComponent
       startSitState={startSitState}
-      onConfirm={async (state: any) => {
+      onConfirm={async (state: StartSitState) => {
         const updated = applyStartSitDecisions(gameState, state);
         setGameState(updated);
         await saveGameState(updated);
@@ -6579,7 +6588,10 @@ export function WaiverWireScreenWrapper({
       return { id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, rating };
     })
     .filter(Boolean)
-    .sort((a: any, b: any) => a.rating - b.rating);
+    .sort(
+      (a: { rating: number } | null, b: { rating: number } | null) =>
+        (a?.rating ?? 0) - (b?.rating ?? 0)
+    );
 
   return (
     <WaiverComponent
@@ -6587,10 +6599,10 @@ export function WaiverWireScreenWrapper({
       practiceSquadPlayers={practiceSquadPlayers}
       rosterCount={userTeam?.rosterPlayerIds?.length || 0}
       droppablePlayers={droppablePlayers}
-      onStateChange={async (state: any) => {
+      onStateChange={async (state: WaiverWireState) => {
         const updated = { ...gameState, waiverWire: state };
-        setGameState(updated as any);
-        await saveGameState(updated as any);
+        setGameState(updated);
+        await saveGameState(updated);
       }}
       onBack={() => navigation.goBack()}
     />

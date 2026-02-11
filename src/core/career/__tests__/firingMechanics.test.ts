@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Firing Mechanics Tests
  * Tests for GM termination, reason generation, severance, and legacy

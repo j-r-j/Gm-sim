@@ -46,6 +46,16 @@ export interface ScoreState {
 }
 
 /**
+ * Overtime tracking state
+ */
+export interface OvertimeState {
+  firstPossessionTeam: 'home' | 'away';
+  possessionsCompleted: number; // 0, 1, or 2
+  firstPossessionResult: 'none' | 'touchdown' | 'field_goal' | 'no_score';
+  isSuddenDeath: boolean;
+}
+
+/**
  * Complete game state
  */
 export interface LiveGameState {
@@ -72,6 +82,9 @@ export interface LiveGameState {
   // Kickoff state
   needsKickoff: boolean;
   kickoffTeam: 'home' | 'away';
+
+  // Overtime state
+  overtime: OvertimeState | null;
 }
 
 /**
@@ -161,6 +174,8 @@ export class GameStateMachine {
 
       needsKickoff: true,
       kickoffTeam: 'away', // Away team kicks off to start
+
+      overtime: null,
     };
   }
 
@@ -217,19 +232,33 @@ export class GameStateMachine {
     const kickingTeam = kickoffTeam === 'home' ? homeTeam : awayTeam;
     const receivingTeam = kickoffTeam === 'home' ? awayTeam : homeTeam;
 
+    // Build context from kicking team's perspective for onside kick decisions
     const context = this.getCurrentContext();
-    const result = resolveSpecialTeamsPlay(kickingTeam, receivingTeam, 'kickoff', context);
+    const kickingTeamScore = kickoffTeam === 'home' ? this.state.score.home : this.state.score.away;
+    const receivingTeamScore =
+      kickoffTeam === 'home' ? this.state.score.away : this.state.score.home;
+    const kickoffContext = {
+      ...context,
+      scoreDifferential: kickingTeamScore - receivingTeamScore,
+    };
+    const result = resolveSpecialTeamsPlay(kickingTeam, receivingTeam, 'kickoff', kickoffContext);
 
-    // Update state
+    // Update state - check if onside kick was recovered (turnover=false means kicking team kept it)
+    const newPossession = result.turnover
+      ? kickoffTeam === 'home'
+        ? 'away'
+        : 'home'
+      : kickoffTeam;
+
     this.state.field = {
       ...field,
       ballPosition:
-        kickoffTeam === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
-      possession: kickoffTeam === 'home' ? 'away' : 'home',
+        newPossession === 'home' ? result.newFieldPosition : 100 - result.newFieldPosition,
+      possession: newPossession,
       down: 1,
       yardsToGo: 10,
       yardsToEndzone:
-        kickoffTeam === 'home' ? result.newFieldPosition : 100 - result.newFieldPosition,
+        newPossession === 'home' ? 100 - result.newFieldPosition : result.newFieldPosition,
     };
 
     this.state.needsKickoff = false;
@@ -503,7 +532,65 @@ export class GameStateMachine {
     // Update game state
     this.updateStateFromResult(result);
 
+    // AI strategic timeout usage
+    this.checkStrategicTimeout(result);
+
     return result;
+  }
+
+  /**
+   * AI strategic timeout logic.
+   * Called after each play in the last 2 minutes of each half.
+   */
+  private checkStrategicTimeout(result: PlayResult): void {
+    const { clock, field, score } = this.state;
+
+    // Only in last 2 minutes of a half (Q2 or Q4)
+    const isEndOfHalf = (clock.quarter === 2 || clock.quarter === 4) && clock.timeRemaining <= 120;
+    if (!isEndOfHalf) return;
+
+    const offensiveSide: 'home' | 'away' = field.possession === 'home' ? 'home' : 'away';
+    const defensiveSide: 'home' | 'away' = offensiveSide === 'home' ? 'away' : 'home';
+
+    const defensiveScore = defensiveSide === 'home' ? score.home : score.away;
+    const offensiveScore = offensiveSide === 'home' ? score.home : score.away;
+
+    const defTeamState = defensiveSide === 'home' ? this.state.homeTeam : this.state.awayTeam;
+
+    // Defensive timeout: if trailing and offense ran the ball (clock running)
+    const isRunPlay =
+      result.playType.startsWith('run') ||
+      result.playType === 'qb_sneak' ||
+      result.playType === 'qb_scramble';
+    const clockShouldBeRunning =
+      isRunPlay && result.outcome !== 'fumble' && result.outcome !== 'fumble_lost';
+
+    if (clockShouldBeRunning && defensiveScore < offensiveScore) {
+      // Defense is trailing and clock is running - use timeout
+      if (defTeamState.timeoutsRemaining > 0) {
+        // Use gameDayIQ to modulate timeout usage (higher IQ = smarter about timing)
+        const headCoach = defTeamState.coaches.headCoach;
+        const gameDayIQ = headCoach?.attributes.gameDayIQ ?? 50;
+        // Higher IQ coaches are more likely to use timeouts strategically
+        const useTimeout = Math.random() * 100 < gameDayIQ + 30;
+        if (useTimeout) {
+          this.callTimeout(defensiveSide);
+        }
+      }
+    }
+
+    // Offensive timeout: final minute, before critical plays
+    if (clock.timeRemaining <= 60 && offensiveScore <= defensiveScore) {
+      const offTeamState = offensiveSide === 'home' ? this.state.homeTeam : this.state.awayTeam;
+      if (offTeamState.timeoutsRemaining > 0 && field.down >= 3) {
+        const headCoach = offTeamState.coaches.headCoach;
+        const gameDayIQ = headCoach?.attributes.gameDayIQ ?? 50;
+        const useTimeout = Math.random() * 100 < gameDayIQ;
+        if (useTimeout) {
+          this.callTimeout(offensiveSide);
+        }
+      }
+    }
   }
 
   /**
@@ -511,6 +598,28 @@ export class GameStateMachine {
    */
   private updateStateFromResult(result: PlayResult): void {
     const { field, score } = this.state;
+
+    // Handle safety: check if a sack or loss pushed the offense into their own end zone
+    if (result.safety) {
+      // 2 points to the defensive team
+      const defensiveTeam = field.possession === 'home' ? 'away' : 'home';
+      if (defensiveTeam === 'home') {
+        this.state.score = { ...score, home: score.home + 2 };
+      } else {
+        this.state.score = { ...score, away: score.away + 2 };
+      }
+
+      // After safety: team that gave up safety kicks off from their own 20
+      this.state.needsKickoff = true;
+      this.state.kickoffTeam = field.possession;
+      this.state.plays.push(result);
+      this.advanceClock(this.calculateClockTime(result));
+
+      if (this.state.overtime) {
+        this.checkOvertimeResult('no_score');
+      }
+      return;
+    }
 
     // Handle touchdown
     if (result.touchdown) {
@@ -520,9 +629,12 @@ export class GameStateMachine {
         this.state.score = { ...score, away: score.away + 6 };
       }
 
-      // After TD, we need to handle PAT/2PT then kickoff
-      // For simplicity, auto-kick extra point
-      this.handleExtraPoint();
+      // Decide between PAT and 2-point conversion
+      if (this.shouldGoForTwo()) {
+        this.handleTwoPointConversion();
+      } else {
+        this.handleExtraPoint();
+      }
       return;
     }
 
@@ -605,6 +717,25 @@ export class GameStateMachine {
           // Go to overtime
           clock.quarter = 'OT';
           clock.timeRemaining = 600; // 10 minute OT
+
+          // Coin toss: away team gets first OT possession (simplified)
+          const firstPossession = Math.random() < 0.5 ? 'home' : 'away';
+          this.state.overtime = {
+            firstPossessionTeam: firstPossession,
+            possessionsCompleted: 0,
+            firstPossessionResult: 'none',
+            isSuddenDeath: false,
+          };
+          this.state.needsKickoff = true;
+          this.state.kickoffTeam = firstPossession === 'home' ? 'away' : 'home';
+        } else if (clock.quarter === 'OT') {
+          // OT time expired - regular season ends in tie
+          if (this.state.stakes === 'regular') {
+            this.state.isComplete = true;
+            this.state.inProgress = false;
+            clock.timeRemaining = 0;
+          }
+          // Playoff OT would continue but we cap at regulation OT for simplicity
         } else {
           // Game over
           this.state.isComplete = true;
@@ -626,6 +757,111 @@ export class GameStateMachine {
     }
 
     this.state.clock = clock;
+  }
+
+  /**
+   * Decide whether to go for a 2-point conversion after a touchdown.
+   * Score differential is calculated AFTER the TD (6 points already added).
+   */
+  private shouldGoForTwo(): boolean {
+    const { score, field, clock } = this.state;
+    const scoringTeam = field.possession;
+
+    // Deficit from scoring team's perspective (after TD, before extra point)
+    const deficit = scoringTeam === 'home' ? score.away - score.home : score.home - score.away;
+
+    // Trailing by 2: go for 2 to tie
+    if (deficit === 2) return true;
+
+    // Trailing by 5: go for 2 to be within a FG
+    if (deficit === 5) return true;
+
+    // 4th quarter or OT, trailing by 8+: go for 2 (need to maximize points)
+    if ((clock.quarter === 4 || clock.quarter === 'OT') && deficit >= 8) return true;
+
+    return false;
+  }
+
+  /**
+   * Check overtime rules after a scoring play or possession change.
+   * Returns true if the game should end.
+   */
+  private checkOvertimeResult(driveResult: 'touchdown' | 'field_goal' | 'no_score'): boolean {
+    const ot = this.state.overtime;
+    if (!ot || this.state.clock.quarter !== 'OT') return false;
+
+    if (ot.isSuddenDeath) {
+      // In sudden death, any score wins
+      if (driveResult === 'touchdown' || driveResult === 'field_goal') {
+        this.state.isComplete = true;
+        this.state.inProgress = false;
+        return true;
+      }
+      return false;
+    }
+
+    if (ot.possessionsCompleted === 0) {
+      // First possession just ended
+      if (driveResult === 'touchdown') {
+        // TD on first possession: game over
+        ot.firstPossessionResult = 'touchdown';
+        ot.possessionsCompleted = 1;
+        this.state.isComplete = true;
+        this.state.inProgress = false;
+        return true;
+      }
+
+      // FG or no score: other team gets a chance
+      ot.firstPossessionResult = driveResult === 'field_goal' ? 'field_goal' : 'no_score';
+      ot.possessionsCompleted = 1;
+      return false;
+    }
+
+    if (ot.possessionsCompleted === 1) {
+      // Second possession just ended
+      ot.possessionsCompleted = 2;
+
+      if (ot.firstPossessionResult === 'field_goal') {
+        // First team kicked FG
+        if (driveResult === 'touchdown') {
+          // Second team scored TD: they win
+          this.state.isComplete = true;
+          this.state.inProgress = false;
+          return true;
+        }
+        if (driveResult === 'no_score') {
+          // Second team failed to score: first team wins
+          this.state.isComplete = true;
+          this.state.inProgress = false;
+          return true;
+        }
+        // Both kicked FG: sudden death
+        ot.isSuddenDeath = true;
+        return false;
+      }
+
+      if (ot.firstPossessionResult === 'no_score') {
+        // First team didn't score
+        if (driveResult === 'touchdown' || driveResult === 'field_goal') {
+          // Second team scored: they win
+          this.state.isComplete = true;
+          this.state.inProgress = false;
+          return true;
+        }
+        // Neither scored: sudden death
+        ot.isSuddenDeath = true;
+        return false;
+      }
+    }
+
+    // After both initial possessions, it's sudden death
+    ot.isSuddenDeath = true;
+    if (driveResult === 'touchdown' || driveResult === 'field_goal') {
+      this.state.isComplete = true;
+      this.state.inProgress = false;
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -668,16 +904,25 @@ export class GameStateMachine {
       // Check for drive ending conditions
       if (result.touchdown) {
         driveResult = 'touchdown';
+        if (this.state.overtime) {
+          this.checkOvertimeResult('touchdown');
+        }
         break;
       }
 
       if (result.outcome === 'field_goal_made') {
         driveResult = 'field_goal';
+        if (this.state.overtime) {
+          this.checkOvertimeResult('field_goal');
+        }
         break;
       }
 
       if (result.turnover) {
         driveResult = 'turnover';
+        if (this.state.overtime) {
+          this.checkOvertimeResult('no_score');
+        }
         break;
       }
 
@@ -687,6 +932,9 @@ export class GameStateMachine {
           driveResult = 'punt';
         } else {
           driveResult = 'turnover_on_downs';
+        }
+        if (this.state.overtime) {
+          this.checkOvertimeResult('no_score');
         }
         break;
       }

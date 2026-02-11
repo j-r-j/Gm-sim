@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Patience Event Processor Tests
  * Tests for event processing and patience updates

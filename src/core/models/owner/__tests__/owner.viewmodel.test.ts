@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Owner View Model Tests
  * Tests that personality shows descriptions not numbers and job security maps correctly
