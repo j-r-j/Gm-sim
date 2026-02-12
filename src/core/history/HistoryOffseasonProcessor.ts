@@ -180,9 +180,9 @@ export function processContractExpirations(
 
     const advancedContract = advanceContractYear(contract);
 
-    if (advancedContract === null) {
+    if (advancedContract === null || advancedContract.status === 'expired') {
       // Contract expired - player becomes free agent
-      updatedContracts[contractId] = { ...contract, status: 'expired' };
+      updatedContracts[contractId] = advancedContract || { ...contract, status: 'expired' };
       const player = updatedPlayers[contract.playerId];
       if (player) {
         updatedPlayers[player.id] = { ...player, contractId: null };
@@ -585,7 +585,8 @@ export function processAIFreeAgency(
   players: Record<string, Player>,
   teams: Record<string, Team>,
   contracts: Record<string, PlayerContract>,
-  year: number
+  year: number,
+  salaryCap: number = DEFAULT_SALARY_CAP
 ): {
   signings: { playerId: string; teamId: string; contract: PlayerContract }[];
   updatedPlayers: Record<string, Player>;
@@ -650,9 +651,9 @@ export function processAIFreeAgency(
       if (needDeficit > 0 || rosterSize < 50) {
         // Use cached cap usage for O(1) lookup
         const capUsage = teamCapUsage.get(team.id) || 0;
-        const capSpace = DEFAULT_SALARY_CAP - capUsage;
+        const capSpace = salaryCap - capUsage;
 
-        if (capSpace > 1000000) {
+        if (capSpace > 1000) {
           interestedTeams.push({
             teamId: team.id,
             needScore: needDeficit * 10 + rosterNeed + randomInt(0, 10),
@@ -669,12 +670,54 @@ export function processAIFreeAgency(
 
     // Generate contract
     const contract = generatePlayerContract(freeAgent, winnerTeamId, year);
+
+    // Check if the contract's cap hit fits under the team's remaining cap space
+    const contractCapHit = getCapHitForYear(contract, year);
+    const currentTeamCapUsage = teamCapUsage.get(winnerTeamId) || 0;
+    const remainingCap = salaryCap - currentTeamCapUsage;
+
+    if (contractCapHit > remainingCap) {
+      // Contract too expensive - try a minimum salary deal instead
+      const minSalary = getMinimumSalary(freeAgent.experience);
+      if (minSalary > remainingCap) {
+        // Can't even afford minimum salary - skip this signing
+        continue;
+      }
+      // Sign for minimum salary
+      const minOffer: ContractOffer = {
+        years: 1,
+        bonusPerYear: minSalary,
+        salaryPerYear: 0,
+        noTradeClause: false,
+      };
+      const minContract = createPlayerContract(
+        freeAgent.id,
+        `${freeAgent.firstName} ${freeAgent.lastName}`,
+        winnerTeamId,
+        freeAgent.position,
+        minOffer,
+        year,
+        'veteran'
+      );
+      updatedContracts[minContract.id] = minContract;
+      updatedPlayers[freeAgent.id] = { ...freeAgent, contractId: minContract.id };
+      const minCapHit = getCapHitForYear(minContract, year);
+      teamCapUsage.set(winnerTeamId, currentTeamCapUsage + minCapHit);
+
+      updatedTeams[winnerTeamId] = {
+        ...updatedTeams[winnerTeamId],
+        rosterPlayerIds: [...updatedTeams[winnerTeamId].rosterPlayerIds, freeAgent.id],
+      };
+
+      signings.push({ playerId: freeAgent.id, teamId: winnerTeamId, contract: minContract });
+      continue;
+    }
+
     updatedContracts[contract.id] = contract;
     updatedPlayers[freeAgent.id] = { ...freeAgent, contractId: contract.id };
 
     // Incrementally update cached cap usage for the signing team
-    const newCapHit = getCapHitForYear(contract, year);
-    teamCapUsage.set(winnerTeamId, (teamCapUsage.get(winnerTeamId) || 0) + newCapHit);
+    teamCapUsage.set(winnerTeamId, currentTeamCapUsage + contractCapHit);
 
     // Add to team
     updatedTeams[winnerTeamId] = {
@@ -771,35 +814,143 @@ export function processRosterMaintenance(
         Position.P,
       ];
 
+      // Determine team's position needs for smarter filling
+      const needs = getTeamPositionNeeds({ ...team, rosterPlayerIds: rosterIds }, updatedPlayers);
+
       for (let i = 0; i < needed; i++) {
-        const position = fillerPositions[i % fillerPositions.length];
+        // Pick position based on team needs, falling back to common positions
+        let position = fillerPositions[i % fillerPositions.length];
+        for (const [needPos] of needs) {
+          const currentNeed = needs.get(needPos) || 0;
+          if (currentNeed > 0) {
+            position = needPos;
+            needs.set(needPos, currentNeed - 1);
+            break;
+          }
+        }
+
+        // Vary skill tier: ~20% backup, ~80% fringe (not all fringe)
+        const skillTier = Math.random() < 0.2 ? 'backup' : 'fringe';
         const newPlayer = generatePlayer({
           position,
-          skillTier: 'fringe',
+          skillTier,
           teamId,
           ageRange: { min: 22, max: 28 },
         });
-        const minSalary = getMinimumSalary(0);
-        const offer: ContractOffer = {
-          years: 1,
-          bonusPerYear: minSalary,
-          salaryPerYear: 0,
-          noTradeClause: false,
-        };
-        const contract = createPlayerContract(
-          newPlayer.id,
-          `${newPlayer.firstName} ${newPlayer.lastName}`,
-          teamId,
-          newPlayer.position,
-          offer,
-          year,
-          'veteran'
-        );
+
+        // Use generatePlayerContract for realistic multi-year contracts
+        const contract = generatePlayerContract(newPlayer, teamId, year);
 
         updatedPlayers[newPlayer.id] = { ...newPlayer, contractId: contract.id };
         updatedContracts[contract.id] = contract;
         rosterIds.push(newPlayer.id);
       }
+    }
+
+    updatedTeams[teamId] = {
+      ...team,
+      rosterPlayerIds: rosterIds,
+    };
+  }
+
+  return { updatedTeams, updatedPlayers, updatedContracts };
+}
+
+// ============================================================================
+// CAP ENFORCEMENT
+// ============================================================================
+
+/**
+ * Enforce salary cap compliance for all teams.
+ * Teams over the cap will auto-cut their most overpaid/worst players until under.
+ * This mimics the real NFL where teams MUST be under the cap by a deadline.
+ */
+export function enforceCapCompliance(
+  teams: Record<string, Team>,
+  players: Record<string, Player>,
+  contracts: Record<string, PlayerContract>,
+  year: number,
+  salaryCap: number
+): {
+  updatedTeams: Record<string, Team>;
+  updatedPlayers: Record<string, Player>;
+  updatedContracts: Record<string, PlayerContract>;
+} {
+  const updatedTeams = { ...teams };
+  const updatedPlayers = { ...players };
+  const updatedContracts = { ...contracts };
+
+  for (const teamId of Object.keys(updatedTeams)) {
+    const team = updatedTeams[teamId];
+
+    // Calculate current cap usage for this team
+    const teamContracts = Object.values(updatedContracts).filter(
+      (c) => c.teamId === teamId && c.status === 'active'
+    );
+    let capUsage = calculateTotalCapUsage(
+      Object.fromEntries(teamContracts.map((c) => [c.id, c])),
+      year
+    );
+
+    if (capUsage <= salaryCap) continue; // Team is compliant
+
+    // Build list of cuttable players sorted by worst value (cap hit vs skill)
+    // We want to cut overpaid low-skill players first
+    const cuttablePlayers: {
+      playerId: string;
+      contractId: string;
+      capHit: number;
+      capSavings: number;
+      skillScore: number;
+    }[] = [];
+
+    for (const contract of teamContracts) {
+      const player = updatedPlayers[contract.playerId];
+      if (!player) continue;
+
+      const capHit = getCapHitForYear(contract, year);
+      // Cap savings from cutting = non-guaranteed salary portion
+      const capSavings = contract.yearlyBreakdown.find((y) => y.year === year)?.salary ?? 0;
+
+      if (capSavings <= 0) continue; // Can't save anything by cutting (all guaranteed)
+
+      const tierScores: Record<string, number> = { elite: 4, starter: 3, backup: 2, fringe: 1 };
+      const skillTier = determineSkillTierFromPlayer(player);
+      const skillScore = tierScores[skillTier] || 1;
+
+      cuttablePlayers.push({
+        playerId: player.id,
+        contractId: contract.id,
+        capHit,
+        capSavings,
+        skillScore,
+      });
+    }
+
+    // Sort by worst value: highest (capHit / skillScore) first = most overpaid
+    cuttablePlayers.sort((a, b) => {
+      const aValue = a.capHit / a.skillScore;
+      const bValue = b.capHit / b.skillScore;
+      return bValue - aValue;
+    });
+
+    // Cut players until under cap, maintaining minimum 45 players
+    let rosterIds = [...team.rosterPlayerIds];
+    for (const candidate of cuttablePlayers) {
+      if (capUsage <= salaryCap) break;
+      if (rosterIds.length <= 45) break; // Don't cut below minimum viable roster
+
+      // Cut the player
+      const contract = updatedContracts[candidate.contractId];
+      if (contract) {
+        updatedContracts[candidate.contractId] = { ...contract, status: 'expired' };
+      }
+      updatedPlayers[candidate.playerId] = {
+        ...updatedPlayers[candidate.playerId],
+        contractId: null,
+      };
+      rosterIds = rosterIds.filter((id) => id !== candidate.playerId);
+      capUsage -= candidate.capSavings;
     }
 
     updatedTeams[teamId] = {
@@ -821,7 +972,8 @@ export function processRosterMaintenance(
 export function updateTeamFinances(
   teams: Record<string, Team>,
   contracts: Record<string, PlayerContract>,
-  year: number
+  year: number,
+  salaryCap: number = DEFAULT_SALARY_CAP
 ): Record<string, Team> {
   const updatedTeams = { ...teams };
 
@@ -836,8 +988,9 @@ export function updateTeamFinances(
       ...updatedTeams[teamId],
       finances: {
         ...updatedTeams[teamId].finances,
+        salaryCap,
         currentCapUsage: capUsage,
-        capSpace: DEFAULT_SALARY_CAP - capUsage,
+        capSpace: salaryCap - capUsage,
         nextYearCommitted: futureCommitments.nextYear,
         twoYearsOutCommitted: futureCommitments.twoYearsOut,
         threeYearsOutCommitted: futureCommitments.threeYearsOut,

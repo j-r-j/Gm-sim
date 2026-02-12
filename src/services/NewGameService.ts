@@ -263,6 +263,10 @@ export function createNewGame(options: NewGameOptions): GameState {
   const players: Record<string, Player> = {};
   const contracts: Record<string, PlayerContract> = {};
 
+  // When history is enabled, generate contracts for the history start year
+  // so that contracts have valid yearly breakdowns during the simulation
+  const contractYear = historyYears > 0 ? startYear - historyYears : startYear;
+
   for (const teamId of teamIds) {
     const roster = generateRoster(teamId);
     const playerIds: string[] = [];
@@ -271,7 +275,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     const { contracts: teamContracts, updatedPlayers } = generateInitialRosterContracts(
       roster,
       teamId,
-      startYear
+      contractYear
     );
 
     // Add contracts to the contracts collection
@@ -289,8 +293,8 @@ export function createNewGame(options: NewGameOptions): GameState {
     const teamContractsOnly = Object.fromEntries(
       Object.entries(teamContracts).filter(([, c]) => c.teamId === teamId)
     );
-    const capUsage = calculateTotalCapUsage(teamContractsOnly, startYear);
-    const futureCommitments = calculateFutureCommitments(teamContractsOnly, startYear);
+    const capUsage = calculateTotalCapUsage(teamContractsOnly, contractYear);
+    const futureCommitments = calculateFutureCommitments(teamContractsOnly, contractYear);
 
     // Assign roster to team and update finances
     teams[teamId] = {
@@ -309,7 +313,7 @@ export function createNewGame(options: NewGameOptions): GameState {
 
   // Seed initial free agent pool (approximately 250 free agents)
   // Free agents don't have contracts (they will sign when joining a team)
-  const freeAgents = seedInitialFreeAgentPool(startYear);
+  const freeAgents = seedInitialFreeAgentPool(contractYear);
   for (const freeAgent of freeAgents) {
     players[freeAgent.id] = freeAgent;
   }
