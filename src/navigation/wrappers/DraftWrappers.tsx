@@ -581,6 +581,183 @@ export function DraftRoomScreenWrapper({
     ]);
   }, [draftStateRef.current?.status, gameState, setGameState, saveGameState, navigation]);
 
+  // Current pick id for hook dependencies (must be before early return)
+  const currentPickId = draftStateRef.current?.currentPick?.pick.id ?? null;
+
+  // Generate scout recommendations once per pick (guarded)
+  useEffect(() => {
+    const ds = draftStateRef.current;
+    if (!ds?.currentPick?.isUserPick || !currentPickId || !gameState) {
+      setCachedScoutRecs([]);
+      return;
+    }
+    if (scoutRecsGeneratedRef.current === currentPickId) return;
+    scoutRecsGeneratedRef.current = currentPickId;
+
+    const userScouts = Object.values(gameState.scouts).filter(
+      (s) => s.teamId === gameState.userTeamId
+    );
+    if (userScouts.length === 0) {
+      setCachedScoutRecs([]);
+      return;
+    }
+    const pickRecs = generatePickRecommendations(
+      userScouts,
+      ds.availableProspects,
+      [],
+      ds.currentPick.overallPick,
+      ds.currentPick.round
+    );
+    setCachedScoutRecs(
+      pickRecs.recommendations.map(
+        (rec: ScoutDraftRecommendation): ScoutRecommendationDisplay => ({
+          scoutName: rec.scoutName,
+          scoutRole: rec.scoutRole,
+          prospectId: rec.recommendedProspectId,
+          prospectName: rec.recommendedProspectName,
+          prospectPosition: rec.recommendedProspectPosition,
+          reasoning: rec.reasoning,
+          confidence: rec.confidence,
+          isFocusBased: rec.isFocusBased,
+          estimatedOverall: rec.estimatedOverall,
+        })
+      )
+    );
+  }, [currentPickId, draftStateRef.current?.currentPick?.isUserPick]);
+
+  // Generate feed events when new picks are made
+  useEffect(() => {
+    const ds = draftStateRef.current;
+    if (!ds || !gameState) return;
+    if (ds.picks.length <= lastPickCountRef.current) return;
+    const newPicks = ds.picks.slice(lastPickCountRef.current);
+    lastPickCountRef.current = ds.picks.length;
+
+    const newEvents: WarRoomFeedEvent[] = [];
+    for (const pickResult of newPicks) {
+      const team = gameState.teams[pickResult.teamId];
+      const teamName = team ? `${team.city} ${team.nickname}` : pickResult.teamId;
+      const isUserTeam = pickResult.teamId === gameState.userTeamId;
+
+      newEvents.push(generatePickAnnouncement(pickResult, teamName, isUserTeam));
+
+      const projectedRound = pickResult.prospect.consensusProjection?.projectedRound ?? null;
+      const projectedPickRange =
+        pickResult.prospect.consensusProjection?.projectedPickRange ?? null;
+      const alert = classifyPickValue(
+        pickResult.pick.overallPick ?? 0,
+        projectedRound,
+        projectedPickRange
+      );
+      const alertEvent = generateStealReachAlert(pickResult, alert, teamName);
+      if (alertEvent) newEvents.push(alertEvent);
+
+      if (!isUserTeam && pickResult.prospect.flagged) {
+        newEvents.push(generateUserTargetTaken(pickResult, teamName, null, null));
+      }
+    }
+
+    if (newEvents.length > 0) {
+      setFeedEvents((prev) => [...newEvents, ...prev]);
+    }
+  }, [draftStateRef.current?.picks.length]);
+
+  // Compute team needs from roster position gaps
+  const computedTeamNeeds: Position[] = useMemo(() => {
+    const ds = draftStateRef.current;
+    if (!ds || !gameState) return [];
+    const userTeam = gameState.teams[gameState.userTeamId];
+    if (!userTeam) return [];
+    const rosterPositions = userTeam.rosterPlayerIds
+      .map((id) => gameState.players[id]?.position)
+      .filter((p): p is Position => p !== undefined);
+
+    // Also include drafted prospects from this draft
+    const draftedPositions = ds.picks
+      .filter((p) => p.teamId === gameState.userTeamId)
+      .map((p) => p.prospect.player.position);
+
+    const allPositions = [...rosterPositions, ...draftedPositions];
+
+    // Position targets (approximate NFL starter counts)
+    const targets: Partial<Record<Position, number>> = {
+      [Position.QB]: 2,
+      [Position.RB]: 3,
+      [Position.WR]: 5,
+      [Position.TE]: 3,
+      [Position.LT]: 2,
+      [Position.LG]: 2,
+      [Position.C]: 2,
+      [Position.RG]: 2,
+      [Position.RT]: 2,
+      [Position.DE]: 4,
+      [Position.DT]: 3,
+      [Position.OLB]: 3,
+      [Position.ILB]: 3,
+      [Position.CB]: 5,
+      [Position.FS]: 2,
+      [Position.SS]: 2,
+    };
+
+    const needs: { pos: Position; gap: number }[] = [];
+    for (const [pos, target] of Object.entries(targets)) {
+      const count = allPositions.filter((p) => p === pos).length;
+      const gap = (target as number) - count;
+      if (gap > 0) {
+        needs.push({ pos: pos as Position, gap });
+      }
+    }
+
+    return needs.sort((a, b) => b.gap - a.gap).map((n) => n.pos);
+  }, [gameState?.teams, gameState?.players, gameState?.userTeamId, draftStateRef.current?.picks]);
+
+  // Compute user drafted picks with grades
+  const userDraftedPicks: UserDraftedPick[] = useMemo(() => {
+    const ds = draftStateRef.current;
+    if (!ds || !gameState) return [];
+    return ds.picks
+      .filter((p) => p.teamId === gameState.userTeamId)
+      .map((pickResult) => {
+        const prospect = pickResult.prospect;
+        const pickGrade = gradePickValue(
+          pickResult.pick.overallPick ?? 0,
+          pickResult.pick.round,
+          prospect,
+          prospect.consensusProjection?.projectedRound ?? null,
+          prospect.consensusProjection?.projectedPickRange ?? null
+        );
+        return {
+          pickNumber: pickResult.pick.overallPick ?? 0,
+          round: pickResult.pick.round,
+          prospectName: `${prospect.player.firstName} ${prospect.player.lastName}`,
+          prospectPosition: prospect.player.position,
+          grade: pickGrade.grade,
+          assessment: pickGrade.assessment,
+        };
+      });
+  }, [draftStateRef.current?.picks, gameState?.userTeamId]);
+
+  // Clear selected prospect when pick changes
+  useEffect(() => {
+    setSelectedProspectId(null);
+  }, [currentPickId]);
+
+  // Handle drafting the selected prospect
+  const handleDraftSelectedProspect = useCallback(() => {
+    if (!selectedProspectId || !draftStateRef.current?.currentPick?.isUserPick) return;
+    try {
+      const newState = makeUserPick(draftStateRef.current!, selectedProspectId);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setSelectedProspectId(null);
+      updateDraftState(newState);
+    } catch {
+      Alert.alert('Error', 'Could not make that selection.');
+    }
+  }, [selectedProspectId, draftStateRef.current?.currentPick?.isUserPick, updateDraftState]);
+
   if (!gameState || !initialized || !draftStateRef.current) {
     return <LoadingFallback message="Loading draft room..." />;
   }
@@ -642,174 +819,6 @@ export function DraftRoomScreenWrapper({
   }));
 
   const isPaused = draftState.status === DraftStatus.PAUSED;
-
-  // Generate scout recommendations once per pick (guarded)
-  const currentPickId = draftState.currentPick?.pick.id ?? null;
-  useEffect(() => {
-    if (!draftState.currentPick?.isUserPick || !currentPickId) {
-      setCachedScoutRecs([]);
-      return;
-    }
-    if (scoutRecsGeneratedRef.current === currentPickId) return;
-    scoutRecsGeneratedRef.current = currentPickId;
-
-    const userScouts = Object.values(gameState.scouts).filter(
-      (s) => s.teamId === gameState.userTeamId
-    );
-    if (userScouts.length === 0) {
-      setCachedScoutRecs([]);
-      return;
-    }
-    const pickRecs = generatePickRecommendations(
-      userScouts,
-      draftState.availableProspects,
-      [],
-      draftState.currentPick.overallPick,
-      draftState.currentPick.round
-    );
-    setCachedScoutRecs(
-      pickRecs.recommendations.map(
-        (rec: ScoutDraftRecommendation): ScoutRecommendationDisplay => ({
-          scoutName: rec.scoutName,
-          scoutRole: rec.scoutRole,
-          prospectId: rec.recommendedProspectId,
-          prospectName: rec.recommendedProspectName,
-          prospectPosition: rec.recommendedProspectPosition,
-          reasoning: rec.reasoning,
-          confidence: rec.confidence,
-          isFocusBased: rec.isFocusBased,
-          estimatedOverall: rec.estimatedOverall,
-        })
-      )
-    );
-  }, [currentPickId, draftState.currentPick?.isUserPick]);
-
-  // Generate feed events when new picks are made
-  useEffect(() => {
-    if (draftState.picks.length <= lastPickCountRef.current) return;
-    const newPicks = draftState.picks.slice(lastPickCountRef.current);
-    lastPickCountRef.current = draftState.picks.length;
-
-    const newEvents: WarRoomFeedEvent[] = [];
-    for (const pickResult of newPicks) {
-      const team = gameState.teams[pickResult.teamId];
-      const teamName = team ? `${team.city} ${team.nickname}` : pickResult.teamId;
-      const isUserTeam = pickResult.teamId === gameState.userTeamId;
-
-      newEvents.push(generatePickAnnouncement(pickResult, teamName, isUserTeam));
-
-      const projectedRound = pickResult.prospect.consensusProjection?.projectedRound ?? null;
-      const projectedPickRange =
-        pickResult.prospect.consensusProjection?.projectedPickRange ?? null;
-      const alert = classifyPickValue(
-        pickResult.pick.overallPick ?? 0,
-        projectedRound,
-        projectedPickRange
-      );
-      const alertEvent = generateStealReachAlert(pickResult, alert, teamName);
-      if (alertEvent) newEvents.push(alertEvent);
-
-      if (!isUserTeam && pickResult.prospect.flagged) {
-        newEvents.push(generateUserTargetTaken(pickResult, teamName, null, null));
-      }
-    }
-
-    if (newEvents.length > 0) {
-      setFeedEvents((prev) => [...newEvents, ...prev]);
-    }
-  }, [draftState.picks.length]);
-
-  // Compute team needs from roster position gaps
-  const computedTeamNeeds: Position[] = useMemo(() => {
-    const userTeam = gameState.teams[gameState.userTeamId];
-    if (!userTeam) return [];
-    const rosterPositions = userTeam.rosterPlayerIds
-      .map((id) => gameState.players[id]?.position)
-      .filter((p): p is Position => p !== undefined);
-
-    // Also include drafted prospects from this draft
-    const draftedPositions = draftState.picks
-      .filter((p) => p.teamId === gameState.userTeamId)
-      .map((p) => p.prospect.player.position);
-
-    const allPositions = [...rosterPositions, ...draftedPositions];
-
-    // Position targets (approximate NFL starter counts)
-    const targets: Partial<Record<Position, number>> = {
-      [Position.QB]: 2,
-      [Position.RB]: 3,
-      [Position.WR]: 5,
-      [Position.TE]: 3,
-      [Position.LT]: 2,
-      [Position.LG]: 2,
-      [Position.C]: 2,
-      [Position.RG]: 2,
-      [Position.RT]: 2,
-      [Position.DE]: 4,
-      [Position.DT]: 3,
-      [Position.OLB]: 3,
-      [Position.ILB]: 3,
-      [Position.CB]: 5,
-      [Position.FS]: 2,
-      [Position.SS]: 2,
-    };
-
-    const needs: { pos: Position; gap: number }[] = [];
-    for (const [pos, target] of Object.entries(targets)) {
-      const count = allPositions.filter((p) => p === pos).length;
-      const gap = (target as number) - count;
-      if (gap > 0) {
-        needs.push({ pos: pos as Position, gap });
-      }
-    }
-
-    return needs.sort((a, b) => b.gap - a.gap).map((n) => n.pos);
-  }, [gameState.teams, gameState.players, gameState.userTeamId, draftState.picks]);
-
-  // Compute user drafted picks with grades
-  const userDraftedPicks: UserDraftedPick[] = useMemo(() => {
-    return draftState.picks
-      .filter((p) => p.teamId === gameState.userTeamId)
-      .map((pickResult) => {
-        const prospect = pickResult.prospect;
-        const pickGrade = gradePickValue(
-          pickResult.pick.overallPick ?? 0,
-          pickResult.pick.round,
-          prospect,
-          prospect.consensusProjection?.projectedRound ?? null,
-          prospect.consensusProjection?.projectedPickRange ?? null
-        );
-        return {
-          pickNumber: pickResult.pick.overallPick ?? 0,
-          round: pickResult.pick.round,
-          prospectName: `${prospect.player.firstName} ${prospect.player.lastName}`,
-          prospectPosition: prospect.player.position,
-          grade: pickGrade.grade,
-          assessment: pickGrade.assessment,
-        };
-      });
-  }, [draftState.picks, gameState.userTeamId]);
-
-  // Clear selected prospect when pick changes
-  useEffect(() => {
-    setSelectedProspectId(null);
-  }, [currentPickId]);
-
-  // Handle drafting the selected prospect
-  const handleDraftSelectedProspect = useCallback(() => {
-    if (!selectedProspectId || !draftState.currentPick?.isUserPick) return;
-    try {
-      const newState = makeUserPick(draftStateRef.current!, selectedProspectId);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      setSelectedProspectId(null);
-      updateDraftState(newState);
-    } catch {
-      Alert.alert('Error', 'Could not make that selection.');
-    }
-  }, [selectedProspectId, draftState.currentPick?.isUserPick, updateDraftState]);
 
   return (
     <DraftRoomScreen
