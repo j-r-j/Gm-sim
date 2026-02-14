@@ -15,10 +15,7 @@ import { FAKE_CITIES } from '@core/models/team/FakeCities';
 import { createDefaultStadium } from '@core/models/team/Stadium';
 import { createDefaultTeamFinances } from '@core/models/team/TeamFinances';
 import { createEmptyStaffHierarchy } from '@core/models/staff/StaffHierarchy';
-import {
-  generateSeasonSchedule,
-  createDefaultStandings,
-} from '@core/season/ScheduleGenerator';
+import { generateSeasonSchedule, createDefaultStandings } from '@core/season/ScheduleGenerator';
 import { simulateWeek } from '@core/season/WeekSimulator';
 import {
   generatePlayoffBracket,
@@ -372,8 +369,7 @@ describe('Playoff Progression Integration Tests', () => {
         for (const expected of expectedMatchups) {
           const matchup = confGames.find(
             (m) =>
-              m.homeTeamId === seeds.get(expected.home) &&
-              m.awayTeamId === seeds.get(expected.away)
+              m.homeTeamId === seeds.get(expected.home) && m.awayTeamId === seeds.get(expected.away)
           );
           expect(matchup).toBeDefined();
           expect(matchup!.homeSeed).toBe(expected.home);
@@ -444,9 +440,7 @@ describe('Playoff Progression Integration Tests', () => {
       for (const conference of ['afc', 'nfc'] as const) {
         const seeds = conference === 'afc' ? postWildCard.afcSeeds : postWildCard.nfcSeeds;
         const topSeed = seeds.get(1)!;
-        const confWcGames = postWildCard.wildCardRound.filter(
-          (m) => m.conference === conference
-        );
+        const confWcGames = postWildCard.wildCardRound.filter((m) => m.conference === conference);
         const confWcWinners = confWcGames.filter((m) => m.winnerId != null);
 
         if (confWcWinners.length === 3) {
@@ -596,8 +590,10 @@ describe('Playoff Progression Integration Tests', () => {
       const nfc1 = bracket.nfcSeeds.get(1)!;
 
       for (const m of bracket.divisionalRound) {
-        const homeIsValid = wcWinners.has(m.homeTeamId) || m.homeTeamId === afc1 || m.homeTeamId === nfc1;
-        const awayIsValid = wcWinners.has(m.awayTeamId) || m.awayTeamId === afc1 || m.awayTeamId === nfc1;
+        const homeIsValid =
+          wcWinners.has(m.homeTeamId) || m.homeTeamId === afc1 || m.homeTeamId === nfc1;
+        const awayIsValid =
+          wcWinners.has(m.awayTeamId) || m.awayTeamId === afc1 || m.awayTeamId === nfc1;
         expect(homeIsValid).toBe(true);
         expect(awayIsValid).toBe(true);
       }

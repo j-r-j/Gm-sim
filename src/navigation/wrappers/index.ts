@@ -4,7 +4,13 @@
  */
 
 // Shared utilities
-export { LoadingFallback, tryCompleteOffseasonTask, tryCompleteViewTask, validateOffseasonPhaseAdvance, processWeekEnd } from './shared';
+export {
+  LoadingFallback,
+  tryCompleteOffseasonTask,
+  tryCompleteViewTask,
+  validateOffseasonPhaseAdvance,
+  processWeekEnd,
+} from './shared';
 
 // Auth/Startup wrappers
 export {

@@ -11,11 +11,7 @@
 import { createNewGame } from '@services/NewGameService';
 import { GameStorage } from '@services/storage/GameStorage';
 import { FAKE_CITIES } from '@core/models/team/FakeCities';
-import {
-  GameState,
-  serializeGameState,
-  deserializeGameState,
-} from '@core/models/game/GameState';
+import { GameState, serializeGameState, deserializeGameState } from '@core/models/game/GameState';
 import { validatePlayer } from '@core/models/player/Player';
 import { simulateWeek } from '@core/season/WeekSimulator';
 import { getWeekGames } from '@core/season/ScheduleGenerator';
@@ -197,12 +193,8 @@ describe('Game Lifecycle Integration Tests', () => {
       expect(Object.keys(restored.scouts)).toHaveLength(96);
       expect(Object.keys(restored.owners)).toHaveLength(32);
       expect(Object.keys(restored.draftPicks)).toHaveLength(224);
-      expect(Object.keys(restored.players)).toHaveLength(
-        Object.keys(gameState.players).length
-      );
-      expect(Object.keys(restored.contracts)).toHaveLength(
-        Object.keys(gameState.contracts).length
-      );
+      expect(Object.keys(restored.players)).toHaveLength(Object.keys(gameState.players).length);
+      expect(Object.keys(restored.contracts)).toHaveLength(Object.keys(gameState.contracts).length);
     });
 
     it('should preserve league calendar through serialization', () => {
@@ -317,21 +309,11 @@ describe('Game Lifecycle Integration Tests', () => {
       await storage.save(0, gameState);
       const loaded = await storage.load<GameState>(0);
 
-      expect(Object.keys(loaded!.players)).toHaveLength(
-        Object.keys(gameState.players).length
-      );
-      expect(Object.keys(loaded!.coaches)).toHaveLength(
-        Object.keys(gameState.coaches).length
-      );
-      expect(Object.keys(loaded!.scouts)).toHaveLength(
-        Object.keys(gameState.scouts).length
-      );
-      expect(Object.keys(loaded!.contracts)).toHaveLength(
-        Object.keys(gameState.contracts).length
-      );
-      expect(Object.keys(loaded!.prospects)).toHaveLength(
-        Object.keys(gameState.prospects).length
-      );
+      expect(Object.keys(loaded!.players)).toHaveLength(Object.keys(gameState.players).length);
+      expect(Object.keys(loaded!.coaches)).toHaveLength(Object.keys(gameState.coaches).length);
+      expect(Object.keys(loaded!.scouts)).toHaveLength(Object.keys(gameState.scouts).length);
+      expect(Object.keys(loaded!.contracts)).toHaveLength(Object.keys(gameState.contracts).length);
+      expect(Object.keys(loaded!.prospects)).toHaveLength(Object.keys(gameState.prospects).length);
     });
   });
 });

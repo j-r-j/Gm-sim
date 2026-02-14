@@ -33,10 +33,7 @@ import {
   WeekProgressionService,
   createWeekProgressionService,
 } from '@core/gameflow/WeekProgressionService';
-import {
-  GameFlowManager,
-  createGameFlowManager,
-} from '@core/gameflow/GameFlowManager';
+import { GameFlowManager, createGameFlowManager } from '@core/gameflow/GameFlowManager';
 import {
   GameState,
   createDefaultCareerStats,
@@ -483,12 +480,7 @@ describe('Weekly Game Flow Integration Tests', () => {
     });
 
     it('should create correct week flow state for regular week', () => {
-      const flowState = weekService.createWeekFlowState(
-        1,
-        'regularSeason',
-        teams[0].id,
-        schedule
-      );
+      const flowState = weekService.createWeekFlowState(1, 'regularSeason', teams[0].id, schedule);
 
       expect(flowState.weekNumber).toBe(1);
       expect(flowState.seasonPhase).toBe('regularSeason');
@@ -558,12 +550,7 @@ describe('Weekly Game Flow Integration Tests', () => {
     });
 
     it('should not allow advancing week without completing gates', () => {
-      const flowState = weekService.createWeekFlowState(
-        1,
-        'regularSeason',
-        teams[0].id,
-        schedule
-      );
+      const flowState = weekService.createWeekFlowState(1, 'regularSeason', teams[0].id, schedule);
 
       const { canAdvance, reason } = weekService.canAdvanceWeek(flowState);
       expect(canAdvance).toBe(false);
@@ -571,11 +558,7 @@ describe('Weekly Game Flow Integration Tests', () => {
     });
 
     it('should advance week and update season phase tracking', () => {
-      const { result } = weekService.advanceWeek(
-        1,
-        'regularSeason',
-        gameState
-      );
+      const { result } = weekService.advanceWeek(1, 'regularSeason', gameState);
 
       expect(result.newWeek).toBe(2);
       expect(result.seasonPhase).toBe('regularSeason');
@@ -695,9 +678,7 @@ describe('Weekly Game Flow Integration Tests', () => {
 
       const game = getUserTeamGame(schedule, nonByeWeek, userTeamId);
       if (game) {
-        expect(
-          game.homeTeamId === userTeamId || game.awayTeamId === userTeamId
-        ).toBe(true);
+        expect(game.homeTeamId === userTeamId || game.awayTeamId === userTeamId).toBe(true);
       }
     });
   });

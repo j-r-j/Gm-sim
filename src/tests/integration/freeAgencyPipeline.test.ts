@@ -65,11 +65,7 @@ import {
   declineToMatch,
   validateRFASystemState,
 } from '@core/freeAgency/RFATenderSystem';
-import {
-  createPlayerContract,
-  ContractOffer,
-  validatePlayerContract,
-} from '@core/contracts/Contract';
+import { ContractOffer, validatePlayerContract } from '@core/contracts/Contract';
 import { Position } from '@core/models/player/Position';
 
 const YEAR = 2025;
@@ -97,11 +93,7 @@ function createFAPlayer(
 }
 
 // Helper: create a contract offer
-function createOffer(
-  years: number,
-  bonusPerYear: number,
-  salaryPerYear: number
-): ContractOffer {
+function createOffer(years: number, bonusPerYear: number, salaryPerYear: number): ContractOffer {
   return {
     years,
     bonusPerYear,
@@ -214,24 +206,9 @@ describe('Free Agency Pipeline Integration Tests', () => {
     it('should add free agents to the pool', () => {
       let state = createFreeAgencyState(YEAR, TEAM_IDS);
 
-      state = addFreeAgent(
-        state,
-        createFAPlayer('fa-1', Position.QB, 85),
-        'UFA',
-        25000
-      );
-      state = addFreeAgent(
-        state,
-        createFAPlayer('fa-2', Position.WR, 78),
-        'UFA',
-        15000
-      );
-      state = addFreeAgent(
-        state,
-        createFAPlayer('fa-3', Position.CB, 72, 25, 3),
-        'RFA',
-        10000
-      );
+      state = addFreeAgent(state, createFAPlayer('fa-1', Position.QB, 85), 'UFA', 25000);
+      state = addFreeAgent(state, createFAPlayer('fa-2', Position.WR, 78), 'UFA', 15000);
+      state = addFreeAgent(state, createFAPlayer('fa-3', Position.CB, 72, 25, 3), 'RFA', 10000);
 
       expect(state.freeAgents.size).toBe(3);
     });
@@ -361,7 +338,6 @@ describe('Free Agency Pipeline Integration Tests', () => {
 
       const teamOffers = getTeamOffers(tamperingState, USER_TEAM);
       if (teamOffers.length > 0) {
-        const beforeState = tamperingState;
         tamperingState = acceptOffer(tamperingState, teamOffers[0].id);
         // Accept should not work during legal tampering
         const fa = tamperingState.freeAgents.get('fa-fa-star-2025');
@@ -376,7 +352,6 @@ describe('Free Agency Pipeline Integration Tests', () => {
       const teamOffers = getTeamOffers(state, USER_TEAM);
       state = rejectOffer(state, teamOffers[0].id);
 
-      const updatedOffers = getTeamOffers(state, USER_TEAM);
       const rejectedOffer = Array.from(state.offers.values()).find(
         (o) => o.id === teamOffers[0].id
       );
@@ -552,7 +527,7 @@ describe('Free Agency Pipeline Integration Tests', () => {
         playerId: 'fa-1',
         playerName: 'Star Player',
         position: Position.QB,
-      } as any;
+      } as unknown as Parameters<typeof recordFrenzySigning>[1];
 
       const offer: ContractOffer = {
         years: 4,
@@ -606,20 +581,13 @@ describe('Free Agency Pipeline Integration Tests', () => {
           age: 28,
           status: 'available' as const,
         },
-      ] as any[];
+      ] as unknown as Parameters<typeof identifyBargainOpportunities>[1];
 
-      // Create market values map
-      const marketValues = new Map<string, any>();
-      marketValues.set('bargain-1', {
-        projectedAAV: 5000,
-        projectedYears: 1,
-        tier: 'depth' as const,
-      });
-      marketValues.set('bargain-2', {
-        projectedAAV: 7000,
-        projectedYears: 2,
-        tier: 'quality' as const,
-      });
+      // Create market values map (partial objects sufficient for test)
+      const marketValues = new Map<string, unknown>([
+        ['bargain-1', { projectedAAV: 5000, projectedYears: 1, tier: 'depth' }],
+        ['bargain-2', { projectedAAV: 7000, projectedYears: 2, tier: 'quality' }],
+      ]) as Parameters<typeof identifyBargainOpportunities>[2];
 
       // identifyBargainOpportunities(state, freeAgents, marketValues) returns updated state
       const updatedState = identifyBargainOpportunities(state, remainingPlayers, marketValues);
@@ -654,7 +622,14 @@ describe('Free Agency Pipeline Integration Tests', () => {
       let state = createRFASystemState(YEAR);
 
       // submitTender(state, playerId, playerName, teamId, level, salaryCap)
-      state = submitTender(state, 'rfa-player-1', 'RFA Player', USER_TEAM, 'first_round', SALARY_CAP);
+      state = submitTender(
+        state,
+        'rfa-player-1',
+        'RFA Player',
+        USER_TEAM,
+        'first_round',
+        SALARY_CAP
+      );
 
       const tender = getPlayerTender(state, 'rfa-player-1');
       expect(tender).toBeDefined();
@@ -666,7 +641,14 @@ describe('Free Agency Pipeline Integration Tests', () => {
       let state = createRFASystemState(YEAR);
 
       // Original team submits tender
-      state = submitTender(state, 'rfa-player-1', 'RFA Player', USER_TEAM, 'first_round', SALARY_CAP);
+      state = submitTender(
+        state,
+        'rfa-player-1',
+        'RFA Player',
+        USER_TEAM,
+        'first_round',
+        SALARY_CAP
+      );
 
       // Another team submits offer sheet
       const offerSheet: ContractOffer = {
@@ -677,13 +659,7 @@ describe('Free Agency Pipeline Integration Tests', () => {
       };
 
       // submitOfferSheet(state, rfaPlayerId, offeringTeamId, originalTeamId, offer)
-      state = submitOfferSheet(
-        state,
-        'rfa-player-1',
-        'team-5',
-        USER_TEAM,
-        offerSheet
-      );
+      state = submitOfferSheet(state, 'rfa-player-1', 'team-5', USER_TEAM, offerSheet);
 
       // Verify offer sheet exists (offerSheets is a Map)
       expect(state.offerSheets.size).toBe(1);
@@ -703,7 +679,14 @@ describe('Free Agency Pipeline Integration Tests', () => {
     it('should handle declining to match offer sheet', () => {
       let state = createRFASystemState(YEAR);
 
-      state = submitTender(state, 'rfa-player-1', 'RFA Player', USER_TEAM, 'second_round', SALARY_CAP);
+      state = submitTender(
+        state,
+        'rfa-player-1',
+        'RFA Player',
+        USER_TEAM,
+        'second_round',
+        SALARY_CAP
+      );
 
       const offerSheet: ContractOffer = {
         years: 4,
@@ -712,13 +695,7 @@ describe('Free Agency Pipeline Integration Tests', () => {
         noTradeClause: false,
       };
 
-      state = submitOfferSheet(
-        state,
-        'rfa-player-1',
-        'team-10',
-        USER_TEAM,
-        offerSheet
-      );
+      state = submitOfferSheet(state, 'rfa-player-1', 'team-10', USER_TEAM, offerSheet);
 
       // Get the offer sheet ID
       const offerSheetId = Array.from(state.offerSheets.keys())[0];

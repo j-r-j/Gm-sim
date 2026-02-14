@@ -15,7 +15,11 @@ import { ScheduleScreen } from '../../screens/ScheduleScreen';
 import { StandingsScreen } from '../../screens/StandingsScreen';
 import { NewsScreen } from '../../screens/NewsScreen';
 import { GameDayScreen } from '../../screens/GameDayScreen';
-import { PlayoffBracketScreen, PlayoffMatchup, PlayoffSeed } from '../../screens/PlayoffBracketScreen';
+import {
+  PlayoffBracketScreen,
+  PlayoffMatchup,
+  PlayoffSeed,
+} from '../../screens/PlayoffBracketScreen';
 import { StatsScreen } from '../../screens/StatsScreen';
 import { RumorMillScreen } from '../../screens/RumorMillScreen';
 import { WeeklyDigestScreen } from '../../screens/WeeklyDigestScreen';

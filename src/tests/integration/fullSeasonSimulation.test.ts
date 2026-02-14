@@ -20,10 +20,7 @@ import {
   createDefaultStandings,
   getWeekGames,
 } from '@core/season/ScheduleGenerator';
-import {
-  simulateWeek,
-  WeekResults,
-} from '@core/season/WeekSimulator';
+import { simulateWeek, WeekResults } from '@core/season/WeekSimulator';
 import { calculateStandings, TeamStanding } from '@core/season/StandingsCalculator';
 import {
   GameState,

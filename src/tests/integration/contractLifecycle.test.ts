@@ -10,8 +10,6 @@ import {
   validatePlayerContract,
   getCapHitForYear,
   getCurrentCapHit,
-  calculateDeadMoney,
-  calculateCapSavings,
   advanceContractYear,
   isExpiringContract,
   getContractEndYear,
@@ -22,7 +20,6 @@ import {
   canTradePlayer,
   PlayerContract,
   ContractOffer,
-  VETERAN_MINIMUM_SALARY,
 } from '@core/contracts/Contract';
 import {
   createSalaryCapState,
@@ -53,13 +50,11 @@ import {
   applyFranchiseTag,
   createTeamTagStatus,
   canUseFranchiseTag,
-  canUseTransitionTag,
   getFranchiseTagValue,
   getTransitionTagValue,
   removeFranchiseTag,
   advanceTagYear,
   validateFranchiseTag,
-  FRANCHISE_TAG_VALUES,
 } from '@core/contracts/FranchiseTagSystem';
 import {
   analyzeStandardCut,
@@ -77,9 +72,7 @@ import {
   getExtensionEligible,
   calculateRecommendedOffer,
 } from '@core/contracts/ExtensionSystem';
-import {
-  createDefaultTeamFinances,
-} from '@core/models/team/TeamFinances';
+import { createDefaultTeamFinances } from '@core/models/team/TeamFinances';
 import { Position } from '@core/models/player/Position';
 
 const YEAR = 2025;

@@ -11,13 +11,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import {
-  Alert,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  SafeAreaView,
-} from 'react-native';
+import { Alert, Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';

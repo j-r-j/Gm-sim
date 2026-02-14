@@ -165,7 +165,7 @@ export function AppNavigator(): React.JSX.Element {
 
       {/* Enhanced Game Experience */}
       <Stack.Screen name="LiveGameSimulation" component={LiveGameSimulationScreenWrapper} />
-<Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
+      <Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
 
       {/* New Weekly Decision Systems */}
       <Stack.Screen name="GamePlan" component={GamePlanScreenWrapper} />

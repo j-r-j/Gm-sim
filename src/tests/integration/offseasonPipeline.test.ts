@@ -105,9 +105,7 @@ describe('Offseason Pipeline Integration Tests', () => {
       const state = createOffSeasonState(2025);
 
       for (const phase of PHASE_ORDER) {
-        const requiredTasks = state.phaseTasks[phase].tasks.filter(
-          (t) => t.isRequired
-        );
+        const requiredTasks = state.phaseTasks[phase].tasks.filter((t) => t.isRequired);
         expect(requiredTasks.length).toBeGreaterThanOrEqual(1);
       }
     });
@@ -160,12 +158,8 @@ describe('Offseason Pipeline Integration Tests', () => {
       state = advancePhase(state);
 
       // Should have task_complete and phase_complete events
-      const taskCompleteEvents = state.events.filter(
-        (e) => e.type === 'task_complete'
-      );
-      const phaseCompleteEvents = state.events.filter(
-        (e) => e.type === 'phase_complete'
-      );
+      const taskCompleteEvents = state.events.filter((e) => e.type === 'task_complete');
+      const phaseCompleteEvents = state.events.filter((e) => e.type === 'phase_complete');
       expect(taskCompleteEvents.length).toBeGreaterThan(0);
       expect(phaseCompleteEvents.length).toBeGreaterThan(0);
     });
@@ -197,9 +191,7 @@ describe('Offseason Pipeline Integration Tests', () => {
       state = completeTask(state, requiredTask.id);
 
       const updatedTaskStatus = state.phaseTasks[state.currentPhase];
-      const updatedTask = updatedTaskStatus.tasks.find(
-        (t) => t.id === requiredTask.id
-      );
+      const updatedTask = updatedTaskStatus.tasks.find((t) => t.id === requiredTask.id);
       expect(updatedTask!.isComplete).toBe(true);
       expect(updatedTaskStatus.tasksCompleted).toContain(requiredTask.id);
     });
@@ -456,9 +448,7 @@ describe('Offseason Pipeline Integration Tests', () => {
       expect(completed.events.length).toBeGreaterThan(20);
 
       // Should have phase_complete events for each completed phase
-      const phaseCompleteEvents = completed.events.filter(
-        (e) => e.type === 'phase_complete'
-      );
+      const phaseCompleteEvents = completed.events.filter((e) => e.type === 'phase_complete');
       expect(phaseCompleteEvents.length).toBeGreaterThanOrEqual(11);
     });
 

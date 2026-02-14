@@ -13,12 +13,7 @@ import {
   getProspectsByPosition,
   DraftClass,
 } from '@core/draft/DraftClassGenerator';
-import {
-  selectCombineInvites,
-  simulateCombine,
-  CombineSimulationResults,
-  CombineGrade,
-} from '@core/draft/CombineSimulator';
+import { simulateCombine, CombineSimulationResults } from '@core/draft/CombineSimulator';
 import {
   createDraftOrderState,
   getDraftOrder,
@@ -37,13 +32,7 @@ import {
   DraftRoomState,
   DEFAULT_TIMER_CONFIG,
 } from '@core/draft/DraftRoomSimulator';
-import {
-  createAIDraftProfile,
-  assessTeamNeeds,
-  AIDraftProfile,
-  DraftPhilosophy,
-  TeamNeeds,
-} from '@core/draft/AIDraftStrategy';
+import { createAIDraftProfile, AIDraftProfile, TeamNeeds } from '@core/draft/AIDraftStrategy';
 import {
   createUDFAPool,
   simulateAISignings,
@@ -58,7 +47,7 @@ import {
   generateRookieContract,
   validateRookieContract,
 } from '@core/draft/RookieContractGenerator';
-import { DraftPick, createDraftPick, assignOverallPick } from '@core/models/league/DraftPick';
+import { DraftPick } from '@core/models/league/DraftPick';
 import { Position } from '@core/models/player/Position';
 
 // Helper: create 32 fake team IDs
@@ -169,7 +158,7 @@ describe('Draft Pipeline Integration Tests', () => {
 
     it('should have workout results for invited prospects who participated', () => {
       let foundWorkouts = false;
-      for (const [prospectId, result] of combineResults.results) {
+      for (const [, result] of combineResults.results) {
         if (result.invited && result.participated && result.workoutResults) {
           foundWorkouts = true;
           const workouts = result.workoutResults;
@@ -187,7 +176,7 @@ describe('Draft Pipeline Integration Tests', () => {
 
     it('should have medical evaluations for invited prospects', () => {
       let foundMedical = false;
-      for (const [prospectId, result] of combineResults.results) {
+      for (const [, result] of combineResults.results) {
         if (result.invited && result.participated && result.medicalEvaluation) {
           foundMedical = true;
           expect(result.medicalEvaluation.grade).toBeDefined();
@@ -200,7 +189,7 @@ describe('Draft Pipeline Integration Tests', () => {
 
     it('should have interview impressions', () => {
       let hasInterviews = false;
-      for (const [prospectId, result] of combineResults.results) {
+      for (const [, result] of combineResults.results) {
         if (result.interviewImpressions && result.interviewImpressions.length > 0) {
           hasInterviews = true;
           for (const interview of result.interviewImpressions) {
@@ -291,7 +280,14 @@ describe('Draft Pipeline Integration Tests', () => {
 
       // Create draft room with timer disabled for test speed
       const timerConfig = { ...DEFAULT_TIMER_CONFIG, enabled: false };
-      let state = createDraftRoomState(YEAR, orderState, draftClass, aiProfiles, userTeamId, timerConfig);
+      let state = createDraftRoomState(
+        YEAR,
+        orderState,
+        draftClass,
+        aiProfiles,
+        userTeamId,
+        timerConfig
+      );
 
       // Start the draft
       state = startDraft(state);

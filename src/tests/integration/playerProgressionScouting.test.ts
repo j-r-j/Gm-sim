@@ -11,10 +11,7 @@
  * - Hidden trait revelation
  */
 
-import {
-  generatePlayer,
-  generateRoster,
-} from '@core/generators/player/PlayerGenerator';
+import { generatePlayer, generateRoster } from '@core/generators/player/PlayerGenerator';
 import { Player, validatePlayer, isRookie, isVeteran } from '@core/models/player/Player';
 import { Position } from '@core/models/player/Position';
 import { createDefaultCoach, Coach } from '@core/models/staff/Coach';
@@ -120,13 +117,9 @@ describe('Player Progression & Scouting Integration Tests', () => {
       const result = applyOffseasonProgression(youngPlayer, coach);
 
       expect(result.playerId).toBe(youngPlayer.id);
-      expect(result.playerName).toBe(
-        `${youngPlayer.firstName} ${youngPlayer.lastName}`
-      );
+      expect(result.playerName).toBe(`${youngPlayer.firstName} ${youngPlayer.lastName}`);
       expect(typeof result.totalChange).toBe('number');
-      expect(['significant', 'moderate', 'minimal', 'negative']).toContain(
-        result.coachInfluence
-      );
+      expect(['significant', 'moderate', 'minimal', 'negative']).toContain(result.coachInfluence);
       expect(result.developmentDescription.length).toBeGreaterThan(0);
     });
 
@@ -158,15 +151,15 @@ describe('Player Progression & Scouting Integration Tests', () => {
       }
 
       // On average, young players should develop more
-      expect(youngTotalChange / trials).toBeGreaterThanOrEqual(
-        veteranTotalChange / trials
-      );
+      expect(youngTotalChange / trials).toBeGreaterThanOrEqual(veteranTotalChange / trials);
     });
 
     it('processTeamProgression should update all players in roster', () => {
       const roster = [youngPlayer, veteranPlayer];
-      const { updatedPlayers, results, notableImprovements } =
-        processTeamProgression(roster, coach);
+      const { updatedPlayers, results, notableImprovements } = processTeamProgression(
+        roster,
+        coach
+      );
 
       expect(updatedPlayers).toHaveLength(2);
       expect(results).toHaveLength(2);
@@ -437,10 +430,7 @@ describe('Player Progression & Scouting Integration Tests', () => {
         expect(Array.isArray(player.hiddenTraits.revealedToUser)).toBe(true);
 
         // Revealed traits should be a subset of all traits
-        const allTraits = [
-          ...player.hiddenTraits.positive,
-          ...player.hiddenTraits.negative,
-        ];
+        const allTraits = [...player.hiddenTraits.positive, ...player.hiddenTraits.negative];
         for (const revealed of player.hiddenTraits.revealedToUser) {
           expect(allTraits).toContain(revealed);
         }
@@ -620,12 +610,7 @@ describe('Player Progression & Scouting Integration Tests', () => {
 
           // Complete evaluation
           const actualOverall = 65 + Math.floor(Math.random() * 20);
-          scout = updateEvaluationsWithResults(
-            scout,
-            prospectId,
-            2,
-            actualOverall
-          );
+          scout = updateEvaluationsWithResults(scout, prospectId, 2, actualOverall);
         }
 
         scout = advanceAccuracyYear(scout);
@@ -719,11 +704,9 @@ describe('Player Progression & Scouting Integration Tests', () => {
         const youngResult = applyOffseasonProgression(youngPlayer, coach, {
           applyAgeModifier: true,
         });
-        const oldResult = applyOffseasonProgression(
-          { ...oldPlayer, experience: 13 },
-          coach,
-          { applyAgeModifier: true }
-        );
+        const oldResult = applyOffseasonProgression({ ...oldPlayer, experience: 13 }, coach, {
+          applyAgeModifier: true,
+        });
 
         youngTotal += youngResult.totalChange;
         oldTotal += oldResult.totalChange;

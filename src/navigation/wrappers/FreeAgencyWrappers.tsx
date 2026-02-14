@@ -24,7 +24,11 @@ import { CompPickTrackerScreen } from '../../screens/CompPickTrackerScreen';
 // Core type imports
 import { GameState } from '../../core/models/game/GameState';
 import { Position } from '../../core/models/player/Position';
-import { TenderOffer, OfferSheet, recommendTenderLevel } from '../../core/freeAgency/RFATenderSystem';
+import {
+  TenderOffer,
+  OfferSheet,
+  recommendTenderLevel,
+} from '../../core/freeAgency/RFATenderSystem';
 import {
   FADeparture,
   FAAcquisition,
@@ -71,22 +75,23 @@ export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.
           evaluateUserTradeProposal: typeof import('../../core/trade/AITradeOfferGenerator').evaluateUserTradeProposal;
         };
 
-        const userTradeProposal: import('../../core/trade/AITradeOfferGenerator').UserTradeProposal = {
-          userTeamId: proposal.offeringTeamId,
-          aiTeamId: proposal.receivingTeamId,
-          playersOffered: proposal.assetsOffered
-            .filter((a): a is Extract<typeof a, { type: 'player' }> => a.type === 'player')
-            .map((a) => a.playerId),
-          playersRequested: proposal.assetsRequested
-            .filter((a): a is Extract<typeof a, { type: 'player' }> => a.type === 'player')
-            .map((a) => a.playerId),
-          picksOffered: proposal.assetsOffered
-            .filter((a): a is Extract<typeof a, { type: 'pick' }> => a.type === 'pick')
-            .map((a) => a.pickId),
-          picksRequested: proposal.assetsRequested
-            .filter((a): a is Extract<typeof a, { type: 'pick' }> => a.type === 'pick')
-            .map((a) => a.pickId),
-        };
+        const userTradeProposal: import('../../core/trade/AITradeOfferGenerator').UserTradeProposal =
+          {
+            userTeamId: proposal.offeringTeamId,
+            aiTeamId: proposal.receivingTeamId,
+            playersOffered: proposal.assetsOffered
+              .filter((a): a is Extract<typeof a, { type: 'player' }> => a.type === 'player')
+              .map((a) => a.playerId),
+            playersRequested: proposal.assetsRequested
+              .filter((a): a is Extract<typeof a, { type: 'player' }> => a.type === 'player')
+              .map((a) => a.playerId),
+            picksOffered: proposal.assetsOffered
+              .filter((a): a is Extract<typeof a, { type: 'pick' }> => a.type === 'pick')
+              .map((a) => a.pickId),
+            picksRequested: proposal.assetsRequested
+              .filter((a): a is Extract<typeof a, { type: 'pick' }> => a.type === 'pick')
+              .map((a) => a.pickId),
+          };
 
         const aiResponse = evaluateUserTradeProposal(gameState, userTradeProposal);
 

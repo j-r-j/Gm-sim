@@ -340,9 +340,10 @@ export function SeasonRecapScreenWrapper({
       topPerformers,
       awards: (() => {
         try {
-          const { generateSeasonAwards } = require('../../core/offseason/bridges/PhaseGenerators') as {
-            generateSeasonAwards: typeof import('../../core/offseason/bridges/PhaseGenerators').generateSeasonAwards;
-          };
+          const { generateSeasonAwards } =
+            require('../../core/offseason/bridges/PhaseGenerators') as {
+              generateSeasonAwards: typeof import('../../core/offseason/bridges/PhaseGenerators').generateSeasonAwards;
+            };
           return generateSeasonAwards(gameState, gameState.seasonStats).map((a) => ({
             award: a.award,
             playerId: a.playerId,

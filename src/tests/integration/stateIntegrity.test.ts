@@ -144,8 +144,7 @@ describe('State Integrity Integration Tests', () => {
 
     it('cap space should equal salaryCap minus currentCapUsage', () => {
       for (const team of Object.values(gameState.teams)) {
-        const expectedCapSpace =
-          team.finances.salaryCap - team.finances.currentCapUsage;
+        const expectedCapSpace = team.finances.salaryCap - team.finances.currentCapUsage;
         expect(team.finances.capSpace).toBe(expectedCapSpace);
       }
     });
@@ -183,14 +182,10 @@ describe('State Integrity Integration Tests', () => {
 
     it('majority of active contracts should reference valid players', () => {
       const contracts = Object.values(gameState.contracts);
-      const validPlayerContracts = contracts.filter(
-        (c) => gameState.players[c.playerId]
-      );
+      const validPlayerContracts = contracts.filter((c) => gameState.players[c.playerId]);
 
       // After history sim, some contracts may be orphaned due to retirements
-      expect(validPlayerContracts.length / contracts.length).toBeGreaterThanOrEqual(
-        0.5
-      );
+      expect(validPlayerContracts.length / contracts.length).toBeGreaterThanOrEqual(0.5);
     });
 
     it('players with contracts should reference valid contract IDs', () => {
@@ -249,11 +244,7 @@ describe('State Integrity Integration Tests', () => {
     });
 
     it('each coach should have a valid role', () => {
-      const validRoles = [
-        'headCoach',
-        'offensiveCoordinator',
-        'defensiveCoordinator',
-      ];
+      const validRoles = ['headCoach', 'offensiveCoordinator', 'defensiveCoordinator'];
       for (const coach of Object.values(gameState.coaches)) {
         expect(validRoles).toContain(coach.role);
       }
@@ -364,9 +355,7 @@ describe('State Integrity Integration Tests', () => {
     it('schedule should not double-book a team in the same week', () => {
       if (gameState.league.schedule) {
         for (let week = 1; week <= 18; week++) {
-          const weekGames = gameState.league.schedule.regularSeason.filter(
-            (g) => g.week === week
-          );
+          const weekGames = gameState.league.schedule.regularSeason.filter((g) => g.week === week);
           const teamsPlaying = new Set<string>();
 
           for (const game of weekGames) {
@@ -394,12 +383,8 @@ describe('State Integrity Integration Tests', () => {
   // =====================================================
   describe('conference and division structure', () => {
     it('should have 16 teams in each conference', () => {
-      const afcTeams = Object.values(gameState.teams).filter(
-        (t) => t.conference === 'AFC'
-      );
-      const nfcTeams = Object.values(gameState.teams).filter(
-        (t) => t.conference === 'NFC'
-      );
+      const afcTeams = Object.values(gameState.teams).filter((t) => t.conference === 'AFC');
+      const nfcTeams = Object.values(gameState.teams).filter((t) => t.conference === 'NFC');
 
       expect(afcTeams).toHaveLength(16);
       expect(nfcTeams).toHaveLength(16);
@@ -464,8 +449,7 @@ describe('State Integrity Integration Tests', () => {
       let standingsTeamCount = 0;
       for (const conference of ['afc', 'nfc'] as const) {
         for (const division of ['north', 'south', 'east', 'west'] as const) {
-          standingsTeamCount +=
-            results.standings[conference][division].length;
+          standingsTeamCount += results.standings[conference][division].length;
         }
       }
       expect(standingsTeamCount).toBe(32);

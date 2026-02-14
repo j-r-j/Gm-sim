@@ -17,11 +17,7 @@ import {
   TradeOffersState,
   UserTradeProposal,
 } from '@core/trade/AITradeOfferGenerator';
-import {
-  evaluateTrade,
-  wouldAIAcceptTrade,
-  TradeProposal,
-} from '@core/draft/TradeValueCalculator';
+import { evaluateTrade, wouldAIAcceptTrade, TradeProposal } from '@core/draft/TradeValueCalculator';
 import {
   createDraftOrderState,
   executeTrade,
@@ -144,9 +140,7 @@ describe('Trade System Integration Tests', () => {
       const team1PicksAfter = getTeamPicks(newState, 'team-1', YEAR);
 
       expect(team0PicksAfter.length).toBe(team0Picks.length - 1);
-      expect(team1PicksAfter.length).toBe(
-        getTeamPicks(orderState, 'team-1', YEAR).length + 1
-      );
+      expect(team1PicksAfter.length).toBe(getTeamPicks(orderState, 'team-1', YEAR).length + 1);
 
       // The traded pick should have a trade history entry
       const tradedPick = team1PicksAfter.find((p) => p.id === pickToTrade.id);
@@ -181,14 +175,7 @@ describe('Trade System Integration Tests', () => {
 
       // This should throw because we only generate 3 years of picks
       expect(() => {
-        executeTrade(
-          orderState,
-          'nonexistent-pick',
-          tooFarYear,
-          'team-1',
-          'trade-too-far',
-          1
-        );
+        executeTrade(orderState, 'nonexistent-pick', tooFarYear, 'team-1', 'trade-too-far', 1);
       }).toThrow();
     });
 
