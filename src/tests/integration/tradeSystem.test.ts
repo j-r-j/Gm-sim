@@ -234,12 +234,9 @@ describe('Trade System Integration Tests', () => {
 
     it('should generate trade offers from game state', () => {
       // May produce 0 offers due to randomness, so run multiple times
-      let hasOffers = false;
       for (let attempt = 0; attempt < 10; attempt++) {
         const offers = generateWeeklyTradeOffers(gameState);
         if (offers.length > 0) {
-          hasOffers = true;
-
           for (const offer of offers) {
             expect(offer.id).toBeTruthy();
             expect(offer.offeringTeamId).toBeTruthy();

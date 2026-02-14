@@ -239,3 +239,12 @@ export {
   validateBigBoard,
   getBigBoardSummary,
 } from './BigBoardGenerator';
+
+// Draft Recommendation System
+export {
+  ScoutDraftRecommendation,
+  DraftPickRecommendations,
+  generateScoutRecommendation,
+  generatePickRecommendations,
+  getAutoPickRecommendation,
+} from './DraftRecommendationSystem';

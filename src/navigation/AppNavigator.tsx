@@ -57,7 +57,6 @@ import {
   StatsScreenWrapper,
   WeeklyScheduleScreenWrapper,
   LiveGameSimulationScreenWrapper,
-  PostGameSummaryScreenWrapper,
   WeekSummaryScreenWrapper,
   GamePlanScreenWrapper,
   TradeOffersScreenWrapper,
@@ -70,7 +69,7 @@ import {
   HallOfFameScreenWrapper,
   PlayerComparisonScreenWrapper,
   DraftTradeCalculatorScreenWrapper,
-} from './ScreenWrappers';
+} from './wrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -166,8 +165,7 @@ export function AppNavigator(): React.JSX.Element {
 
       {/* Enhanced Game Experience */}
       <Stack.Screen name="LiveGameSimulation" component={LiveGameSimulationScreenWrapper} />
-      <Stack.Screen name="PostGameSummary" component={PostGameSummaryScreenWrapper} />
-      <Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
+<Stack.Screen name="WeekSummary" component={WeekSummaryScreenWrapper} />
 
       {/* New Weekly Decision Systems */}
       <Stack.Screen name="GamePlan" component={GamePlanScreenWrapper} />

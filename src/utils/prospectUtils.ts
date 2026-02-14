@@ -4,13 +4,48 @@
  */
 
 import { Prospect, getOverallRanking, getPositionRanking } from '../core/draft/Prospect';
-import { DraftBoardProspect } from '../screens/DraftBoardScreen';
+import { DraftBoardProspect, ProspectCombineData } from '../screens/DraftBoardScreen';
 import { SkillValue } from '../core/models/player/TechnicalSkills';
+import { CombineResults } from '../core/draft/CombineSimulator';
+
+/**
+ * Extra scouting data that can be passed when building the draft board
+ */
+export interface DraftBoardEnrichment {
+  combineResults?: Record<string, CombineResults>;
+  /** Aggregated OVR ranges by prospectId, e.g. { "id": "72-81" } */
+  ovrRanges?: Record<string, string>;
+  /** Scout confidence scores by prospectId (0-100) */
+  confidenceScores?: Record<string, number>;
+  /** Confidence labels by prospectId */
+  confidenceLabels?: Record<string, string>;
+}
+
+/**
+ * Extracts combine workout data into the display format
+ */
+function extractCombineData(result: CombineResults): ProspectCombineData | null {
+  if (!result.participated || !result.workoutResults) {
+    return null;
+  }
+  const w = result.workoutResults;
+  return {
+    fortyYardDash: w.fortyYardDash,
+    benchPress: w.benchPress,
+    verticalJump: w.verticalJump,
+    broadJump: w.broadJump,
+    threeConeDrill: w.threeConeDrill,
+    twentyYardShuttle: w.twentyYardShuttle,
+  };
+}
 
 /**
  * Converts a Prospect to DraftBoardProspect format for display
  */
-export function convertToDraftBoardProspect(prospect: Prospect): DraftBoardProspect {
+export function convertToDraftBoardProspect(
+  prospect: Prospect,
+  enrichment?: DraftBoardEnrichment
+): DraftBoardProspect {
   const player = prospect.player;
 
   // Get rankings
@@ -21,7 +56,6 @@ export function convertToDraftBoardProspect(prospect: Prospect): DraftBoardProsp
   const projection = prospect.consensusProjection || prospect.userProjection;
 
   // Convert player skills to SkillValue format
-  // The player.skills is already in the right format (Record<string, SkillValue>)
   const skills: Record<string, SkillValue> = {};
   if (player.skills) {
     for (const [key, value] of Object.entries(player.skills)) {
@@ -29,6 +63,12 @@ export function convertToDraftBoardProspect(prospect: Prospect): DraftBoardProsp
         skills[key] = value as SkillValue;
       }
     }
+  }
+
+  // Extract combine data if available
+  let combine: ProspectCombineData | null = null;
+  if (enrichment?.combineResults?.[prospect.id]) {
+    combine = extractCombineData(enrichment.combineResults[prospect.id]);
   }
 
   return {
@@ -45,6 +85,10 @@ export function convertToDraftBoardProspect(prospect: Prospect): DraftBoardProsp
     overallRank: overallRanking?.rank ?? null,
     skills,
     physical: prospect.physicalsRevealed ? player.physical : null,
+    combine,
+    ovrRange: enrichment?.ovrRanges?.[prospect.id] ?? null,
+    confidence: enrichment?.confidenceScores?.[prospect.id] ?? null,
+    confidenceLabel: enrichment?.confidenceLabels?.[prospect.id] ?? null,
   };
 }
 
@@ -52,9 +96,10 @@ export function convertToDraftBoardProspect(prospect: Prospect): DraftBoardProsp
  * Converts multiple prospects to DraftBoardProspect format
  */
 export function convertProspectsToDraftBoard(
-  prospects: Record<string, Prospect>
+  prospects: Record<string, Prospect>,
+  enrichment?: DraftBoardEnrichment
 ): DraftBoardProspect[] {
-  return Object.values(prospects).map(convertToDraftBoardProspect);
+  return Object.values(prospects).map((p) => convertToDraftBoardProspect(p, enrichment));
 }
 
 /**

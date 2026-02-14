@@ -13,7 +13,6 @@ import { GameStorage } from '@services/storage/GameStorage';
 import { FAKE_CITIES } from '@core/models/team/FakeCities';
 import {
   GameState,
-  validateGameState,
   serializeGameState,
   deserializeGameState,
 } from '@core/models/game/GameState';

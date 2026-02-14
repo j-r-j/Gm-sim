@@ -6,7 +6,7 @@
  * home-field advantage, and champion determination all work together.
  */
 
-import { SeasonManager, createSeasonManager } from '@core/season/SeasonManager';
+import { createSeasonManager } from '@core/season/SeasonManager';
 import { Team, createEmptyTeamRecord } from '@core/models/team/Team';
 import { Player } from '@core/models/player/Player';
 import { Coach, createDefaultCoach } from '@core/models/staff/Coach';
@@ -31,7 +31,7 @@ import {
   getTeamPlayoffSeed,
   PlayoffSchedule,
 } from '@core/season/PlayoffGenerator';
-import { calculateStandings, determinePlayoffTeams } from '@core/season/StandingsCalculator';
+import { calculateStandings } from '@core/season/StandingsCalculator';
 import { calculateDraftOrder } from '@core/season/DraftOrderCalculator';
 import {
   GameState,

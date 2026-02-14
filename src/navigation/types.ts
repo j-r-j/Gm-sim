@@ -122,7 +122,6 @@ export type RootStackParamList = {
 
   // Enhanced Game Experience
   LiveGameSimulation: undefined;
-  PostGameSummary: undefined;
   WeekSummary: undefined;
 
   // New Weekly Decision Systems

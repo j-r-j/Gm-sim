@@ -36,7 +36,7 @@ import {
   getScoutsByAccuracy,
 } from '@core/scouting/ScoutAccuracySystem';
 import { createDefaultScout, Scout } from '@core/models/staff/Scout';
-import { createEmptyTrackRecord, MIN_EVALUATIONS_FOR_RELIABILITY } from '@core/models/staff/ScoutTrackRecord';
+import { createEmptyTrackRecord } from '@core/models/staff/ScoutTrackRecord';
 
 describe('Player Progression & Scouting Integration Tests', () => {
   // =====================================================
@@ -337,7 +337,7 @@ describe('Player Progression & Scouting Integration Tests', () => {
       const roster = generateRoster('team-1');
 
       for (const player of roster) {
-        for (const [skillName, skill] of Object.entries(player.skills)) {
+        for (const skill of Object.values(player.skills)) {
           // Perceived range should encompass or be near true value
           // Note: after history sim, perceived ranges may not perfectly contain trueValue
           // but they should be reasonable

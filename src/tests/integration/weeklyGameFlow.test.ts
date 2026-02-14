@@ -571,7 +571,7 @@ describe('Weekly Game Flow Integration Tests', () => {
     });
 
     it('should advance week and update season phase tracking', () => {
-      const { result, updatedGameState } = weekService.advanceWeek(
+      const { result } = weekService.advanceWeek(
         1,
         'regularSeason',
         gameState

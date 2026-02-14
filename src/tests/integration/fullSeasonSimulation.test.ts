@@ -6,7 +6,7 @@
  * and playoff seeding all work together correctly across an entire season.
  */
 
-import { SeasonManager, createSeasonManager } from '@core/season/SeasonManager';
+import { createSeasonManager } from '@core/season/SeasonManager';
 import { Team, createEmptyTeamRecord } from '@core/models/team/Team';
 import { Player } from '@core/models/player/Player';
 import { Coach, createDefaultCoach } from '@core/models/staff/Coach';

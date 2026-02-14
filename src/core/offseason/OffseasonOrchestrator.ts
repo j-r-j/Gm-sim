@@ -204,13 +204,42 @@ export function enterPhase(gameState: GameState, phase: OffSeasonPhaseType): Pha
       break;
     }
 
-    case 'draft':
+    case 'draft': {
       // Ensure draft order is set
       if (newOffseasonData.draftOrder.length === 0) {
         newOffseasonData.draftOrder = calculateDraftOrder(newGameState);
       }
+
+      // Reorder gameState.draftPicks overallPick numbers based on standings
+      const draftOrder = newOffseasonData.draftOrder;
+      if (draftOrder.length > 0) {
+        const currentYear = newGameState.league.calendar.currentYear;
+        const updatedPicks = { ...newGameState.draftPicks };
+        const ROUNDS = 7;
+
+        for (let round = 1; round <= ROUNDS; round++) {
+          // For each round, assign overallPick based on draft order
+          draftOrder.forEach((teamId, posInRound) => {
+            const overallPick = (round - 1) * draftOrder.length + posInRound + 1;
+            // Find the pick for this round+team (by originalTeamId)
+            const pickEntry = Object.entries(updatedPicks).find(
+              ([, p]) => p.year === currentYear && p.round === round && p.originalTeamId === teamId
+            );
+            if (pickEntry) {
+              updatedPicks[pickEntry[0]] = {
+                ...pickEntry[1],
+                overallPick,
+              };
+            }
+          });
+        }
+        newGameState = { ...newGameState, draftPicks: updatedPicks };
+        changes.push('Reordered draft picks based on standings');
+      }
+
       changes.push('NFL Draft begins');
       break;
+    }
 
     case 'udfa': {
       // Generate UDFA pool from remaining prospects

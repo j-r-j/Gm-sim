@@ -88,6 +88,21 @@ export interface DraftRoomProspect {
 }
 
 /**
+ * Scout recommendation for display in draft room
+ */
+export interface ScoutRecommendationDisplay {
+  scoutName: string;
+  scoutRole: string;
+  prospectId: string;
+  prospectName: string;
+  prospectPosition: string;
+  reasoning: string;
+  confidence: 'high' | 'medium' | 'low';
+  isFocusBased: boolean;
+  estimatedOverall: { min: number; max: number } | null;
+}
+
+/**
  * Props for DraftRoomScreen
  */
 export interface DraftRoomScreenProps {
@@ -109,6 +124,8 @@ export interface DraftRoomScreenProps {
   timeRemaining?: number;
   /** Whether draft is paused */
   isPaused: boolean;
+  /** Scout recommendations for the current pick */
+  scoutRecommendations?: ScoutRecommendationDisplay[];
   /** Callback to select a prospect */
   onSelectProspect: (prospectId: string) => void;
   /** Callback to view prospect profile */
@@ -125,6 +142,8 @@ export interface DraftRoomScreenProps {
   onToggleAutoPick: () => void;
   /** Callback to pause/resume draft */
   onTogglePause: () => void;
+  /** Callback to skip to user's next pick */
+  onSkipToMyPick?: () => void;
   /** War room feed events */
   feedEvents?: WarRoomFeedEvent[];
   /** Callback to go back */
@@ -157,6 +176,8 @@ export function DraftRoomScreen({
   onProposeTrade,
   onToggleAutoPick,
   onTogglePause,
+  onSkipToMyPick,
+  scoutRecommendations = [],
   feedEvents = [],
   onBack,
 }: DraftRoomScreenProps): React.JSX.Element {
@@ -289,33 +310,51 @@ export function DraftRoomScreen({
         />
       </View>
 
-      {/* Auto-pick toggle (for user picks) */}
-      {isUserPick && (
-        <View style={styles.autoPickContainer}>
-          <Text style={styles.autoPickLabel}>Auto-pick:</Text>
-          <TouchableOpacity
-            style={[styles.autoPickToggle, autoPickEnabled && styles.autoPickToggleActive]}
-            onPress={onToggleAutoPick}
-            accessibilityLabel={`Auto-pick ${autoPickEnabled ? 'enabled' : 'disabled'}`}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: autoPickEnabled }}
-            accessibilityHint="Toggle automatic player selection"
-            hitSlop={accessibility.hitSlop}
-          >
-            <Text
-              style={[
-                styles.autoPickToggleText,
-                autoPickEnabled && styles.autoPickToggleTextActive,
-              ]}
+      {/* Draft speed controls */}
+      <View style={styles.autoPickContainer}>
+        {isUserPick ? (
+          <>
+            <Text style={styles.autoPickLabel}>Auto-pick:</Text>
+            <TouchableOpacity
+              style={[styles.autoPickToggle, autoPickEnabled && styles.autoPickToggleActive]}
+              onPress={onToggleAutoPick}
+              accessibilityLabel={`Auto-pick ${autoPickEnabled ? 'enabled' : 'disabled'}`}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: autoPickEnabled }}
+              accessibilityHint="Toggle automatic player selection"
+              hitSlop={accessibility.hitSlop}
             >
-              {autoPickEnabled ? 'ON' : 'OFF'}
-            </Text>
-          </TouchableOpacity>
-          {!autoPickEnabled && (
-            <Text style={styles.instructionText}>Long press a prospect to draft</Text>
-          )}
-        </View>
-      )}
+              <Text
+                style={[
+                  styles.autoPickToggleText,
+                  autoPickEnabled && styles.autoPickToggleTextActive,
+                ]}
+              >
+                {autoPickEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+            {!autoPickEnabled && (
+              <Text style={styles.instructionText}>Long press a prospect to draft</Text>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={styles.autoPickLabel}>AI picking...</Text>
+            {onSkipToMyPick && (
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={onSkipToMyPick}
+                accessibilityLabel="Skip to my next pick"
+                accessibilityRole="button"
+                hitSlop={accessibility.hitSlop}
+              >
+                <Ionicons name="play-forward" size={16} color={colors.textOnPrimary} />
+                <Text style={styles.skipButtonText}>Skip to My Pick</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+      </View>
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer} accessibilityRole="tablist">
@@ -409,6 +448,78 @@ export function DraftRoomScreen({
             </TouchableOpacity>
             <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
           </View>
+
+          {/* Scout Recommendations (shown during user's pick) */}
+          {isUserPick && scoutRecommendations.length > 0 && (
+            <View style={styles.scoutRecsContainer}>
+              <View style={styles.scoutRecsHeader}>
+                <Ionicons name="eye" size={14} color={colors.primary} />
+                <Text style={styles.scoutRecsTitle}>Scout Recommendations</Text>
+              </View>
+              {scoutRecommendations.map((rec, idx) => (
+                <TouchableOpacity
+                  key={`rec-${idx}`}
+                  style={styles.scoutRecCard}
+                  onPress={() => onViewProspect(rec.prospectId)}
+                  accessibilityLabel={`${rec.scoutName} recommends ${rec.prospectName}`}
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
+                >
+                  <View style={styles.scoutRecTop}>
+                    <View style={styles.scoutRecNameRow}>
+                      <Ionicons
+                        name={rec.isFocusBased ? 'star' : 'person'}
+                        size={12}
+                        color={rec.isFocusBased ? colors.secondary : colors.textLight}
+                      />
+                      <Text style={styles.scoutRecScoutName}>{rec.scoutName}</Text>
+                      <View
+                        style={[
+                          styles.scoutRecConfBadge,
+                          {
+                            backgroundColor:
+                              rec.confidence === 'high'
+                                ? colors.success + '22'
+                                : rec.confidence === 'medium'
+                                  ? colors.warning + '22'
+                                  : colors.error + '22',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.scoutRecConfText,
+                            {
+                              color:
+                                rec.confidence === 'high'
+                                  ? colors.success
+                                  : rec.confidence === 'medium'
+                                    ? colors.warning
+                                    : colors.error,
+                            },
+                          ]}
+                        >
+                          {rec.confidence}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.scoutRecPlayerRow}>
+                      <Text style={styles.scoutRecPlayerName}>{rec.prospectName}</Text>
+                      <Text style={styles.scoutRecPlayerPos}>{rec.prospectPosition}</Text>
+                      {rec.estimatedOverall && (
+                        <Text style={styles.scoutRecOvr}>
+                          {rec.estimatedOverall.min}-{rec.estimatedOverall.max}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  <Text style={styles.scoutRecReasoning} numberOfLines={2}>
+                    "{rec.reasoning}"
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           <FlatList
             data={filteredProspects}
@@ -572,6 +683,21 @@ const styles = StyleSheet.create({
   autoPickToggleTextActive: {
     color: colors.textOnPrimary,
   },
+  skipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
+  },
+  skipButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
   instructionText: {
     fontSize: fontSize.sm,
     color: colors.textLight,
@@ -732,6 +858,86 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textLight,
     textAlign: 'center',
+  },
+  scoutRecsContainer: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  scoutRecsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  scoutRecsTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  scoutRecCard: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  scoutRecTop: {
+    marginBottom: spacing.xxs,
+  },
+  scoutRecNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xxs,
+  },
+  scoutRecScoutName: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  scoutRecConfBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+  },
+  scoutRecConfText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+  },
+  scoutRecPlayerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  scoutRecPlayerName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  scoutRecPlayerPos: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  scoutRecOvr: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+    fontVariant: ['tabular-nums'],
+  },
+  scoutRecReasoning: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: fontSize.xs * 1.4,
   },
 });
 
