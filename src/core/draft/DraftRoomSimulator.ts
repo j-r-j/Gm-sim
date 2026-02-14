@@ -40,9 +40,9 @@ export interface DraftTimerConfig {
  * Default timer configuration
  */
 export const DEFAULT_TIMER_CONFIG: DraftTimerConfig = {
-  roundsOneTwo: 600, // 10 minutes
-  roundsThreeFour: 420, // 7 minutes
-  roundsFiveToSeven: 300, // 5 minutes
+  roundsOneTwo: 90, // 1.5 minutes
+  roundsThreeFour: 75, // 1.25 minutes
+  roundsFiveToSeven: 60, // 1 minute
   enabled: true,
 };
 

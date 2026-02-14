@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
@@ -151,6 +151,10 @@ function RumorCard({
       style={[styles.rumorCard, rumor.isResolved && styles.resolvedCard]}
       onPress={() => setExpanded(!expanded)}
       activeOpacity={0.7}
+      accessibilityLabel={`${getRumorTypeDisplay(rumor.type)} rumor: ${rumor.headline}${rumor.isResolved ? `, ${rumor.isTrue ? 'confirmed' : 'debunked'}` : ''}`}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      hitSlop={accessibility.hitSlop}
     >
       {/* Header */}
       <View style={styles.rumorHeader}>
@@ -221,6 +225,9 @@ function RumorCard({
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => onPlayerSelect(rumor.playerId!)}
+                  accessibilityLabel="View player"
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={styles.actionButtonText}>View Player</Text>
                 </TouchableOpacity>
@@ -229,6 +236,9 @@ function RumorCard({
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => onTeamSelect(rumor.teamId!)}
+                  accessibilityLabel="View team"
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={styles.actionButtonText}>View Team</Text>
                 </TouchableOpacity>
@@ -260,6 +270,10 @@ function FilterChip({
     <TouchableOpacity
       style={[styles.filterChip, active && styles.filterChipActive]}
       onPress={onPress}
+      accessibilityLabel={`${label} filter${active ? ', selected' : ''}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      hitSlop={accessibility.hitSlop}
     >
       <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
     </TouchableOpacity>
@@ -335,6 +349,10 @@ export function RumorMillScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'active' && styles.tabActive]}
           onPress={() => setActiveTab('active')}
+          accessibilityLabel={`Active tab, ${activeCount} rumors`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'active' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>
             Active ({activeCount})
@@ -343,6 +361,10 @@ export function RumorMillScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'confirmed' && styles.tabActive]}
           onPress={() => setActiveTab('confirmed')}
+          accessibilityLabel={`Confirmed tab, ${confirmedCount} rumors`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'confirmed' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'confirmed' && styles.tabTextActive]}>
             Confirmed ({confirmedCount})
@@ -351,6 +373,10 @@ export function RumorMillScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'debunked' && styles.tabActive]}
           onPress={() => setActiveTab('debunked')}
+          accessibilityLabel={`Debunked tab, ${debunkedCount} rumors`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'debunked' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'debunked' && styles.tabTextActive]}>
             Debunked ({debunkedCount})
@@ -359,6 +385,10 @@ export function RumorMillScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'all' && styles.tabActive]}
           onPress={() => setActiveTab('all')}
+          accessibilityLabel={`All tab, ${rumors.length} rumors`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'all' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
             All ({rumors.length})

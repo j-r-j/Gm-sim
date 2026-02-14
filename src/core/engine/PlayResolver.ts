@@ -1064,8 +1064,32 @@ export function resolveSpecialTeamsPlay(
     };
   }
 
-  // Normal kickoff
-  const returnYards = 20 + Math.floor(Math.random() * 15);
+  // Normal kickoff - 55% touchback chance (NFL average)
+  if (Math.random() < 0.55) {
+    return {
+      playType: 'kickoff',
+      outcome: 'good_gain',
+      yardsGained: 0,
+      primaryOffensivePlayer: kicker.id,
+      primaryDefensivePlayer: returner.id,
+      newDown: 1,
+      newDistance: 10,
+      newFieldPosition: 25,
+      turnover: true,
+      touchdown: false,
+      firstDown: false,
+      injuryOccurred: false,
+      injuredPlayerId: null,
+      penaltyOccurred: false,
+      penaltyDetails: null,
+      safety: false,
+      description: 'Touchback. Ball at the 25-yard line.',
+    };
+  }
+
+  // Kickoff return - average starting position ~22-27
+  const returnYards = 15 + Math.floor(Math.random() * 11);
+  const startPosition = 7 + returnYards;
 
   return {
     playType: 'kickoff',
@@ -1075,7 +1099,7 @@ export function resolveSpecialTeamsPlay(
     primaryDefensivePlayer: returner.id,
     newDown: 1,
     newDistance: 10,
-    newFieldPosition: 25 + returnYards - 5,
+    newFieldPosition: startPosition,
     turnover: true,
     touchdown: false,
     firstDown: false,
@@ -1084,6 +1108,6 @@ export function resolveSpecialTeamsPlay(
     penaltyOccurred: false,
     penaltyDetails: null,
     safety: false,
-    description: `Kickoff returned to the ${25 + returnYards - 5} yard line`,
+    description: `Kickoff returned to the ${startPosition} yard line`,
   };
 }

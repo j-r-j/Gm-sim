@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { Avatar } from '../components/avatar';
@@ -137,6 +137,10 @@ function CandidateCard({
       ]}
       onPress={onSelect}
       activeOpacity={0.7}
+      accessibilityLabel={`${coachName}, ${candidate.reputationDisplay}${isSelected ? ', selected' : ''}${isOverBudget ? ', over budget' : ''}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
+      hitSlop={accessibility.hitSlop}
     >
       {/* Header */}
       <View style={styles.candidateHeader}>
@@ -287,7 +291,13 @@ function CandidateCard({
               </Text>
             </View>
           ) : (
-            <TouchableOpacity style={styles.hireButton} onPress={onHire}>
+            <TouchableOpacity
+              style={styles.hireButton}
+              onPress={onHire}
+              accessibilityLabel={`Hire ${candidate.coach.firstName} ${candidate.coach.lastName}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.hireButtonText}>Hire {candidate.coach.firstName}</Text>
             </TouchableOpacity>
           )}

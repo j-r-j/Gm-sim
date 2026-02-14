@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
@@ -111,7 +111,13 @@ function ProspectRow({
   onToggleLock?: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.prospectRow} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.prospectRow}
+      onPress={onPress}
+      accessibilityLabel={`${prospect.prospectName}, ${prospect.position}, ranked number ${rank}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.rankColumn}>
         <Text style={styles.rankNumber}>#{rank}</Text>
         {prospect.userRank && prospect.userRank !== rank && (
@@ -125,7 +131,13 @@ function ProspectRow({
         <View style={styles.nameRow}>
           <Text style={styles.prospectName}>{prospect.prospectName}</Text>
           {prospect.isLocked && (
-            <TouchableOpacity style={styles.lockBadge} onPress={onToggleLock}>
+            <TouchableOpacity
+              style={styles.lockBadge}
+              onPress={onToggleLock}
+              accessibilityLabel={`Toggle lock for ${prospect.prospectName}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.lockText}>🔒</Text>
             </TouchableOpacity>
           )}
@@ -261,6 +273,10 @@ export function BigBoardScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label} tab${activeTab === tab.key ? ', selected' : ''}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}
@@ -282,6 +298,10 @@ export function BigBoardScreen({
               key={pos}
               style={[styles.filterChip, selectedPosition === pos && styles.activeFilterChip]}
               onPress={() => setSelectedPosition(selectedPosition === pos ? null : pos)}
+              accessibilityLabel={`Filter by ${pos}${selectedPosition === pos ? ', selected' : ''}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: selectedPosition === pos }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[
@@ -312,6 +332,10 @@ export function BigBoardScreen({
                 { borderColor: getTierColor(tier) },
               ]}
               onPress={() => setSelectedTier(selectedTier === tier ? null : tier)}
+              accessibilityLabel={`Filter by ${getTierLabel(tier)}${selectedTier === tier ? ', selected' : ''}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: selectedTier === tier }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text
                 style={[

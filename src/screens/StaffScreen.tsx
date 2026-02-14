@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
@@ -48,7 +48,14 @@ type StaffTab = 'coaches' | 'scouts';
  */
 function CoachCard({ coach, onPress }: { coach: Coach; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.staffCard}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`${coach.firstName} ${coach.lastName}, ${formatRole(coach.role)}, reputation ${coach.attributes.reputation}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.staffInfo}>
         <View style={styles.avatarContainer}>
           <Avatar id={coach.id} size="sm" age={coach.attributes.age} context="coach" />
@@ -82,7 +89,14 @@ function ScoutCard({ scout, onPress }: { scout: Scout; onPress?: () => void }) {
   const currentFocus = scout.focusProspects.length;
 
   return (
-    <TouchableOpacity style={styles.staffCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.staffCard}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`${scout.firstName} ${scout.lastName}, ${formatScoutRole(scout.role)}, experience ${scout.attributes.experience}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.staffInfo}>
         <View style={styles.avatarContainer}>
           <Avatar id={scout.id} size="sm" context="coach" accentColor={colors.accent} />
@@ -143,7 +157,14 @@ function VacancyCard({ vacancy, onHire }: { vacancy: VacancyDisplay; onHire?: ()
           <Text style={styles.staffRole}>{vacancy.displayName}</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.hireButton} onPress={onHire} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.hireButton}
+        onPress={onHire}
+        activeOpacity={0.7}
+        accessibilityLabel={`Hire ${vacancy.displayName}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <Text style={styles.hireButtonText}>Hire</Text>
       </TouchableOpacity>
     </View>
@@ -218,6 +239,10 @@ export function StaffScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'coaches' && styles.tabActive]}
           onPress={() => setActiveTab('coaches')}
+          accessibilityLabel={`Coaches tab, ${coaches.length} coaches`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'coaches' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'coaches' && styles.tabTextActive]}>
             Coaches ({coaches.length})
@@ -226,6 +251,10 @@ export function StaffScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'scouts' && styles.tabActive]}
           onPress={() => setActiveTab('scouts')}
+          accessibilityLabel={`Scouts tab, ${scouts.length} scouts`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'scouts' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'scouts' && styles.tabTextActive]}>
             Scouts ({scouts.length})

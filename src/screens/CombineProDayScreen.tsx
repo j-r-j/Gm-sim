@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { Prospect } from '../core/draft/Prospect';
@@ -412,6 +412,9 @@ function ProspectCombineCard({
       style={styles.prospectCard}
       onPress={() => setExpanded(!expanded)}
       activeOpacity={0.7}
+      accessibilityLabel={`${prospect.player.firstName} ${prospect.player.lastName}, ${prospect.player.position}, ${prospect.collegeName}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.prospectHeader}>
         <View style={styles.prospectInfo}>
@@ -501,7 +504,13 @@ function ProspectCombineCard({
           )}
 
           {onPress && (
-            <TouchableOpacity style={styles.viewProfileButton} onPress={onPress}>
+            <TouchableOpacity
+              style={styles.viewProfileButton}
+              onPress={onPress}
+              accessibilityLabel={`View full profile of ${prospect.player.firstName} ${prospect.player.lastName}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.viewProfileText}>View Full Profile</Text>
             </TouchableOpacity>
           )}
@@ -629,6 +638,9 @@ export function CombineProDayScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'combine' && styles.tabActive]}
           onPress={() => setActiveTab('combine')}
+          accessibilityLabel={`Combine${activeTab === 'combine' ? ', selected' : ''}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'combine' && styles.tabTextActive]}>
             Combine
@@ -637,6 +649,9 @@ export function CombineProDayScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'proday' && styles.tabActive]}
           onPress={() => setActiveTab('proday')}
+          accessibilityLabel={`Pro Days${activeTab === 'proday' ? ', selected' : ''}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'proday' && styles.tabTextActive]}>
             Pro Days
@@ -645,6 +660,9 @@ export function CombineProDayScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'leaderboard' && styles.tabActive]}
           onPress={() => setActiveTab('leaderboard')}
+          accessibilityLabel={`Leaderboard${activeTab === 'leaderboard' ? ', selected' : ''}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.tabTextActive]}>
             Leaderboard
@@ -657,6 +675,9 @@ export function CombineProDayScreen({
         <TouchableOpacity
           style={[styles.filterChip, !filterPosition && styles.filterChipActive]}
           onPress={() => setFilterPosition(null)}
+          accessibilityLabel={`All positions${!filterPosition ? ', selected' : ''}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.filterChipText, !filterPosition && styles.filterChipTextActive]}>
             All
@@ -667,6 +688,9 @@ export function CombineProDayScreen({
             key={pos}
             style={[styles.filterChip, filterPosition === pos && styles.filterChipActive]}
             onPress={() => setFilterPosition(pos)}
+            accessibilityLabel={`Filter by ${pos}${filterPosition === pos ? ', selected' : ''}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text
               style={[styles.filterChipText, filterPosition === pos && styles.filterChipTextActive]}
@@ -744,6 +768,9 @@ export function CombineProDayScreen({
                     onPress={
                       onProspectSelect ? () => onProspectSelect(entry.prospect.id) : undefined
                     }
+                    accessibilityLabel={`${entry.prospect.player.firstName} ${entry.prospect.player.lastName}, ${entry.prospect.player.position}, ${entry.value}`}
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
                   >
                     <Text style={styles.leaderboardRank}>#{index + 1}</Text>
                     <View style={styles.leaderboardInfo}>

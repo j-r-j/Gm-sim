@@ -23,7 +23,15 @@ import {
   Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { BoxScoreModal } from '../components/BoxScoreModal';
 import { BoxScore } from '../core/game/BoxScoreGenerator';
 import { GameResult } from '../core/game/GameRunner';
@@ -315,6 +323,9 @@ function HeroGameCard({
             style={styles.heroBoxScoreBtn}
             onPress={onViewBoxScore}
             activeOpacity={0.7}
+            accessibilityLabel="View box score"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={styles.heroBoxScoreText}>View Box Score</Text>
           </TouchableOpacity>
@@ -361,6 +372,9 @@ function ScoreboardCard({
       activeOpacity={hasScore ? 0.7 : 1}
       onPress={hasScore ? onPress : undefined}
       disabled={!hasScore}
+      accessibilityLabel={`${game.awayTeam.abbr} at ${game.homeTeam.abbr}${hasScore ? `, ${game.awayScore} to ${game.homeScore}, final` : ', pending'}${badge ? `, ${badge}` : ''}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
     >
       <Animated.View
         style={[
@@ -619,7 +633,9 @@ export function WeeklySchedulePopup({
         <TouchableOpacity
           onPress={onBack}
           style={styles.backBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={accessibility.hitSlop}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
         >
           <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
@@ -666,6 +682,9 @@ export function WeeklySchedulePopup({
                   style={styles.primaryBtn}
                   onPress={handlePlayGame}
                   activeOpacity={0.8}
+                  accessibilityLabel="Play game"
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={styles.primaryBtnText}>Play Game</Text>
                 </TouchableOpacity>
@@ -673,6 +692,9 @@ export function WeeklySchedulePopup({
                   style={styles.secondaryBtn}
                   onPress={handleSimUserGame}
                   activeOpacity={0.8}
+                  accessibilityLabel="Simulate your game"
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={styles.secondaryBtnText}>Simulate</Text>
                 </TouchableOpacity>
@@ -684,6 +706,9 @@ export function WeeklySchedulePopup({
                 style={styles.fullWidthBtn}
                 onPress={simulateOtherGames}
                 activeOpacity={0.8}
+                accessibilityLabel="Simulate league games"
+                accessibilityRole="button"
+                hitSlop={accessibility.hitSlop}
               >
                 <Text style={styles.fullWidthBtnText}>Simulate League Games</Text>
               </TouchableOpacity>
@@ -700,6 +725,9 @@ export function WeeklySchedulePopup({
                 style={styles.fullWidthBtn}
                 onPress={simulateOtherGames}
                 activeOpacity={0.8}
+                accessibilityLabel="Simulate all games"
+                accessibilityRole="button"
+                hitSlop={accessibility.hitSlop}
               >
                 <Text style={styles.fullWidthBtnText}>Simulate All Games</Text>
               </TouchableOpacity>
@@ -737,6 +765,9 @@ export function WeeklySchedulePopup({
             style={styles.advanceBtn}
             onPress={handleAdvanceWeek}
             activeOpacity={0.8}
+            accessibilityLabel="Continue to next week"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={styles.advanceBtnText}>Continue to Next Week</Text>
             <Text style={styles.advanceBtnArrow}>→</Text>

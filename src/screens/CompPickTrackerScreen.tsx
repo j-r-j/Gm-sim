@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { CompensatoryRound } from '../core/models/league/DraftPick';
@@ -69,7 +69,13 @@ function DepartureCard({
   const projectedRound = determineCompPickRound(departure.contractAAV);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onPress}
+      accessibilityLabel={`${departure.playerName}, ${departure.position}, age ${departure.age}, ${departure.qualifyingContract ? 'qualifying' : 'non-qualifying'} departure`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{departure.playerName}</Text>
@@ -127,7 +133,13 @@ function AcquisitionCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onPress}
+      accessibilityLabel={`${acquisition.playerName}, ${acquisition.position}, age ${acquisition.age}, ${acquisition.qualifyingContract ? 'negating' : 'non-qualifying'} acquisition`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{acquisition.playerName}</Text>
@@ -178,7 +190,13 @@ function EntitlementCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onPress}
+      accessibilityLabel={`Entitlement for ${entitlement.lostPlayerName}, ${entitlement.projectedRound ? `projected round ${entitlement.projectedRound}` : 'cancelled'}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{entitlement.lostPlayerName}</Text>
@@ -299,6 +317,10 @@ export function CompPickTrackerScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label} tab${tab.count !== undefined ? `, ${tab.count} items` : ''}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}

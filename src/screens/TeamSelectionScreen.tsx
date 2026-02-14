@@ -15,7 +15,15 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { ScreenHeader } from '../components';
 import {
   FAKE_CITIES,
@@ -72,6 +80,9 @@ export function TeamSelectionScreen({
         style={[styles.teamCard, isSelected && styles.teamCardSelected]}
         onPress={() => setSelectedTeam(team)}
         activeOpacity={0.7}
+        accessibilityLabel={`${getFullTeamName(team)}${isSelected ? ', selected' : ''}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
       >
         <View style={styles.teamCardContent}>
           <Text style={[styles.teamAbbr, isSelected && styles.teamAbbrSelected]}>
@@ -112,6 +123,9 @@ export function TeamSelectionScreen({
                     style={styles.divisionHeader}
                     onPress={() => toggleDivision(divKey)}
                     activeOpacity={0.7}
+                    accessibilityLabel={`${conference} ${division}, ${isExpanded ? 'collapse' : 'expand'}`}
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
                   >
                     <Text style={styles.divisionTitle}>
                       {conference} {division}
@@ -149,6 +163,10 @@ export function TeamSelectionScreen({
         <TouchableOpacity
           style={[styles.viewModeButton, viewMode === 'conference' && styles.viewModeButtonActive]}
           onPress={() => setViewMode('conference')}
+          accessibilityLabel="View by division"
+          accessibilityRole="button"
+          accessibilityState={{ selected: viewMode === 'conference' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text
             style={[styles.viewModeText, viewMode === 'conference' && styles.viewModeTextActive]}
@@ -159,6 +177,10 @@ export function TeamSelectionScreen({
         <TouchableOpacity
           style={[styles.viewModeButton, viewMode === 'all' && styles.viewModeButtonActive]}
           onPress={() => setViewMode('all')}
+          accessibilityLabel="View all teams"
+          accessibilityRole="button"
+          accessibilityState={{ selected: viewMode === 'all' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.viewModeText, viewMode === 'all' && styles.viewModeTextActive]}>
             All Teams
@@ -194,6 +216,7 @@ export function TeamSelectionScreen({
                 placeholder="Enter your GM name"
                 placeholderTextColor={colors.textLight}
                 autoCapitalize="words"
+                accessibilityLabel="GM name"
               />
             </View>
 
@@ -208,6 +231,9 @@ export function TeamSelectionScreen({
                       saveSlot === slot && styles.saveSlotButtonActive,
                     ]}
                     onPress={() => setSaveSlot(slot)}
+                    accessibilityLabel={`Save slot ${slot + 1}${saveSlot === slot ? ', selected' : ''}`}
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
                   >
                     <Text
                       style={[styles.saveSlotText, saveSlot === slot && styles.saveSlotTextActive]}
@@ -224,6 +250,10 @@ export function TeamSelectionScreen({
               onPress={handleConfirm}
               disabled={!gmName.trim()}
               activeOpacity={0.8}
+              accessibilityLabel="Start career"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !gmName.trim() }}
+              hitSlop={accessibility.hitSlop}
             >
               <Text style={styles.confirmButtonText}>Start Career</Text>
             </TouchableOpacity>

@@ -50,12 +50,9 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
   }
 
   const userTeam = gameState.teams[gameState.userTeamId];
-  const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
-  const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2;
+  const capSpace = userTeam.finances?.capSpace ?? 0;
 
-  // Get IR player IDs from team data (injuredReservePlayerIds or fallback)
-  const injuredReserveIds: string[] =
-    (userTeam as unknown as { injuredReservePlayerIds?: string[] }).injuredReservePlayerIds || [];
+  const injuredReserveIds: string[] = userTeam.injuredReserveIds || [];
 
   return (
     <RosterScreen
@@ -71,7 +68,7 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
         const updatedTeam = {
           ...userTeam,
           rosterPlayerIds: updatedRoster,
-          injuredReservePlayerIds: updatedIR,
+          injuredReserveIds: updatedIR,
         };
         const updatedState: GameState = {
           ...gameState,
@@ -87,7 +84,7 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
         const updatedTeam = {
           ...userTeam,
           rosterPlayerIds: updatedRoster,
-          injuredReservePlayerIds: updatedIR,
+          injuredReserveIds: updatedIR,
         };
         const updatedState: GameState = {
           ...gameState,
@@ -163,8 +160,7 @@ export function DepthChartScreenWrapper({
 
   // Get or generate depth chart for user's team (V2 format)
   const userTeamId = gameState.userTeamId;
-  const existingV2DepthChart = (gameState as { depthChartsV2?: Record<string, DepthChartV2> })
-    .depthChartsV2?.[userTeamId];
+  const existingV2DepthChart = gameState.depthChartsV2?.[userTeamId];
   const existingLegacyDepthChart = gameState.depthCharts?.[userTeamId];
 
   // Migrate legacy to V2 or generate new V2 depth chart
@@ -178,13 +174,13 @@ export function DepthChartScreenWrapper({
   }
 
   const handleDepthChartChange = async (newDepthChart: DepthChartV2) => {
-    const updatedState = {
+    const updatedState: GameState = {
       ...gameState,
       depthChartsV2: {
-        ...(gameState as { depthChartsV2?: Record<string, DepthChartV2> }).depthChartsV2,
+        ...gameState.depthChartsV2,
         [userTeamId]: newDepthChart,
       },
-    } as GameState;
+    };
     setGameState(updatedState);
     await saveGameState(updatedState);
   };
@@ -285,74 +281,28 @@ export function ContractManagementScreenWrapper({
 
   const userTeam = gameState.teams[gameState.userTeamId];
 
-  // Build cap status from team finances
-  // Note: In a full implementation, we'd track SalaryCapState in GameState
-  // For now, we create a mock cap status from team finances
+  // Build cap status from team finances (all values in thousands)
+  const salaryCap = userTeam.finances.salaryCap;
   const capStatus = {
-    salaryCap: 255000, // $255M cap in thousands
-    currentCapUsage: Math.round(
-      255000 - userTeam.finances.capSpace / 1000 // Convert dollars to thousands
-    ),
-    capSpace: Math.round(userTeam.finances.capSpace / 1000),
-    deadMoney: 0,
-    effectiveCapSpace: Math.round(userTeam.finances.capSpace / 1000),
-    percentUsed: ((255000 - userTeam.finances.capSpace / 1000) / 255000) * 100,
+    salaryCap,
+    currentCapUsage: userTeam.finances.currentCapUsage,
+    capSpace: userTeam.finances.capSpace,
+    deadMoney: userTeam.finances.deadMoney,
+    effectiveCapSpace: userTeam.finances.capSpace,
+    percentUsed: salaryCap > 0 ? (userTeam.finances.currentCapUsage / salaryCap) * 100 : 0,
     top51Total: 0,
     isOverCap: userTeam.finances.capSpace < 0,
     meetsFloor: true,
     rolloverFromPreviousYear: 0,
   };
 
-  // Get contracts from players on the roster
-  // In a full implementation, we'd track PlayerContract objects in GameState
-  // For now, we create mock contracts from player data
+  // Get real contracts from gameState.contracts for players on the roster
   const contracts: PlayerContract[] = userTeam.rosterPlayerIds
     .map((playerId) => {
       const player = gameState.players[playerId];
       if (!player) return null;
-
-      // Create a mock contract based on player data
-      const contract: PlayerContract = {
-        id: `contract-${playerId}`,
-        playerId,
-        playerName: `${player.firstName} ${player.lastName}`,
-        teamId: userTeam.id,
-        position: player.position,
-        status: 'active',
-        type: player.experience <= 3 ? 'rookie' : 'veteran',
-        signedYear: gameState.league.calendar.currentYear - player.experience,
-        totalYears: 4,
-        yearsRemaining: Math.max(1, 4 - player.experience),
-        totalValue: Math.round(Math.random() * 50000 + 1000), // Mock value
-        guaranteedMoney: Math.round(Math.random() * 20000 + 500),
-        signingBonus: Math.round(Math.random() * 10000),
-        averageAnnualValue: Math.round(Math.random() * 15000 + 500),
-        yearlyBreakdown: [
-          {
-            year: 1,
-            // New required properties
-            bonus: Math.round(Math.random() * 2000),
-            salary: Math.round(Math.random() * 10000 + 500),
-            capHit: Math.round(Math.random() * 12000 + 500),
-            isVoidYear: false,
-            // Backward compat properties
-            baseSalary: Math.round(Math.random() * 10000 + 500),
-            prorationedBonus: Math.round(Math.random() * 2000),
-            rosterBonus: 0,
-            workoutBonus: 0,
-            optionBonus: 0,
-            incentivesLTBE: 0,
-            incentivesNLTBE: 0,
-            isGuaranteed: Math.random() > 0.5,
-            isGuaranteedForInjury: Math.random() > 0.7,
-          },
-        ],
-        voidYears: 0,
-        hasNoTradeClause: Math.random() > 0.9,
-        hasNoTagClause: false,
-        originalContractId: null,
-        notes: [],
-      };
+      const contract = player.contractId ? gameState.contracts[player.contractId] : null;
+      if (!contract) return null;
       return contract;
     })
     .filter((c): c is PlayerContract => c !== null);

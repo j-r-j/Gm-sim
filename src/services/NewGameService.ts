@@ -40,10 +40,11 @@ import {
 import { DEFAULT_SALARY_CAP } from '../core/models/team/TeamFinances';
 import { simulateLeagueHistory } from '../core/history/LeagueHistorySimulator';
 
-const SALARY_CAP = 255000000; // $255 million
+// Use the canonical cap value (in thousands) from TeamFinances
+const SALARY_CAP = DEFAULT_SALARY_CAP;
 
-/** Default number of years to pre-simulate for league history */
-const DEFAULT_HISTORY_YEARS = 10;
+/** Default number of years to pre-simulate for league history (0 = skip) */
+const DEFAULT_HISTORY_YEARS = 0;
 
 interface NewGameOptions {
   saveSlot: SaveSlot;

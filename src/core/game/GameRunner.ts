@@ -267,6 +267,36 @@ export class GameRunner {
     ) {
       this.recordScoringPlay(play, state);
 
+      // Track PAT/2PT stats when a touchdown occurs
+      if (play.touchdown) {
+        const scoreDiff = {
+          home: state.score.home - this.previousScore.home,
+          away: state.score.away - this.previousScore.away,
+        };
+        const scoringTeam = scoreDiff.home > 0 ? 'home' : 'away';
+        const teamId = scoringTeam === 'home' ? state.homeTeam.teamId : state.awayTeam.teamId;
+        const totalPoints = scoreDiff.home > 0 ? scoreDiff.home : scoreDiff.away;
+
+        if (totalPoints === 7) {
+          // TD + successful PAT
+          const kicker =
+            scoringTeam === 'home'
+              ? state.homeTeam.specialTeams?.k
+              : state.awayTeam.specialTeams?.k;
+          this.tracker.recordExtraPoint(teamId, true, kicker?.id || play.primaryOffensivePlayer);
+        } else if (totalPoints === 6) {
+          // TD + missed PAT (or no PAT yet, but since executePlay handles both, 6 means missed)
+          const kicker =
+            scoringTeam === 'home'
+              ? state.homeTeam.specialTeams?.k
+              : state.awayTeam.specialTeams?.k;
+          this.tracker.recordExtraPoint(teamId, false, kicker?.id || play.primaryOffensivePlayer);
+        } else if (totalPoints === 8) {
+          // TD + successful 2-point conversion
+          this.tracker.recordTwoPointConversion(teamId, true);
+        }
+      }
+
       if (this.options.onScoreChange) {
         this.options.onScoreChange(state);
       }

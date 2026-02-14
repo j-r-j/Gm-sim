@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SaveSlot } from '../../core/models/game/GameState';
 
-export type SaveSlot = 0 | 1 | 2;
+export type { SaveSlot };
 
 const SAVE_KEY_PREFIX = 'save_';
 

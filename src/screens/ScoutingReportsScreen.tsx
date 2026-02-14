@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { ScreenHeader } from '../components';
 import {
@@ -66,7 +66,13 @@ function ReportSummaryCard({
         report.reportType === 'focus' ? { borderColor: colors.primary + '40' } : {},
       ]}
     >
-      <TouchableOpacity style={styles.reportHeader} onPress={() => setExpanded(!expanded)}>
+      <TouchableOpacity
+        style={styles.reportHeader}
+        onPress={() => setExpanded(!expanded)}
+        accessibilityLabel={`${displayReport.header.playerName} report, ${expanded ? 'collapse' : 'expand'}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <View style={styles.reportTitleSection}>
           <Text style={styles.prospectName}>{displayReport.header.playerName}</Text>
           <Text style={styles.prospectDetails}>
@@ -208,17 +214,35 @@ function ReportSummaryCard({
       )}
 
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.viewButton} onPress={onPress}>
+        <TouchableOpacity
+          style={styles.viewButton}
+          onPress={onPress}
+          accessibilityLabel={`View prospect ${displayReport.header.playerName}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.viewButtonText}>View Prospect</Text>
         </TouchableOpacity>
 
         {report.needsMoreScouting && onRequestFocus && (
-          <TouchableOpacity style={styles.focusButton} onPress={onRequestFocus}>
+          <TouchableOpacity
+            style={styles.focusButton}
+            onPress={onRequestFocus}
+            accessibilityLabel={`Request focus scouting for ${displayReport.header.playerName}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.focusButtonText}>Request Focus</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.expandButton} onPress={() => setExpanded(!expanded)}>
+        <TouchableOpacity
+          style={styles.expandButton}
+          onPress={() => setExpanded(!expanded)}
+          accessibilityLabel={expanded ? 'Show less details' : 'Show more details'}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.expandButtonText}>{expanded ? 'Less' : 'More'}</Text>
         </TouchableOpacity>
       </View>
@@ -283,6 +307,10 @@ export function ScoutingReportsScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label}, ${tab.count} reports${activeTab === tab.key ? ', selected' : ''}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label} ({tab.count})

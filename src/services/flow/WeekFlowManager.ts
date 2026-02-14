@@ -326,7 +326,7 @@ export function advanceWeek(gameState: GameState): GameState | null {
   }
 
   // Import and use calendar advancement function
-  const { advanceCalendarWeek } = require('../../core/models/league/League');
+  const { advanceWeek: advanceCalendarWeek } = require('../../core/models/league/League');
 
   const newLeague = {
     ...gameState.league,

@@ -12,6 +12,7 @@ export {
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { LoadingScreen, type LoadingScreenProps } from './LoadingScreen';
 export { ErrorScreen, type ErrorScreenProps } from './ErrorScreen';
+export { ErrorBoundary, type ErrorBoundaryProps } from './ErrorBoundary';
 export {
   OffseasonProgressBar,
   OFFSEASON_PHASES,

@@ -14,7 +14,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameSettings, SimulationSpeed } from '../core/models/game/GameState';
 
@@ -59,6 +59,8 @@ function ToggleSetting({
         onValueChange={onChange}
         trackColor={{ false: colors.border, true: colors.primaryLight }}
         thumbColor={value ? colors.primary : colors.textSecondary}
+        accessibilityLabel={`${label}${value ? ', enabled' : ', disabled'}`}
+        accessibilityRole="switch"
       />
     </View>
   );
@@ -92,6 +94,9 @@ function SelectSetting({
             key={option.value}
             style={[styles.optionButton, value === option.value && styles.optionButtonActive]}
             onPress={() => onChange(option.value)}
+            accessibilityLabel={`${label}: ${option.label}${value === option.value ? ', selected' : ''}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.optionText, value === option.value && styles.optionTextActive]}>
               {option.label}
@@ -186,7 +191,13 @@ export function SettingsScreen({
         {/* Data Management */}
         <SectionHeader title="Data" />
         <View style={styles.section}>
-          <TouchableOpacity style={styles.dangerButton} onPress={handleClearData}>
+          <TouchableOpacity
+            style={styles.dangerButton}
+            onPress={handleClearData}
+            accessibilityLabel="Clear all save data"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.dangerButtonText}>Clear All Save Data</Text>
           </TouchableOpacity>
         </View>

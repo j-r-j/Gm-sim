@@ -1,6 +1,7 @@
 /**
  * DraftRoomScreen
- * Draft room interface with pick/trade controls and real-time draft flow.
+ * Draft room interface with stacked single-screen layout.
+ * All critical info visible at once — no tabs, no hidden interactions.
  *
  * BRAND GUIDELINES:
  * - NO overall rating anywhere
@@ -16,7 +17,6 @@ import {
   SafeAreaView,
   TouchableOpacity,
   FlatList,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -28,16 +28,11 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { Button, ScreenHeader } from '../components';
-import { Position } from '../core/models/player/Position';
-import {
-  DraftPickCard,
-  TradeOfferCard,
-  ProspectListItem,
-  WarRoomFeed,
-  type TradeAsset,
-} from '../components/draft';
-import { WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';
+import { ScreenHeader } from '../components';
+import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../core/models/player/Position';
+import { type TradeAsset } from '../components/draft';
+import { DraftLetterGrade, WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';
+import { getGradeColor } from '../utils/draftGradeUtils';
 
 /**
  * Draft pick information
@@ -103,191 +98,551 @@ export interface ScoutRecommendationDisplay {
 }
 
 /**
- * Props for DraftRoomScreen
+ * User's drafted pick with grade info
  */
-export interface DraftRoomScreenProps {
-  /** Current pick information */
-  currentPick: DraftPick;
-  /** User's team ID */
-  userTeamId: string;
-  /** Recent picks (last 5) */
-  recentPicks: DraftPick[];
-  /** Upcoming picks (next 5) */
-  upcomingPicks: DraftPick[];
-  /** Available prospects (not drafted) */
-  availableProspects: DraftRoomProspect[];
-  /** Incoming trade offers */
-  tradeOffers: TradeOffer[];
-  /** Whether auto-pick is enabled */
-  autoPickEnabled: boolean;
-  /** Time remaining for current pick (seconds) */
-  timeRemaining?: number;
-  /** Whether draft is paused */
-  isPaused: boolean;
-  /** Scout recommendations for the current pick */
-  scoutRecommendations?: ScoutRecommendationDisplay[];
-  /** Callback to select a prospect */
-  onSelectProspect: (prospectId: string) => void;
-  /** Callback to view prospect profile */
-  onViewProspect: (prospectId: string) => void;
-  /** Callback to accept a trade */
-  onAcceptTrade: (tradeId: string) => void;
-  /** Callback to reject a trade */
-  onRejectTrade: (tradeId: string) => void;
-  /** Callback to counter a trade */
-  onCounterTrade: (tradeId: string) => void;
-  /** Callback to propose a trade */
-  onProposeTrade: () => void;
-  /** Callback to toggle auto-pick */
-  onToggleAutoPick: () => void;
-  /** Callback to pause/resume draft */
-  onTogglePause: () => void;
-  /** Callback to skip to user's next pick */
-  onSkipToMyPick?: () => void;
-  /** War room feed events */
-  feedEvents?: WarRoomFeedEvent[];
-  /** Callback to go back */
-  onBack?: () => void;
+export interface UserDraftedPick {
+  pickNumber: number;
+  round: number;
+  prospectName: string;
+  prospectPosition: Position;
+  grade: DraftLetterGrade;
+  assessment: string;
 }
 
 /**
- * Tab options for the draft room
+ * Position filter type
  */
-type DraftRoomTab = 'board' | 'feed' | 'trades' | 'picks';
+type PositionFilter = 'ALL' | 'OFF' | 'DEF' | Position;
 
 /**
- * DraftRoomScreen Component
+ * Props for DraftRoomScreen
  */
+export interface DraftRoomScreenProps {
+  currentPick: DraftPick;
+  userTeamId: string;
+  recentPicks: DraftPick[];
+  upcomingPicks: DraftPick[];
+  availableProspects: DraftRoomProspect[];
+  tradeOffers: TradeOffer[];
+  autoPickEnabled: boolean;
+  timeRemaining?: number;
+  isPaused: boolean;
+  scoutRecommendations?: ScoutRecommendationDisplay[];
+  feedEvents?: WarRoomFeedEvent[];
+  selectedProspectId?: string | null;
+  currentRound?: number;
+  totalPicks?: number;
+  picksCompleted?: number;
+  userDraftedPicks?: UserDraftedPick[];
+  teamNeeds?: Position[];
+  onHighlightProspect?: (id: string | null) => void;
+  onDraftSelectedProspect?: () => void;
+  onSelectProspect: (prospectId: string) => void;
+  onViewProspect: (prospectId: string) => void;
+  onAcceptTrade: (tradeId: string) => void;
+  onRejectTrade: (tradeId: string) => void;
+  onCounterTrade: (tradeId: string) => void;
+  onProposeTrade: () => void;
+  onToggleAutoPick: () => void;
+  onTogglePause: () => void;
+  onSkipToMyPick?: () => void;
+  onBack?: () => void;
+}
+
+// =============================================
+// Sub-components (inline)
+// =============================================
+
+/** Compact banner showing current pick, timer, and progress */
+function CompactPickBanner({
+  pick,
+  isUserPick,
+  timeRemaining,
+  currentRound,
+  picksCompleted,
+  totalPicks,
+}: {
+  pick: DraftPick;
+  isUserPick: boolean;
+  timeRemaining?: number;
+  currentRound?: number;
+  picksCompleted?: number;
+  totalPicks?: number;
+}) {
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const isLowTime = timeRemaining !== undefined && timeRemaining <= 30;
+
+  return (
+    <View style={[s.pickBanner, isUserPick ? s.pickBannerUser : s.pickBannerAI]}>
+      <View style={s.pickBannerLeft}>
+        <Text style={s.pickBannerLabel}>{isUserPick ? 'ON THE CLOCK' : 'NOW PICKING'}</Text>
+        <View style={s.pickBannerTeamRow}>
+          <Text style={s.pickBannerTeam}>[{pick.teamAbbr}]</Text>
+          <Text style={s.pickBannerPick}>Pick #{pick.pickNumber}</Text>
+        </View>
+        {isUserPick && <Text style={s.pickBannerHint}>YOUR PICK — Select a player below</Text>}
+      </View>
+      <View style={s.pickBannerRight}>
+        {timeRemaining !== undefined && (
+          <Text style={[s.pickBannerTimer, isLowTime && s.pickBannerTimerLow]}>
+            {formatTime(timeRemaining)}
+          </Text>
+        )}
+        <Text style={s.pickBannerProgress}>
+          Rd {currentRound ?? pick.round} | {picksCompleted ?? 0}/{totalPicks ?? 224}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** Dismissible trade offer banner */
+function TradeOfferBanner({
+  offer,
+  onAccept,
+  onReject,
+}: {
+  offer: TradeOffer;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <View style={s.tradeBanner}>
+      <Ionicons name="swap-horizontal" size={16} color={colors.info} />
+      <View style={s.tradeBannerInfo}>
+        <Text style={s.tradeBannerText} numberOfLines={1}>
+          TRADE from {offer.proposingTeam.abbr} — Wants{' '}
+          {offer.requesting.map((r) => r.label).join(', ')}
+        </Text>
+        <Text style={s.tradeBannerDetail} numberOfLines={1}>
+          Offers: {offer.offering.map((o) => o.label).join(', ')}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={s.tradeBannerAccept}
+        onPress={onAccept}
+        accessibilityLabel={`Accept trade from ${offer.proposingTeam.abbr}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
+        <Text style={s.tradeBannerAcceptText}>Accept</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={s.tradeBannerReject}
+        onPress={onReject}
+        accessibilityLabel={`Reject trade from ${offer.proposingTeam.abbr}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
+        <Ionicons name="close" size={18} color={colors.error} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/** Horizontal strip of user's drafted picks with grade badges */
+function UserDraftClassStrip({
+  picks,
+  currentPickNumber,
+}: {
+  picks: UserDraftedPick[];
+  currentPickNumber: number;
+}) {
+  if (picks.length === 0) return null;
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={s.draftClassStrip}
+      contentContainerStyle={s.draftClassStripContent}
+    >
+      {picks.map((p, i) => (
+        <View key={`udp-${i}`} style={s.draftClassChip}>
+          <View style={[s.draftClassGrade, { backgroundColor: getGradeColor(p.grade) + '22' }]}>
+            <Text style={[s.draftClassGradeText, { color: getGradeColor(p.grade) }]}>
+              {p.grade}
+            </Text>
+          </View>
+          <Text style={s.draftClassName} numberOfLines={1}>
+            Rd{p.round}#{p.pickNumber}
+          </Text>
+          <Text style={s.draftClassPos}>{p.prospectPosition}</Text>
+          <Text style={s.draftClassName2} numberOfLines={1}>
+            {p.prospectName.split(' ').pop()}
+          </Text>
+        </View>
+      ))}
+      <View style={s.draftClassChipCurrent}>
+        <Text style={s.draftClassCurrentText}>#{currentPickNumber}</Text>
+        <Text style={s.draftClassCurrentLabel}>NOW</Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+/** Tappable team needs badges that double as position filters */
+function TeamNeedsBar({
+  needs,
+  activeFilter,
+  onFilterPress,
+}: {
+  needs: Position[];
+  activeFilter: PositionFilter;
+  onFilterPress: (pos: PositionFilter) => void;
+}) {
+  if (needs.length === 0) return null;
+
+  return (
+    <View style={s.needsBar}>
+      <Text style={s.needsLabel}>NEEDS:</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {needs.slice(0, 8).map((pos) => {
+          const isActive = activeFilter === pos;
+          return (
+            <TouchableOpacity
+              key={pos}
+              style={[s.needsChip, isActive && s.needsChipActive]}
+              onPress={() => onFilterPress(isActive ? 'ALL' : pos)}
+              accessibilityLabel={`Filter by ${pos}${isActive ? ', currently active' : ''}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={[s.needsChipText, isActive && s.needsChipTextActive]}>{pos}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Position filter chips: ALL | OFF | DEF | individual positions */
+function PositionFilterBar({
+  activeFilter,
+  onFilterPress,
+  showFlaggedOnly,
+  onToggleFlagged,
+}: {
+  activeFilter: PositionFilter;
+  onFilterPress: (pos: PositionFilter) => void;
+  showFlaggedOnly: boolean;
+  onToggleFlagged: () => void;
+}) {
+  const groups: PositionFilter[] = ['ALL', 'OFF', 'DEF'];
+  const positions: Position[] = [
+    Position.QB,
+    Position.WR,
+    Position.RB,
+    Position.TE,
+    Position.CB,
+    Position.DE,
+    Position.OLB,
+    Position.DT,
+  ];
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={s.filterBar}
+      contentContainerStyle={s.filterBarContent}
+    >
+      {groups.map((g) => (
+        <TouchableOpacity
+          key={g}
+          style={[s.filterChip, activeFilter === g && s.filterChipActive]}
+          onPress={() => onFilterPress(g)}
+          accessibilityLabel={`Filter ${g}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
+          <Text style={[s.filterChipText, activeFilter === g && s.filterChipTextActive]}>{g}</Text>
+        </TouchableOpacity>
+      ))}
+      <View style={s.filterDivider} />
+      {positions.map((p) => (
+        <TouchableOpacity
+          key={p}
+          style={[s.filterChip, activeFilter === p && s.filterChipActive]}
+          onPress={() => onFilterPress(activeFilter === p ? 'ALL' : p)}
+          accessibilityLabel={`Filter by ${p}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
+          <Text style={[s.filterChipText, activeFilter === p && s.filterChipTextActive]}>{p}</Text>
+        </TouchableOpacity>
+      ))}
+      <View style={s.filterDivider} />
+      <TouchableOpacity
+        style={[s.filterChip, showFlaggedOnly && s.filterChipFlagged]}
+        onPress={onToggleFlagged}
+        accessibilityLabel={`Show ${showFlaggedOnly ? 'all' : 'flagged only'}`}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: showFlaggedOnly }}
+        hitSlop={accessibility.hitSlop}
+      >
+        <Ionicons
+          name={showFlaggedOnly ? 'star' : 'star-outline'}
+          size={12}
+          color={showFlaggedOnly ? colors.secondary : colors.textSecondary}
+        />
+        <Text style={[s.filterChipText, showFlaggedOnly && { color: colors.secondary }]}>
+          Flagged
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+/** Collapsible one-liner showing top scout recommendation */
+function ScoutRecBar({
+  recommendations,
+  onViewProspect,
+}: {
+  recommendations: ScoutRecommendationDisplay[];
+  onViewProspect: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  if (recommendations.length === 0) return null;
+
+  const top = recommendations[0];
+
+  return (
+    <View style={s.scoutBar}>
+      <TouchableOpacity
+        style={s.scoutBarRow}
+        onPress={() => setExpanded(!expanded)}
+        accessibilityLabel={`Scout recommendation: ${top.prospectName}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
+        <Ionicons name="eye" size={14} color={colors.primary} />
+        <Text style={s.scoutBarText} numberOfLines={1}>
+          SCOUT: "{top.prospectName}, {top.prospectPosition}" — {top.scoutName}
+        </Text>
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={16}
+          color={colors.textLight}
+        />
+      </TouchableOpacity>
+      {expanded && (
+        <View style={s.scoutBarExpanded}>
+          {recommendations.slice(0, 3).map((rec, idx) => (
+            <TouchableOpacity
+              key={`sr-${idx}`}
+              style={s.scoutBarItem}
+              onPress={() => onViewProspect(rec.prospectId)}
+              accessibilityLabel={`View ${rec.prospectName}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
+              <View style={s.scoutBarItemLeft}>
+                <Text style={s.scoutBarItemName}>{rec.prospectName}</Text>
+                <Text style={s.scoutBarItemPos}>{rec.prospectPosition}</Text>
+              </View>
+              <Text style={s.scoutBarItemReason} numberOfLines={1}>
+                {rec.reasoning}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** Single row for a draftable prospect with explicit Select button */
+function DraftableProspectRow({
+  prospect,
+  isSelected,
+  isUserPick,
+  onSelect,
+  onView,
+}: {
+  prospect: DraftRoomProspect;
+  isSelected: boolean;
+  isUserPick: boolean;
+  onSelect: () => void;
+  onView: () => void;
+}) {
+  const pickRange = prospect.projectedPickRange
+    ? `#${prospect.projectedPickRange.min}-${prospect.projectedPickRange.max}`
+    : prospect.projectedRound
+      ? `Rd ${prospect.projectedRound}`
+      : '--';
+
+  return (
+    <TouchableOpacity
+      style={[s.prospectRow, isSelected && s.prospectRowSelected]}
+      onPress={onView}
+      accessibilityLabel={`${prospect.name}, ${prospect.position}, ${prospect.collegeName}`}
+      accessibilityRole="button"
+      hitSlop={{ top: 2, bottom: 2, left: 0, right: 0 }}
+    >
+      <Text style={s.prospectRank}>#{prospect.overallRank ?? '--'}</Text>
+      <View style={s.prospectInfo}>
+        <View style={s.prospectNameRow}>
+          <Text style={s.prospectName} numberOfLines={1}>
+            {prospect.name}
+          </Text>
+          {prospect.flagged && <Ionicons name="star" size={12} color={colors.secondary} />}
+        </View>
+        <View style={s.prospectMetaRow}>
+          <Text style={s.prospectPos}>{prospect.position}</Text>
+          <Text style={s.prospectCollege} numberOfLines={1}>
+            {prospect.collegeName}
+          </Text>
+          <Text style={s.prospectRange}>{pickRange}</Text>
+        </View>
+      </View>
+      {isUserPick && (
+        <TouchableOpacity
+          style={[s.selectBtn, isSelected && s.selectBtnSelected]}
+          onPress={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
+          accessibilityLabel={`Select ${prospect.name}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
+          <Ionicons
+            name={isSelected ? 'checkmark' : 'add'}
+            size={18}
+            color={isSelected ? colors.textOnPrimary : colors.primary}
+          />
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+/** Large green DRAFT button anchored to bottom */
+function DraftActionButton({
+  prospectName,
+  prospectPosition,
+  onDraft,
+}: {
+  prospectName: string;
+  prospectPosition: string;
+  onDraft: () => void;
+}) {
+  return (
+    <View style={s.draftActionContainer}>
+      <TouchableOpacity
+        style={s.draftActionBtn}
+        onPress={onDraft}
+        accessibilityLabel={`Draft ${prospectName}, ${prospectPosition}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
+        <Text style={s.draftActionText}>
+          DRAFT {prospectName.toUpperCase()}, {prospectPosition}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// =============================================
+// Main Component
+// =============================================
+
 export function DraftRoomScreen({
   currentPick,
   userTeamId,
-  recentPicks,
-  upcomingPicks,
   availableProspects,
   tradeOffers,
-  autoPickEnabled,
+  autoPickEnabled: _autoPickEnabled,
   timeRemaining,
   isPaused,
-  onSelectProspect,
+  scoutRecommendations = [],
+  feedEvents: _feedEvents = [],
+  selectedProspectId,
+  currentRound,
+  totalPicks,
+  picksCompleted,
+  userDraftedPicks = [],
+  teamNeeds = [],
+  onHighlightProspect,
+  onDraftSelectedProspect,
+  onSelectProspect: _onSelectProspect,
   onViewProspect,
   onAcceptTrade,
   onRejectTrade,
-  onCounterTrade,
-  onProposeTrade,
-  onToggleAutoPick,
+  onToggleAutoPick: _onToggleAutoPick,
   onTogglePause,
   onSkipToMyPick,
-  scoutRecommendations = [],
-  feedEvents = [],
   onBack,
 }: DraftRoomScreenProps): React.JSX.Element {
-  const [activeTab, setActiveTab] = useState<DraftRoomTab>('board');
+  const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
   const isUserPick = currentPick.teamId === userTeamId;
-  const safeTradeOffers = tradeOffers ?? [];
-  const pendingTradeOffers = safeTradeOffers.filter((t) => t.status === 'pending');
+  const pendingTradeOffers = (tradeOffers ?? []).filter((t) => t.status === 'pending');
 
-  // Filter available prospects
+  // Find selected prospect details
+  const selectedProspect = selectedProspectId
+    ? availableProspects.find((p) => p.id === selectedProspectId)
+    : null;
+
+  // Filter prospects
   const filteredProspects = useMemo(() => {
     let result = availableProspects.filter((p) => !p.isDrafted);
+
     if (showFlaggedOnly) {
       result = result.filter((p) => p.flagged);
     }
-    return result.slice(0, 20); // Limit for performance in draft room
-  }, [availableProspects, showFlaggedOnly]);
 
-  // Handle draft selection
-  const handleDraftPlayer = useCallback(
-    (prospectId: string) => {
-      const prospect = availableProspects.find((p) => p.id === prospectId);
-      if (!prospect) return;
+    if (positionFilter !== 'ALL') {
+      if (positionFilter === 'OFF') {
+        result = result.filter((p) => OFFENSIVE_POSITIONS.includes(p.position));
+      } else if (positionFilter === 'DEF') {
+        result = result.filter((p) => DEFENSIVE_POSITIONS.includes(p.position));
+      } else {
+        result = result.filter((p) => p.position === positionFilter);
+      }
+    }
 
-      Alert.alert(
-        'Confirm Selection',
-        `Select ${prospect.name} with pick #${currentPick.pickNumber}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Select',
-            style: 'default',
-            onPress: () => onSelectProspect(prospectId),
-          },
-        ]
-      );
+    return result.slice(0, 40);
+  }, [availableProspects, showFlaggedOnly, positionFilter]);
+
+  // Handle prospect selection (highlight for drafting)
+  const handleHighlight = useCallback(
+    (id: string) => {
+      if (onHighlightProspect) {
+        onHighlightProspect(selectedProspectId === id ? null : id);
+      }
     },
-    [availableProspects, currentPick.pickNumber, onSelectProspect]
+    [onHighlightProspect, selectedProspectId]
   );
 
-  // Render prospect item
+  // Render prospect row
   const renderProspect = useCallback(
     ({ item }: { item: DraftRoomProspect }) => (
-      <ProspectListItem
-        id={item.id}
-        name={item.name}
-        position={item.position}
-        collegeName={item.collegeName}
-        projectedRound={item.projectedRound}
-        projectedPickRange={item.projectedPickRange}
-        userTier={item.userTier}
-        flagged={item.flagged}
-        positionRank={item.positionRank}
-        overallRank={item.overallRank}
-        onPress={() => onViewProspect(item.id)}
-        onLongPress={isUserPick ? () => handleDraftPlayer(item.id) : undefined}
+      <DraftableProspectRow
+        prospect={item}
+        isSelected={item.id === selectedProspectId}
+        isUserPick={isUserPick}
+        onSelect={() => handleHighlight(item.id)}
+        onView={() => onViewProspect(item.id)}
       />
     ),
-    [isUserPick, handleDraftPlayer, onViewProspect]
-  );
-
-  // Render trade offer
-  const renderTradeOffer = useCallback(
-    ({ item }: { item: TradeOffer }) => (
-      <TradeOfferCard
-        tradeId={item.tradeId}
-        proposingTeam={item.proposingTeam}
-        offering={item.offering}
-        requesting={item.requesting}
-        isIncoming={true}
-        status={item.status}
-        expiresIn={item.expiresIn}
-        onAccept={() => onAcceptTrade(item.tradeId)}
-        onReject={() => onRejectTrade(item.tradeId)}
-        onCounter={() => onCounterTrade(item.tradeId)}
-      />
-    ),
-    [onAcceptTrade, onRejectTrade, onCounterTrade]
-  );
-
-  // Render pick history item
-  const renderPickItem = useCallback(
-    (pick: DraftPick, index: number, isRecent: boolean) => (
-      <View
-        key={`${isRecent ? 'recent' : 'upcoming'}-${pick.pickNumber}`}
-        style={[styles.pickHistoryItem, pick.teamId === userTeamId && styles.pickHistoryItemUser]}
-      >
-        <View style={styles.pickNumberBadge}>
-          <Text style={styles.pickNumberText}>#{pick.pickNumber}</Text>
-        </View>
-        <View style={styles.pickInfo}>
-          <Text style={styles.pickTeamName}>{pick.teamAbbr}</Text>
-          {pick.selectedProspectName ? (
-            <Text style={styles.pickSelection}>{pick.selectedProspectName}</Text>
-          ) : (
-            <Text style={styles.pickPending}>--</Text>
-          )}
-        </View>
-        <Text style={styles.pickRound}>Rd {pick.round}</Text>
-      </View>
-    ),
-    [userTeamId]
+    [selectedProspectId, isUserPick, handleHighlight, onViewProspect]
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={s.container}>
       {/* Header */}
       <ScreenHeader
-        title="Draft Room"
+        title="DRAFT ROOM"
         onBack={onBack}
         rightAction={{
           icon: isPaused ? 'play' : 'pause',
@@ -297,391 +652,237 @@ export function DraftRoomScreen({
         testID="draft-room-header"
       />
 
-      {/* Current Pick Card */}
-      <View style={styles.currentPickContainer}>
-        <DraftPickCard
-          round={currentPick.round}
-          pickNumber={currentPick.pickNumber}
-          teamName={currentPick.teamName}
-          teamAbbr={currentPick.teamAbbr}
-          isUserPick={isUserPick}
-          timeRemaining={timeRemaining}
-          originalTeamAbbr={currentPick.originalTeamAbbr}
-        />
-      </View>
+      {/* Compact Pick Banner */}
+      <CompactPickBanner
+        pick={currentPick}
+        isUserPick={isUserPick}
+        timeRemaining={timeRemaining}
+        currentRound={currentRound}
+        picksCompleted={picksCompleted}
+        totalPicks={totalPicks}
+      />
 
-      {/* Draft speed controls */}
-      <View style={styles.autoPickContainer}>
-        {isUserPick ? (
-          <>
-            <Text style={styles.autoPickLabel}>Auto-pick:</Text>
+      {/* Trade Offer Banners */}
+      {isUserPick &&
+        pendingTradeOffers.map((offer) => (
+          <TradeOfferBanner
+            key={offer.tradeId}
+            offer={offer}
+            onAccept={() => onAcceptTrade(offer.tradeId)}
+            onReject={() => onRejectTrade(offer.tradeId)}
+          />
+        ))}
+
+      {/* AI picking state */}
+      {!isUserPick && (
+        <View style={s.aiPickingBar}>
+          <Text style={s.aiPickingText}>AI picking...</Text>
+          {onSkipToMyPick && (
             <TouchableOpacity
-              style={[styles.autoPickToggle, autoPickEnabled && styles.autoPickToggleActive]}
-              onPress={onToggleAutoPick}
-              accessibilityLabel={`Auto-pick ${autoPickEnabled ? 'enabled' : 'disabled'}`}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: autoPickEnabled }}
-              accessibilityHint="Toggle automatic player selection"
+              style={s.skipButton}
+              onPress={onSkipToMyPick}
+              accessibilityLabel="Skip to my next pick"
+              accessibilityRole="button"
               hitSlop={accessibility.hitSlop}
             >
-              <Text
-                style={[
-                  styles.autoPickToggleText,
-                  autoPickEnabled && styles.autoPickToggleTextActive,
-                ]}
-              >
-                {autoPickEnabled ? 'ON' : 'OFF'}
-              </Text>
+              <Ionicons name="play-forward" size={16} color={colors.textOnPrimary} />
+              <Text style={s.skipButtonText}>Skip to My Pick</Text>
             </TouchableOpacity>
-            {!autoPickEnabled && (
-              <Text style={styles.instructionText}>Long press a prospect to draft</Text>
-            )}
-          </>
-        ) : (
-          <>
-            <Text style={styles.autoPickLabel}>AI picking...</Text>
-            {onSkipToMyPick && (
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={onSkipToMyPick}
-                accessibilityLabel="Skip to my next pick"
-                accessibilityRole="button"
-                hitSlop={accessibility.hitSlop}
-              >
-                <Ionicons name="play-forward" size={16} color={colors.textOnPrimary} />
-                <Text style={styles.skipButtonText}>Skip to My Pick</Text>
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-      </View>
-
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer} accessibilityRole="tablist">
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'board' && styles.tabActive]}
-          onPress={() => setActiveTab('board')}
-          accessibilityLabel="Draft board"
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'board' }}
-          hitSlop={accessibility.hitSlop}
-        >
-          <Ionicons
-            name="list"
-            size={16}
-            color={activeTab === 'board' ? colors.textOnPrimary : colors.textSecondary}
-          />
-          <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>Board</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'feed' && styles.tabActive]}
-          onPress={() => setActiveTab('feed')}
-          accessibilityLabel={`War room feed${feedEvents.length > 0 ? `, ${feedEvents.length} events` : ''}`}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'feed' }}
-          hitSlop={accessibility.hitSlop}
-        >
-          <Ionicons
-            name="radio"
-            size={16}
-            color={activeTab === 'feed' ? colors.textOnPrimary : colors.textSecondary}
-          />
-          <Text style={[styles.tabText, activeTab === 'feed' && styles.tabTextActive]}>
-            Feed {feedEvents.length > 0 && `(${feedEvents.length})`}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'trades' && styles.tabActive]}
-          onPress={() => setActiveTab('trades')}
-          accessibilityLabel={`Trades${pendingTradeOffers.length > 0 ? `, ${pendingTradeOffers.length} pending` : ''}`}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'trades' }}
-          hitSlop={accessibility.hitSlop}
-        >
-          <Ionicons
-            name="swap-horizontal"
-            size={16}
-            color={activeTab === 'trades' ? colors.textOnPrimary : colors.textSecondary}
-          />
-          <Text style={[styles.tabText, activeTab === 'trades' && styles.tabTextActive]}>
-            Trades {pendingTradeOffers.length > 0 && `(${pendingTradeOffers.length})`}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'picks' && styles.tabActive]}
-          onPress={() => setActiveTab('picks')}
-          accessibilityLabel="Pick history"
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'picks' }}
-          hitSlop={accessibility.hitSlop}
-        >
-          <Ionicons
-            name="time"
-            size={16}
-            color={activeTab === 'picks' ? colors.textOnPrimary : colors.textSecondary}
-          />
-          <Text style={[styles.tabText, activeTab === 'picks' && styles.tabTextActive]}>Picks</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      {activeTab === 'board' && (
-        <View style={styles.tabContent}>
-          {/* Filter bar */}
-          <View style={styles.boardFilterBar}>
-            <TouchableOpacity
-              style={[styles.flagFilterButton, showFlaggedOnly && styles.flagFilterButtonActive]}
-              onPress={() => setShowFlaggedOnly(!showFlaggedOnly)}
-              accessibilityLabel={`Show ${showFlaggedOnly ? 'all prospects' : 'flagged only'}`}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: showFlaggedOnly }}
-              hitSlop={accessibility.hitSlop}
-            >
-              <Ionicons
-                name={showFlaggedOnly ? 'star' : 'star-outline'}
-                size={16}
-                color={showFlaggedOnly ? colors.secondary : colors.textSecondary}
-              />
-              <Text style={[styles.flagFilterText, showFlaggedOnly && styles.flagFilterTextActive]}>
-                Flagged Only
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.boardCount}>{filteredProspects.length} available</Text>
-          </View>
-
-          {/* Scout Recommendations (shown during user's pick) */}
-          {isUserPick && scoutRecommendations.length > 0 && (
-            <View style={styles.scoutRecsContainer}>
-              <View style={styles.scoutRecsHeader}>
-                <Ionicons name="eye" size={14} color={colors.primary} />
-                <Text style={styles.scoutRecsTitle}>Scout Recommendations</Text>
-              </View>
-              {scoutRecommendations.map((rec, idx) => (
-                <TouchableOpacity
-                  key={`rec-${idx}`}
-                  style={styles.scoutRecCard}
-                  onPress={() => onViewProspect(rec.prospectId)}
-                  accessibilityLabel={`${rec.scoutName} recommends ${rec.prospectName}`}
-                  accessibilityRole="button"
-                  hitSlop={accessibility.hitSlop}
-                >
-                  <View style={styles.scoutRecTop}>
-                    <View style={styles.scoutRecNameRow}>
-                      <Ionicons
-                        name={rec.isFocusBased ? 'star' : 'person'}
-                        size={12}
-                        color={rec.isFocusBased ? colors.secondary : colors.textLight}
-                      />
-                      <Text style={styles.scoutRecScoutName}>{rec.scoutName}</Text>
-                      <View
-                        style={[
-                          styles.scoutRecConfBadge,
-                          {
-                            backgroundColor:
-                              rec.confidence === 'high'
-                                ? colors.success + '22'
-                                : rec.confidence === 'medium'
-                                  ? colors.warning + '22'
-                                  : colors.error + '22',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.scoutRecConfText,
-                            {
-                              color:
-                                rec.confidence === 'high'
-                                  ? colors.success
-                                  : rec.confidence === 'medium'
-                                    ? colors.warning
-                                    : colors.error,
-                            },
-                          ]}
-                        >
-                          {rec.confidence}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.scoutRecPlayerRow}>
-                      <Text style={styles.scoutRecPlayerName}>{rec.prospectName}</Text>
-                      <Text style={styles.scoutRecPlayerPos}>{rec.prospectPosition}</Text>
-                      {rec.estimatedOverall && (
-                        <Text style={styles.scoutRecOvr}>
-                          {rec.estimatedOverall.min}-{rec.estimatedOverall.max}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <Text style={styles.scoutRecReasoning} numberOfLines={2}>
-                    "{rec.reasoning}"
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           )}
-
-          <FlatList
-            data={filteredProspects}
-            keyExtractor={(item) => item.id}
-            renderItem={renderProspect}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No prospects available</Text>
-              </View>
-            }
-          />
         </View>
       )}
 
-      {activeTab === 'feed' && (
-        <View style={styles.tabContent}>
-          <WarRoomFeed events={feedEvents} />
-        </View>
+      {/* User Draft Class Strip */}
+      {isUserPick && (
+        <UserDraftClassStrip picks={userDraftedPicks} currentPickNumber={currentPick.pickNumber} />
       )}
 
-      {activeTab === 'trades' && (
-        <View style={styles.tabContent}>
-          <View style={styles.proposeTradeContainer}>
-            <Button
-              label="Propose Trade"
-              onPress={onProposeTrade}
-              variant="primary"
-              leftIcon={<Ionicons name="add-circle" size={18} color={colors.textOnPrimary} />}
-              accessibilityHint="Opens trade proposal interface"
-              testID="propose-trade-button"
-            />
-          </View>
-
-          <FlatList
-            data={safeTradeOffers}
-            keyExtractor={(item) => item.tradeId}
-            renderItem={renderTradeOffer}
-            contentContainerStyle={styles.tradeListContent}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No trade offers</Text>
-              </View>
-            }
-          />
-        </View>
+      {/* Team Needs Bar (user's turn only) */}
+      {isUserPick && (
+        <TeamNeedsBar
+          needs={teamNeeds}
+          activeFilter={positionFilter}
+          onFilterPress={setPositionFilter}
+        />
       )}
 
-      {activeTab === 'picks' && (
-        <ScrollView style={styles.tabContent}>
-          {/* Recent Picks */}
-          <View style={styles.picksSection}>
-            <Text style={styles.picksSectionTitle} accessibilityRole="header">
-              Recent Picks
+      {/* Position Filter Bar (user's turn only) */}
+      {isUserPick && (
+        <PositionFilterBar
+          activeFilter={positionFilter}
+          onFilterPress={setPositionFilter}
+          showFlaggedOnly={showFlaggedOnly}
+          onToggleFlagged={() => setShowFlaggedOnly(!showFlaggedOnly)}
+        />
+      )}
+
+      {/* Scout Recommendation Bar (user's turn only) */}
+      {isUserPick && (
+        <ScoutRecBar recommendations={scoutRecommendations} onViewProspect={onViewProspect} />
+      )}
+
+      {/* Prospect List */}
+      <FlatList
+        data={filteredProspects}
+        keyExtractor={(item) => item.id}
+        renderItem={renderProspect}
+        style={s.prospectList}
+        contentContainerStyle={selectedProspect ? s.prospectListContentWithAction : undefined}
+        ListEmptyComponent={
+          <View style={s.emptyContainer}>
+            <Text style={s.emptyText}>
+              {showFlaggedOnly ? 'No flagged prospects' : 'No prospects available'}
             </Text>
-            {recentPicks.length > 0 ? (
-              recentPicks.map((pick, index) => renderPickItem(pick, index, true))
-            ) : (
-              <Text style={styles.noPicksText}>No picks made yet</Text>
-            )}
           </View>
+        }
+      />
 
-          {/* Upcoming Picks */}
-          <View style={styles.picksSection}>
-            <Text style={styles.picksSectionTitle} accessibilityRole="header">
-              Upcoming
-            </Text>
-            {upcomingPicks && upcomingPicks.length > 0 ? (
-              upcomingPicks.map((pick, index) => renderPickItem(pick, index, false))
-            ) : (
-              <Text style={styles.noPicksText}>No upcoming picks</Text>
-            )}
-          </View>
-        </ScrollView>
+      {/* Draft Action Button (bottom, when prospect selected) */}
+      {isUserPick && selectedProspect && onDraftSelectedProspect && (
+        <DraftActionButton
+          prospectName={selectedProspect.name}
+          prospectPosition={selectedProspect.position}
+          onDraft={onDraftSelectedProspect}
+        />
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+// =============================================
+// Styles
+// =============================================
+
+const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+
+  // Pick Banner
+  pickBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pickBannerUser: {
     backgroundColor: colors.primary,
-    ...shadows.md,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    minHeight: accessibility.minTouchTarget,
+  pickBannerAI: {
+    backgroundColor: colors.surfaceDark,
   },
-  backButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+  pickBannerLeft: {
+    flex: 1,
   },
-  headerTitle: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.xl,
+  pickBannerLabel: {
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  pauseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-    minHeight: accessibility.minTouchTarget,
-  },
-  pauseButtonActive: {
-    backgroundColor: colors.warning,
-  },
-  pauseButtonText: {
     color: colors.textOnPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    letterSpacing: 1,
+    opacity: 0.8,
   },
-  currentPickContainer: {
-    padding: spacing.md,
+  pickBannerTeamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  autoPickContainer: {
+  pickBannerTeam: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  pickBannerPick: {
+    fontSize: fontSize.md,
+    color: colors.textOnDark,
+  },
+  pickBannerHint: {
+    fontSize: fontSize.xs,
+    color: colors.textOnDark,
+    opacity: 0.7,
+    marginTop: spacing.xxs,
+  },
+  pickBannerRight: {
+    alignItems: 'flex-end',
+  },
+  pickBannerTimer: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  pickBannerTimerLow: {
+    color: colors.error,
+  },
+  pickBannerProgress: {
+    fontSize: fontSize.xs,
+    color: colors.textOnDark,
+    opacity: 0.7,
+    fontVariant: ['tabular-nums'],
+  },
+
+  // Trade Banner
+  tradeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.info + '15',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.info + '30',
     gap: spacing.sm,
   },
-  autoPickLabel: {
-    fontSize: fontSize.md,
+  tradeBannerInfo: {
+    flex: 1,
+  },
+  tradeBannerText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
     color: colors.text,
   },
-  autoPickToggle: {
-    backgroundColor: colors.border,
+  tradeBannerDetail: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  tradeBannerAccept: {
+    backgroundColor: colors.success,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    minHeight: accessibility.minTouchTarget,
+    justifyContent: 'center',
   },
-  autoPickToggleActive: {
-    backgroundColor: colors.success,
-  },
-  autoPickToggleText: {
+  tradeBannerAcceptText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    color: colors.textSecondary,
-  },
-  autoPickToggleTextActive: {
     color: colors.textOnPrimary,
+  },
+  tradeBannerReject: {
+    minWidth: accessibility.minTouchTarget,
+    minHeight: accessibility.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // AI Picking Bar
+  aiPickingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  aiPickingText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   skipButton: {
     flexDirection: 'row',
@@ -698,156 +899,321 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textOnPrimary,
   },
-  instructionText: {
+
+  // Draft Class Strip
+  draftClassStrip: {
+    maxHeight: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  draftClassStripContent: {
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  draftClassChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginVertical: spacing.xs,
+  },
+  draftClassGrade: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+  },
+  draftClassGradeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+  },
+  draftClassName: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
+  },
+  draftClassPos: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  draftClassName2: {
+    fontSize: fontSize.xs,
+    color: colors.text,
+    maxWidth: 60,
+  },
+  draftClassChipCurrent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginVertical: spacing.xs,
+  },
+  draftClassCurrentText: {
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  draftClassCurrentLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textOnPrimary,
+    opacity: 0.7,
+  },
+
+  // Needs Bar
+  needsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+  },
+  needsLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  needsChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.error + '15',
+    marginRight: spacing.xs,
+    minHeight: 28,
+    justifyContent: 'center',
+  },
+  needsChipActive: {
+    backgroundColor: colors.error,
+  },
+  needsChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.error,
+  },
+  needsChipTextActive: {
+    color: colors.textOnPrimary,
+  },
+
+  // Filter Bar
+  filterBar: {
+    maxHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  filterBarContent: {
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginVertical: spacing.xs,
+    minHeight: 32,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+  },
+  filterChipFlagged: {
+    backgroundColor: colors.secondary + '20',
+  },
+  filterChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: colors.textOnPrimary,
+  },
+  filterDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xxs,
+  },
+
+  // Scout Bar
+  scoutBar: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  scoutBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    minHeight: accessibility.minTouchTarget,
+  },
+  scoutBarText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.primary,
+  },
+  scoutBarExpanded: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  scoutBarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    minHeight: accessibility.minTouchTarget,
+  },
+  scoutBarItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 120,
+  },
+  scoutBarItemName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  scoutBarItemPos: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  scoutBarItemReason: {
+    flex: 1,
+    fontSize: fontSize.xs,
     color: colors.textLight,
     fontStyle: 'italic',
     marginLeft: spacing.sm,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    marginHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xs,
-    ...shadows.sm,
-  },
-  tab: {
+
+  // Prospect Row
+  prospectList: {
     flex: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.md,
-    minHeight: accessibility.minTouchTarget,
   },
-  tabActive: {
-    backgroundColor: colors.primary,
+  prospectListContentWithAction: {
+    paddingBottom: 80,
   },
-  tabText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.textOnPrimary,
-  },
-  tabContent: {
-    flex: 1,
-    marginTop: spacing.md,
-  },
-  boardFilterBar: {
+  prospectRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-  },
-  flagFilterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surface,
     minHeight: accessibility.minTouchTarget,
   },
-  flagFilterButtonActive: {
-    backgroundColor: colors.secondary + '20',
+  prospectRowSelected: {
+    backgroundColor: colors.success + '12',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.success,
   },
-  flagFilterText: {
+  prospectRank: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  flagFilterTextActive: {
-    color: colors.secondary,
     fontWeight: fontWeight.bold,
-  },
-  boardCount: {
-    fontSize: fontSize.sm,
     color: colors.textLight,
-  },
-  proposeTradeContainer: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  tradeListContent: {
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  picksSection: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  picksSectionTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  pickHistoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  pickHistoryItemUser: {
-    backgroundColor: colors.primary + '10',
-    marginHorizontal: -spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
-  pickNumberBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.sm,
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  pickNumberText: {
-    color: colors.textOnPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    width: 32,
+    textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
-  pickInfo: {
+  prospectInfo: {
     flex: 1,
-    marginLeft: spacing.md,
+    marginLeft: spacing.sm,
   },
-  pickTeamName: {
+  prospectNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  prospectName: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.text,
   },
-  pickSelection: {
+  prospectMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
+  },
+  prospectPos: {
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    minWidth: 28,
+  },
+  prospectCollege: {
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
+    flex: 1,
   },
-  pickPending: {
-    fontSize: fontSize.sm,
+  prospectRange: {
+    fontSize: fontSize.xs,
     color: colors.textLight,
+    fontVariant: ['tabular-nums'],
   },
-  pickRound: {
-    fontSize: fontSize.sm,
-    color: colors.textLight,
+  selectBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
   },
-  noPicksText: {
-    fontSize: fontSize.md,
-    color: colors.textLight,
-    fontStyle: 'italic',
-    textAlign: 'center',
+  selectBtnSelected: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+
+  // Draft Action Button
+  draftActionContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    ...shadows.lg,
   },
+  draftActionBtn: {
+    backgroundColor: colors.success,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: accessibility.minTouchTarget,
+  },
+  draftActionText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    letterSpacing: 0.5,
+  },
+
+  // Empty
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -858,86 +1224,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textLight,
     textAlign: 'center',
-  },
-  scoutRecsContainer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  scoutRecsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  scoutRecsTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  scoutRecCard: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  scoutRecTop: {
-    marginBottom: spacing.xxs,
-  },
-  scoutRecNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xxs,
-  },
-  scoutRecScoutName: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  scoutRecConfBadge: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 1,
-    borderRadius: borderRadius.sm,
-  },
-  scoutRecConfText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-  },
-  scoutRecPlayerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  scoutRecPlayerName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-  },
-  scoutRecPlayerPos: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  scoutRecOvr: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-    fontVariant: ['tabular-nums'],
-  },
-  scoutRecReasoning: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-    lineHeight: fontSize.xs * 1.4,
   },
 });
 

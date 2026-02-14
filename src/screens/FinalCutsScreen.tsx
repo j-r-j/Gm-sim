@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
@@ -133,7 +133,13 @@ function RosterPlayerCard({
 }): React.JSX.Element {
   return (
     <View style={styles.playerCard}>
-      <TouchableOpacity style={styles.playerInfo} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.playerInfo}
+        onPress={onPress}
+        accessibilityLabel={`${player.playerName}, ${player.position}, overall ${player.overallRating}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <View style={styles.playerHeader}>
           <Avatar id={player.playerId} size="sm" age={player.age} context="player" />
           <View style={styles.playerHeaderInfo}>
@@ -218,7 +224,13 @@ function RosterPlayerCard({
 
       {showActions && onCut && player.recommendation !== 'keep' && (
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.cutButton} onPress={onCut}>
+          <TouchableOpacity
+            style={styles.cutButton}
+            onPress={onCut}
+            accessibilityLabel={`Release ${player.playerName}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.cutButtonText}>Release</Text>
           </TouchableOpacity>
         </View>
@@ -242,7 +254,13 @@ function PracticeSquadCard({
   return (
     <View style={styles.psCard}>
       <Avatar id={player.playerId} size="sm" age={player.age} context="player" />
-      <TouchableOpacity style={styles.psPlayerInfo} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.psPlayerInfo}
+        onPress={onPress}
+        accessibilityLabel={`${player.playerName}, ${player.position}, overall ${player.overallRating}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <View style={styles.psPlayerDetails}>
           <Text style={styles.playerName}>{player.playerName}</Text>
           <Text style={styles.playerPosition}>
@@ -255,7 +273,13 @@ function PracticeSquadCard({
         </View>
       </TouchableOpacity>
       {onSignToPS && (
-        <TouchableOpacity style={styles.signPSButton} onPress={onSignToPS}>
+        <TouchableOpacity
+          style={styles.signPSButton}
+          onPress={onSignToPS}
+          accessibilityLabel={`Sign ${player.playerName} to practice squad`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.signPSButtonText}>Sign to PS</Text>
         </TouchableOpacity>
       )}
@@ -373,6 +397,9 @@ export function FinalCutsScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label}${tab.count !== undefined ? `, ${tab.count}` : ''}${activeTab === tab.key ? ', selected' : ''}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}

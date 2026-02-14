@@ -28,6 +28,7 @@ import { GameState } from '../../core/models/game/GameState';
 import { Coach } from '../../core/models/staff/Coach';
 import { CoachRole } from '../../core/models/staff/StaffSalary';
 import { getCoachHierarchyKey } from '../../core/models/staff/StaffHierarchy';
+import { extendCoachAction } from '../../core/coaching/CoachManagementActions';
 import {
   canFireCoach,
   canPromoteCoach,
@@ -257,7 +258,6 @@ export function CoachProfileScreenWrapper({
               text: 'Offer Extension',
               onPress: () => {
                 // For now, auto-accept. Future: negotiation system
-                const { extendCoachAction } = require('../../core/coaching/CoachManagementActions');
                 const result = extendCoachAction(gameState, coachId, teamId, {
                   yearsAdded: years,
                   newSalaryPerYear: salary,

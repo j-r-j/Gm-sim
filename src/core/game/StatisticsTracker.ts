@@ -456,9 +456,15 @@ export class StatisticsTracker {
     if (play.outcome === 'incomplete') {
       qbStats.passing.attempts++;
 
+      // Track receiver target on incomplete pass
+      // For pass plays, primaryDefensivePlayer is the intended receiver
       if (play.primaryDefensivePlayer) {
-        const defStats = this.getOrCreatePlayerStats(defenseStats, play.primaryDefensivePlayer);
-        defStats.defensive.passesDefended++;
+        const receiverStats = this.getOrCreatePlayerStats(
+          offenseStats,
+          play.primaryDefensivePlayer
+        );
+        receiverStats.receiving.targets++;
+        receiverStats.snapsPlayed++;
       }
       return;
     }

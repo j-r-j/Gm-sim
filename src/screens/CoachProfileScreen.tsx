@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { Coach, getCoachFullName, getCareerWinningPercentage } from '../core/models/staff/Coach';
 import { ScreenHeader } from '../components';
 import { CoachPersonalityBadge } from '../components/coach/CoachPersonalityBadge';
@@ -158,6 +158,9 @@ function ManagementActions({
           <TouchableOpacity
             style={[styles.actionButton, styles.extendButton]}
             onPress={() => onAction('extend')}
+            accessibilityLabel={`Extend contract for ${coach.firstName} ${coach.lastName}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={styles.actionButtonText}>Extend Contract</Text>
           </TouchableOpacity>
@@ -167,6 +170,9 @@ function ManagementActions({
           <TouchableOpacity
             style={[styles.actionButton, styles.promoteButton]}
             onPress={() => onAction('promote')}
+            accessibilityLabel={`Promote ${coach.firstName} ${coach.lastName} to head coach`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={styles.actionButtonText}>Promote to HC</Text>
           </TouchableOpacity>
@@ -175,6 +181,9 @@ function ManagementActions({
         <TouchableOpacity
           style={[styles.actionButton, styles.fireButton]}
           onPress={() => onAction('fire')}
+          accessibilityLabel={`Release ${coach.firstName} ${coach.lastName}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={styles.actionButtonText}>Release</Text>
         </TouchableOpacity>
@@ -258,7 +267,13 @@ export function CoachProfileScreen({
         {/* View Coaching Tree Button */}
         {onViewCoachingTree && (
           <View style={styles.section}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={onViewCoachingTree}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={onViewCoachingTree}
+              accessibilityLabel="View coaching tree"
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.secondaryButtonText}>View Coaching Tree</Text>
             </TouchableOpacity>
           </View>

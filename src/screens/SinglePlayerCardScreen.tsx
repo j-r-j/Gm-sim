@@ -19,7 +19,15 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
@@ -200,6 +208,10 @@ function ReportCard({ report }: { report: ScoutReport }): React.JSX.Element {
       style={styles.reportCard}
       onPress={() => setExpanded(!expanded)}
       activeOpacity={0.7}
+      accessibilityLabel={`${isFocus ? 'Focus' : 'Auto'} report by ${report.scoutName}, confidence ${report.confidence.level}`}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.reportHeader}>
         <View style={styles.reportHeaderLeft}>
@@ -542,7 +554,15 @@ export function SinglePlayerCardScreen({
       <ScreenHeader title="Prospect Profile" onBack={onBack} testID="prospect-profile-header" />
       <View style={styles.headerActions}>
         {onToggleLock && (
-          <TouchableOpacity onPress={onToggleLock} style={styles.actionButton}>
+          <TouchableOpacity
+            onPress={onToggleLock}
+            style={styles.actionButton}
+            accessibilityLabel={
+              isLocked ? `Unlock ${fullName} board position` : `Lock ${fullName} board position`
+            }
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.actionText}>{isLocked ? 'Locked' : 'Unlocked'}</Text>
           </TouchableOpacity>
         )}
@@ -550,6 +570,9 @@ export function SinglePlayerCardScreen({
           <TouchableOpacity
             onPress={onToggleFlag}
             style={[styles.actionButton, flagged && styles.actionButtonActive]}
+            accessibilityLabel={flagged ? `Remove flag from ${fullName}` : `Flag ${fullName}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.actionText, flagged && styles.actionTextActive]}>
               {flagged ? 'Flagged' : 'Flag'}
@@ -624,6 +647,10 @@ export function SinglePlayerCardScreen({
                   key={t}
                   style={[styles.userTierButton, userTier === t && styles.userTierButtonActive]}
                   onPress={() => onUpdateTier(userTier === t ? null : t)}
+                  accessibilityLabel={`${t} tier${userTier === t ? ', selected' : ''}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: userTier === t }}
+                  hitSlop={accessibility.hitSlop}
                 >
                   <Text style={[styles.userTierText, userTier === t && styles.userTierTextActive]}>
                     {t}
@@ -656,16 +683,31 @@ export function SinglePlayerCardScreen({
                       setNotesValue(userNotes);
                       setEditingNotes(false);
                     }}
+                    accessibilityLabel="Cancel editing notes"
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
                   >
                     <Text style={styles.notesCancelText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.notesSaveButton} onPress={handleSaveNotes}>
+                  <TouchableOpacity
+                    style={styles.notesSaveButton}
+                    onPress={handleSaveNotes}
+                    accessibilityLabel="Save notes"
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
+                  >
                     <Text style={styles.notesSaveText}>Save</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             ) : (
-              <TouchableOpacity style={styles.notesDisplay} onPress={() => setEditingNotes(true)}>
+              <TouchableOpacity
+                style={styles.notesDisplay}
+                onPress={() => setEditingNotes(true)}
+                accessibilityLabel={userNotes ? 'Edit notes' : 'Add notes about this prospect'}
+                accessibilityRole="button"
+                hitSlop={accessibility.hitSlop}
+              >
                 <Text style={userNotes ? styles.notesText : styles.notesPlaceholder}>
                   {userNotes || 'Tap to add notes...'}
                 </Text>

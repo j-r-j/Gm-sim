@@ -6,7 +6,15 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
+import {
+  colors,
+  spacing,
+  fontSize,
+  fontWeight,
+  borderRadius,
+  shadows,
+  accessibility,
+} from '../styles';
 import { ScreenHeader } from '../components';
 import { Coach } from '../core/models/staff/Coach';
 import { CoachRole } from '../core/models/staff/StaffSalary';
@@ -133,7 +141,14 @@ function StaffCard({
   const strengths = useMemo(() => generateCoachStrengths(coach), [coach]);
 
   return (
-    <TouchableOpacity style={styles.staffCard} onPress={onViewDetails} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.staffCard}
+      onPress={onViewDetails}
+      activeOpacity={0.8}
+      accessibilityLabel={`${coach.firstName} ${coach.lastName}, ${getRoleDisplayName(coach.role)}. Tap for details`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       {/* Header */}
       <View style={styles.staffCardHeader}>
         <View style={[styles.roleIcon, { backgroundColor: roleColor }]}>
@@ -379,7 +394,14 @@ export function StaffDecisionScreen({
 
       {/* Bottom Actions */}
       <View style={styles.bottomPanel}>
-        <TouchableOpacity style={styles.keepButton} onPress={onKeepStaff} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.keepButton}
+          onPress={onKeepStaff}
+          activeOpacity={0.8}
+          accessibilityLabel="Keep staff. Continue with these coaches"
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.keepButtonText}>Keep Staff</Text>
           <Text style={styles.keepButtonSubtext}>Continue with these coaches</Text>
         </TouchableOpacity>
@@ -388,6 +410,9 @@ export function StaffDecisionScreen({
           style={styles.cleanHouseButton}
           onPress={onCleanHouse}
           activeOpacity={0.8}
+          accessibilityLabel="Clean house. Fire all and hire new coaches"
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={styles.cleanHouseButtonText}>Clean House</Text>
           <Text style={styles.cleanHouseButtonSubtext}>Fire all & hire new (no penalty)</Text>

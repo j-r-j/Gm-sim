@@ -23,12 +23,31 @@ import {
   createPatienceMeterState,
   updatePatienceValue,
 } from '../../core/career/PatienceMeterManager';
+import {
+  shouldFire,
+  createFiringRecord,
+  createDefaultTenureStats,
+  FiringContext,
+  FiringRecord,
+} from '../../core/career/FiringMechanics';
+import { processWeeklyWaiverWire } from '../../core/roster/WaiverWireManager';
+import { processWeeklyTradeOffers } from '../../core/trade/AITradeOfferGenerator';
+import { processWeeklyAwards } from '../../core/season/WeeklyAwards';
+
+/**
+ * Result of processing week end, including potential firing info
+ */
+export interface ProcessWeekEndResult {
+  state: GameState;
+  fired: boolean;
+  firingRecord: FiringRecord | null;
+}
 
 /**
  * Consolidates all weekly systems into a single state transition.
  * Called when advancing from one week to the next (after games are complete).
  */
-export function processWeekEnd(gameState: GameState): GameState {
+export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
   let state = gameState;
   const { calendar, schedule } = state.league;
   const newWeek = calendar.currentWeek + 1;
@@ -144,74 +163,95 @@ export function processWeekEnd(gameState: GameState): GameState {
     );
   }
 
+  // 3b. Check for firing after patience meter update
+  let firedResult: { fired: boolean; firingRecord: FiringRecord | null } = {
+    fired: false,
+    firingRecord: null,
+  };
+  if (updatedPatienceMeter && userOwner) {
+    const firingContext: FiringContext = {
+      consecutiveLosingSeason: userTeam.currentRecord.losses > userTeam.currentRecord.wins ? 1 : 0,
+      missedPlayoffsCount: 0,
+      ownerDefianceCount: 0,
+      majorScandals: 0,
+      recentPatienceHistory: [],
+      ownershipJustChanged: false,
+      seasonExpectation: 'competitive',
+    };
+
+    const firingCheck = shouldFire(updatedPatienceMeter, firingContext, userOwner);
+
+    if (firingCheck.shouldFire) {
+      const tenureStats = state.tenureStats || createDefaultTenureStats();
+      const record = createFiringRecord(
+        state.userName,
+        state.userTeamId,
+        userOwner,
+        calendar.currentYear,
+        calendar.currentWeek,
+        tenureStats,
+        updatedPatienceMeter,
+        firingContext,
+        0,
+        3000000
+      );
+      firedResult = { fired: true, firingRecord: record };
+    }
+  }
+
   updatedNewsFeed = advanceNewsFeedWeek(updatedNewsFeed, calendar.currentYear, newWeek);
 
   // 4. Process waiver wire
   let updatedWaiverWire = state.waiverWire;
   if (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') {
-    try {
-      const { processWeeklyWaiverWire } = require('../../core/roster/WaiverWireManager');
-      const intermediateState: GameState = {
-        ...state,
-        league: {
-          ...state.league,
-          calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
-        },
-        teams: updatedTeams,
-        players: updatedPlayers,
-      };
-      const waiverResult = processWeeklyWaiverWire(intermediateState, newWeek);
-      updatedWaiverWire = waiverResult.updatedWaiverState;
-      if (waiverResult.updatedGameState?.teams) {
-        Object.assign(updatedTeams, waiverResult.updatedGameState.teams);
-      }
-      if (waiverResult.updatedGameState?.players) {
-        Object.assign(updatedPlayers, waiverResult.updatedGameState.players);
-      }
-    } catch {
-      // Waiver wire processing is non-critical
+    const intermediateState: GameState = {
+      ...state,
+      league: {
+        ...state.league,
+        calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
+      },
+      teams: updatedTeams,
+      players: updatedPlayers,
+    };
+    const waiverResult = processWeeklyWaiverWire(intermediateState, newWeek);
+    updatedWaiverWire = waiverResult.updatedWaiverState;
+    if (waiverResult.updatedGameState?.teams) {
+      Object.assign(updatedTeams, waiverResult.updatedGameState.teams);
+    }
+    if (waiverResult.updatedGameState?.players) {
+      Object.assign(updatedPlayers, waiverResult.updatedGameState.players);
     }
   }
 
   // 5. Generate trade offers
   let updatedTradeOffers = state.tradeOffers;
   if (calendar.currentPhase === 'regularSeason' && newWeek <= 12) {
-    try {
-      const { processWeeklyTradeOffers } = require('../../core/trade/AITradeOfferGenerator');
-      const intermediateState: GameState = {
-        ...state,
-        league: {
-          ...state.league,
-          calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
-        },
-        teams: updatedTeams,
-        players: updatedPlayers,
-      };
-      const tradeResult = processWeeklyTradeOffers(intermediateState);
-      updatedTradeOffers = tradeResult.tradeOffers;
-    } catch {
-      // Trade offer generation is non-critical
-    }
+    const intermediateState: GameState = {
+      ...state,
+      league: {
+        ...state.league,
+        calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
+      },
+      teams: updatedTeams,
+      players: updatedPlayers,
+    };
+    const tradeResult = processWeeklyTradeOffers(intermediateState);
+    updatedTradeOffers = tradeResult.tradeOffers;
   }
 
   // 6. Generate weekly awards
   let updatedWeeklyAwards = state.weeklyAwards;
   if (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') {
-    try {
-      const { processWeeklyAwards } = require('../../core/season/WeeklyAwards');
-      const intermediateState: GameState = {
-        ...state,
-        league: {
-          ...state.league,
-          calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
-        },
-        teams: updatedTeams,
-        players: updatedPlayers,
-      };
-      updatedWeeklyAwards = processWeeklyAwards(intermediateState);
-    } catch {
-      // Awards processing is non-critical
-    }
+    const intermediateState: GameState = {
+      ...state,
+      league: {
+        ...state.league,
+        calendar: { ...calendar, currentWeek: newWeek, currentPhase: newPhase },
+      },
+      teams: updatedTeams,
+      players: updatedPlayers,
+    };
+    updatedWeeklyAwards = processWeeklyAwards(intermediateState);
   }
 
   // 7. Build final state with advanced calendar
@@ -239,7 +279,11 @@ export function processWeekEnd(gameState: GameState): GameState {
     halftimeDecisions: undefined,
   };
 
-  return state;
+  return {
+    state,
+    fired: firedResult.fired,
+    firingRecord: firedResult.firingRecord,
+  };
 }
 
 /**

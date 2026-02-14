@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import { WeeklyDigest } from '../core/news/WeeklyDigest';
@@ -138,6 +138,9 @@ function StoryCard({
       style={[styles.storyCard, !news.isRead && styles.unreadCard]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${news.priority} ${getCategoryDisplay(news.category)} story: ${news.headline}${!news.isRead ? ', unread' : ''}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.storyHeader}>
         <View style={styles.storyMeta}>
@@ -172,6 +175,9 @@ function StoryCard({
           <TouchableOpacity
             style={styles.viewPlayerButton}
             onPress={() => onPlayerSelect(news.playerId!)}
+            accessibilityLabel="View player"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={styles.viewPlayerText}>View Player</Text>
           </TouchableOpacity>
@@ -192,7 +198,14 @@ function RumorPreviewCard({
   onPress?: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.rumorPreviewCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.rumorPreviewCard}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`Rumor: ${rumor.headline}, ${rumor.sourceConfidence} source`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.rumorPreviewHeader}>
         <Text style={styles.rumorIcon}>💬</Text>
         <Text style={styles.rumorConfidence}>
@@ -219,7 +232,14 @@ function CategorySummaryCard({
   onPress?: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.categoryCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.categoryCard}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`${getCategoryDisplay(category)}, ${count} stories`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <Text style={styles.categoryCardIcon}>{getCategoryIcon(category)}</Text>
       <Text style={styles.categoryCardName}>{getCategoryDisplay(category)}</Text>
       <Text style={styles.categoryCardCount}>{count}</Text>
@@ -258,6 +278,10 @@ export function WeeklyDigestScreen({
         <TouchableOpacity
           style={[styles.tab, activeSection === 'overview' && styles.tabActive]}
           onPress={() => setActiveSection('overview')}
+          accessibilityLabel="Overview tab"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeSection === 'overview' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeSection === 'overview' && styles.tabTextActive]}>
             Overview
@@ -266,6 +290,10 @@ export function WeeklyDigestScreen({
         <TouchableOpacity
           style={[styles.tab, activeSection === 'stories' && styles.tabActive]}
           onPress={() => setActiveSection('stories')}
+          accessibilityLabel={`Stories tab, ${digest.topStories.length} stories`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeSection === 'stories' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeSection === 'stories' && styles.tabTextActive]}>
             Stories ({digest.topStories.length})
@@ -274,6 +302,10 @@ export function WeeklyDigestScreen({
         <TouchableOpacity
           style={[styles.tab, activeSection === 'rumors' && styles.tabActive]}
           onPress={() => setActiveSection('rumors')}
+          accessibilityLabel={`Rumors tab, ${digest.activeRumors.length} rumors`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeSection === 'rumors' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeSection === 'rumors' && styles.tabTextActive]}>
             Rumors ({digest.activeRumors.length})
@@ -282,6 +314,10 @@ export function WeeklyDigestScreen({
         <TouchableOpacity
           style={[styles.tab, activeSection === 'categories' && styles.tabActive]}
           onPress={() => setActiveSection('categories')}
+          accessibilityLabel="By type tab"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeSection === 'categories' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeSection === 'categories' && styles.tabTextActive]}>
             By Type

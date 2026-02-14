@@ -52,6 +52,9 @@ import {
   FiringContext,
 } from '../../core/career/FiringMechanics';
 import { transitionToNewSeason } from '../../core/season/SeasonTransitionService';
+import { processWeeklyWaiverWire } from '../../core/roster/WaiverWireManager';
+import { processWeeklyTradeOffers } from '../../core/trade/AITradeOfferGenerator';
+import { processWeeklyAwards } from '../../core/season/WeeklyAwards';
 
 export function DashboardScreenWrapper({
   navigation,
@@ -348,43 +351,28 @@ export function DashboardScreenWrapper({
       // Process waiver wire claims from previous week
       let updatedWaiverWire = gameState.waiverWire;
       if (newPhase === 'regularSeason' || newPhase === 'playoffs') {
-        try {
-          const { processWeeklyWaiverWire } = require('../../core/roster/WaiverWireManager');
-          const waiverResult = processWeeklyWaiverWire(intermediateState, newWeek);
-          updatedWaiverWire = waiverResult.updatedWaiverState;
-          // Apply any roster changes from waiver claims
-          if (waiverResult.updatedGameState?.teams) {
-            Object.assign(updatedTeams, waiverResult.updatedGameState.teams);
-          }
-          if (waiverResult.updatedGameState?.players) {
-            Object.assign(updatedPlayers, waiverResult.updatedGameState.players);
-          }
-        } catch {
-          // Waiver wire processing is non-critical
+        const waiverResult = processWeeklyWaiverWire(intermediateState, newWeek);
+        updatedWaiverWire = waiverResult.updatedWaiverState;
+        // Apply any roster changes from waiver claims
+        if (waiverResult.updatedGameState?.teams) {
+          Object.assign(updatedTeams, waiverResult.updatedGameState.teams);
+        }
+        if (waiverResult.updatedGameState?.players) {
+          Object.assign(updatedPlayers, waiverResult.updatedGameState.players);
         }
       }
 
       // Generate new trade offers for the coming week
       let updatedTradeOffers = gameState.tradeOffers;
       if (newPhase === 'regularSeason' && newWeek <= 12) {
-        try {
-          const { processWeeklyTradeOffers } = require('../../core/trade/AITradeOfferGenerator');
-          const tradeResult = processWeeklyTradeOffers(intermediateState);
-          updatedTradeOffers = tradeResult.tradeOffers;
-        } catch {
-          // Trade offer generation is non-critical
-        }
+        const tradeResult = processWeeklyTradeOffers(intermediateState);
+        updatedTradeOffers = tradeResult.tradeOffers;
       }
 
       // Generate weekly awards and power rankings
       let updatedWeeklyAwards = gameState.weeklyAwards;
       if (newPhase === 'regularSeason' || newPhase === 'playoffs') {
-        try {
-          const { processWeeklyAwards } = require('../../core/season/WeeklyAwards');
-          updatedWeeklyAwards = processWeeklyAwards(intermediateState);
-        } catch {
-          // Awards processing is non-critical
-        }
+        updatedWeeklyAwards = processWeeklyAwards(intermediateState);
       }
 
       // Handle phase transitions

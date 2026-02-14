@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
@@ -125,6 +125,9 @@ function TreeNode({
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.7}
+      accessibilityLabel={`${coach.firstName} ${coach.lastName}, ${coach.role}, generation ${coach.tree.generation}${isMainCoach ? ', current coach' : ''}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
     >
       <Text style={[styles.treeNodeName, isMainCoach && styles.mainTreeNodeName]}>
         {coach.firstName} {coach.lastName}
@@ -197,7 +200,14 @@ function ChemistryCard({
   };
 
   return (
-    <TouchableOpacity style={styles.chemistryCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.chemistryCard}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityLabel={`${otherCoach.firstName} ${otherCoach.lastName}, ${otherCoach.role}, ${chemistry.description}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.chemistryHeader}>
         <Text style={styles.chemistryName}>
           {otherCoach.firstName} {otherCoach.lastName}
@@ -265,12 +275,20 @@ export function CoachingTreeScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'tree' && styles.tabActive]}
           onPress={() => setActiveTab('tree')}
+          accessibilityLabel={`Tree tab${activeTab === 'tree' ? ', selected' : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'tree' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'tree' && styles.tabTextActive]}>Tree</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'philosophy' && styles.tabActive]}
           onPress={() => setActiveTab('philosophy')}
+          accessibilityLabel={`Philosophy tab${activeTab === 'philosophy' ? ', selected' : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'philosophy' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'philosophy' && styles.tabTextActive]}>
             Philosophy
@@ -279,6 +297,10 @@ export function CoachingTreeScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'chemistry' && styles.tabActive]}
           onPress={() => setActiveTab('chemistry')}
+          accessibilityLabel={`Chemistry tab${activeTab === 'chemistry' ? ', selected' : ''}`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'chemistry' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'chemistry' && styles.tabTextActive]}>
             Chemistry

@@ -729,13 +729,19 @@ export class GameStateMachine {
           this.state.needsKickoff = true;
           this.state.kickoffTeam = firstPossession === 'home' ? 'away' : 'home';
         } else if (clock.quarter === 'OT') {
-          // OT time expired - regular season ends in tie
-          if (this.state.stakes === 'regular') {
+          // OT time expired
+          if (this.state.stakes === 'playoff' || this.state.stakes === 'championship') {
+            // Playoff games continue until there is a winner
+            clock.timeRemaining = 600; // Reset OT clock
+            if (this.state.overtime) {
+              this.state.overtime.isSuddenDeath = true;
+            }
+          } else {
+            // Regular season ends in tie
             this.state.isComplete = true;
             this.state.inProgress = false;
             clock.timeRemaining = 0;
           }
-          // Playoff OT would continue but we cap at regulation OT for simplicity
         } else {
           // Game over
           this.state.isComplete = true;
@@ -801,18 +807,13 @@ export class GameStateMachine {
     }
 
     if (ot.possessionsCompleted === 0) {
-      // First possession just ended
-      if (driveResult === 'touchdown') {
-        // TD on first possession: game over
-        ot.firstPossessionResult = 'touchdown';
-        ot.possessionsCompleted = 1;
-        this.state.isComplete = true;
-        this.state.inProgress = false;
-        return true;
-      }
-
-      // FG or no score: other team gets a chance
-      ot.firstPossessionResult = driveResult === 'field_goal' ? 'field_goal' : 'no_score';
+      // First possession just ended - record result, other team always gets a chance
+      ot.firstPossessionResult =
+        driveResult === 'touchdown'
+          ? 'touchdown'
+          : driveResult === 'field_goal'
+            ? 'field_goal'
+            : 'no_score';
       ot.possessionsCompleted = 1;
       return false;
     }
@@ -820,6 +821,19 @@ export class GameStateMachine {
     if (ot.possessionsCompleted === 1) {
       // Second possession just ended
       ot.possessionsCompleted = 2;
+
+      if (ot.firstPossessionResult === 'touchdown') {
+        // First team scored TD
+        if (driveResult === 'touchdown') {
+          // Second team also scored TD: sudden death (tied again)
+          ot.isSuddenDeath = true;
+          return false;
+        }
+        // Second team failed to match TD: first team wins
+        this.state.isComplete = true;
+        this.state.inProgress = false;
+        return true;
+      }
 
       if (ot.firstPossessionResult === 'field_goal') {
         // First team kicked FG

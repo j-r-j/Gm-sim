@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { ScreenHeader } from '../components';
 import {
@@ -182,7 +182,13 @@ function GameCard({
 
   return (
     <View style={styles.gameCard}>
-      <TouchableOpacity style={styles.gameHeader} onPress={() => setExpanded(!expanded)}>
+      <TouchableOpacity
+        style={styles.gameHeader}
+        onPress={() => setExpanded(!expanded)}
+        accessibilityLabel={`Game ${game.gameNumber} vs ${game.opponent}, ${game.result}, ${game.teamScore}-${game.opponentScore}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <View>
           <Text style={styles.gameTitle}>Game {game.gameNumber}</Text>
           <Text style={styles.gameOpponent}>
@@ -223,6 +229,9 @@ function GameCard({
                 key={perf.playerId}
                 style={styles.performerRow}
                 onPress={() => onPlayerPress(perf.playerId)}
+                accessibilityLabel={`${perf.playerName}, ${perf.position}, grade ${perf.grade}`}
+                accessibilityRole="button"
+                hitSlop={accessibility.hitSlop}
               >
                 <View style={styles.performerInfo}>
                   <Text style={styles.performerName}>{perf.playerName}</Text>
@@ -265,7 +274,13 @@ function GameCard({
         </>
       )}
 
-      <TouchableOpacity style={styles.expandButton} onPress={() => setExpanded(!expanded)}>
+      <TouchableOpacity
+        style={styles.expandButton}
+        onPress={() => setExpanded(!expanded)}
+        accessibilityLabel={expanded ? 'Show less details' : 'Show more details'}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
         <Text style={styles.expandText}>{expanded ? 'Show Less' : 'Show Details'}</Text>
       </TouchableOpacity>
     </View>
@@ -283,7 +298,13 @@ function EvaluationCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.evaluationCard} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.evaluationCard}
+      onPress={onPress}
+      accessibilityLabel={`${evaluation.playerName}, ${evaluation.position}, ${evaluation.rosterProjection.replace('_', ' ')}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.evaluationHeader}>
         <View>
           <Text style={styles.playerName}>{evaluation.playerName}</Text>
@@ -353,7 +374,13 @@ function InjuryCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.injuryCard} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.injuryCard}
+      onPress={onPress}
+      accessibilityLabel={`${injury.playerName}, ${injury.position}, ${injury.injuryType}, ${injury.severity}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.injuryHeader}>
         <View>
           <Text style={styles.playerName}>{injury.playerName}</Text>
@@ -429,6 +456,9 @@ export function PreseasonScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label}${activeTab === tab.key ? ', selected' : ''}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}

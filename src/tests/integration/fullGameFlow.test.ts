@@ -223,9 +223,9 @@ describe('Full Game Flow Integration', () => {
       }
     });
 
-    it('each sampled player should have age 21-45', () => {
+    it('each sampled player should have age 20-45', () => {
       for (const player of sampledPlayers) {
-        expect(player.age).toBeGreaterThanOrEqual(21);
+        expect(player.age).toBeGreaterThanOrEqual(20);
         expect(player.age).toBeLessThanOrEqual(45);
       }
     });

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { OwnerViewModel, OwnerDemand, getSecondaryTraitDescription } from '../core/models/owner';
 import { ScreenHeader } from '../components';
 import { PatienceViewModel } from '../core/career/PatienceMeterManager';
@@ -312,6 +312,9 @@ function DemandsSection({
             style={[styles.demandCard, { borderLeftColor: getUrgencyColor(urgency) }]}
             onPress={() => onDemandPress?.(demand)}
             activeOpacity={onDemandPress ? 0.7 : 1}
+            accessibilityLabel={`${demand.type} demand: ${demand.description}, ${urgency === 'critical' ? 'overdue' : `${weeksRemaining} weeks remaining`}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <View style={styles.demandHeader}>
               <Text style={styles.demandType}>{demand.type.toUpperCase()}</Text>

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
@@ -278,6 +278,9 @@ function BattleCard({
               battle.winner === competitor.playerId && styles.winnerRow,
             ]}
             onPress={() => onPlayerPress(competitor.playerId)}
+            accessibilityLabel={`${competitor.playerName}, grade ${competitor.practiceGrade}, ${competitor.trend}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <View style={styles.competitorRank}>
               <Text style={styles.rankNumber}>{index + 1}</Text>
@@ -348,6 +351,9 @@ function DevelopmentCard({
     <TouchableOpacity
       style={[styles.developmentCard, { borderColor: getImpactColor(reveal.impact) + '40' }]}
       onPress={() => onPlayerPress(reveal.playerId)}
+      accessibilityLabel={`${reveal.playerName}, ${reveal.position}, ${reveal.impact} development`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.developmentHeader}>
         <View>
@@ -384,7 +390,13 @@ function InjuryCard({
   onPlayerPress: (playerId: string) => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.injuryCard} onPress={() => onPlayerPress(injury.playerId)}>
+    <TouchableOpacity
+      style={styles.injuryCard}
+      onPress={() => onPlayerPress(injury.playerId)}
+      accessibilityLabel={`${injury.playerName}, ${injury.position}, ${injury.injuryType}, ${injury.severity}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.injuryHeader}>
         <View>
           <Text style={styles.playerName}>{injury.playerName}</Text>
@@ -467,6 +479,9 @@ export function TrainingCampScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label}${activeTab === tab.key ? ', selected' : ''}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}

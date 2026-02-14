@@ -11,6 +11,7 @@ export {
   validateOffseasonPhaseAdvance,
   processWeekEnd,
 } from './shared';
+export type { ProcessWeekEndResult } from './shared';
 
 // Auth/Startup wrappers
 export {

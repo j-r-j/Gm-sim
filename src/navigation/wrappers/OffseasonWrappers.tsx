@@ -36,6 +36,7 @@ import {
 import { enterPhase, initializeOffseason } from '../../core/offseason/OffseasonOrchestrator';
 import { transitionToNewSeason } from '../../core/season/SeasonTransitionService';
 import { Position } from '../../core/models/player/Position';
+import { generateSeasonAwards } from '../../core/offseason/bridges/PhaseGenerators';
 
 // Offseason phase modules
 import {
@@ -338,21 +339,11 @@ export function SeasonRecapScreenWrapper({
       playoffResult: null,
       draftPosition,
       topPerformers,
-      awards: (() => {
-        try {
-          const { generateSeasonAwards } =
-            require('../../core/offseason/bridges/PhaseGenerators') as {
-              generateSeasonAwards: typeof import('../../core/offseason/bridges/PhaseGenerators').generateSeasonAwards;
-            };
-          return generateSeasonAwards(gameState, gameState.seasonStats).map((a) => ({
-            award: a.award,
-            playerId: a.playerId,
-            playerName: a.playerName,
-          }));
-        } catch {
-          return [];
-        }
-      })(),
+      awards: generateSeasonAwards(gameState, gameState.seasonStats).map((a) => ({
+        award: a.award,
+        playerId: a.playerId,
+        playerName: a.playerName,
+      })),
       seasonWriteUp: '',
       playerImprovements: [],
     };

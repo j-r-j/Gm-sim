@@ -21,6 +21,24 @@ import { WeekSummaryScreen } from '../../screens/WeekSummaryScreen';
 import { simulateWeek, advanceWeek, getUserTeamGame } from '../../core/season/WeekSimulator';
 import { updateSeasonStatsFromGame } from '../../core/game/SeasonStatsAggregator';
 import { getAllNews } from '../../core/news/NewsFeedManager';
+import { applyMidSeasonProgression } from '../../core/career/PlayerProgression';
+import { GamePlanScreen } from '../../screens/GamePlanScreen';
+import { analyzeOpponent, applyGamePlan } from '../../core/gameplan';
+import { StartSitScreen } from '../../screens/StartSitScreen';
+import {
+  generateStartSitDecisions,
+  applyStartSitDecisions,
+} from '../../core/roster/StartSitManager';
+import { WeeklyAwardsScreen } from '../../screens/WeeklyAwardsScreen';
+import { createWeeklyAwardsState, generateAwardRaces } from '../../core/season/WeeklyAwards';
+import { TradeOffersScreen } from '../../screens/TradeOffersScreen';
+import {
+  acceptTradeOffer,
+  rejectTradeOffer,
+  createTradeOffersState,
+} from '../../core/trade/AITradeOfferGenerator';
+import { WaiverWireScreen } from '../../screens/WaiverWireScreen';
+import { createWaiverWireState } from '../../core/roster/WaiverWireManager';
 
 // ============================================
 // WEEKLY SCHEDULE SCREEN
@@ -462,63 +480,55 @@ export function LiveGameSimulationScreenWrapper({
         setLastGameResult(result);
 
         // Apply mid-season progression to user's team players
-        try {
-          const { applyMidSeasonProgression } = require('../../core/career/PlayerProgression') as {
-            applyMidSeasonProgression: typeof import('../../core/career/PlayerProgression').applyMidSeasonProgression;
-          };
+        const userTeamForProg = updatedState.teams[updatedState.userTeamId];
+        if (userTeamForProg) {
+          const isHome = result.homeTeamId === updatedState.userTeamId;
+          const uScore = isHome ? result.homeScore : result.awayScore;
+          const oScore = isHome ? result.awayScore : result.homeScore;
+          const scoreDiff = uScore - oScore;
 
-          const userTeamForProg = updatedState.teams[updatedState.userTeamId];
-          if (userTeamForProg) {
-            const isHome = result.homeTeamId === updatedState.userTeamId;
-            const uScore = isHome ? result.homeScore : result.awayScore;
-            const oScore = isHome ? result.awayScore : result.homeScore;
-            const scoreDiff = uScore - oScore;
+          // Derive a simple game performance score (0-100)
+          let gamePerformanceScore: number;
+          if (scoreDiff >= 14)
+            gamePerformanceScore = 75 + Math.floor(Math.random() * 16); // 75-90
+          else if (scoreDiff > 0)
+            gamePerformanceScore = 60 + Math.floor(Math.random() * 16); // 60-75
+          else if (scoreDiff >= -7)
+            gamePerformanceScore = 40 + Math.floor(Math.random() * 16); // 40-55
+          else gamePerformanceScore = 20 + Math.floor(Math.random() * 21); // 20-40
 
-            // Derive a simple game performance score (0-100)
-            let gamePerformanceScore: number;
-            if (scoreDiff >= 14)
-              gamePerformanceScore = 75 + Math.floor(Math.random() * 16); // 75-90
-            else if (scoreDiff > 0)
-              gamePerformanceScore = 60 + Math.floor(Math.random() * 16); // 60-75
-            else if (scoreDiff >= -7)
-              gamePerformanceScore = 40 + Math.floor(Math.random() * 16); // 40-55
-            else gamePerformanceScore = 20 + Math.floor(Math.random() * 21); // 20-40
+          const headCoachId = userTeamForProg.staffHierarchy?.headCoach;
+          const headCoach = headCoachId ? (updatedState.coaches[headCoachId] ?? null) : null;
+          const currentWeek = updatedState.league.calendar.currentWeek;
 
-            const headCoachId = userTeamForProg.staffHierarchy?.headCoach;
-            const headCoach = headCoachId ? (updatedState.coaches[headCoachId] ?? null) : null;
-            const currentWeek = updatedState.league.calendar.currentWeek;
+          const updatedPlayers = { ...updatedState.players };
+          const breakoutNames: string[] = [];
 
-            const updatedPlayers = { ...updatedState.players };
-            const breakoutNames: string[] = [];
-
-            for (const playerId of userTeamForProg.rosterPlayerIds) {
-              const player = updatedPlayers[playerId];
-              if (!player) continue;
-              const progResult = applyMidSeasonProgression(
-                player,
-                gamePerformanceScore,
-                headCoach,
-                currentWeek
-              );
-              updatedPlayers[playerId] = progResult.updatedPlayer;
-              if (progResult.isBreakout && progResult.breakoutDescription) {
-                breakoutNames.push(`${player.firstName} ${player.lastName}`);
-              }
-            }
-
-            updatedState = { ...updatedState, players: updatedPlayers };
-
-            // Show breakout alert if any players broke out
-            if (breakoutNames.length > 0) {
-              const names = breakoutNames.join(', ');
-              Alert.alert(
-                'Breakout Performance!',
-                `${names} ${breakoutNames.length === 1 ? 'is' : 'are'} having a breakout season!`
-              );
+          for (const playerId of userTeamForProg.rosterPlayerIds) {
+            const player = updatedPlayers[playerId];
+            if (!player) continue;
+            const progResult = applyMidSeasonProgression(
+              player,
+              gamePerformanceScore,
+              headCoach,
+              currentWeek
+            );
+            updatedPlayers[playerId] = progResult.updatedPlayer;
+            if (progResult.isBreakout && progResult.breakoutDescription) {
+              breakoutNames.push(`${player.firstName} ${player.lastName}`);
             }
           }
-        } catch {
-          // Mid-season progression is non-critical
+
+          updatedState = { ...updatedState, players: updatedPlayers };
+
+          // Show breakout alert if any players broke out
+          if (breakoutNames.length > 0) {
+            const names = breakoutNames.join(', ');
+            Alert.alert(
+              'Breakout Performance!',
+              `${names} ${breakoutNames.length === 1 ? 'is' : 'are'} having a breakout season!`
+            );
+          }
         }
 
         setGameState(updatedState);
@@ -703,9 +713,16 @@ export function WeekSummaryScreenWrapper({
     setIsLoading(true);
     try {
       // Process week end (consolidates all weekly systems)
-      const newState = processWeekEnd(gameState);
+      const weekEndResult = processWeekEnd(gameState);
+      const newState = weekEndResult.state;
       setGameState(newState);
       await saveGameState(newState);
+
+      // Check if fired
+      if (weekEndResult.fired) {
+        navigation.navigate('Fired');
+        return;
+      }
 
       // Check if season ended -> auto-transition to offseason or playoffs
       const newPhase = newState.league.calendar.currentPhase;
@@ -765,9 +782,7 @@ export function GamePlanScreenWrapper({ navigation }: ScreenProps<'GamePlan'>): 
     return <LoadingFallback message="Loading..." />;
   }
 
-  const { GamePlanScreen: GamePlanScreenComponent } = require('../../screens/GamePlanScreen');
-  const { analyzeOpponent, applyGamePlan } = require('../../core/gameplan');
-  const { getUserTeamGame } = require('../../core/season/WeekSimulator');
+  // getUserTeamGame is already imported at the top
 
   const week = gameState.league.calendar.currentWeek;
   const schedule = gameState.league.schedule;
@@ -790,7 +805,7 @@ export function GamePlanScreenWrapper({ navigation }: ScreenProps<'GamePlan'>): 
   }
 
   return (
-    <GamePlanScreenComponent
+    <GamePlanScreen
       week={week}
       opponentAnalysis={opponentAnalysis}
       existingPlan={gameState.weeklyGamePlan || null}
@@ -812,16 +827,10 @@ export function StartSitScreenWrapper({ navigation }: ScreenProps<'StartSit'>): 
     return <LoadingFallback message="Loading..." />;
   }
 
-  const { StartSitScreen: StartSitComponent } = require('../../screens/StartSitScreen');
-  const {
-    generateStartSitDecisions,
-    applyStartSitDecisions,
-  } = require('../../core/roster/StartSitManager');
-
   const startSitState = gameState.startSitDecisions || generateStartSitDecisions(gameState);
 
   return (
-    <StartSitComponent
+    <StartSitScreen
       startSitState={startSitState}
       onConfirm={async (state: StartSitState) => {
         const updated = applyStartSitDecisions(gameState, state);
@@ -843,14 +852,11 @@ export function WeeklyAwardsScreenWrapper({
     return <LoadingFallback message="Loading..." />;
   }
 
-  const { WeeklyAwardsScreen: AwardsComponent } = require('../../screens/WeeklyAwardsScreen');
-  const { createWeeklyAwardsState, generateAwardRaces } = require('../../core/season/WeeklyAwards');
-
   const awardsState = gameState.weeklyAwards || createWeeklyAwardsState();
   const awardRaces = generateAwardRaces(gameState);
 
   return (
-    <AwardsComponent
+    <WeeklyAwardsScreen
       awardsState={awardsState}
       awardRaces={awardRaces}
       userTeamId={gameState.userTeamId}
@@ -872,17 +878,10 @@ export function TradeOffersScreenWrapper({
     return <LoadingFallback message="Loading..." />;
   }
 
-  const { TradeOffersScreen: TradeOffersComponent } = require('../../screens/TradeOffersScreen');
-  const {
-    acceptTradeOffer,
-    rejectTradeOffer,
-    createTradeOffersState,
-  } = require('../../core/trade/AITradeOfferGenerator');
-
   const tradeOffers = gameState.tradeOffers || createTradeOffersState();
 
   return (
-    <TradeOffersComponent
+    <TradeOffersScreen
       tradeOffers={tradeOffers}
       onAccept={async (offerId: string) => {
         const updated = acceptTradeOffer(gameState, offerId);
@@ -912,9 +911,6 @@ export function WaiverWireScreenWrapper({
     return <LoadingFallback message="Loading..." />;
   }
 
-  const { WaiverWireScreen: WaiverComponent } = require('../../screens/WaiverWireScreen');
-  const { createWaiverWireState } = require('../../core/roster/WaiverWireManager');
-
   const waiverState = gameState.waiverWire || createWaiverWireState();
   const userTeam = gameState.teams[gameState.userTeamId];
 
@@ -934,9 +930,14 @@ export function WaiverWireScreenWrapper({
         skillValues.length > 0
           ? Math.round(skillValues.reduce((a: number, b: number) => a + b, 0) / skillValues.length)
           : 50;
-      return { id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, rating };
+      return {
+        id: p.id,
+        name: `${p.firstName} ${p.lastName}`,
+        position: p.position as string,
+        rating,
+      };
     })
-    .filter(Boolean);
+    .filter((x): x is { id: string; name: string; position: string; rating: number } => x != null);
 
   // Build droppable player list (bottom of roster by rating)
   const droppablePlayers = (userTeam?.rosterPlayerIds || [])
@@ -954,16 +955,18 @@ export function WaiverWireScreenWrapper({
         skillValues.length > 0
           ? Math.round(skillValues.reduce((a: number, b: number) => a + b, 0) / skillValues.length)
           : 50;
-      return { id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, rating };
+      return {
+        id: p.id,
+        name: `${p.firstName} ${p.lastName}`,
+        position: p.position as string,
+        rating,
+      };
     })
-    .filter(Boolean)
-    .sort(
-      (a: { rating: number } | null, b: { rating: number } | null) =>
-        (a?.rating ?? 0) - (b?.rating ?? 0)
-    );
+    .filter((x): x is { id: string; name: string; position: string; rating: number } => x != null)
+    .sort((a, b) => a.rating - b.rating);
 
   return (
-    <WaiverComponent
+    <WaiverWireScreen
       waiverState={waiverState}
       practiceSquadPlayers={practiceSquadPlayers}
       rosterCount={userTeam?.rosterPlayerIds?.length || 0}

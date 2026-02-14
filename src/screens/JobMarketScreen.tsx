@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
 import {
@@ -131,6 +131,10 @@ function JobOpeningCard({
       style={styles.card}
       onPress={() => setExpanded(!expanded)}
       activeOpacity={0.7}
+      accessibilityLabel={`${opening.teamCity} ${opening.teamName} job opening${opening.isFilled ? ', filled' : ''}`}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.cardHeader}>
         <View style={styles.cardTitleRow}>
@@ -250,7 +254,13 @@ function JobOpeningCard({
 
           {/* Request Interview Button */}
           {canRequestInterview && onRequestInterview && (
-            <TouchableOpacity style={styles.requestButton} onPress={onRequestInterview}>
+            <TouchableOpacity
+              style={styles.requestButton}
+              onPress={onRequestInterview}
+              accessibilityLabel={`Request interview with ${opening.teamCity} ${opening.teamName}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.requestButtonText}>Request Interview</Text>
             </TouchableOpacity>
           )}
@@ -280,6 +290,10 @@ function InterviewCard({
       style={styles.card}
       onPress={() => setExpanded(!expanded)}
       activeOpacity={0.7}
+      accessibilityLabel={`Interview with ${interview.teamName}, ${status.text}`}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      hitSlop={accessibility.hitSlop}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{interview.teamName}</Text>
@@ -385,12 +399,18 @@ function InterviewCard({
                   <TouchableOpacity
                     style={[styles.offerButton, styles.acceptButton]}
                     onPress={onAccept}
+                    accessibilityLabel={`Accept offer from ${interview.teamName}`}
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
                   >
                     <Text style={styles.acceptButtonText}>Accept Offer</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.offerButton, styles.declineButton]}
                     onPress={onDecline}
+                    accessibilityLabel={`Decline offer from ${interview.teamName}`}
+                    accessibilityRole="button"
+                    hitSlop={accessibility.hitSlop}
                   >
                     <Text style={styles.declineButtonText}>Decline</Text>
                   </TouchableOpacity>
@@ -459,6 +479,10 @@ export function JobMarketScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'openings' && styles.tabActive]}
           onPress={() => setActiveTab('openings')}
+          accessibilityLabel={`Openings tab, ${openPositions.length} openings`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'openings' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'openings' && styles.tabTextActive]}>
             Openings ({openPositions.length})
@@ -467,6 +491,10 @@ export function JobMarketScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'interviews' && styles.tabActive]}
           onPress={() => setActiveTab('interviews')}
+          accessibilityLabel={`Interviews tab, ${scheduledInterviews.length} interviews`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'interviews' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'interviews' && styles.tabTextActive]}>
             Interviews ({scheduledInterviews.length})
@@ -475,6 +503,10 @@ export function JobMarketScreen({
         <TouchableOpacity
           style={[styles.tab, activeTab === 'offers' && styles.tabActive]}
           onPress={() => setActiveTab('offers')}
+          accessibilityLabel={`Offers tab, ${activeOffers.length} offers`}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'offers' }}
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={[styles.tabText, activeTab === 'offers' && styles.tabTextActive]}>
             Offers ({activeOffers.length})

@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { ScreenHeader } from '../components';
 import {
@@ -155,7 +155,13 @@ function StandoutCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.standoutCard} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.standoutCard}
+      onPress={onPress}
+      accessibilityLabel={`${report.playerName}, ${report.position}, standout`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.standoutHeader}>
         <View>
           <Text style={styles.playerName}>{report.playerName}</Text>
@@ -225,7 +231,13 @@ function ConcernCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.concernCard} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.concernCard}
+      onPress={onPress}
+      accessibilityLabel={`${report.playerName}, ${report.position}, concern`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.standoutHeader}>
         <View>
           <Text style={styles.playerName}>{report.playerName}</Text>
@@ -262,7 +274,13 @@ function AttendanceItem({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.attendanceItem} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.attendanceItem}
+      onPress={onPress}
+      accessibilityLabel={`${report.playerName}, ${report.position}, ${report.attendance}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.attendanceInfo}>
         <Text style={styles.attendanceName}>{report.playerName}</Text>
         <Text style={styles.attendancePosition}>
@@ -312,7 +330,13 @@ function RookieCard({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <TouchableOpacity style={styles.rookieCard} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.rookieCard}
+      onPress={onPress}
+      accessibilityLabel={`${report.playerName}, ${report.position}, ${report.learningCurve.replace('_', ' ')}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
       <View style={styles.rookieHeader}>
         <View>
           <Text style={styles.playerName}>{report.playerName}</Text>
@@ -394,6 +418,9 @@ function BattleCard({
       <TouchableOpacity
         style={styles.incumbentRow}
         onPress={() => onPlayerPress(battle.incumbentId)}
+        accessibilityLabel={`Incumbent: ${battle.incumbentName}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
       >
         <Text style={styles.incumbentLabel}>Incumbent:</Text>
         <Text style={styles.incumbentName}>{battle.incumbentName}</Text>
@@ -405,6 +432,9 @@ function BattleCard({
           key={challenger.playerId}
           style={styles.challengerRow}
           onPress={() => onPlayerPress(challenger.playerId)}
+          accessibilityLabel={`Challenger: ${challenger.playerName}, ${challenger.earlyImpression}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
         >
           <Text style={styles.challengerName}>{challenger.playerName}</Text>
           <View
@@ -484,6 +514,9 @@ export function OTAsScreen({
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityLabel={`${tab.label}${activeTab === tab.key ? ', selected' : ''}`}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}

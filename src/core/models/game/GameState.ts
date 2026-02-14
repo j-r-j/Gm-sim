@@ -125,6 +125,9 @@ export interface GameState {
   // Depth charts (optional for backward compatibility)
   depthCharts?: Record<string, import('../../roster/DepthChartManager').DepthChart>;
 
+  // V2 depth charts
+  depthChartsV2?: Record<string, import('../../roster/DepthChartTypes').DepthChart>;
+
   // Season stats for players (optional for backward compatibility)
   seasonStats?: Record<string, import('../../game/SeasonStatsAggregator').PlayerSeasonStats>;
 

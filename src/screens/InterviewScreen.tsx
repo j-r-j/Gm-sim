@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, borderRadius } from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import {
   InterviewRecord,
@@ -154,10 +154,22 @@ function ContractOfferSection({
       </View>
 
       <View style={styles.offerButtons}>
-        <TouchableOpacity style={styles.acceptButton} onPress={onAccept}>
+        <TouchableOpacity
+          style={styles.acceptButton}
+          onPress={onAccept}
+          accessibilityLabel={`Accept offer from ${offer.teamName}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.acceptButtonText}>Accept Offer</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.declineButton} onPress={onDecline}>
+        <TouchableOpacity
+          style={styles.declineButton}
+          onPress={onDecline}
+          accessibilityLabel={`Decline offer from ${offer.teamName}`}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
           <Text style={styles.declineButtonText}>Decline</Text>
         </TouchableOpacity>
       </View>
@@ -223,7 +235,13 @@ export function InterviewScreen({
 
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No interview scheduled with this team</Text>
-          <TouchableOpacity style={styles.returnButton} onPress={onBack}>
+          <TouchableOpacity
+            style={styles.returnButton}
+            onPress={onBack}
+            accessibilityLabel="Return to job market"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
             <Text style={styles.returnButtonText}>Return to Job Market</Text>
           </TouchableOpacity>
         </View>
@@ -260,7 +278,13 @@ export function InterviewScreen({
               Your reputation and career record will influence how the interview goes.
             </Text>
 
-            <TouchableOpacity style={styles.startButton} onPress={handleStartInterview}>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStartInterview}
+              accessibilityLabel={`Enter interview with ${teamName}`}
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
               <Text style={styles.startButtonText}>Enter Interview</Text>
             </TouchableOpacity>
           </View>
