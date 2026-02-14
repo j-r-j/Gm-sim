@@ -415,9 +415,9 @@ describe('Playoff Progression Integration Tests', () => {
       }
     });
 
-    it('should have each winner match the team with the higher score', () => {
+    it('should have each winner match the team with the higher score (or home team on tie)', () => {
       for (const matchup of postWildCard.wildCardRound) {
-        if (matchup.homeScore! > matchup.awayScore!) {
+        if (matchup.homeScore! >= matchup.awayScore!) {
           expect(matchup.winnerId).toBe(matchup.homeTeamId);
         } else {
           expect(matchup.winnerId).toBe(matchup.awayTeamId);

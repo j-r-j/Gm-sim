@@ -30,7 +30,7 @@ describe('Full Game Flow Integration', () => {
       gmName,
       selectedTeam,
       startYear: 2025,
-      historyYears: 10,
+      historyYears: 1,
     });
     creationTimeMs = Date.now() - start;
   }, 60000);

@@ -421,14 +421,24 @@ export function simulatePlayoffRound(
       continue;
     }
 
-    const result = simulatePlayoffGame(matchup, gameState);
+    let result = simulatePlayoffGame(matchup, gameState);
+
+    // Playoff games cannot end in ties - re-simulate up to 5 times if tied
+    let retries = 5;
+    while (result.isTie && retries > 0) {
+      result = simulatePlayoffGame(matchup, gameState);
+      retries--;
+    }
+
+    // If still tied after retries, award win to higher seed (home team)
+    const winnerId = result.isTie ? matchup.homeTeamId : result.winnerId;
 
     results.push({
       ...matchup,
       isComplete: true,
       homeScore: result.homeScore,
       awayScore: result.awayScore,
-      winnerId: result.winnerId,
+      winnerId,
     });
   }
 
