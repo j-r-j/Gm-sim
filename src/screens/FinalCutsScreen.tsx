@@ -29,6 +29,7 @@ export interface FinalCutsScreenProps {
   onPlayerSelect?: (playerId: string) => void;
   onCutPlayer?: (playerId: string) => void;
   onSignToPS?: (playerId: string) => void;
+  onAutoCut?: () => void;
 }
 
 type TabType = 'roster' | 'cuts' | 'practice_squad' | 'waivers';
@@ -72,11 +73,13 @@ function RosterOverviewCard({
   practiceSquadSize,
   maxPracticeSquadSize,
   cutsNeeded,
+  onAutoCut,
 }: {
   rosterSize: number;
   maxRosterSize: number;
   practiceSquadSize: number;
   maxPracticeSquadSize: number;
+  onAutoCut?: () => void;
   cutsNeeded: number;
 }): React.JSX.Element {
   return (
@@ -112,6 +115,17 @@ function RosterOverviewCard({
             {cutsNeeded} cut{cutsNeeded !== 1 ? 's' : ''} needed to reach 53-man roster
           </Text>
         </View>
+      )}
+      {cutsNeeded > 0 && onAutoCut && (
+        <TouchableOpacity
+          style={styles.autoCutButton}
+          onPress={onAutoCut}
+          accessibilityLabel="Auto-cut recommended players"
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
+          <Text style={styles.autoCutButtonText}>Auto-Cut Recommended</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -351,6 +365,7 @@ export function FinalCutsScreen({
   onPlayerSelect,
   onCutPlayer,
   onSignToPS,
+  onAutoCut,
 }: FinalCutsScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('roster');
 
@@ -418,6 +433,7 @@ export function FinalCutsScreen({
               practiceSquadSize={practiceSquadSize}
               maxPracticeSquadSize={maxPracticeSquadSize}
               cutsNeeded={cutsNeeded}
+              onAutoCut={onAutoCut}
             />
 
             {sortedPositions.map((position) => (
@@ -619,6 +635,21 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.error,
     textAlign: 'center',
+  },
+  autoCutButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    alignItems: 'center' as const,
+    minHeight: 44,
+    justifyContent: 'center' as const,
+  },
+  autoCutButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
   positionHeader: {
     fontSize: fontSize.md,

@@ -199,8 +199,15 @@ export function StaffDecisionScreenWrapper({
   const handleKeepStaff = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Save and proceed with existing staff
-      await gameStorage.save(saveSlot as SaveSlot, pendingNewGame);
+      // Save game (non-blocking: proceed to Dashboard even if save fails on web)
+      try {
+        await gameStorage.save(saveSlot as SaveSlot, pendingNewGame);
+      } catch {
+        // Storage may fail on web due to localStorage quota limits.
+        // Continue anyway — the game state is held in memory.
+        // eslint-disable-next-line no-console
+        console.warn('Game save failed (likely localStorage quota on web). Continuing...');
+      }
       setGameState(pendingNewGame);
       clearPendingNewGame();
       navigation.dispatch(
@@ -372,7 +379,13 @@ export function StaffHiringScreenWrapper({
           scouts: updatedScouts,
         };
 
-        await gameStorage.save(saveSlot as SaveSlot, finalGameState);
+        // Save game (non-blocking: proceed even if save fails on web)
+        try {
+          await gameStorage.save(saveSlot as SaveSlot, finalGameState);
+        } catch {
+          // eslint-disable-next-line no-console
+          console.warn('Game save failed (likely localStorage quota on web). Continuing...');
+        }
         setGameState(finalGameState);
         clearPendingNewGame();
         navigation.dispatch(

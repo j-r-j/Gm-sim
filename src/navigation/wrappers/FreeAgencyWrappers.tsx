@@ -182,8 +182,9 @@ export function FreeAgencyScreenWrapper({
   }
 
   const userTeam = gameState.teams[gameState.userTeamId];
-  const leagueCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
-  const capSpace = userTeam.finances?.capSpace ?? leagueCap * 0.2;
+  const leagueCap = gameState.league.settings?.salaryCap || 255000;
+  // Convert from thousands to raw dollars to match estimatedValue units used by FreeAgencyScreen
+  const capSpace = (userTeam.finances?.capSpace ?? leagueCap * 0.2) * 1000;
 
   const freeAgents: FreeAgent[] = Object.values(gameState.players)
     .filter((p) => {
@@ -231,8 +232,9 @@ export function FreeAgencyScreenWrapper({
               finances: userTeam.finances
                 ? {
                     ...userTeam.finances,
-                    capSpace: userTeam.finances.capSpace - offer.annualSalary,
-                    currentCapUsage: userTeam.finances.currentCapUsage + offer.annualSalary,
+                    // Convert raw dollars back to thousands to match finances units
+                    capSpace: userTeam.finances.capSpace - offer.annualSalary / 1000,
+                    currentCapUsage: userTeam.finances.currentCapUsage + offer.annualSalary / 1000,
                   }
                 : userTeam.finances,
             };

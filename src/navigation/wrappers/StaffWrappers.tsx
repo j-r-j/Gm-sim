@@ -183,7 +183,7 @@ export function FinancesScreenWrapper({ navigation }: ScreenProps<'Finances'>): 
   }
 
   const userTeam = gameState.teams[gameState.userTeamId];
-  const salaryCap = (gameState.league.settings?.salaryCap || 255000) * 1000;
+  const salaryCap = gameState.league.settings?.salaryCap || 255000;
 
   return (
     <FinancesScreen

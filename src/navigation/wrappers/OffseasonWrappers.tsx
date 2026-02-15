@@ -166,7 +166,8 @@ export function OffseasonScreenWrapper({
     // Validate phase-specific requirements
     const validationError = validateOffseasonPhaseAdvance(gameState);
     if (validationError) {
-      Alert.alert('Cannot Advance', validationError);
+      // eslint-disable-next-line no-alert
+      window.alert(validationError);
       return;
     }
 
@@ -181,7 +182,8 @@ export function OffseasonScreenWrapper({
       });
       setGameState(transitionedState);
       await saveGameState(transitionedState);
-      Alert.alert('Offseason Complete', 'Preseason begins!');
+      // eslint-disable-next-line no-alert
+      window.alert('Offseason Complete! Preseason begins!');
       navigation.goBack();
     } else {
       // Use orchestrator to enter the new phase and auto-generate data
@@ -905,6 +907,88 @@ export function FinalCutsScreenWrapper({
     };
   }, [gameState]);
 
+  const handleCutPlayer = (playerId: string) => {
+    if (!gameState) return;
+    const userTeam = gameState.teams[gameState.userTeamId];
+    if (!userTeam) return;
+
+    // Remove player from active roster
+    const updatedRoster = userTeam.rosterPlayerIds.filter((id) => id !== playerId);
+    let updatedState: GameState = {
+      ...gameState,
+      teams: {
+        ...gameState.teams,
+        [gameState.userTeamId]: {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+        },
+      },
+    };
+
+    // If roster is now at or below 53, auto-complete the cut_to_53 task
+    if (updatedRoster.length <= 53) {
+      const cutTaskState = tryCompleteOffseasonTask(updatedState, 'cut_to_53');
+      if (cutTaskState) {
+        updatedState = cutTaskState;
+      }
+    }
+
+    setGameState(updatedState);
+    saveGameState(updatedState);
+  };
+
+  const handleAutoCut = () => {
+    if (!gameState || !evaluationData) return;
+    const userTeam = gameState.teams[gameState.userTeamId];
+    if (!userTeam) return;
+
+    const rosterSize = userTeam.rosterPlayerIds.length;
+    if (rosterSize <= 53) return;
+
+    // Get players recommended for cutting, sorted by lowest overall first
+    const cutCandidates = evaluationData.summary.finalRoster
+      .filter((p) => p.recommendation === 'cut' || p.recommendation === 'practice_squad')
+      .sort((a, b) => a.overallRating - b.overallRating);
+
+    const cutsNeeded = rosterSize - 53;
+    const playerIdsToCut = cutCandidates.slice(0, cutsNeeded).map((p) => p.playerId);
+
+    // If not enough recommended, cut lowest-rated remaining players
+    if (playerIdsToCut.length < cutsNeeded) {
+      const allByRating = evaluationData.summary.finalRoster
+        .filter((p) => !playerIdsToCut.includes(p.playerId))
+        .sort((a, b) => a.overallRating - b.overallRating);
+      const remaining = cutsNeeded - playerIdsToCut.length;
+      for (let i = 0; i < remaining && i < allByRating.length; i++) {
+        playerIdsToCut.push(allByRating[i].playerId);
+      }
+    }
+
+    const cutSet = new Set(playerIdsToCut);
+    const updatedRoster = userTeam.rosterPlayerIds.filter((id) => !cutSet.has(id));
+
+    let updatedState: GameState = {
+      ...gameState,
+      teams: {
+        ...gameState.teams,
+        [gameState.userTeamId]: {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+        },
+      },
+    };
+
+    if (updatedRoster.length <= 53) {
+      const cutTaskState = tryCompleteOffseasonTask(updatedState, 'cut_to_53');
+      if (cutTaskState) {
+        updatedState = cutTaskState;
+      }
+    }
+
+    setGameState(updatedState);
+    saveGameState(updatedState);
+  };
+
   if (!gameState || !evaluationData) {
     return <LoadingFallback message="Loading Final Cuts..." />;
   }
@@ -919,6 +1003,8 @@ export function FinalCutsScreenWrapper({
       maxPracticeSquadSize={16}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+      onCutPlayer={handleCutPlayer}
+      onAutoCut={handleAutoCut}
     />
   );
 }

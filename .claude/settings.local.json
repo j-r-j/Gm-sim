@@ -9,7 +9,19 @@
       "Bash(npx ts-node:*)",
       "Bash(npm run lint:*)",
       "Bash(npm run format:check:*)",
-      "Bash(npm run format:*)"
+      "Bash(npm run format:*)",
+      "Bash(node:*)",
+      "Bash(lsof:*)",
+      "Bash(pgrep:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:necolas.github.io)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(npx jest:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

@@ -668,7 +668,7 @@ export function RosterScreen({
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>${(capSpace / 1000000).toFixed(1)}M</Text>
+          <Text style={styles.summaryValue}>${(capSpace / 1000).toFixed(1)}M</Text>
           <Text style={styles.summaryLabel}>Cap Space</Text>
         </View>
       </View>

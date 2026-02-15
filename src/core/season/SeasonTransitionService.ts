@@ -8,6 +8,10 @@ import { GameState, updateCareerStatsAfterSeason } from '@core/models/game/GameS
 import { SeasonSummary, createEmptyStandings } from '@core/models/league/League';
 import { createEmptyTeamRecord } from '@core/models/team/Team';
 import { advanceContractYear } from '@core/contracts/Contract';
+import {
+  calculateTotalCapUsage,
+  calculateFutureCommitments,
+} from '@core/contracts/ContractGenerator';
 import { generateDraftClass } from '@core/draft/DraftClassGenerator';
 import { generateDraftPicksForYear } from '@core/models/league/DraftPick';
 import { generateSeasonSchedule, PreviousYearStandings } from '@core/season/ScheduleGenerator';
@@ -16,6 +20,10 @@ import { createHealthyStatus } from '@core/models/player/InjuryStatus';
 import { Player } from '@core/models/player/Player';
 import { Team } from '@core/models/team/Team';
 import { Coach } from '@core/models/staff/Coach';
+import {
+  DEFAULT_SALARY_CAP,
+  advanceCapPenalties,
+} from '@core/models/team/TeamFinances';
 
 /**
  * Transitions the game state to a new season.
@@ -51,7 +59,10 @@ export function transitionToNewSeason(gameState: GameState): GameState {
   // Step 9: Update career stats
   state = updateCareerStats(state);
 
-  // Step 10: Reset transient state
+  // Step 10: Recalculate team finances for new year
+  state = recalculateAllTeamFinances(state);
+
+  // Step 11: Reset transient state
   state = resetTransientState(state);
 
   return state;
@@ -412,6 +423,52 @@ function resetTransientState(state: GameState): GameState {
     weeklyAwards: undefined,
     waiverWire: undefined,
     halftimeDecisions: undefined,
+  };
+}
+
+/**
+ * Step 10: Recalculate all team finances
+ * After contracts are advanced/expired, recalculate cap usage and space for each team.
+ */
+function recalculateAllTeamFinances(state: GameState): GameState {
+  const nextYear = state.league.calendar.currentYear + 1;
+  const updatedTeams = { ...state.teams };
+
+  for (const [teamId, team] of Object.entries(updatedTeams)) {
+    // Get all active contracts for this team
+    const teamContracts: Record<string, (typeof state.contracts)[string]> = {};
+    for (const [contractId, contract] of Object.entries(state.contracts)) {
+      if (contract.teamId === teamId && contract.status === 'active') {
+        teamContracts[contractId] = contract;
+      }
+    }
+
+    const capUsage = calculateTotalCapUsage(teamContracts, nextYear);
+    const futureCommitments = calculateFutureCommitments(teamContracts, nextYear);
+
+    // Advance cap penalties (reduce years remaining, remove expired)
+    const advancedFinances = advanceCapPenalties(team.finances);
+
+    // Apply ~3% annual cap growth
+    const newSalaryCap = Math.round(DEFAULT_SALARY_CAP * (1 + 0.03 * (nextYear - 2025)));
+
+    updatedTeams[teamId] = {
+      ...team,
+      finances: {
+        ...advancedFinances,
+        salaryCap: newSalaryCap,
+        currentCapUsage: capUsage,
+        capSpace: newSalaryCap - capUsage,
+        nextYearCommitted: futureCommitments.nextYear,
+        twoYearsOutCommitted: futureCommitments.twoYearsOut,
+        threeYearsOutCommitted: futureCommitments.threeYearsOut,
+      },
+    };
+  }
+
+  return {
+    ...state,
+    teams: updatedTeams,
   };
 }
 

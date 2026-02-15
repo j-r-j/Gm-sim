@@ -102,6 +102,14 @@ function PowerRankingsTab({
   rankings: PowerRankingEntry[];
   userTeamId: string;
 }): React.JSX.Element {
+  if (rankings.length === 0) {
+    return (
+      <View style={styles.emptyTab}>
+        <Text style={styles.emptyText}>Power rankings will appear after games are played.</Text>
+      </View>
+    );
+  }
+
   return (
     <>
       <Text style={styles.sectionTitle}>Power Rankings</Text>
