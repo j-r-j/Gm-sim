@@ -36,16 +36,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'yarn'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: yarn install --frozen-lockfile --ignore-engines
 
       - name: Run TypeScript type check
-        run: npm run typecheck
+        run: yarn typecheck
 
       - name: Run tests
-        run: npm test
+        run: yarn test
 
   # Build Android APK/AAB
   build-android:
@@ -61,7 +61,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'yarn'
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
@@ -70,7 +70,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: yarn install --frozen-lockfile --ignore-engines
 
       - name: Determine build profile
         id: profile
@@ -98,7 +98,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'yarn'
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
@@ -107,7 +107,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: yarn install --frozen-lockfile --ignore-engines
 
       - name: Determine build profile
         id: profile
@@ -135,7 +135,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'yarn'
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
@@ -144,7 +144,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: yarn install --frozen-lockfile --ignore-engines
 
       - name: Publish OTA update
         run: eas update --auto --non-interactive

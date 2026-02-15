@@ -6,23 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Development
-npm start              # Start Expo development server
-npm run web            # Run on web browser
-npm run ios            # Run on iOS simulator
-npm run android        # Run on Android emulator
+yarn start              # Start Expo development server
+yarn web            # Run on web browser
+yarn ios            # Run on iOS simulator
+yarn android        # Run on Android emulator
 
 # Testing
-npm test               # Run all tests
-npm test -- path/to/file.test.ts  # Run a single test file
-npm run test:watch     # Run tests in watch mode
-npm run test:coverage  # Run tests with coverage report
+yarn test               # Run all tests
+yarn test -- path/to/file.test.ts  # Run a single test file
+yarn test:watch     # Run tests in watch mode
+yarn test:coverage  # Run tests with coverage report
 
 # Code Quality
-npm run lint           # ESLint for src/ directory
-npm run lint:fix       # Auto-fix lint issues
-npm run typecheck      # TypeScript type checking
-npm run format         # Prettier formatting
-npm run format:check   # Check formatting without changes
+yarn lint           # ESLint for src/ directory
+yarn lint:fix       # Auto-fix lint issues
+yarn typecheck      # TypeScript type checking
+yarn format         # Prettier formatting
+yarn format:check   # Check formatting without changes
 ```
 
 ## Path Aliases
@@ -103,9 +103,9 @@ GameStorage wraps AsyncStorage with 3 save slots. NewGameService creates complet
 
 **NFL Teams**: The game uses real NFL team names and cities (defined in `src/core/models/team/FakeCities.ts`).
 
-**Strict TypeScript**: The project uses strict TypeScript with `noImplicitAny`, `strictNullChecks`, and all strict options enabled. Run `npm run typecheck` before committing.
+**Strict TypeScript**: The project uses strict TypeScript with `noImplicitAny`, `strictNullChecks`, and all strict options enabled. Run `yarn typecheck` before committing.
 
-**Formatting**: Run `npm run format:check` before each push to ensure Prettier formatting passes CI.
+**Formatting**: Run `yarn format:check` before each push to ensure Prettier formatting passes CI.
 
 **Test Setup**: Tests use Jest with `src/tests/setup.ts` for AsyncStorage mocks. Test files are co-located with source files using `.test.ts` extension.
 
