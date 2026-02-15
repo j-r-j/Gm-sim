@@ -342,8 +342,10 @@ export function ContractManagementScreenWrapper({
         switch (action.type) {
           case 'applyFranchiseTag': {
             // Mark player as franchise tagged in contracts
-            const existingContract = gameState.contracts[action.playerId];
-            if (existingContract) {
+            const tagPlayer = gameState.players[action.playerId];
+            const tagContractId = tagPlayer?.contractId;
+            const existingContract = tagContractId ? gameState.contracts[tagContractId] : undefined;
+            if (existingContract && tagContractId) {
               const taggedContract: PlayerContract = {
                 ...existingContract,
                 type: 'franchise_tag',
@@ -354,7 +356,7 @@ export function ContractManagementScreenWrapper({
               };
               const updatedContracts = {
                 ...gameState.contracts,
-                [action.playerId]: taggedContract,
+                [tagContractId]: taggedContract,
               };
               const updatedState: GameState = { ...gameState, contracts: updatedContracts };
               setGameState(updatedState);
@@ -364,16 +366,20 @@ export function ContractManagementScreenWrapper({
             break;
           }
           case 'removeFranchiseTag': {
-            const existingContract = gameState.contracts[action.playerId];
-            if (existingContract) {
+            const untagPlayer = gameState.players[action.playerId];
+            const untagContractId = untagPlayer?.contractId;
+            const existingTagContract = untagContractId
+              ? gameState.contracts[untagContractId]
+              : undefined;
+            if (existingTagContract && untagContractId) {
               const untaggedContract: PlayerContract = {
-                ...existingContract,
-                type: existingContract.totalYears <= 3 ? 'rookie' : 'veteran',
-                notes: [...(existingContract.notes || []), 'Franchise tag removed'],
+                ...existingTagContract,
+                type: existingTagContract.totalYears <= 3 ? 'rookie' : 'veteran',
+                notes: [...(existingTagContract.notes || []), 'Franchise tag removed'],
               };
               const updatedContracts = {
                 ...gameState.contracts,
-                [action.playerId]: untaggedContract,
+                [untagContractId]: untaggedContract,
               };
               const updatedState: GameState = { ...gameState, contracts: updatedContracts };
               setGameState(updatedState);
@@ -682,7 +688,9 @@ export function PlayerProfileScreenWrapper({
   // For players (not prospects), use the new PlayerDetailCard
   if (realPlayer) {
     // Get the player's contract from gameState.contracts
-    const playerContract = gameState.contracts[realPlayer.id] ?? null;
+    const playerContract = realPlayer.contractId
+      ? (gameState.contracts[realPlayer.contractId] ?? null)
+      : null;
 
     // Get the team's coaches to find schemes
     const teamCoaches = Object.values(gameState.coaches).filter(

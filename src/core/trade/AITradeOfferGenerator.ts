@@ -374,6 +374,31 @@ export function acceptTradeOffer(gameState: GameState, offerId: string): GameSta
     [offer.offeringTeamId]: { ...aiTeam, rosterPlayerIds: aiRoster },
   };
 
+  // Update contract teamIds for traded players
+  const updatedContracts = { ...gameState.contracts };
+  for (const asset of offer.requesting) {
+    if (asset.type === 'player' && asset.playerId) {
+      const player = gameState.players[asset.playerId];
+      if (player?.contractId && updatedContracts[player.contractId]) {
+        updatedContracts[player.contractId] = {
+          ...updatedContracts[player.contractId],
+          teamId: offer.offeringTeamId,
+        };
+      }
+    }
+  }
+  for (const asset of offer.offering) {
+    if (asset.type === 'player' && asset.playerId) {
+      const player = gameState.players[asset.playerId];
+      if (player?.contractId && updatedContracts[player.contractId]) {
+        updatedContracts[player.contractId] = {
+          ...updatedContracts[player.contractId],
+          teamId: gameState.userTeamId,
+        };
+      }
+    }
+  }
+
   // Update offer status
   const updatedOffers: TradeOffersState = {
     ...tradeOffers,
@@ -384,6 +409,7 @@ export function acceptTradeOffer(gameState: GameState, offerId: string): GameSta
   return {
     ...gameState,
     teams: updatedTeams,
+    contracts: updatedContracts,
     tradeOffers: updatedOffers,
   } as GameState;
 }
