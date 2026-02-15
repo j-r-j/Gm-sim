@@ -108,7 +108,13 @@ export function StartScreen({
 
         {/* Main Menu Buttons */}
         <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onNewGame} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={onNewGame}
+            activeOpacity={0.8}
+            accessibilityLabel="New Game"
+            accessibilityRole="button"
+          >
             <Text style={styles.primaryButtonText}>New Game</Text>
             <Text style={styles.primaryButtonSubtext}>Start your GM career</Text>
           </TouchableOpacity>
@@ -118,13 +124,21 @@ export function StartScreen({
               style={styles.secondaryButton}
               onPress={handleContinue}
               activeOpacity={0.8}
+              accessibilityLabel="Continue"
+              accessibilityRole="button"
             >
               <Text style={styles.secondaryButtonText}>Continue</Text>
               <Text style={styles.secondaryButtonSubtext}>Load saved game</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.tertiaryButton} onPress={onSettings} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.tertiaryButton}
+            onPress={onSettings}
+            activeOpacity={0.8}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+          >
             <Text style={styles.tertiaryButtonText}>Settings</Text>
           </TouchableOpacity>
         </View>
@@ -150,6 +164,8 @@ export function StartScreen({
                     onContinue(slotInfo.slot);
                   }}
                   activeOpacity={0.8}
+                  accessibilityLabel={`Load save slot ${slotInfo.slot + 1}, ${slotInfo.summary?.teamName ?? 'Unknown'}`}
+                  accessibilityRole="button"
                 >
                   <View style={styles.saveSlotHeader}>
                     <Text style={styles.saveSlotTitle}>Slot {slotInfo.slot + 1}</Text>
@@ -174,6 +190,8 @@ export function StartScreen({
               style={styles.cancelButton}
               onPress={() => setShowContinueModal(false)}
               activeOpacity={0.8}
+              accessibilityLabel="Cancel"
+              accessibilityRole="button"
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>

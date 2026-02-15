@@ -487,13 +487,20 @@ export class GameDayFlow {
    * Get recent form (last 3 games)
    */
   private getRecentForm(team: Team): GameOutcome[] {
+    const record = team.currentRecord;
+    const gamesPlayed = record.wins + record.losses;
+
+    // No games played yet - return empty (no badges shown)
+    if (gamesPlayed === 0) {
+      return [];
+    }
+
     // Simplified - would track actual game history
     const form: GameOutcome[] = [];
-    const record = team.currentRecord;
+    const count = Math.min(3, gamesPlayed);
 
-    // Generate fake recent form based on record
-    for (let i = 0; i < 3; i++) {
-      const isWin = Math.random() < record.wins / (record.wins + record.losses + 1);
+    for (let i = 0; i < count; i++) {
+      const isWin = Math.random() < record.wins / gamesPlayed;
       form.push({
         result: isWin ? 'W' : 'L',
         opponentAbbr: ['NYG', 'PHI', 'WSH', 'DAL', 'SF'][Math.floor(Math.random() * 5)],
