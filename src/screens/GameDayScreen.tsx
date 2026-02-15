@@ -170,32 +170,104 @@ function PreGamePhase({
         </View>
       </View>
 
-      {/* Injuries */}
-      {(userInjuries.length > 0 || opponentInjuries.length > 0) && (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoCardTitle}>Injury Report</Text>
-          {userInjuries.length > 0 && (
-            <View style={styles.injurySection}>
-              <Text style={styles.injuryTeam}>{userTeam.abbreviation}</Text>
-              {userInjuries.slice(0, 3).map((inj) => (
-                <Text key={inj.playerId} style={styles.injuryText}>
-                  {inj.playerName} ({inj.position}) - {inj.status.toUpperCase()}
-                </Text>
-              ))}
-            </View>
-          )}
-          {opponentInjuries.length > 0 && (
-            <View style={styles.injurySection}>
-              <Text style={styles.injuryTeam}>{opponent.abbreviation}</Text>
-              {opponentInjuries.slice(0, 3).map((inj) => (
-                <Text key={inj.playerId} style={styles.injuryText}>
-                  {inj.playerName} ({inj.position}) - {inj.status.toUpperCase()}
-                </Text>
-              ))}
-            </View>
+      {/* Injury Report */}
+      <View style={styles.infoCard}>
+        <Text style={styles.infoCardTitle}>Injury Report</Text>
+        <View style={styles.injurySection}>
+          <Text style={styles.injuryTeam}>{userTeam.abbreviation}</Text>
+          {userInjuries.length > 0 ? (
+            userInjuries.map((inj) => (
+              <View key={inj.playerId} style={styles.injuryRow}>
+                <View style={styles.injuryPlayerInfo}>
+                  <Text style={styles.injuryPlayerName}>{inj.playerName}</Text>
+                  <Text style={styles.injuryPlayerPosition}>{inj.position}</Text>
+                  {inj.injury !== 'none' && inj.injury !== 'other' && (
+                    <Text style={styles.injuryType}>{inj.injury}</Text>
+                  )}
+                </View>
+                <View
+                  style={[
+                    styles.injuryStatusBadge,
+                    inj.status === 'questionable' && styles.injuryStatusQuestionable,
+                    inj.status === 'doubtful' && styles.injuryStatusDoubtful,
+                    (inj.status === 'out' || inj.status === 'probable') && styles.injuryStatusOut,
+                  ]}
+                >
+                  <Text
+                    style={styles.injuryStatusText}
+                    accessibilityLabel={
+                      inj.status === 'questionable'
+                        ? 'Questionable'
+                        : inj.status === 'doubtful'
+                          ? 'Doubtful'
+                          : inj.status === 'out'
+                            ? 'Out'
+                            : 'Probable'
+                    }
+                  >
+                    {inj.status === 'questionable'
+                      ? 'Q'
+                      : inj.status === 'doubtful'
+                        ? 'D'
+                        : inj.status === 'out'
+                          ? 'OUT'
+                          : 'P'}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.injuryHealthyText}>All players healthy</Text>
           )}
         </View>
-      )}
+        <View style={[styles.injurySection, styles.injurySectionLast]}>
+          <Text style={styles.injuryTeam}>{opponent.abbreviation}</Text>
+          {opponentInjuries.length > 0 ? (
+            opponentInjuries.map((inj) => (
+              <View key={inj.playerId} style={styles.injuryRow}>
+                <View style={styles.injuryPlayerInfo}>
+                  <Text style={styles.injuryPlayerName}>{inj.playerName}</Text>
+                  <Text style={styles.injuryPlayerPosition}>{inj.position}</Text>
+                  {inj.injury !== 'none' && inj.injury !== 'other' && (
+                    <Text style={styles.injuryType}>{inj.injury}</Text>
+                  )}
+                </View>
+                <View
+                  style={[
+                    styles.injuryStatusBadge,
+                    inj.status === 'questionable' && styles.injuryStatusQuestionable,
+                    inj.status === 'doubtful' && styles.injuryStatusDoubtful,
+                    (inj.status === 'out' || inj.status === 'probable') && styles.injuryStatusOut,
+                  ]}
+                >
+                  <Text
+                    style={styles.injuryStatusText}
+                    accessibilityLabel={
+                      inj.status === 'questionable'
+                        ? 'Questionable'
+                        : inj.status === 'doubtful'
+                          ? 'Doubtful'
+                          : inj.status === 'out'
+                            ? 'Out'
+                            : 'Probable'
+                    }
+                  >
+                    {inj.status === 'questionable'
+                      ? 'Q'
+                      : inj.status === 'doubtful'
+                        ? 'D'
+                        : inj.status === 'out'
+                          ? 'OUT'
+                          : 'P'}
+                  </Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.injuryHealthyText}>All players healthy</Text>
+          )}
+        </View>
+      </View>
 
       {/* Prediction */}
       <View style={styles.predictionCard}>
@@ -955,18 +1027,75 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   injurySection: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  injurySectionLast: {
+    marginBottom: 0,
+    paddingBottom: 0,
+    borderBottomWidth: 0,
   },
   injuryTeam: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  injuryText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
+  injuryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
     marginLeft: spacing.sm,
+  },
+  injuryPlayerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.xs,
+  },
+  injuryPlayerName: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    fontWeight: fontWeight.medium,
+  },
+  injuryPlayerPosition: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  injuryType: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  injuryStatusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+    minWidth: 32,
+    alignItems: 'center',
+  },
+  injuryStatusQuestionable: {
+    backgroundColor: colors.warning,
+  },
+  injuryStatusDoubtful: {
+    backgroundColor: '#FF8C00',
+  },
+  injuryStatusOut: {
+    backgroundColor: colors.error,
+  },
+  injuryStatusText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  injuryHealthyText: {
+    fontSize: fontSize.sm,
+    color: colors.success,
+    marginLeft: spacing.sm,
+    fontWeight: fontWeight.medium,
   },
   predictionCard: {
     backgroundColor: colors.surface,

@@ -326,22 +326,60 @@ export function createNewGame(options: NewGameOptions): GameState {
     owners[owner.id] = owner;
   }
 
-  // Create coaches for all teams
+  // Create coaches for all teams and link to staffHierarchy
   const coaches: Record<string, Coach> = {};
   for (const teamId of teamIds) {
     const teamCoaches = createCoachesForTeam(teamId, startYear);
     for (const coach of teamCoaches) {
       coaches[coach.id] = coach;
     }
+    // Link coaches to team staffHierarchy
+    const hc = teamCoaches.find((c) => c.role === 'headCoach');
+    const oc = teamCoaches.find((c) => c.role === 'offensiveCoordinator');
+    const dc = teamCoaches.find((c) => c.role === 'defensiveCoordinator');
+    const coachingSpend =
+      (hc?.contract?.salaryPerYear || 0) +
+      (oc?.contract?.salaryPerYear || 0) +
+      (dc?.contract?.salaryPerYear || 0);
+    teams[teamId] = {
+      ...teams[teamId],
+      staffHierarchy: {
+        ...teams[teamId].staffHierarchy,
+        headCoach: hc?.id || null,
+        offensiveCoordinator: oc?.id || null,
+        defensiveCoordinator: dc?.id || null,
+        coachingSpend,
+        remainingBudget: teams[teamId].staffHierarchy.staffBudget - coachingSpend - teams[teamId].staffHierarchy.scoutingSpend,
+      },
+    };
   }
 
-  // Create scouts for all teams
+  // Create scouts for all teams and link to staffHierarchy
   const scouts: Record<string, Scout> = {};
   for (const teamId of teamIds) {
     const teamScouts = createScoutsForTeam(teamId);
     for (const scout of teamScouts) {
       scouts[scout.id] = scout;
     }
+    // Link scouts to team staffHierarchy
+    const hs = teamScouts.find((s) => s.role === 'headScout');
+    const os = teamScouts.find((s) => s.role === 'offensiveScout');
+    const ds = teamScouts.find((s) => s.role === 'defensiveScout');
+    const scoutingSpend =
+      (hs?.contract?.salary || 0) +
+      (os?.contract?.salary || 0) +
+      (ds?.contract?.salary || 0);
+    teams[teamId] = {
+      ...teams[teamId],
+      staffHierarchy: {
+        ...teams[teamId].staffHierarchy,
+        headScout: hs?.id || null,
+        offensiveScout: os?.id || null,
+        defensiveScout: ds?.id || null,
+        scoutingSpend,
+        remainingBudget: teams[teamId].staffHierarchy.staffBudget - teams[teamId].staffHierarchy.coachingSpend - scoutingSpend,
+      },
+    };
   }
 
   // Create draft picks

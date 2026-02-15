@@ -37,7 +37,12 @@ import {
   OffensiveScheme,
   DefensiveScheme,
 } from '../../core/models/player/SchemeFit';
-import { PlayerContract, getContractSummary, ContractSummary } from '../../core/contracts/Contract';
+import {
+  PlayerContract,
+  getContractSummary,
+  ContractSummary,
+  calculateDeadMoney,
+} from '../../core/contracts/Contract';
 import { PlayerSeasonStats } from '../../core/game/SeasonStatsAggregator';
 import { SkillRangeDisplay } from './SkillRangeDisplay';
 import { PhysicalAttributesDisplay } from './PhysicalAttributesDisplay';
@@ -633,6 +638,20 @@ function ContractTab({
     ? getContractSummary(contract, currentYear)
     : null;
 
+  const deadMoney = contract ? calculateDeadMoney(contract, currentYear) : 0;
+  const formatMoney = (value: number): string => {
+    if (value >= 1000) return `$${(value / 1000).toFixed(1)}M`;
+    return `$${value}K`;
+  };
+
+  const contractTypeLabel: Record<string, string> = {
+    rookie: 'Rookie',
+    veteran: 'Veteran',
+    extension: 'Extension',
+    franchise_tag: 'Franchise Tag',
+    transition_tag: 'Transition Tag',
+  };
+
   return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Draft Info Section */}
@@ -665,14 +684,23 @@ function ContractTab({
         <Text style={styles.sectionTitle}>Contract Details</Text>
         {summary ? (
           <View style={styles.contractCard}>
-            {/* Contract status badge */}
-            <View
-              style={[
-                styles.contractStatusBadge,
-                summary.statusDescription === 'Expiring' && styles.contractStatusExpiring,
-              ]}
-            >
-              <Text style={styles.contractStatusText}>{summary.statusDescription}</Text>
+            {/* Contract type + status badges */}
+            <View style={styles.contractBadgeRow}>
+              <View
+                style={[
+                  styles.contractStatusBadge,
+                  summary.statusDescription === 'Expiring' && styles.contractStatusExpiring,
+                ]}
+              >
+                <Text style={styles.contractStatusText}>{summary.statusDescription}</Text>
+              </View>
+              {contract && (
+                <View style={styles.contractTypeBadge}>
+                  <Text style={styles.contractTypeText}>
+                    {contractTypeLabel[contract.type] || contract.type}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Contract values */}
@@ -682,16 +710,18 @@ function ContractTab({
                 <Text style={styles.contractValueAmount}>{summary.totalValue}</Text>
               </View>
               <View style={styles.contractValueItem}>
-                <Text style={styles.contractValueLabel}>Guaranteed</Text>
-                <Text style={styles.contractValueAmount}>{summary.guaranteed}</Text>
-              </View>
-              <View style={styles.contractValueItem}>
                 <Text style={styles.contractValueLabel}>AAV</Text>
                 <Text style={styles.contractValueAmount}>{summary.aav}</Text>
               </View>
               <View style={styles.contractValueItem}>
                 <Text style={styles.contractValueLabel}>Cap Hit</Text>
                 <Text style={styles.contractValueAmount}>{summary.currentCapHit}</Text>
+              </View>
+              <View style={styles.contractValueItem}>
+                <Text style={styles.contractValueLabel}>Dead Cap</Text>
+                <Text style={[styles.contractValueAmount, deadMoney > 0 && styles.deadCapValue]}>
+                  {formatMoney(deadMoney)}
+                </Text>
               </View>
             </View>
 
@@ -1288,13 +1318,17 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
   },
+  contractBadgeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   contractStatusBadge: {
     alignSelf: 'flex-start',
     backgroundColor: colors.success,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
-    marginBottom: spacing.md,
   },
   contractStatusExpiring: {
     backgroundColor: colors.warning,
@@ -1303,6 +1337,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textOnPrimary,
+  },
+  contractTypeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.info,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  contractTypeText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
+  },
+  deadCapValue: {
+    color: colors.error,
   },
   contractValuesGrid: {
     flexDirection: 'row',

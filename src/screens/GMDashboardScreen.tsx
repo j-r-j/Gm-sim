@@ -331,8 +331,9 @@ export function GMDashboardScreen({
 
     // If has game to play
     if (userGame && !userGame.isComplete) {
+      const showRecord = calendar.currentWeek > 1;
       const matchupText = opponentInfo
-        ? `${opponentInfo.isHome ? 'vs' : '@'} ${opponentInfo.name} (${opponentInfo.record})`
+        ? `${opponentInfo.isHome ? 'vs' : '@'} ${opponentInfo.name}${showRecord ? ` (${opponentInfo.record})` : ''}`
         : 'View your matchup';
 
       return {

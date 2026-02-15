@@ -465,10 +465,19 @@ export class GameDayFlow {
 
     for (const playerId of team.rosterPlayerIds) {
       const player = gameState.players[playerId];
-      if (player && player.injuryStatus.weeksRemaining > 0) {
-        let status: InjuryStatus['status'] = 'out';
-        if (player.injuryStatus.weeksRemaining === 0) status = 'probable';
-        else if (player.injuryStatus.weeksRemaining === 1) status = 'questionable';
+      if (player && player.injuryStatus.severity !== 'none') {
+        let status: InjuryStatus['status'];
+        switch (player.injuryStatus.severity) {
+          case 'questionable':
+            status = 'questionable';
+            break;
+          case 'doubtful':
+            status = 'doubtful';
+            break;
+          default:
+            status = 'out';
+            break;
+        }
 
         injuries.push({
           playerId: player.id,

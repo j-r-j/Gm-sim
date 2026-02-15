@@ -120,16 +120,43 @@ export function StartScreen({
           </TouchableOpacity>
 
           {hasSavedGames && (
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleContinue}
-              activeOpacity={0.8}
-              accessibilityLabel="Continue"
-              accessibilityRole="button"
-            >
-              <Text style={styles.secondaryButtonText}>Continue</Text>
-              <Text style={styles.secondaryButtonSubtext}>Load saved game</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={handleContinue}
+                activeOpacity={0.8}
+                accessibilityLabel="Continue"
+                accessibilityRole="button"
+              >
+                <Text style={styles.secondaryButtonText}>Continue</Text>
+                <Text style={styles.secondaryButtonSubtext}>Load saved game</Text>
+              </TouchableOpacity>
+
+              {/* Save Slot Previews */}
+              <View style={styles.savePreviewContainer}>
+                {saveSlots
+                  .filter((s: SaveSlotInfo) => s.exists)
+                  .map((slotInfo: SaveSlotInfo) => (
+                    <TouchableOpacity
+                      key={slotInfo.slot}
+                      style={styles.savePreview}
+                      onPress={() => onContinue(slotInfo.slot)}
+                      activeOpacity={0.8}
+                      accessibilityLabel={`Load slot ${slotInfo.slot + 1}, ${slotInfo.summary?.teamName ?? 'Unknown'}, ${slotInfo.summary?.record ?? ''}`}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.savePreviewSlot}>Slot {slotInfo.slot + 1}</Text>
+                      <Text style={styles.savePreviewTeam}>
+                        {slotInfo.summary?.teamName ?? 'Unknown'}
+                      </Text>
+                      <Text style={styles.savePreviewDetail}>
+                        {slotInfo.summary?.record ?? '0-0'} | Year{' '}
+                        {slotInfo.summary?.year ?? '?'} | {slotInfo.summary?.phase ?? ''}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            </>
           )}
 
           <TouchableOpacity
@@ -302,6 +329,37 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xxs,
+  },
+  savePreviewContainer: {
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  savePreview: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  savePreviewSlot: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+    opacity: 0.7,
+    width: 40,
+  },
+  savePreviewTeam: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnPrimary,
+    flex: 1,
+  },
+  savePreviewDetail: {
+    fontSize: fontSize.xs,
+    color: colors.textOnPrimary,
+    opacity: 0.7,
   },
   tertiaryButton: {
     paddingVertical: spacing.md,

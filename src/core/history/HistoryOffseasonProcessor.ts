@@ -289,10 +289,12 @@ export function processCoachingChanges(
   coaches: Record<string, Coach>,
   year: number
 ): {
+  updatedTeams: Record<string, Team>;
   updatedCoaches: Record<string, Coach>;
   changes: { teamId: string; firedCoachId: string; newCoach: Coach }[];
 } {
   const updatedCoaches = { ...coaches };
+  const updatedTeams = { ...teams };
   const changes: { teamId: string; firedCoachId: string; newCoach: Coach }[] = [];
 
   for (const team of Object.values(teams)) {
@@ -381,9 +383,35 @@ export function processCoachingChanges(
         }
       }
     }
+
+    // Sync staffHierarchy with current coaches for this team
+    const currentHC = Object.values(updatedCoaches).find(
+      (c) => c.teamId === team.id && c.role === 'headCoach'
+    );
+    const currentOC = Object.values(updatedCoaches).find(
+      (c) => c.teamId === team.id && c.role === 'offensiveCoordinator'
+    );
+    const currentDC = Object.values(updatedCoaches).find(
+      (c) => c.teamId === team.id && c.role === 'defensiveCoordinator'
+    );
+    const coachingSpend =
+      (currentHC?.contract?.salaryPerYear || 0) +
+      (currentOC?.contract?.salaryPerYear || 0) +
+      (currentDC?.contract?.salaryPerYear || 0);
+    updatedTeams[team.id] = {
+      ...updatedTeams[team.id],
+      staffHierarchy: {
+        ...updatedTeams[team.id].staffHierarchy,
+        headCoach: currentHC?.id || null,
+        offensiveCoordinator: currentOC?.id || null,
+        defensiveCoordinator: currentDC?.id || null,
+        coachingSpend,
+        remainingBudget: updatedTeams[team.id].staffHierarchy.staffBudget - coachingSpend - updatedTeams[team.id].staffHierarchy.scoutingSpend,
+      },
+    };
   }
 
-  return { updatedCoaches, changes };
+  return { updatedTeams, updatedCoaches, changes };
 }
 
 // ============================================================================

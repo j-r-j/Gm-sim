@@ -664,6 +664,7 @@ export function simulateLeagueHistory(
     const coachResult = processCoachingChanges(state.teams, state.coaches, currentYear);
     state = {
       ...state,
+      teams: coachResult.updatedTeams,
       coaches: coachResult.updatedCoaches,
     };
     totalCoachingChanges += coachResult.changes.length;

@@ -28,6 +28,7 @@ import {
   evaluateUserTradeProposal,
   UserTradeProposal,
 } from '../../core/trade/AITradeOfferGenerator';
+import { PlayerContract, ContractYear } from '../../core/contracts/Contract';
 import {
   TenderOffer,
   OfferSheet,
@@ -226,15 +227,58 @@ export function FreeAgencyScreenWrapper({
         if (offerRatio >= 0.9) {
           const player = gameState.players[playerId];
           if (player) {
+            const currentYear = gameState.league.calendar.currentYear;
+            // Convert dollars to thousands for contract/finances
+            const annualSalaryK = Math.round(offer.annualSalary / 1000);
+            const guaranteedK = Math.round((offer.guaranteed || 0) / 1000);
+            const signingBonusK = Math.round(guaranteedK * 0.3);
+            const salaryPerYearK = annualSalaryK - Math.round(signingBonusK / offer.years);
+
+            // Create contract
+            const contractId = `contract-${playerId}-${currentYear}`;
+            const yearlyBreakdown: ContractYear[] = Array.from(
+              { length: offer.years },
+              (_, i) => ({
+                year: currentYear + i,
+                bonus: i === 0 ? signingBonusK : 0,
+                salary: salaryPerYearK,
+                capHit: annualSalaryK,
+                isVoidYear: false,
+                isGuaranteed: i === 0,
+              })
+            );
+
+            const faContract: PlayerContract = {
+              id: contractId,
+              playerId,
+              playerName: `${player.firstName} ${player.lastName}`,
+              teamId: userTeam.id,
+              position: player.position,
+              status: 'active',
+              type: 'veteran',
+              signedYear: currentYear,
+              totalYears: offer.years,
+              yearsRemaining: offer.years,
+              totalValue: annualSalaryK * offer.years,
+              guaranteedMoney: guaranteedK,
+              signingBonus: signingBonusK,
+              averageAnnualValue: annualSalaryK,
+              yearlyBreakdown,
+              voidYears: 0,
+              hasNoTradeClause: false,
+              hasNoTagClause: false,
+              originalContractId: null,
+              notes: ['Signed as free agent'],
+            };
+
             const updatedTeam = {
               ...userTeam,
               rosterPlayerIds: [...userTeam.rosterPlayerIds, playerId],
               finances: userTeam.finances
                 ? {
                     ...userTeam.finances,
-                    // Convert raw dollars back to thousands to match finances units
-                    capSpace: userTeam.finances.capSpace - offer.annualSalary / 1000,
-                    currentCapUsage: userTeam.finances.currentCapUsage + offer.annualSalary / 1000,
+                    capSpace: userTeam.finances.capSpace - annualSalaryK,
+                    currentCapUsage: userTeam.finances.currentCapUsage + annualSalaryK,
                   }
                 : userTeam.finances,
             };
@@ -243,6 +287,14 @@ export function FreeAgencyScreenWrapper({
               teams: {
                 ...gameState.teams,
                 [userTeam.id]: updatedTeam,
+              },
+              contracts: {
+                ...gameState.contracts,
+                [contractId]: faContract,
+              },
+              players: {
+                ...gameState.players,
+                [playerId]: { ...player, contractId },
               },
             };
             setGameState(updatedState);

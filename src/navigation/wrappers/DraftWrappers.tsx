@@ -19,6 +19,8 @@ import { useGame } from '../GameContext';
 import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask, tryCompleteOffseasonTask } from './shared';
+import { PlayerContract, ContractYear } from '../../core/contracts/Contract';
+import { getSlotValues } from '../../core/draft/RookieContractGenerator';
 
 // Screen imports
 import { DraftBoardScreen } from '../../screens/DraftBoardScreen';
@@ -541,17 +543,66 @@ export function DraftRoomScreenWrapper({
     if (draftCompleteHandled.current) return;
     draftCompleteHandled.current = true;
 
-    // Convert drafted prospects to players and assign to teams
+    // Convert drafted prospects to players, assign to teams, and create rookie contracts
     const updatedPlayers = { ...gameState.players };
     const updatedTeams = { ...gameState.teams };
     const updatedProspects = { ...gameState.prospects };
+    const updatedContracts = { ...gameState.contracts };
+    const currentYear = gameState.league.calendar.currentYear;
 
     for (const pickResult of state.picks) {
-      const { prospect, teamId } = pickResult;
+      const { prospect, teamId, pick } = pickResult;
       const player = prospect.player;
+      const overallPick = pick.overallPick ?? 224;
+      const round = pick.round;
 
       // Add player to the players record
       updatedPlayers[player.id] = player;
+
+      // Create rookie contract from slot values
+      const slotValues = getSlotValues(overallPick, round);
+      const contractYears = 4;
+      const totalAAV = Math.round(slotValues.totalValue / contractYears);
+      const bonusPerYear = Math.round(slotValues.signingBonus / contractYears);
+      const salaryPerYear = totalAAV - bonusPerYear;
+
+      const yearlyBreakdown: ContractYear[] = Array.from(
+        { length: contractYears },
+        (_, i) => ({
+          year: currentYear + i,
+          bonus: bonusPerYear,
+          salary: salaryPerYear,
+          capHit: totalAAV,
+          isVoidYear: false,
+          isGuaranteed: i < 2,
+        })
+      );
+
+      const contractId = `contract-${player.id}-${currentYear}`;
+      const contract: PlayerContract = {
+        id: contractId,
+        playerId: player.id,
+        playerName: `${player.firstName} ${player.lastName}`,
+        teamId,
+        position: player.position,
+        status: 'active',
+        type: 'rookie',
+        signedYear: currentYear,
+        totalYears: contractYears,
+        yearsRemaining: contractYears,
+        totalValue: slotValues.totalValue,
+        guaranteedMoney: Math.round(slotValues.totalValue * 0.8),
+        signingBonus: slotValues.signingBonus,
+        averageAnnualValue: totalAAV,
+        yearlyBreakdown,
+        voidYears: 0,
+        hasNoTradeClause: false,
+        hasNoTagClause: false,
+        originalContractId: null,
+        notes: [`Drafted in round ${round}, pick ${overallPick}`],
+      };
+      updatedContracts[contractId] = contract;
+      updatedPlayers[player.id] = { ...updatedPlayers[player.id], contractId };
 
       // Add to team roster
       const team = updatedTeams[teamId];
@@ -571,6 +622,7 @@ export function DraftRoomScreenWrapper({
       players: updatedPlayers,
       teams: updatedTeams,
       prospects: updatedProspects,
+      contracts: updatedContracts,
     };
 
     // Auto-complete the offseason 'make_picks' task if in offseason draft phase
@@ -881,8 +933,8 @@ export function DraftRoomScreenWrapper({
           showAlert('Error', 'Could not reject trade.');
         }
       }}
-      onCounterTrade={() => showAlert('Counter Trade', 'Counter trade feature coming soon.')}
-      onProposeTrade={() => showAlert('Propose Trade', 'Trade proposal feature coming soon.')}
+      onCounterTrade={() => showAlert('Counter Trade', 'Counter trade proposals will be available in a future update. For now, you can accept or reject incoming offers.')}
+      onProposeTrade={() => showAlert('Propose Trade', 'Initiating trade proposals will be available in a future update. AI teams will send you trade offers automatically when you are on the clock.')}
       onToggleAutoPick={() => {
         if (speedMode === 'SKIP') {
           setSpeedMode('AUTO');

@@ -3,7 +3,7 @@
  * Select a team to manage in your GM career
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -75,6 +75,121 @@ function getStadiumLabel(type: StadiumType): string {
   }
 }
 
+/** Simple deterministic hash from a string */
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function getStartingCapSpace(marketSize: MarketSize, abbr: string): number {
+  const h = simpleHash(abbr);
+  switch (marketSize) {
+    case 'large':
+      return 80 + (h % 21); // $80-100M
+    case 'medium':
+      return 100 + (h % 31); // $100-130M
+    case 'small':
+      return 130 + (h % 31); // $130-160M
+  }
+}
+
+function getProjectedRecord(
+  difficulty: DifficultyLevel,
+  abbr: string
+): { wins: number; losses: number } {
+  const h = simpleHash(abbr);
+  switch (difficulty) {
+    case 'Easy': {
+      const wins = 9 + (h % 3);
+      return { wins, losses: 17 - wins };
+    }
+    case 'Normal': {
+      const wins = 6 + (h % 3);
+      return { wins, losses: 17 - wins };
+    }
+    case 'Hard': {
+      const wins = 3 + (h % 3);
+      return { wins, losses: 17 - wins };
+    }
+  }
+}
+
+function getRosterGrade(difficulty: DifficultyLevel, abbr: string): string {
+  const h = simpleHash(abbr);
+  switch (difficulty) {
+    case 'Easy':
+      return h % 2 === 0 ? 'A' : 'B+';
+    case 'Normal':
+      return h % 2 === 0 ? 'B' : 'C+';
+    case 'Hard':
+      return h % 2 === 0 ? 'C' : 'D+';
+  }
+}
+
+function getRosterGradeColor(grade: string): string {
+  if (grade.startsWith('A')) return colors.success;
+  if (grade.startsWith('B')) return colors.info;
+  if (grade.startsWith('C')) return colors.warning;
+  return colors.error;
+}
+
+interface StarPlayer {
+  position: string;
+  name: string;
+  ovr: number;
+}
+
+const FIRST_NAMES = ['J.', 'M.', 'K.', 'D.', 'T.', 'A.', 'R.', 'C.', 'L.', 'B.'];
+const LAST_NAMES = [
+  'Smith',
+  'Jones',
+  'Brown',
+  'Williams',
+  'Johnson',
+  'Davis',
+  'Miller',
+  'Wilson',
+  'Moore',
+  'Taylor',
+  'Anderson',
+  'Thomas',
+  'Jackson',
+  'White',
+  'Harris',
+  'Martin',
+  'Thompson',
+  'Garcia',
+  'Robinson',
+  'Clark',
+];
+const STAR_POSITIONS = ['QB', 'WR', 'RB', 'TE', 'OT', 'DE', 'DT', 'LB', 'CB', 'S'];
+
+function getStarPlayers(team: FakeCity): StarPlayer[] {
+  const h = simpleHash(team.abbreviation);
+  const difficulty = getDifficulty(team.marketSize);
+  const baseOvr = difficulty === 'Easy' ? 80 : difficulty === 'Normal' ? 75 : 70;
+  const players: StarPlayer[] = [];
+  const positions = ['QB'];
+  const pos2Idx = (h % 9) + 1; // skip QB at 0
+  positions.push(STAR_POSITIONS[pos2Idx]);
+  let pos3Idx = ((h >> 4) % 9) + 1;
+  if (pos3Idx === pos2Idx) pos3Idx = (pos3Idx % 9) + 1;
+  positions.push(STAR_POSITIONS[pos3Idx]);
+
+  for (let i = 0; i < 3; i++) {
+    const nameHash = simpleHash(team.abbreviation + i);
+    players.push({
+      position: positions[i],
+      name: `${FIRST_NAMES[nameHash % FIRST_NAMES.length]} ${LAST_NAMES[(nameHash >> 3) % LAST_NAMES.length]}`,
+      ovr: baseOvr + (nameHash % 8),
+    });
+  }
+  return players;
+}
+
 interface TeamSelectionScreenProps {
   onSelectTeam: (team: FakeCity, gmName: string, saveSlot: SaveSlot) => void;
   onBack: () => void;
@@ -91,6 +206,7 @@ export function TeamSelectionScreen({
   const [saveSlot, setSaveSlot] = useState<SaveSlot>(0);
   const [viewMode, setViewMode] = useState<ViewMode>('conference');
   const [expandedDivisions, setExpandedDivisions] = useState<string[]>(['AFC-East']);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const getTeamsByDivision = (conference: Conference, division: Division): FakeCity[] => {
     return FAKE_CITIES.filter(
@@ -114,14 +230,24 @@ export function TeamSelectionScreen({
     const isSelected = selectedTeam?.abbreviation === team.abbreviation;
     const difficulty = getDifficulty(team.marketSize);
     const difficultyColor = getDifficultyColor(difficulty);
+    const record = getProjectedRecord(difficulty, team.abbreviation);
+    const capSpace = getStartingCapSpace(team.marketSize, team.abbreviation);
+    const grade = getRosterGrade(difficulty, team.abbreviation);
+    const gradeColor = getRosterGradeColor(grade);
 
     return (
       <TouchableOpacity
         key={team.abbreviation}
         style={[styles.teamCard, isSelected && styles.teamCardSelected]}
-        onPress={() => setSelectedTeam(team)}
+        onPress={() => {
+          setSelectedTeam(team);
+          // Auto-scroll to bottom so user sees the GM name input and Start Career button
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }}
         activeOpacity={0.7}
-        accessibilityLabel={`${getFullTeamName(team)}, ${difficulty} difficulty${isSelected ? ', selected' : ''}`}
+        accessibilityLabel={`${getFullTeamName(team)}, ${difficulty} difficulty, roster grade ${grade}, projected ${record.wins}-${record.losses}, $${capSpace}M cap${isSelected ? ', selected' : ''}`}
         accessibilityRole="button"
         hitSlop={accessibility.hitSlop}
       >
@@ -142,9 +268,25 @@ export function TeamSelectionScreen({
                 {getStadiumLabel(team.stadiumType)}
               </Text>
             </View>
+            <View style={styles.teamDetailRow}>
+              <Text style={[styles.teamMeta, isSelected && styles.teamMetaSelected]}>
+                Proj: {record.wins}-{record.losses}
+              </Text>
+              <Text style={styles.teamDetailSeparator}>|</Text>
+              <Text style={[styles.teamMeta, isSelected && styles.teamMetaSelected]}>
+                ${capSpace}M cap
+              </Text>
+            </View>
           </View>
-          <View style={[styles.difficultyBadge, { borderColor: difficultyColor }]}>
-            <Text style={[styles.difficultyText, { color: difficultyColor }]}>{difficulty}</Text>
+          <View style={styles.badgeColumn}>
+            <View style={[styles.difficultyBadge, { borderColor: difficultyColor }]}>
+              <Text style={[styles.difficultyText, { color: difficultyColor }]}>
+                {difficulty}
+              </Text>
+            </View>
+            <View style={[styles.rosterGradeBadge, { borderColor: gradeColor }]}>
+              <Text style={[styles.rosterGradeText, { color: gradeColor }]}>{grade}</Text>
+            </View>
           </View>
         </View>
         {isSelected && (
@@ -240,6 +382,7 @@ export function TeamSelectionScreen({
 
       {/* Teams List */}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -257,8 +400,21 @@ export function TeamSelectionScreen({
               <Text style={styles.selectedTeamName}>{getFullTeamName(selectedTeam)}</Text>
             </View>
 
+            <View style={styles.starPlayersSection}>
+              <Text style={styles.starPlayersTitle}>Star Players</Text>
+              <View style={styles.starPlayersList}>
+                {getStarPlayers(selectedTeam).map((player) => (
+                  <View key={player.position} style={styles.starPlayerItem}>
+                    <Text style={styles.starPlayerPos}>{player.position}</Text>
+                    <Text style={styles.starPlayerName}>{player.name}</Text>
+                    <Text style={styles.starPlayerOvr}>{player.ovr} OVR</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
             <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>Your Name</Text>
+              <Text style={styles.inputLabel}>GM Name</Text>
               <TextInput
                 style={styles.textInput}
                 value={gmName}
@@ -469,16 +625,30 @@ const styles = StyleSheet.create({
   teamMetaSelected: {
     color: colors.textSecondary,
   },
+  badgeColumn: {
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginLeft: spacing.sm,
+  },
   difficultyBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    marginLeft: spacing.sm,
   },
   difficultyText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
+  },
+  rosterGradeBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+  },
+  rosterGradeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
   },
   checkmark: {
     width: 28,
@@ -515,6 +685,44 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.textOnPrimary,
+  },
+  starPlayersSection: {
+    marginBottom: spacing.md,
+  },
+  starPlayersTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  starPlayersList: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  starPlayerItem: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  starPlayerPos: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  starPlayerName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  starPlayerOvr: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
   },
   inputSection: {
     marginBottom: spacing.md,

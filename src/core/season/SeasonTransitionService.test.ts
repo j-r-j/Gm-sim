@@ -12,6 +12,8 @@ import { createDefaultTeamFinances } from '@core/models/team/TeamFinances';
 import { createDefaultStadium } from '@core/models/team/Stadium';
 import { generatePlayer } from '@core/generators/player/PlayerGenerator';
 import { Position } from '@core/models/player/Position';
+import { createNewGame } from '@services/NewGameService';
+import { getCityByAbbreviation } from '@core/models/team/FakeCities';
 
 // ============================================================================
 // Test Helpers
@@ -279,6 +281,172 @@ describe('SeasonTransitionService', () => {
       expect(result.league.schedule!.year).toBe(2026);
       expect(result.league.schedule!.regularSeason.length).toBe(272);
     });
+
+    it('should recalculate cap space correctly for surviving contracts', () => {
+      // Add a multi-year contract that will survive the transition
+      const contractId = 'contract-multiyear';
+      const multiYearContract = {
+        id: contractId,
+        playerId,
+        playerName: 'Test Player',
+        teamId: state.userTeamId,
+        position: Position.QB,
+        status: 'active' as const,
+        type: 'veteran' as const,
+        signedYear: 2025,
+        totalYears: 4,
+        yearsRemaining: 4,
+        totalValue: 40000,
+        guaranteedMoney: 20000,
+        signingBonus: 0,
+        averageAnnualValue: 10000,
+        yearlyBreakdown: [
+          { year: 2025, bonus: 5000, salary: 5000, capHit: 10000, isVoidYear: false },
+          { year: 2026, bonus: 5000, salary: 5000, capHit: 10000, isVoidYear: false },
+          { year: 2027, bonus: 5000, salary: 5000, capHit: 10000, isVoidYear: false },
+          { year: 2028, bonus: 5000, salary: 5000, capHit: 10000, isVoidYear: false },
+        ],
+        voidYears: 0,
+        hasNoTradeClause: false,
+        hasNoTagClause: false,
+        originalContractId: null,
+        notes: [],
+      };
+      state.contracts[contractId] = multiYearContract;
+      state.players[playerId] = {
+        ...state.players[playerId],
+        contractId,
+      };
+
+      const result = transitionToNewSeason(state);
+
+      // Contract should still be active with yearsRemaining = 3
+      expect(result.contracts[contractId].status).toBe('active');
+      expect(result.contracts[contractId].yearsRemaining).toBe(3);
+
+      // Cap space for the user's team should reflect the contract's cap hit
+      const userTeam = result.teams[state.userTeamId];
+      expect(userTeam.finances.currentCapUsage).toBeGreaterThan(0);
+      expect(userTeam.finances.capSpace).toBeGreaterThan(0);
+      expect(userTeam.finances.capSpace).toBeLessThan(userTeam.finances.salaryCap);
+      // capSpace should be salaryCap - currentCapUsage
+      expect(userTeam.finances.capSpace).toBe(
+        userTeam.finances.salaryCap - userTeam.finances.currentCapUsage
+      );
+    });
+
+    it('should recalculate cap space for ALL teams, not just with default 0', () => {
+      // Add contracts to multiple teams to ensure ALL teams get recalculated
+      const teamIds = Object.keys(state.teams);
+      let contractIdx = 0;
+
+      for (const teamId of teamIds) {
+        // Generate a player for this team
+        const p = generatePlayer({ position: Position.WR, ageRange: { min: 25, max: 25 } });
+        state.players[p.id] = p;
+        state.teams[teamId] = {
+          ...state.teams[teamId],
+          rosterPlayerIds: [...state.teams[teamId].rosterPlayerIds, p.id],
+        };
+
+        // Give each team a 3-year contract worth 15000/year
+        const cid = `contract-team-${contractIdx++}`;
+        state.contracts[cid] = {
+          id: cid,
+          playerId: p.id,
+          playerName: `Player ${contractIdx}`,
+          teamId,
+          position: Position.WR,
+          status: 'active' as const,
+          type: 'veteran' as const,
+          signedYear: 2025,
+          totalYears: 3,
+          yearsRemaining: 3,
+          totalValue: 45000,
+          guaranteedMoney: 20000,
+          signingBonus: 0,
+          averageAnnualValue: 15000,
+          yearlyBreakdown: [
+            { year: 2025, bonus: 5000, salary: 10000, capHit: 15000, isVoidYear: false },
+            { year: 2026, bonus: 5000, salary: 10000, capHit: 15000, isVoidYear: false },
+            { year: 2027, bonus: 5000, salary: 10000, capHit: 15000, isVoidYear: false },
+          ],
+          voidYears: 0,
+          hasNoTradeClause: false,
+          hasNoTagClause: false,
+          originalContractId: null,
+          notes: [],
+        };
+        state.players[p.id] = { ...state.players[p.id], contractId: cid };
+      }
+
+      const result = transitionToNewSeason(state);
+
+      // Every team should have nonzero cap usage and positive cap space
+      for (const teamId of teamIds) {
+        const team = result.teams[teamId];
+        expect(team.finances.currentCapUsage).toBeGreaterThan(0);
+        expect(team.finances.salaryCap).toBeGreaterThan(0);
+        expect(team.finances.capSpace).toBe(
+          team.finances.salaryCap - team.finances.currentCapUsage
+        );
+        // Cap space should not be equal to the full salary cap (that would mean $0 usage)
+        expect(team.finances.capSpace).not.toBe(team.finances.salaryCap);
+      }
+    });
+
+    it('should recalculate cap space correctly with a full realistic game state', () => {
+      // Use createNewGame to get a realistic state with proper contracts
+      const realisticState = createNewGame({
+        saveSlot: 0,
+        gmName: 'TestGM',
+        selectedTeam: getCityByAbbreviation('NYG')!,
+        startYear: 2025,
+        historyYears: 0,
+      });
+
+      // Verify the initial state has cap usage
+      const userTeamBefore = realisticState.teams[realisticState.userTeamId];
+      expect(userTeamBefore.finances.currentCapUsage).toBeGreaterThan(0);
+
+      // Now transition to new season (simulating end of Season 1)
+      const season2State = transitionToNewSeason(realisticState);
+
+      // Verify cap space for user's team is recalculated correctly
+      const userTeamAfter = season2State.teams[season2State.userTeamId];
+      expect(userTeamAfter.finances.salaryCap).toBeGreaterThan(0);
+      expect(userTeamAfter.finances.currentCapUsage).toBeGreaterThan(0);
+      expect(userTeamAfter.finances.capSpace).toBe(
+        userTeamAfter.finances.salaryCap - userTeamAfter.finances.currentCapUsage
+      );
+      // Cap space should not be 0 (that's the bug we're testing for)
+      expect(userTeamAfter.finances.capSpace).not.toBe(0);
+
+      // Also verify ALL 32 teams have proper cap recalculation
+      const allTeamIds = Object.keys(season2State.teams);
+      let teamsWithCapUsage = 0;
+      for (const teamId of allTeamIds) {
+        const team = season2State.teams[teamId];
+        if (team.finances.currentCapUsage > 0) {
+          teamsWithCapUsage++;
+          expect(team.finances.capSpace).toBe(
+            team.finances.salaryCap - team.finances.currentCapUsage
+          );
+        }
+      }
+      // Most teams should have cap usage (active contracts)
+      expect(teamsWithCapUsage).toBeGreaterThan(20);
+
+      // Now transition AGAIN to Season 3 to test two consecutive transitions
+      const season3State = transitionToNewSeason(season2State);
+      const userTeamS3 = season3State.teams[season3State.userTeamId];
+      expect(userTeamS3.finances.salaryCap).toBeGreaterThan(0);
+      expect(userTeamS3.finances.currentCapUsage).toBeGreaterThan(0);
+      expect(userTeamS3.finances.capSpace).toBe(
+        userTeamS3.finances.salaryCap - userTeamS3.finances.currentCapUsage
+      );
+      expect(userTeamS3.finances.capSpace).not.toBe(0);
+    }, 30000);
 
     it('should retire very old players', () => {
       // Add an old player who should almost certainly retire
