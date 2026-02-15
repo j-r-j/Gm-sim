@@ -771,12 +771,7 @@ export function DashboardScreenWrapper({
       }
 
       // Simulate playoffs round by round (weeks 19-22)
-      const playoffRounds: PlayoffRound[] = [
-        'wildCard',
-        'divisional',
-        'conference',
-        'superBowl',
-      ];
+      const playoffRounds: PlayoffRound[] = ['wildCard', 'divisional', 'conference', 'superBowl'];
 
       for (const round of playoffRounds) {
         if (currentPhase !== 'playoffs') break;
@@ -785,11 +780,7 @@ export function DashboardScreenWrapper({
         if (!stateSchedule?.playoffs) break;
 
         // Simulate the round
-        const roundResults = simulatePlayoffRound(
-          stateSchedule.playoffs,
-          round,
-          currentState
-        );
+        const roundResults = simulatePlayoffRound(stateSchedule.playoffs, round, currentState);
 
         // Advance the bracket to generate next round matchups
         const advancedPlayoffs = advancePlayoffRound(stateSchedule.playoffs, roundResults);

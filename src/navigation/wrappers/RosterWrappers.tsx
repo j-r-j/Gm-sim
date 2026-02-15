@@ -15,7 +15,7 @@
 import React, { useEffect } from 'react';
 import { SafeAreaView } from 'react-native';
 import { useGame } from '../GameContext';
-import { showAlert, showConfirm } from '@utils/alert';
+import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask } from './shared';
 import { colors } from '../../styles';

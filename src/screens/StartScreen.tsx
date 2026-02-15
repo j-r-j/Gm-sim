@@ -150,8 +150,8 @@ export function StartScreen({
                         {slotInfo.summary?.teamName ?? 'Unknown'}
                       </Text>
                       <Text style={styles.savePreviewDetail}>
-                        {slotInfo.summary?.record ?? '0-0'} | Year{' '}
-                        {slotInfo.summary?.year ?? '?'} | {slotInfo.summary?.phase ?? ''}
+                        {slotInfo.summary?.record ?? '0-0'} | Year {slotInfo.summary?.year ?? '?'} |{' '}
+                        {slotInfo.summary?.phase ?? ''}
                       </Text>
                     </TouchableOpacity>
                   ))}

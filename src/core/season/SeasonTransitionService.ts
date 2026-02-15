@@ -20,10 +20,7 @@ import { createHealthyStatus } from '@core/models/player/InjuryStatus';
 import { Player } from '@core/models/player/Player';
 import { Team } from '@core/models/team/Team';
 import { Coach } from '@core/models/staff/Coach';
-import {
-  DEFAULT_SALARY_CAP,
-  advanceCapPenalties,
-} from '@core/models/team/TeamFinances';
+import { DEFAULT_SALARY_CAP, advanceCapPenalties } from '@core/models/team/TeamFinances';
 
 /**
  * Transitions the game state to a new season.

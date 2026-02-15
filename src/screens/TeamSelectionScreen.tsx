@@ -280,9 +280,7 @@ export function TeamSelectionScreen({
           </View>
           <View style={styles.badgeColumn}>
             <View style={[styles.difficultyBadge, { borderColor: difficultyColor }]}>
-              <Text style={[styles.difficultyText, { color: difficultyColor }]}>
-                {difficulty}
-              </Text>
+              <Text style={[styles.difficultyText, { color: difficultyColor }]}>{difficulty}</Text>
             </View>
             <View style={[styles.rosterGradeBadge, { borderColor: gradeColor }]}>
               <Text style={[styles.rosterGradeText, { color: gradeColor }]}>{grade}</Text>

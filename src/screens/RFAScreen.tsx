@@ -4,14 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
@@ -418,26 +411,20 @@ export function RFAScreen({
   };
 
   const handleWithdrawTender = (tenderId: string) => {
-    showConfirm(
-      'Withdraw Tender',
-      'Are you sure you want to withdraw this tender?',
-      () => onWithdrawTender?.(tenderId)
+    showConfirm('Withdraw Tender', 'Are you sure you want to withdraw this tender?', () =>
+      onWithdrawTender?.(tenderId)
     );
   };
 
   const handleMatchOffer = (offerSheetId: string) => {
-    showConfirm(
-      'Match Offer',
-      'Do you want to match this offer sheet?',
-      () => onMatchOffer?.(offerSheetId)
+    showConfirm('Match Offer', 'Do you want to match this offer sheet?', () =>
+      onMatchOffer?.(offerSheetId)
     );
   };
 
   const handleDeclineOffer = (offerSheetId: string) => {
-    showConfirm(
-      'Decline Offer',
-      'Are you sure? The player will sign with the other team.',
-      () => onDeclineOffer?.(offerSheetId)
+    showConfirm('Decline Offer', 'Are you sure? The player will sign with the other team.', () =>
+      onDeclineOffer?.(offerSheetId)
     );
   };
 

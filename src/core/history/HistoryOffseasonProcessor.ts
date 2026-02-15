@@ -406,7 +406,10 @@ export function processCoachingChanges(
         offensiveCoordinator: currentOC?.id || null,
         defensiveCoordinator: currentDC?.id || null,
         coachingSpend,
-        remainingBudget: updatedTeams[team.id].staffHierarchy.staffBudget - coachingSpend - updatedTeams[team.id].staffHierarchy.scoutingSpend,
+        remainingBudget:
+          updatedTeams[team.id].staffHierarchy.staffBudget -
+          coachingSpend -
+          updatedTeams[team.id].staffHierarchy.scoutingSpend,
       },
     };
   }

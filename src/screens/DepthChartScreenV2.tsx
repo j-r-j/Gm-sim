@@ -4,14 +4,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { Player } from '../core/models/player/Player';

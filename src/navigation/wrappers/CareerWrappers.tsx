@@ -409,9 +409,13 @@ export function CareerLegacyScreenWrapper({
       careerRecord={enhancedRecord}
       onBack={() => navigation.goBack()}
       onRetire={() => {
-        showConfirm('Retire?', 'Are you sure you want to retire? This will end your career.', () => {
-          showAlert('Retirement', 'You have announced your retirement from the league.');
-        });
+        showConfirm(
+          'Retire?',
+          'Are you sure you want to retire? This will end your career.',
+          () => {
+            showAlert('Retirement', 'You have announced your retirement from the league.');
+          }
+        );
       }}
     />
   );

@@ -236,17 +236,14 @@ export function FreeAgencyScreenWrapper({
 
             // Create contract
             const contractId = `contract-${playerId}-${currentYear}`;
-            const yearlyBreakdown: ContractYear[] = Array.from(
-              { length: offer.years },
-              (_, i) => ({
-                year: currentYear + i,
-                bonus: i === 0 ? signingBonusK : 0,
-                salary: salaryPerYearK,
-                capHit: annualSalaryK,
-                isVoidYear: false,
-                isGuaranteed: i === 0,
-              })
-            );
+            const yearlyBreakdown: ContractYear[] = Array.from({ length: offer.years }, (_, i) => ({
+              year: currentYear + i,
+              bonus: i === 0 ? signingBonusK : 0,
+              salary: salaryPerYearK,
+              capHit: annualSalaryK,
+              isVoidYear: false,
+              isGuaranteed: i === 0,
+            }));
 
             const faContract: PlayerContract = {
               id: contractId,

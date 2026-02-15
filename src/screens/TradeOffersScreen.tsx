@@ -6,14 +6,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { showConfirm } from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -83,10 +76,8 @@ export function TradeOffersScreen({
   const activeOffers = tradeOffers.activeOffers.filter((o) => o.status === 'pending');
 
   const handleAccept = (offer: AITradeOffer) => {
-    showConfirm(
-      'Accept Trade',
-      `Accept trade with ${offer.offeringTeamName}?`,
-      () => onAccept(offer.id)
+    showConfirm('Accept Trade', `Accept trade with ${offer.offeringTeamName}?`, () =>
+      onAccept(offer.id)
     );
   };
 

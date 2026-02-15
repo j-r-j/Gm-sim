@@ -566,17 +566,14 @@ export function DraftRoomScreenWrapper({
       const bonusPerYear = Math.round(slotValues.signingBonus / contractYears);
       const salaryPerYear = totalAAV - bonusPerYear;
 
-      const yearlyBreakdown: ContractYear[] = Array.from(
-        { length: contractYears },
-        (_, i) => ({
-          year: currentYear + i,
-          bonus: bonusPerYear,
-          salary: salaryPerYear,
-          capHit: totalAAV,
-          isVoidYear: false,
-          isGuaranteed: i < 2,
-        })
-      );
+      const yearlyBreakdown: ContractYear[] = Array.from({ length: contractYears }, (_, i) => ({
+        year: currentYear + i,
+        bonus: bonusPerYear,
+        salary: salaryPerYear,
+        capHit: totalAAV,
+        isVoidYear: false,
+        isGuaranteed: i < 2,
+      }));
 
       const contractId = `contract-${player.id}-${currentYear}`;
       const contract: PlayerContract = {
@@ -933,8 +930,18 @@ export function DraftRoomScreenWrapper({
           showAlert('Error', 'Could not reject trade.');
         }
       }}
-      onCounterTrade={() => showAlert('Counter Trade', 'Counter trade proposals will be available in a future update. For now, you can accept or reject incoming offers.')}
-      onProposeTrade={() => showAlert('Propose Trade', 'Initiating trade proposals will be available in a future update. AI teams will send you trade offers automatically when you are on the clock.')}
+      onCounterTrade={() =>
+        showAlert(
+          'Counter Trade',
+          'Counter trade proposals will be available in a future update. For now, you can accept or reject incoming offers.'
+        )
+      }
+      onProposeTrade={() =>
+        showAlert(
+          'Propose Trade',
+          'Initiating trade proposals will be available in a future update. AI teams will send you trade offers automatically when you are on the clock.'
+        )
+      }
       onToggleAutoPick={() => {
         if (speedMode === 'SKIP') {
           setSpeedMode('AUTO');

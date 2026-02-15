@@ -1,8 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  compressToUTF16,
-  decompressFromUTF16,
-} from 'lz-string';
+import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 import { SaveSlot } from '../../core/models/game/GameState';
 
 export type { SaveSlot };

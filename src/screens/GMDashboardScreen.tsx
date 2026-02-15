@@ -486,9 +486,7 @@ export function GMDashboardScreen({
         <View style={styles.statusDivider} />
         <View style={styles.statusItem}>
           <Text style={styles.statusLabel}>Cap Space</Text>
-          <Text style={styles.statusValue}>
-            ${Math.round(userTeam.finances.capSpace / 1000)}M
-          </Text>
+          <Text style={styles.statusValue}>${Math.round(userTeam.finances.capSpace / 1000)}M</Text>
         </View>
         <View style={styles.statusDivider} />
         <View style={styles.statusItem}>

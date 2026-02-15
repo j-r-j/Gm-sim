@@ -349,7 +349,10 @@ export function createNewGame(options: NewGameOptions): GameState {
         offensiveCoordinator: oc?.id || null,
         defensiveCoordinator: dc?.id || null,
         coachingSpend,
-        remainingBudget: teams[teamId].staffHierarchy.staffBudget - coachingSpend - teams[teamId].staffHierarchy.scoutingSpend,
+        remainingBudget:
+          teams[teamId].staffHierarchy.staffBudget -
+          coachingSpend -
+          teams[teamId].staffHierarchy.scoutingSpend,
       },
     };
   }
@@ -366,9 +369,7 @@ export function createNewGame(options: NewGameOptions): GameState {
     const os = teamScouts.find((s) => s.role === 'offensiveScout');
     const ds = teamScouts.find((s) => s.role === 'defensiveScout');
     const scoutingSpend =
-      (hs?.contract?.salary || 0) +
-      (os?.contract?.salary || 0) +
-      (ds?.contract?.salary || 0);
+      (hs?.contract?.salary || 0) + (os?.contract?.salary || 0) + (ds?.contract?.salary || 0);
     teams[teamId] = {
       ...teams[teamId],
       staffHierarchy: {
@@ -377,7 +378,10 @@ export function createNewGame(options: NewGameOptions): GameState {
         offensiveScout: os?.id || null,
         defensiveScout: ds?.id || null,
         scoutingSpend,
-        remainingBudget: teams[teamId].staffHierarchy.staffBudget - teams[teamId].staffHierarchy.coachingSpend - scoutingSpend,
+        remainingBudget:
+          teams[teamId].staffHierarchy.staffBudget -
+          teams[teamId].staffHierarchy.coachingSpend -
+          scoutingSpend,
       },
     };
   }
