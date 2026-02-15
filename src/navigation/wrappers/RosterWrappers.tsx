@@ -15,7 +15,7 @@
 import React, { useEffect } from 'react';
 import { SafeAreaView } from 'react-native';
 import { useGame } from '../GameContext';
-import { showAlert } from '@utils/alert';
+import { showAlert, showConfirm } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask } from './shared';
 import { colors } from '../../styles';
@@ -34,7 +34,7 @@ import { GameState } from '../../core/models/game/GameState';
 import { generateDepthChartV2, DepthChartV2, migrateLegacyDepthChart } from '../../core/roster';
 import { createOwnerViewModel } from '../../core/models/owner';
 import { createPatienceViewModel } from '../../core/career/PatienceMeterManager';
-import { PlayerContract } from '../../core/contracts';
+import { PlayerContract, calculateDeadMoney, calculateCapSavings } from '../../core/contracts';
 import { ContractAction } from '../../screens/ContractManagementScreen';
 import { ScoutReport } from '../../core/scouting/ScoutReportGenerator';
 import { OffensiveScheme, DefensiveScheme } from '../../core/models/player/SchemeFit';
@@ -711,6 +711,80 @@ export function PlayerProfileScreenWrapper({
     // Get season stats if available
     const seasonStats = gameState.seasonStats?.[realPlayer.id] ?? null;
 
+    const handleRelease = () => {
+      const currentYear = gameState.league.calendar.currentYear;
+      const deadMoney = playerContract ? calculateDeadMoney(playerContract, currentYear) : 0;
+      const capSavings = playerContract ? calculateCapSavings(playerContract, currentYear) : 0;
+      const playerName = `${realPlayer.firstName} ${realPlayer.lastName}`;
+
+      const formatK = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}M` : `$${v}K`);
+
+      showConfirm(
+        `Release ${playerName}?`,
+        `Position: ${realPlayer.position}\n` +
+          (playerContract
+            ? `Cap Savings: ${formatK(capSavings)}\nDead Money: ${formatK(deadMoney)}\n\n`
+            : '') +
+          `This will remove the player from your roster.`,
+        async () => {
+          const userTeam = gameState.teams[gameState.userTeamId];
+          const updatedRoster = userTeam.rosterPlayerIds.filter(
+            (id: string) => id !== realPlayer.id
+          );
+
+          // Update player: clear team, clear contract
+          const updatedPlayer = {
+            ...realPlayer,
+            teamId: null,
+            contractId: null,
+          };
+
+          // Remove or void the contract
+          const updatedContracts = { ...gameState.contracts };
+          if (realPlayer.contractId && updatedContracts[realPlayer.contractId]) {
+            updatedContracts[realPlayer.contractId] = {
+              ...updatedContracts[realPlayer.contractId],
+              status: 'voided' as const,
+            };
+          }
+
+          // Recalculate cap usage
+          const newCapUsage = Math.max(
+            0,
+            userTeam.finances.currentCapUsage - capSavings + deadMoney
+          );
+          const salaryCap = gameState.league.settings?.salaryCap || 255000;
+
+          const updatedState: GameState = {
+            ...gameState,
+            players: {
+              ...gameState.players,
+              [realPlayer.id]: updatedPlayer,
+            },
+            teams: {
+              ...gameState.teams,
+              [gameState.userTeamId]: {
+                ...userTeam,
+                rosterPlayerIds: updatedRoster,
+                finances: {
+                  ...userTeam.finances,
+                  currentCapUsage: newCapUsage,
+                  capSpace: salaryCap - newCapUsage,
+                  deadMoney: (userTeam.finances.deadMoney || 0) + deadMoney,
+                },
+              },
+            },
+            contracts: updatedContracts,
+          };
+
+          setGameState(updatedState);
+          await saveGameState(updatedState);
+          showAlert('Player Released', `${playerName} has been released.`);
+          navigation.goBack();
+        }
+      );
+    };
+
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <PlayerDetailCard
@@ -722,6 +796,7 @@ export function PlayerProfileScreenWrapper({
           seasonStats={seasonStats}
           onClose={() => navigation.goBack()}
           isModal={false}
+          onRelease={handleRelease}
         />
       </SafeAreaView>
     );
