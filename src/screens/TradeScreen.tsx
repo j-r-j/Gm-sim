@@ -12,9 +12,9 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Modal,
-  Alert,
   ScrollView,
 } from 'react-native';
+import { showAlert } from '../utils/alert';
 import {
   colors,
   spacing,
@@ -306,7 +306,7 @@ export function TradeScreen({
   // Submit trade
   const handleSubmitTrade = async () => {
     if (!tradePartner || assetsOffered.length === 0 || assetsRequested.length === 0) {
-      Alert.alert('Invalid Trade', 'Please select a trade partner and add assets to both sides.');
+      showAlert('Invalid Trade', 'Please select a trade partner and add assets to both sides.');
       return;
     }
 
@@ -321,15 +321,15 @@ export function TradeScreen({
 
     switch (result) {
       case 'accepted':
-        Alert.alert('Trade Accepted!', 'The trade has been completed.');
+        showAlert('Trade Accepted!', 'The trade has been completed.');
         setAssetsOffered([]);
         setAssetsRequested([]);
         break;
       case 'rejected':
-        Alert.alert('Trade Rejected', 'The other team declined your offer.');
+        showAlert('Trade Rejected', 'The other team declined your offer.');
         break;
       case 'counter':
-        Alert.alert('Counter Offer', 'The other team wants different terms.');
+        showAlert('Counter Offer', 'The other team wants different terms.');
         break;
     }
   };

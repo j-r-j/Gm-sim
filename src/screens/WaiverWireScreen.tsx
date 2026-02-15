@@ -13,8 +13,8 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import {
   colors,
@@ -59,9 +59,7 @@ export function WaiverWireScreen({
 
   const handleClaim = (player: WaiverPlayer) => {
     if (rosterFull && !selectedDropPlayer) {
-      Alert.alert('Roster Full', 'Your roster is at 53 players. Select a player to drop first.', [
-        { text: 'OK' },
-      ]);
+      showAlert('Roster Full', 'Your roster is at 53 players. Select a player to drop first.');
       return;
     }
 
@@ -80,7 +78,7 @@ export function WaiverWireScreen({
 
     onStateChange(updated);
     setSelectedDropPlayer(null);
-    Alert.alert('Claim Submitted', `Waiver claim for ${player.playerName} has been submitted.`);
+    showAlert('Claim Submitted', `Waiver claim for ${player.playerName} has been submitted.`);
   };
 
   const handleCancelClaim = (playerId: string) => {
@@ -91,7 +89,7 @@ export function WaiverWireScreen({
   const handleElevation = (player: { id: string; name: string; position: string }) => {
     const count = waiverState.seasonElevationCounts[player.id] || 0;
     if (count >= 3) {
-      Alert.alert('Limit Reached', `${player.name} has already been elevated 3 times this season.`);
+      showAlert('Limit Reached', `${player.name} has already been elevated 3 times this season.`);
       return;
     }
 

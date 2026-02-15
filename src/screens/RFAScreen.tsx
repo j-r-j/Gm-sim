@@ -11,8 +11,8 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
@@ -413,37 +413,32 @@ export function RFAScreen({
   const handleSubmitTender = (playerId: string, level: TenderLevel | ERFATenderLevel) => {
     if (onSubmitTender) {
       onSubmitTender(playerId, level);
-      Alert.alert('Tender Submitted', `Tender has been submitted for this player.`);
+      showAlert('Tender Submitted', `Tender has been submitted for this player.`);
     }
   };
 
   const handleWithdrawTender = (tenderId: string) => {
-    Alert.alert('Withdraw Tender', 'Are you sure you want to withdraw this tender?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Withdraw',
-        style: 'destructive',
-        onPress: () => onWithdrawTender?.(tenderId),
-      },
-    ]);
+    showConfirm(
+      'Withdraw Tender',
+      'Are you sure you want to withdraw this tender?',
+      () => onWithdrawTender?.(tenderId)
+    );
   };
 
   const handleMatchOffer = (offerSheetId: string) => {
-    Alert.alert('Match Offer', 'Do you want to match this offer sheet?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Match', onPress: () => onMatchOffer?.(offerSheetId) },
-    ]);
+    showConfirm(
+      'Match Offer',
+      'Do you want to match this offer sheet?',
+      () => onMatchOffer?.(offerSheetId)
+    );
   };
 
   const handleDeclineOffer = (offerSheetId: string) => {
-    Alert.alert('Decline Offer', 'Are you sure? The player will sign with the other team.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Let Go',
-        style: 'destructive',
-        onPress: () => onDeclineOffer?.(offerSheetId),
-      },
-    ]);
+    showConfirm(
+      'Decline Offer',
+      'Are you sure? The player will sign with the other team.',
+      () => onDeclineOffer?.(offerSheetId)
+    );
   };
 
   return (

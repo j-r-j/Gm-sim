@@ -7,8 +7,8 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import { useGame } from '../GameContext';
+import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { processWeekEnd, LoadingFallback } from './shared';
 import { type WeeklyGamePlan } from '../../core/gameplan/GamePlanManager';
@@ -410,7 +410,7 @@ export function WeeklyScheduleScreenWrapper({
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error advancing week:', error);
-      Alert.alert('Error', 'Failed to advance week');
+      showAlert('Error', 'Failed to advance week');
     } finally {
       setIsLoading(false);
     }
@@ -455,7 +455,7 @@ export function LiveGameSimulationScreenWrapper({
 
   // Guard: need schedule
   if (!schedule) {
-    Alert.alert('Error', 'No schedule available');
+    showAlert('Error', 'No schedule available');
     navigation.goBack();
     return <LoadingFallback message="No schedule available..." />;
   }
@@ -464,7 +464,7 @@ export function LiveGameSimulationScreenWrapper({
   const userGame = getUserTeamGame(schedule, week, userTeamId);
 
   if (!userGame) {
-    Alert.alert('Error', 'No game found for this week');
+    showAlert('Error', 'No game found for this week');
     navigation.goBack();
     return <LoadingFallback message="No game found..." />;
   }
@@ -524,7 +524,7 @@ export function LiveGameSimulationScreenWrapper({
           // Show breakout alert if any players broke out
           if (breakoutNames.length > 0) {
             const names = breakoutNames.join(', ');
-            Alert.alert(
+            showAlert(
               'Breakout Performance!',
               `${names} ${breakoutNames.length === 1 ? 'is' : 'are'} having a breakout season!`
             );
@@ -750,7 +750,7 @@ export function WeekSummaryScreenWrapper({
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error advancing week:', error);
-      Alert.alert('Error', 'Failed to advance week');
+      showAlert('Error', 'Failed to advance week');
     } finally {
       setIsAdvancing(false);
       setIsLoading(false);

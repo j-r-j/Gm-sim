@@ -13,8 +13,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { Alert } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
+import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';
 import { LoadingFallback, validateOffseasonPhaseAdvance } from './shared';
@@ -73,7 +73,7 @@ export function DashboardScreenWrapper({
     const { calendar, schedule } = gameState.league;
 
     if (!schedule) {
-      Alert.alert('Error', 'No schedule available');
+      showAlert('Error', 'No schedule available');
       return;
     }
 
@@ -424,7 +424,7 @@ export function DashboardScreenWrapper({
         if (currentOffseasonState) {
           // Check if we can advance (required tasks complete)
           if (!canAdvancePhase(currentOffseasonState)) {
-            Alert.alert(
+            showAlert(
               'Cannot Advance',
               'Complete required offseason tasks before advancing. Go to Offseason Tasks to see what needs to be done.'
             );
@@ -435,7 +435,7 @@ export function DashboardScreenWrapper({
           // Validate phase-specific requirements (e.g., roster size for final_cuts)
           const validationError = validateOffseasonPhaseAdvance(gameState);
           if (validationError) {
-            Alert.alert('Cannot Advance', validationError);
+            showAlert('Cannot Advance', validationError);
             setIsLoading(false);
             return;
           }
@@ -455,7 +455,7 @@ export function DashboardScreenWrapper({
             });
             setGameState(transitionedState);
             await saveGameState(transitionedState);
-            Alert.alert('Offseason Complete', 'Preseason begins!');
+            showAlert('Offseason Complete', 'Preseason begins!');
             setIsLoading(false);
             return;
           } else {
@@ -561,11 +561,11 @@ export function DashboardScreenWrapper({
 
       const phaseLabel =
         newPhase === 'offseason' ? `Offseason Phase ${offseasonPhase}` : `Week ${newWeek}`;
-      Alert.alert('Week Advanced', `Now in ${phaseLabel}`);
+      showAlert('Week Advanced', `Now in ${phaseLabel}`);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error advancing week:', error);
-      Alert.alert('Error', 'Failed to advance week');
+      showAlert('Error', 'Failed to advance week');
     } finally {
       setIsLoading(false);
     }
@@ -578,7 +578,7 @@ export function DashboardScreenWrapper({
     const { calendar, schedule } = gameState.league;
 
     if (!schedule) {
-      Alert.alert('Error', 'No schedule available');
+      showAlert('Error', 'No schedule available');
       return;
     }
 
@@ -847,7 +847,7 @@ export function DashboardScreenWrapper({
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error simulating season:', error);
-      Alert.alert('Error', 'Failed to simulate season');
+      showAlert('Error', 'Failed to simulate season');
     } finally {
       setIsLoading(false);
     }
@@ -859,7 +859,7 @@ export function DashboardScreenWrapper({
 
     const { calendar, schedule } = gameState.league;
     if (!schedule?.regularSeason) {
-      Alert.alert('Error', 'No schedule available');
+      showAlert('Error', 'No schedule available');
       return;
     }
 
@@ -947,7 +947,7 @@ export function DashboardScreenWrapper({
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error quick-simming week:', error);
-      Alert.alert('Error', 'Failed to simulate week');
+      showAlert('Error', 'Failed to simulate week');
       setIsLoading(false);
     }
   }, [gameState, setGameState, saveGameState, setIsLoading, navigation]);
@@ -958,7 +958,7 @@ export function DashboardScreenWrapper({
 
     const { calendar, schedule } = gameState.league;
     if (!schedule?.regularSeason) {
-      Alert.alert('Error', 'No schedule available');
+      showAlert('Error', 'No schedule available');
       return;
     }
 
@@ -1046,7 +1046,7 @@ export function DashboardScreenWrapper({
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error simming bye week:', error);
-      Alert.alert('Error', 'Failed to simulate bye week');
+      showAlert('Error', 'Failed to simulate bye week');
       setIsLoading(false);
     }
   }, [gameState, setGameState, saveGameState, setIsLoading, navigation]);
@@ -1149,21 +1149,19 @@ export function DashboardScreenWrapper({
           navigation.navigate('Settings');
           break;
         case 'mainMenu':
-          Alert.alert('Return to Main Menu', 'Any unsaved progress will be lost. Are you sure?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Yes',
-              onPress: () => {
-                setGameState(null);
-                navigation.dispatch(
-                  CommonActions.reset({
-                    index: 0,
-                    routes: [{ name: 'Start' }],
-                  })
-                );
-              },
-            },
-          ]);
+          showConfirm(
+            'Return to Main Menu',
+            'Any unsaved progress will be lost. Are you sure?',
+            () => {
+              setGameState(null);
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'Start' }],
+                })
+              );
+            }
+          );
           break;
         // New Weekly Decision Systems
         case 'gamePlan':

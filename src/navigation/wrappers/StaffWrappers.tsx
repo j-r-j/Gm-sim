@@ -11,8 +11,8 @@
  */
 
 import React, { useEffect } from 'react';
-import { Alert } from 'react-native';
 import { useGame } from '../GameContext';
+import { showAlert, showConfirm } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask } from './shared';
 
@@ -133,25 +133,14 @@ export function StaffScreenWrapper({ navigation }: ScreenProps<'Staff'>): React.
                   : 'Thorough';
             const positionSpecialty = scout.attributes.positionSpecialty || 'General';
 
-            Alert.alert(
+            showAlert(
               `${scout.firstName} ${scout.lastName}`,
               `SCOUTING PROFILE\n\n` +
                 `Region: ${regionText}\n` +
                 `Position Focus: ${positionSpecialty}\n` +
                 `Experience: ${scout.attributes.experience} years\n` +
                 `Evaluation Skill: ${evaluationText}\n` +
-                `Scouting Speed: ${speedText}`,
-              [
-                {
-                  text: 'View Scouting Reports',
-                  onPress: () => navigation.navigate('ScoutingReports'),
-                },
-                {
-                  text: 'View Big Board',
-                  onPress: () => navigation.navigate('BigBoard'),
-                },
-                { text: 'Close', style: 'cancel' },
-              ]
+                `Scouting Speed: ${speedText}`
             );
           }
         }
@@ -233,14 +222,14 @@ export function CoachProfileScreenWrapper({
         // Check if extension is possible
         const validation = canExtendCoach(gameState, coachId, teamId);
         if (!validation.canPerform) {
-          Alert.alert('Cannot Extend', validation.reason || 'Extension not available');
+          showAlert('Cannot Extend', validation.reason || 'Extension not available');
           return;
         }
 
         // Get recommended terms
         const recommendation = getExtensionRecommendation(gameState, coachId);
         if (!recommendation.eligible) {
-          Alert.alert('Cannot Extend', recommendation.reason || 'Extension not available');
+          showAlert('Cannot Extend', recommendation.reason || 'Extension not available');
           return;
         }
 
@@ -249,32 +238,26 @@ export function CoachProfileScreenWrapper({
         const salary = recommendation.recommendedSalary || coach.contract!.salaryPerYear;
         const guaranteed = recommendation.recommendedGuaranteed || salary * years * 0.4;
 
-        Alert.alert(
+        showConfirm(
           'Contract Extension',
           `Offer ${coachName} a ${years}-year extension at $${formatCurrencyShort(salary)}/year?\n\nTotal Value: $${formatCurrencyShort(salary * years)}\nGuaranteed: $${formatCurrencyShort(guaranteed)}`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Offer Extension',
-              onPress: () => {
-                // For now, auto-accept. Future: negotiation system
-                const result = extendCoachAction(gameState, coachId, teamId, {
-                  yearsAdded: years,
-                  newSalaryPerYear: salary,
-                  newGuaranteed: guaranteed,
-                  signingBonus: Math.round(salary * 0.1),
-                });
+          () => {
+            // For now, auto-accept. Future: negotiation system
+            const result = extendCoachAction(gameState, coachId, teamId, {
+              yearsAdded: years,
+              newSalaryPerYear: salary,
+              newGuaranteed: guaranteed,
+              signingBonus: Math.round(salary * 0.1),
+            });
 
-                if (result.success) {
-                  setGameState(result.gameState);
-                  saveGameState(result.gameState);
-                  Alert.alert('Extension Complete', result.message);
-                } else {
-                  Alert.alert('Extension Failed', result.message);
-                }
-              },
-            },
-          ]
+            if (result.success) {
+              setGameState(result.gameState);
+              saveGameState(result.gameState);
+              showAlert('Extension Complete', result.message);
+            } else {
+              showAlert('Extension Failed', result.message);
+            }
+          }
         );
         break;
       }
@@ -283,7 +266,7 @@ export function CoachProfileScreenWrapper({
         // Validate firing
         const validation = canFireCoach(gameState, coachId, teamId);
         if (!validation.canPerform) {
-          Alert.alert('Cannot Release', validation.reason || 'Cannot release this coach');
+          showAlert('Cannot Release', validation.reason || 'Cannot release this coach');
           return;
         }
 
@@ -297,43 +280,27 @@ export function CoachProfileScreenWrapper({
           confirmMessage += `\n\nWarning: ${validation.warning}`;
         }
 
-        Alert.alert('Release Coach', confirmMessage, [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Release',
-            style: 'destructive',
-            onPress: () => {
-              const firedRole = coach.role;
-              const result = fireCoachAction(gameState, coachId, teamId);
+        showConfirm('Release Coach', confirmMessage, () => {
+          const firedRole = coach.role;
+          const result = fireCoachAction(gameState, coachId, teamId);
 
-              if (result.success) {
-                setGameState(result.gameState);
-                saveGameState(result.gameState);
+          if (result.success) {
+            setGameState(result.gameState);
+            saveGameState(result.gameState);
 
-                // Offer to hire a replacement
-                Alert.alert(
-                  'Coach Released',
-                  `${result.message}\n\nWould you like to hire a replacement?`,
-                  [
-                    {
-                      text: 'Hire Replacement',
-                      onPress: () => {
-                        navigation.replace('CoachHiring', { vacancyRole: firedRole });
-                      },
-                    },
-                    {
-                      text: 'Later',
-                      style: 'cancel',
-                      onPress: () => navigation.goBack(),
-                    },
-                  ]
-                );
-              } else {
-                Alert.alert('Release Failed', result.message);
-              }
-            },
-          },
-        ]);
+            // Offer to hire a replacement
+            showConfirm(
+              'Coach Released',
+              `${result.message}\n\nWould you like to hire a replacement?`,
+              () => {
+                navigation.replace('CoachHiring', { vacancyRole: firedRole });
+              },
+              () => navigation.goBack()
+            );
+          } else {
+            showAlert('Release Failed', result.message);
+          }
+        });
         break;
       }
 
@@ -341,30 +308,24 @@ export function CoachProfileScreenWrapper({
         // Validate promotion
         const validation = canPromoteCoach(gameState, coachId, teamId);
         if (!validation.canPerform) {
-          Alert.alert('Cannot Promote', validation.reason || 'Cannot promote this coach');
+          showAlert('Cannot Promote', validation.reason || 'Cannot promote this coach');
           return;
         }
 
-        Alert.alert(
+        showConfirm(
           'Promote to Head Coach',
           `Are you sure you want to promote ${coachName} to Head Coach?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Promote',
-              onPress: () => {
-                const result = promoteCoachAction(gameState, coachId, teamId);
+          () => {
+            const result = promoteCoachAction(gameState, coachId, teamId);
 
-                if (result.success) {
-                  setGameState(result.gameState);
-                  saveGameState(result.gameState);
-                  Alert.alert('Promotion Complete', result.message);
-                } else {
-                  Alert.alert('Promotion Failed', result.message);
-                }
-              },
-            },
-          ]
+            if (result.success) {
+              setGameState(result.gameState);
+              saveGameState(result.gameState);
+              showAlert('Promotion Complete', result.message);
+            } else {
+              showAlert('Promotion Failed', result.message);
+            }
+          }
         );
         break;
       }
@@ -506,16 +467,11 @@ export function CoachHiringScreenWrapper({
     const coachName = `${candidate.coach.firstName} ${candidate.coach.lastName}`;
 
     // Show success and navigate back
-    Alert.alert(
+    showAlert(
       'Coach Hired!',
-      `${coachName} has been hired as your ${formatRole(roleToFill)}.\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1_000_000).toFixed(1)}M/year`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
+      `${coachName} has been hired as your ${formatRole(roleToFill)}.\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1_000_000).toFixed(1)}M/year`
     );
+    navigation.goBack();
   };
 
   return (
@@ -527,16 +483,10 @@ export function CoachHiringScreenWrapper({
       onBack={() => navigation.goBack()}
       onHire={(candidate) => {
         const coachName = `${candidate.coach.firstName} ${candidate.coach.lastName}`;
-        Alert.alert(
+        showConfirm(
           'Hire Coach',
           `Are you sure you want to hire ${coachName} as your new ${formatRole(roleToFill)}?\n\nContract: ${candidate.expectedYears} years, $${(candidate.expectedSalary / 1_000_000).toFixed(1)}M/year`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Hire',
-              onPress: () => handleHireCoach(candidate),
-            },
-          ]
+          () => handleHireCoach(candidate)
         );
       }}
     />

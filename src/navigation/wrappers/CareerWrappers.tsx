@@ -6,8 +6,9 @@
  */
 
 import React from 'react';
-import { Alert, View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
+import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';
 import { LoadingFallback } from './shared';
@@ -210,15 +211,11 @@ export function JobMarketScreenWrapper({
         }
       }}
       onAcceptOffer={(_interviewId) => {
-        Alert.alert('Offer Accepted', 'Congratulations on your new position!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Dashboard'),
-          },
-        ]);
+        showAlert('Offer Accepted', 'Congratulations on your new position!');
+        navigation.navigate('Dashboard');
       }}
       onDeclineOffer={(_interviewId) => {
-        Alert.alert('Offer Declined', 'You have declined the offer.');
+        showAlert('Offer Declined', 'You have declined the offer.');
       }}
     />
   );
@@ -302,54 +299,35 @@ export function InterviewScreenWrapper({
 
   // Handle accepting an offer
   const handleAcceptOffer = () => {
-    Alert.alert(
+    showConfirm(
       'Accept Offer',
       `Are you sure you want to accept the offer from ${team.city} ${team.nickname}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          onPress: () => {
-            Alert.alert(
-              'Congratulations!',
-              `You are now the General Manager of the ${team.city} ${team.nickname}!`,
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    // Update user team to the new team
-                    if (setGameState) {
-                      setGameState({
-                        ...gameState,
-                        userTeamId: teamId,
-                      });
-                    }
-                    navigation.navigate('Dashboard');
-                  },
-                },
-              ]
-            );
-          },
-        },
-      ]
+      () => {
+        showAlert(
+          'Congratulations!',
+          `You are now the General Manager of the ${team.city} ${team.nickname}!`
+        );
+        // Update user team to the new team
+        if (setGameState) {
+          setGameState({
+            ...gameState,
+            userTeamId: teamId,
+          });
+        }
+        navigation.navigate('Dashboard');
+      }
     );
   };
 
   // Handle declining an offer
   const handleDeclineOffer = () => {
-    Alert.alert('Decline Offer', 'Are you sure you want to decline this offer?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Decline',
-        onPress: () => {
-          setInterview({
-            ...interview,
-            status: 'offer_declined',
-          });
-          Alert.alert('Offer Declined', 'You have declined the offer.');
-        },
-      },
-    ]);
+    showConfirm('Decline Offer', 'Are you sure you want to decline this offer?', () => {
+      setInterview({
+        ...interview,
+        status: 'offer_declined',
+      });
+      showAlert('Offer Declined', 'You have declined the offer.');
+    });
   };
 
   return (
@@ -431,16 +409,9 @@ export function CareerLegacyScreenWrapper({
       careerRecord={enhancedRecord}
       onBack={() => navigation.goBack()}
       onRetire={() => {
-        Alert.alert('Retire?', 'Are you sure you want to retire? This will end your career.', [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Retire',
-            style: 'destructive',
-            onPress: () => {
-              Alert.alert('Retirement', 'You have announced your retirement from the league.');
-            },
-          },
-        ]);
+        showConfirm('Retire?', 'Are you sure you want to retire? This will end your career.', () => {
+          showAlert('Retirement', 'You have announced your retirement from the league.');
+        });
       }}
     />
   );

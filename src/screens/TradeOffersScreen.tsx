@@ -13,8 +13,8 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import { showConfirm } from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import {
   colors,
@@ -83,10 +83,11 @@ export function TradeOffersScreen({
   const activeOffers = tradeOffers.activeOffers.filter((o) => o.status === 'pending');
 
   const handleAccept = (offer: AITradeOffer) => {
-    Alert.alert('Accept Trade', `Accept trade with ${offer.offeringTeamName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Accept', onPress: () => onAccept(offer.id) },
-    ]);
+    showConfirm(
+      'Accept Trade',
+      `Accept trade with ${offer.offeringTeamName}?`,
+      () => onAccept(offer.id)
+    );
   };
 
   return (

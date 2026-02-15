@@ -12,8 +12,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Modal,
-  Alert,
 } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import {
   colors,
@@ -60,6 +60,8 @@ export interface ExtensionOffer {
 export interface RosterScreenProps {
   /** Team's player IDs */
   rosterIds: string[];
+  /** Practice squad player IDs */
+  practiceSquadIds?: string[];
   /** IR player IDs */
   injuredReserveIds?: string[];
   /** All players */
@@ -87,9 +89,11 @@ export interface RosterScreenProps {
   onPlaceOnIR?: (playerId: string) => Promise<boolean>;
   /** Callback to activate a player from IR */
   onActivateFromIR?: (playerId: string) => Promise<boolean>;
+  /** Callback to promote a player from practice squad */
+  onPromoteFromPS?: (playerId: string) => Promise<boolean>;
 }
 
-type PositionFilter = 'all' | 'offense' | 'defense' | 'special' | 'ir';
+type PositionFilter = 'all' | 'offense' | 'defense' | 'special' | 'ps' | 'ir';
 
 /**
  * Format money for display
@@ -133,6 +137,16 @@ function RosterPlayerCard({
     setShowActions(!showActions);
   };
 
+  const injurySeverity = player.injuryStatus?.severity ?? 'none';
+  const healthBadge =
+    injurySeverity === 'none'
+      ? null
+      : injurySeverity === 'questionable'
+        ? { label: 'Q', color: colors.warning }
+        : injurySeverity === 'out'
+          ? { label: 'OUT', color: colors.error }
+          : { label: 'IR', color: '#8B0000' };
+
   return (
     <View style={styles.rosterCardContainer}>
       <PlayerCard
@@ -146,6 +160,14 @@ function RosterPlayerCard({
         onPress={handlePress}
         onLongPress={handleLongPress}
       />
+      {healthBadge && (
+        <View
+          style={[styles.healthBadge, { backgroundColor: healthBadge.color }]}
+          accessibilityLabel={`Health status: ${injurySeverity}`}
+        >
+          <Text style={styles.healthBadgeText}>{healthBadge.label}</Text>
+        </View>
+      )}
       {showActions && (
         <View style={styles.actionsOverlay}>
           {canExtend && (
@@ -244,6 +266,61 @@ function IRPlayerCard({
           >
             <Ionicons name="arrow-up-circle" size={14} color={colors.textOnPrimary} />
             <Text style={styles.activateButtonText}>Activate</Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/**
+ * Practice Squad player card - shows PS players with promote action
+ */
+function PSPlayerCard({
+  player,
+  onPress,
+  onPromote,
+}: {
+  player: Player;
+  onPress?: () => void;
+  onPromote?: () => void;
+}) {
+  return (
+    <View style={styles.irCardContainer}>
+      <TouchableOpacity
+        style={[styles.irCard, { borderLeftColor: colors.info }]}
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityLabel={`${player.firstName} ${player.lastName}, ${player.position}, Practice Squad`}
+        accessibilityRole="button"
+      >
+        <View style={styles.irCardLeft}>
+          <Text style={styles.irCardPosition}>{player.position}</Text>
+          <View style={styles.irCardInfo}>
+            <Text style={styles.irCardName}>
+              {player.firstName} {player.lastName}
+            </Text>
+            <View style={styles.irInjuryRow}>
+              <View style={[styles.irInjuryBadge, { backgroundColor: colors.info + '20' }]}>
+                <Text style={[styles.irInjuryBadgeText, { color: colors.info }]}>PS</Text>
+              </View>
+              <Text style={styles.irInjuryText}>
+                Age {player.age} | {player.experience > 0 ? `${player.experience} yr` : 'Rookie'}
+              </Text>
+            </View>
+          </View>
+        </View>
+        {onPromote && (
+          <TouchableOpacity
+            style={styles.activateButton}
+            onPress={onPromote}
+            accessibilityLabel={`Promote ${player.firstName} ${player.lastName} to active roster`}
+            accessibilityRole="button"
+            accessibilityHint="Moves player from practice squad to active roster"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="arrow-up-circle" size={14} color={colors.textOnPrimary} />
+            <Text style={styles.activateButtonText}>Promote</Text>
           </TouchableOpacity>
         )}
       </TouchableOpacity>
@@ -457,6 +534,7 @@ function ExtensionModal({
 
 export function RosterScreen({
   rosterIds,
+  practiceSquadIds = [],
   injuredReserveIds = [],
   players,
   capSpace,
@@ -469,6 +547,7 @@ export function RosterScreen({
   onTrade,
   onPlaceOnIR,
   onActivateFromIR,
+  onPromoteFromPS,
 }: RosterScreenProps) {
   const [filter, setFilter] = useState<PositionFilter>('all');
   const [cutModalVisible, setCutModalVisible] = useState(false);
@@ -510,9 +589,9 @@ export function RosterScreen({
       setCutModalVisible(false);
       setCutPreview(null);
       if (success) {
-        Alert.alert('Player Released', `${cutPreview.playerName} has been released.`);
+        showAlert('Player Released', `${cutPreview.playerName} has been released.`);
       } else {
-        Alert.alert('Error', 'Failed to release player.');
+        showAlert('Error', 'Failed to release player.');
       }
     } else {
       setCutModalVisible(false);
@@ -528,19 +607,19 @@ export function RosterScreen({
 
       switch (result) {
         case 'accepted':
-          Alert.alert(
+          showAlert(
             'Extension Signed!',
             `${selectedPlayer.firstName} ${selectedPlayer.lastName} has agreed to the extension!`
           );
           break;
         case 'rejected':
-          Alert.alert(
+          showAlert(
             'Extension Rejected',
             `${selectedPlayer.firstName} ${selectedPlayer.lastName} declined the offer.`
           );
           break;
         case 'counter':
-          Alert.alert(
+          showAlert(
             'Counter Offer',
             `${selectedPlayer.firstName} ${selectedPlayer.lastName} wants different terms.`
           );
@@ -558,12 +637,12 @@ export function RosterScreen({
     if (onPlaceOnIR) {
       const success = await onPlaceOnIR(player.id);
       if (success) {
-        Alert.alert(
+        showAlert(
           'Placed on IR',
           `${player.firstName} ${player.lastName} has been placed on injured reserve.`
         );
       } else {
-        Alert.alert('Error', 'Failed to place player on IR.');
+        showAlert('Error', 'Failed to place player on IR.');
       }
     }
   };
@@ -573,15 +652,30 @@ export function RosterScreen({
     if (onActivateFromIR) {
       const success = await onActivateFromIR(player.id);
       if (success) {
-        Alert.alert(
+        showAlert(
           'Activated from IR',
           `${player.firstName} ${player.lastName} has been activated from injured reserve.`
         );
       } else {
-        Alert.alert(
+        showAlert(
           'Error',
           'Cannot activate player from IR yet. The player may need more recovery time or the roster may be full.'
         );
+      }
+    }
+  };
+
+  // Handle promoting a player from Practice Squad
+  const handlePromoteFromPS = async (player: Player) => {
+    if (onPromoteFromPS) {
+      const success = await onPromoteFromPS(player.id);
+      if (success) {
+        showAlert(
+          'Promoted from Practice Squad',
+          `${player.firstName} ${player.lastName} has been promoted to the active roster.`
+        );
+      } else {
+        showAlert('Error', 'Failed to promote player. The active roster may be full.');
       }
     }
   };
@@ -632,6 +726,24 @@ export function RosterScreen({
       .sort((a, b) => a.lastName.localeCompare(b.lastName));
   }, [injuredReserveIds, players]);
 
+  // Practice squad players
+  const psPlayers = useMemo(() => {
+    return practiceSquadIds
+      .map((id) => players[id])
+      .filter(Boolean)
+      .sort((a, b) => {
+        const posOrder = [
+          ...OFFENSIVE_POSITIONS,
+          ...DEFENSIVE_POSITIONS,
+          ...SPECIAL_TEAMS_POSITIONS,
+        ];
+        const aIndex = posOrder.indexOf(a.position);
+        const bIndex = posOrder.indexOf(b.position);
+        if (aIndex !== bIndex) return aIndex - bIndex;
+        return a.lastName.localeCompare(b.lastName);
+      });
+  }, [practiceSquadIds, players]);
+
   // Count by group
   const counts = useMemo(() => {
     const offense = rosterPlayers.filter((p) => OFFENSIVE_POSITIONS.includes(p.position)).length;
@@ -639,8 +751,15 @@ export function RosterScreen({
     const special = rosterPlayers.filter((p) =>
       SPECIAL_TEAMS_POSITIONS.includes(p.position)
     ).length;
-    return { offense, defense, special, total: rosterPlayers.length, ir: irPlayers.length };
-  }, [rosterPlayers, irPlayers]);
+    return {
+      offense,
+      defense,
+      special,
+      total: rosterPlayers.length,
+      ps: psPlayers.length,
+      ir: irPlayers.length,
+    };
+  }, [rosterPlayers, psPlayers, irPlayers]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -680,7 +799,7 @@ export function RosterScreen({
 
       {/* Position Filter */}
       <View style={styles.filterContainer} accessibilityRole="tablist">
-        {(['all', 'offense', 'defense', 'special', 'ir'] as PositionFilter[]).map((f) => {
+        {(['all', 'offense', 'defense', 'special', 'ps', 'ir'] as PositionFilter[]).map((f) => {
           const label =
             f === 'all'
               ? `All (${counts.total})`
@@ -688,9 +807,11 @@ export function RosterScreen({
                 ? `Offense (${counts.offense})`
                 : f === 'defense'
                   ? `Defense (${counts.defense})`
-                  : f === 'ir'
-                    ? `IR (${counts.ir})`
-                    : `Special Teams (${counts.special})`;
+                  : f === 'ps'
+                    ? `Practice Squad (${counts.ps})`
+                    : f === 'ir'
+                      ? `IR (${counts.ir})`
+                      : `Special Teams (${counts.special})`;
           const shortLabel =
             f === 'all'
               ? `All (${counts.total})`
@@ -698,9 +819,11 @@ export function RosterScreen({
                 ? `OFF (${counts.offense})`
                 : f === 'defense'
                   ? `DEF (${counts.defense})`
-                  : f === 'ir'
-                    ? `IR (${counts.ir})`
-                    : `ST (${counts.special})`;
+                  : f === 'ps'
+                    ? `PS (${counts.ps})`
+                    : f === 'ir'
+                      ? `IR (${counts.ir})`
+                      : `ST (${counts.special})`;
 
           return (
             <TouchableOpacity
@@ -720,7 +843,7 @@ export function RosterScreen({
         })}
       </View>
 
-      {/* Player List - Active roster or IR list */}
+      {/* Player List - Active roster, PS, or IR list */}
       {filter === 'ir' ? (
         <FlatList
           data={irPlayers}
@@ -742,6 +865,32 @@ export function RosterScreen({
               <Text style={styles.emptyStateIcon}>+</Text>
               <Text style={styles.emptyStateTitle}>No Players on IR</Text>
               <Text style={styles.emptyStateText}>No players are currently on injured reserve</Text>
+            </View>
+          }
+        />
+      ) : filter === 'ps' ? (
+        <FlatList
+          data={psPlayers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PSPlayerCard
+              player={item}
+              onPress={() => onSelectPlayer?.(item.id)}
+              onPromote={onPromoteFromPS ? () => handlePromoteFromPS(item) : undefined}
+            />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            psPlayers.length === 0 && styles.emptyListContent,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>+</Text>
+              <Text style={styles.emptyStateTitle}>No Practice Squad Players</Text>
+              <Text style={styles.emptyStateText}>
+                No players are currently on the practice squad
+              </Text>
             </View>
           }
         />
@@ -914,6 +1063,20 @@ const styles = StyleSheet.create({
   },
   rosterCardContainer: {
     position: 'relative',
+  },
+  healthBadge: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    zIndex: 1,
+  },
+  healthBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
   },
   actionsOverlay: {
     position: 'absolute',

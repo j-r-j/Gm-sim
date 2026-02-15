@@ -12,8 +12,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Switch,
-  Alert,
 } from 'react-native';
+import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameSettings, SimulationSpeed } from '../core/models/game/GameState';
@@ -137,20 +137,13 @@ export function SettingsScreen({
   const safeSettings = settings ?? DEFAULT_SETTINGS;
 
   const handleClearData = () => {
-    Alert.alert(
+    showConfirm(
       'Clear Save Data',
       'This will permanently delete all saved games. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All Data',
-          style: 'destructive',
-          onPress: () => {
-            onClearData?.();
-            Alert.alert('Data Cleared', 'All save data has been deleted.');
-          },
-        },
-      ]
+      () => {
+        onClearData?.();
+        showAlert('Data Cleared', 'All save data has been deleted.');
+      }
     );
   };
 

@@ -255,6 +255,7 @@ export function GMDashboardScreen({
   const patienceViewModel: PatienceViewModel | null = gameState.patienceMeter
     ? createPatienceViewModel(gameState.patienceMeter)
     : null;
+  const jobSecurityPct: number = gameState.patienceMeter?.currentValue ?? 0;
 
   // Generate action prompt for week advancement or offseason entry
   const actionPrompt: NextActionPrompt | null = useMemo(() => {
@@ -513,7 +514,7 @@ export function GMDashboardScreen({
           ]}
           onPress={() => onAction('ownerRelations')}
           activeOpacity={0.7}
-          accessibilityLabel={`Job security: ${getJobSecurityLabel(patienceViewModel.status)}. ${patienceViewModel.trendDescription}`}
+          accessibilityLabel={`Job security: ${getJobSecurityLabel(patienceViewModel.status)} ${jobSecurityPct}%. ${patienceViewModel.trendDescription}`}
           accessibilityRole="button"
           accessibilityHint="View owner relations and job security details"
           hitSlop={accessibility.hitSlop}
@@ -531,8 +532,19 @@ export function GMDashboardScreen({
                   { color: getJobSecurityColor(patienceViewModel.status) },
                 ]}
               >
-                {getJobSecurityLabel(patienceViewModel.status)}
+                {getJobSecurityLabel(patienceViewModel.status)} {jobSecurityPct}%
               </Text>
+            </View>
+            <View style={styles.jobSecurityProgressBar}>
+              <View
+                style={[
+                  styles.jobSecurityProgressFill,
+                  {
+                    width: `${jobSecurityPct}%`,
+                    backgroundColor: getJobSecurityColor(patienceViewModel.status),
+                  },
+                ]}
+              />
             </View>
             <Text style={styles.jobSecurityTrend}>{patienceViewModel.trendDescription}</Text>
           </View>
@@ -1062,6 +1074,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     letterSpacing: 1,
+  },
+  jobSecurityProgressBar: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    marginTop: spacing.xs,
+    overflow: 'hidden' as const,
+  },
+  jobSecurityProgressFill: {
+    height: 4,
+    borderRadius: 2,
   },
   jobSecurityTrend: {
     fontSize: fontSize.xs,

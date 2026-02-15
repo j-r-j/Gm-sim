@@ -30,11 +30,50 @@ import {
   FakeCity,
   Conference,
   Division,
+  MarketSize,
   ALL_CONFERENCES,
   ALL_DIVISIONS,
   getFullTeamName,
 } from '../core/models/team/FakeCities';
+import { StadiumType } from '../core/models/team/Stadium';
 import { SaveSlot } from '../services/storage/GameStorage';
+
+type DifficultyLevel = 'Easy' | 'Normal' | 'Hard';
+
+function getDifficulty(marketSize: MarketSize): DifficultyLevel {
+  switch (marketSize) {
+    case 'large':
+      return 'Easy';
+    case 'medium':
+      return 'Normal';
+    case 'small':
+      return 'Hard';
+  }
+}
+
+function getDifficultyColor(difficulty: DifficultyLevel): string {
+  switch (difficulty) {
+    case 'Easy':
+      return colors.success;
+    case 'Normal':
+      return colors.warning;
+    case 'Hard':
+      return colors.error;
+  }
+}
+
+function getStadiumLabel(type: StadiumType): string {
+  switch (type) {
+    case 'domeFixed':
+      return 'Dome';
+    case 'domeRetractable':
+      return 'Retractable Roof';
+    case 'outdoorWarm':
+      return 'Open Air (Warm)';
+    case 'outdoorCold':
+      return 'Open Air (Cold)';
+  }
+}
 
 interface TeamSelectionScreenProps {
   onSelectTeam: (team: FakeCity, gmName: string, saveSlot: SaveSlot) => void;
@@ -73,6 +112,8 @@ export function TeamSelectionScreen({
 
   const renderTeamCard = (team: FakeCity) => {
     const isSelected = selectedTeam?.abbreviation === team.abbreviation;
+    const difficulty = getDifficulty(team.marketSize);
+    const difficultyColor = getDifficultyColor(difficulty);
 
     return (
       <TouchableOpacity
@@ -80,7 +121,7 @@ export function TeamSelectionScreen({
         style={[styles.teamCard, isSelected && styles.teamCardSelected]}
         onPress={() => setSelectedTeam(team)}
         activeOpacity={0.7}
-        accessibilityLabel={`${getFullTeamName(team)}${isSelected ? ', selected' : ''}`}
+        accessibilityLabel={`${getFullTeamName(team)}, ${difficulty} difficulty${isSelected ? ', selected' : ''}`}
         accessibilityRole="button"
         hitSlop={accessibility.hitSlop}
       >
@@ -92,9 +133,18 @@ export function TeamSelectionScreen({
             <Text style={[styles.teamName, isSelected && styles.teamNameSelected]}>
               {getFullTeamName(team)}
             </Text>
-            <Text style={[styles.teamMeta, isSelected && styles.teamMetaSelected]}>
-              {team.marketSize.charAt(0).toUpperCase() + team.marketSize.slice(1)} Market
-            </Text>
+            <View style={styles.teamDetailRow}>
+              <Text style={[styles.teamMeta, isSelected && styles.teamMetaSelected]}>
+                {team.marketSize.charAt(0).toUpperCase() + team.marketSize.slice(1)} Market
+              </Text>
+              <Text style={styles.teamDetailSeparator}>|</Text>
+              <Text style={[styles.teamMeta, isSelected && styles.teamMetaSelected]}>
+                {getStadiumLabel(team.stadiumType)}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.difficultyBadge, { borderColor: difficultyColor }]}>
+            <Text style={[styles.difficultyText, { color: difficultyColor }]}>{difficulty}</Text>
           </View>
         </View>
         {isSelected && (
@@ -402,13 +452,33 @@ const styles = StyleSheet.create({
   teamNameSelected: {
     color: colors.primary,
   },
+  teamDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xxs,
+  },
+  teamDetailSeparator: {
+    color: colors.border,
+    marginHorizontal: spacing.xs,
+    fontSize: fontSize.sm,
+  },
   teamMeta: {
     fontSize: fontSize.sm,
     color: colors.textLight,
-    marginTop: spacing.xxs,
   },
   teamMetaSelected: {
     color: colors.textSecondary,
+  },
+  difficultyBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    marginLeft: spacing.sm,
+  },
+  difficultyText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
   },
   checkmark: {
     width: 28,

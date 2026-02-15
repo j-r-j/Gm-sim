@@ -15,8 +15,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import { useGame } from '../GameContext';
+import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask, tryCompleteOffseasonTask } from './shared';
 
@@ -760,7 +760,7 @@ export function DraftRoomScreenWrapper({
       setSelectedProspectId(null);
       updateDraftState(newState);
     } catch {
-      Alert.alert('Error', 'Could not make that selection.');
+      showAlert('Error', 'Could not make that selection.');
     }
   }, [draftState, selectedProspectId, updateDraftState]);
 
@@ -861,7 +861,7 @@ export function DraftRoomScreenWrapper({
           }
           updateDraftState(newState);
         } catch {
-          Alert.alert('Error', 'Could not make that selection.');
+          showAlert('Error', 'Could not make that selection.');
         }
       }}
       onViewProspect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
@@ -870,7 +870,7 @@ export function DraftRoomScreenWrapper({
           const newState = acceptTradeOffer(draftState, Number(tradeId));
           updateDraftState(newState);
         } catch {
-          Alert.alert('Error', 'Could not accept trade.');
+          showAlert('Error', 'Could not accept trade.');
         }
       }}
       onRejectTrade={(tradeId) => {
@@ -878,11 +878,11 @@ export function DraftRoomScreenWrapper({
           const newState = rejectTradeOffer(draftState, Number(tradeId));
           updateDraftState(newState);
         } catch {
-          Alert.alert('Error', 'Could not reject trade.');
+          showAlert('Error', 'Could not reject trade.');
         }
       }}
-      onCounterTrade={() => Alert.alert('Counter Trade', 'Counter trade feature coming soon.')}
-      onProposeTrade={() => Alert.alert('Propose Trade', 'Trade proposal feature coming soon.')}
+      onCounterTrade={() => showAlert('Counter Trade', 'Counter trade feature coming soon.')}
+      onProposeTrade={() => showAlert('Propose Trade', 'Trade proposal feature coming soon.')}
       onToggleAutoPick={() => {
         if (speedMode === 'SKIP') {
           setSpeedMode('AUTO');
@@ -1063,7 +1063,7 @@ export function ScoutingReportsScreenWrapper({
       onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
       onRequestFocusScouting={(prospectId) => {
         const prospect = gameState.prospects[prospectId];
-        Alert.alert(
+        showAlert(
           'Focus Scouting Requested',
           `A scout will be assigned to do a comprehensive evaluation of ${prospect?.player.firstName} ${prospect?.player.lastName}.`
         );
@@ -1224,7 +1224,7 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
       onProspectSelect={(prospectId) => navigation.navigate('ProspectDetail', { prospectId })}
       onToggleLock={(prospectId) => {
         const prospect = gameState.prospects[prospectId];
-        Alert.alert(
+        showAlert(
           'Ranking Locked',
           `${prospect?.player.firstName} ${prospect?.player.lastName}'s ranking has been locked on your board.`
         );
@@ -1338,7 +1338,7 @@ export function ProspectDetailScreenWrapper({
     setGameState(updatedState);
     await saveGameState(updatedState);
 
-    Alert.alert(
+    showAlert(
       'Scout Assigned',
       `${scout.firstName} ${scout.lastName} has been assigned to scout ${prospect.player.firstName} ${prospect.player.lastName}.`
     );

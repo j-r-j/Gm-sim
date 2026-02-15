@@ -13,8 +13,9 @@
  */
 
 import React, { useEffect } from 'react';
-import { Alert, SafeAreaView } from 'react-native';
+import { SafeAreaView } from 'react-native';
 import { useGame } from '../GameContext';
+import { showAlert, showConfirm } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask } from './shared';
 import { colors } from '../../styles';
@@ -53,10 +54,12 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
   const capSpace = userTeam.finances?.capSpace ?? 0;
 
   const injuredReserveIds: string[] = userTeam.injuredReserveIds || [];
+  const practiceSquadIds: string[] = userTeam.practiceSquadIds || [];
 
   return (
     <RosterScreen
       rosterIds={userTeam.rosterPlayerIds}
+      practiceSquadIds={practiceSquadIds}
       injuredReserveIds={injuredReserveIds}
       players={gameState.players}
       capSpace={capSpace}
@@ -85,6 +88,22 @@ export function RosterScreenWrapper({ navigation }: ScreenProps<'Roster'>): Reac
           ...userTeam,
           rosterPlayerIds: updatedRoster,
           injuredReserveIds: updatedIR,
+        };
+        const updatedState: GameState = {
+          ...gameState,
+          teams: { ...gameState.teams, [userTeam.id]: updatedTeam },
+        };
+        setGameState(updatedState);
+        await saveGameState(updatedState);
+        return true;
+      }}
+      onPromoteFromPS={async (playerId) => {
+        const updatedPS = practiceSquadIds.filter((id) => id !== playerId);
+        const updatedRoster = [...userTeam.rosterPlayerIds, playerId];
+        const updatedTeam = {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+          practiceSquadIds: updatedPS,
         };
         const updatedState: GameState = {
           ...gameState,
@@ -246,20 +265,9 @@ export function OwnerRelationsScreenWrapper({
       onBack={() => navigation.goBack()}
       onDemandPress={(demand) => {
         // Show demand details with action options
-        Alert.alert(
+        showAlert(
           'Owner Demand',
-          `${demand.description}\n\nDeadline: Week ${demand.deadline}\nIssued: Week ${demand.issuedWeek}\n\nConsequence if failed: ${demand.consequence}`,
-          [
-            {
-              text: 'View Roster',
-              onPress: () => navigation.navigate('Roster'),
-            },
-            {
-              text: 'View Finances',
-              onPress: () => navigation.navigate('Finances'),
-            },
-            { text: 'Close', style: 'cancel' },
-          ]
+          `${demand.description}\n\nDeadline: Week ${demand.deadline}\nIssued: Week ${demand.issuedWeek}\n\nConsequence if failed: ${demand.consequence}`
         );
       }}
     />
@@ -318,7 +326,7 @@ export function ContractManagementScreenWrapper({
       }}
       onCutPlayer={(playerId, breakdown) => {
         const player = gameState.players[playerId];
-        Alert.alert(
+        showAlert(
           'Cut Analysis',
           `${player?.firstName} ${player?.lastName}\n\n` +
             `Standard Cut:\n` +
@@ -352,7 +360,7 @@ export function ContractManagementScreenWrapper({
               setGameState(updatedState);
               await saveGameState(updatedState);
             }
-            Alert.alert('Franchise Tag Applied', `Player has been franchise tagged.`);
+            showAlert('Franchise Tag Applied', `Player has been franchise tagged.`);
             break;
           }
           case 'removeFranchiseTag': {
@@ -371,7 +379,7 @@ export function ContractManagementScreenWrapper({
               setGameState(updatedState);
               await saveGameState(updatedState);
             }
-            Alert.alert('Franchise Tag Removed', `Franchise tag has been removed.`);
+            showAlert('Franchise Tag Removed', `Franchise tag has been removed.`);
             break;
           }
           case 'restructureContract': {
@@ -396,12 +404,12 @@ export function ContractManagementScreenWrapper({
               setGameState(updatedState);
               await saveGameState(updatedState);
             }
-            Alert.alert('Contract Restructured', `Contract has been restructured.`);
+            showAlert('Contract Restructured', `Contract has been restructured.`);
             break;
           }
           case 'cutPlayer': {
             const player = gameState.players[action.playerId];
-            Alert.alert(
+            showAlert(
               'Cut Analysis',
               `${player?.firstName} ${player?.lastName}\n\n` +
                 `Cap Savings: $${(action.cutBreakdown.standardCut.capSavings / 1000).toFixed(1)}M\n` +

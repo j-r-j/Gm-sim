@@ -13,10 +13,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Alert,
   Keyboard,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { showAlert } from '../utils/alert';
 import {
   colors,
   spacing,
@@ -173,11 +173,11 @@ function OfferModal({
 
   const handleSubmit = () => {
     if (salaryNum <= 0) {
-      Alert.alert('Invalid Offer', 'Please enter a valid salary amount');
+      showAlert('Invalid Offer', 'Please enter a valid salary amount');
       return;
     }
     if (salaryNum * 1000000 > capSpace) {
-      Alert.alert('Insufficient Cap Space', 'You cannot afford this contract');
+      showAlert('Insufficient Cap Space', 'You cannot afford this contract');
       return;
     }
     onSubmit({
@@ -339,19 +339,19 @@ export function FreeAgencyScreen({
 
     switch (result) {
       case 'accepted':
-        Alert.alert(
+        showAlert(
           'Offer Accepted!',
           `${selectedAgent.firstName} ${selectedAgent.lastName} has signed with ${teamName}!`
         );
         break;
       case 'rejected':
-        Alert.alert(
+        showAlert(
           'Offer Rejected',
           `${selectedAgent.firstName} ${selectedAgent.lastName} has declined your offer.`
         );
         break;
       case 'counter':
-        Alert.alert(
+        showAlert(
           'Counter Offer',
           `${selectedAgent.firstName} ${selectedAgent.lastName} wants more money.`
         );

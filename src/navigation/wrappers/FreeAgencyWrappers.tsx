@@ -10,8 +10,8 @@
  */
 
 import React, { useEffect } from 'react';
-import { Alert } from 'react-native';
 import { useGame } from '../GameContext';
+import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback, tryCompleteViewTask } from './shared';
 
@@ -56,7 +56,7 @@ export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.
   // P3-4: Trade deadline - prevent trades after week 9 during regular season
   const { calendar } = gameState.league;
   if (calendar.currentPhase === 'regularSeason' && calendar.currentWeek > TRADE_DEADLINE_WEEK) {
-    Alert.alert(
+    showAlert(
       'Trade Deadline Passed',
       `The trade deadline (Week ${TRADE_DEADLINE_WEEK}) has passed. No trades can be made until the offseason.`
     );
@@ -148,13 +148,13 @@ export function TradeScreenWrapper({ navigation }: ScreenProps<'Trade'>): React.
           };
           setGameState(updatedState);
           await saveGameState(updatedState);
-          Alert.alert('Trade Accepted', aiResponse.reason);
+          showAlert('Trade Accepted', aiResponse.reason);
           return 'accepted';
         } else if (aiResponse.decision === 'counter') {
-          Alert.alert('Counter Offer', aiResponse.reason);
+          showAlert('Counter Offer', aiResponse.reason);
           return 'counter';
         }
-        Alert.alert('Trade Rejected', aiResponse.reason);
+        showAlert('Trade Rejected', aiResponse.reason);
         return 'rejected';
       }}
     />
@@ -322,19 +322,19 @@ export function RFAScreenWrapper({ navigation }: ScreenProps<'RFA'>): React.JSX.
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
       onSubmitTender={(playerId, level) => {
         const player = gameState.players[playerId];
-        Alert.alert(
+        showAlert(
           'Tender Submitted',
           `A ${level.replace('_', ' ')} tender has been placed on ${player?.firstName} ${player?.lastName}.`
         );
       }}
       onWithdrawTender={(tenderId) => {
-        Alert.alert('Tender Withdrawn', `Tender ${tenderId} has been withdrawn.`);
+        showAlert('Tender Withdrawn', `Tender ${tenderId} has been withdrawn.`);
       }}
       onMatchOffer={(offerSheetId) => {
-        Alert.alert('Offer Matched', `You have matched offer sheet ${offerSheetId}.`);
+        showAlert('Offer Matched', `You have matched offer sheet ${offerSheetId}.`);
       }}
       onDeclineOffer={(offerSheetId) => {
-        Alert.alert('Offer Declined', `You have declined to match offer sheet ${offerSheetId}.`);
+        showAlert('Offer Declined', `You have declined to match offer sheet ${offerSheetId}.`);
       }}
     />
   );

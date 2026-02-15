@@ -417,8 +417,9 @@ export function createNewGame(options: NewGameOptions): GameState {
   const userOwnerId = `owner-${selectedTeam.abbreviation}`;
   const userOwner = owners[userOwnerId];
 
-  // Initialize patience meter with owner's starting patience
-  const initialPatience = userOwner?.patienceMeter ?? 50;
+  // Initialize patience meter - new GMs start at STABLE (60+) or better
+  const ownerBasePatience = userOwner?.patienceMeter ?? 50;
+  const initialPatience = Math.max(60, ownerBasePatience);
   const patienceMeter = createPatienceMeterState(userOwnerId, initialPatience, 1, startYear);
 
   // Initialize tenure stats

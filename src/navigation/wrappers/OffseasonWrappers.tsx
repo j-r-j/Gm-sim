@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { Alert } from 'react-native';
+
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';
 import {

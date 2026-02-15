@@ -7,8 +7,8 @@
  */
 
 import React from 'react';
-import { Alert } from 'react-native';
 import { useGame } from '../GameContext';
+import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
 import { LoadingFallback } from './shared';
 import { ScheduleScreen } from '../../screens/ScheduleScreen';
@@ -207,7 +207,7 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
   const userGame = schedule ? getUserTeamGame(schedule, currentWeek, gameState.userTeamId) : null;
 
   if (!userGame) {
-    Alert.alert('No Game', 'No game scheduled for this week.');
+    showAlert('No Game', 'No game scheduled for this week.');
     navigation.goBack();
     return <LoadingFallback message="No game scheduled..." />;
   }

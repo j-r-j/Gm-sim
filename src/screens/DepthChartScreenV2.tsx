@@ -11,8 +11,8 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
@@ -376,9 +376,9 @@ export function DepthChartScreenV2({
           try {
             const newDepthChart = swapPlayersV2(depthChart, selectedPlayerId, playerId);
             onDepthChartChange(newDepthChart);
-            Alert.alert('Swapped', 'Players swapped successfully');
+            showAlert('Swapped', 'Players swapped successfully');
           } catch {
-            Alert.alert('Error', 'Could not swap players');
+            showAlert('Error', 'Could not swap players');
           }
         }
         setSelectedPlayerId(null);
@@ -401,20 +401,15 @@ export function DepthChartScreenV2({
     (slot: DepthChartSlot) => {
       const assignment = depthChart.assignments.find((a) => a.slot === slot);
       if (assignment) {
-        Alert.alert(SLOT_INFO[slot].displayName, 'Choose an action', [
-          {
-            text: 'View Player',
-            onPress: () => onPlayerSelect?.(assignment.playerId),
+        showConfirm(
+          SLOT_INFO[slot].displayName,
+          'Change the player in this slot?',
+          () => {
+            setSelectionSlot(slot);
+            setShowPlayerSelection(true);
           },
-          {
-            text: 'Change Player',
-            onPress: () => {
-              setSelectionSlot(slot);
-              setShowPlayerSelection(true);
-            },
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
+          () => onPlayerSelect?.(assignment.playerId)
+        );
       } else {
         setSelectionSlot(slot);
         setShowPlayerSelection(true);
@@ -447,24 +442,18 @@ export function DepthChartScreenV2({
 
   // Handle auto-generate
   const handleAutoGenerate = useCallback(() => {
-    Alert.alert(
+    showConfirm(
       'Auto-Generate Depth Chart',
       'This will regenerate the depth chart based on player ratings. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Generate',
-          onPress: () => {
-            const result = generateDepthChartV2(gameState, depthChart.teamId);
-            onDepthChartChange(result.depthChart);
-            if (result.warnings.length > 0) {
-              Alert.alert('Generated with Warnings', result.warnings.join('\n'));
-            } else {
-              Alert.alert('Success', `Assigned ${result.assignmentsChanged} players`);
-            }
-          },
-        },
-      ]
+      () => {
+        const result = generateDepthChartV2(gameState, depthChart.teamId);
+        onDepthChartChange(result.depthChart);
+        if (result.warnings.length > 0) {
+          showAlert('Generated with Warnings', result.warnings.join('\n'));
+        } else {
+          showAlert('Success', `Assigned ${result.assignmentsChanged} players`);
+        }
+      }
     );
   }, [gameState, depthChart.teamId, onDepthChartChange]);
 

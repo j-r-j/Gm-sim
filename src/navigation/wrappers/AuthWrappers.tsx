@@ -11,8 +11,9 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { Alert, Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
+import { Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
+import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';
 import { colors, spacing, fontSize } from '../../styles';
@@ -56,12 +57,12 @@ export function StartScreenWrapper({ navigation }: ScreenProps<'Start'>): React.
           setGameState(loadedState);
           navigation.navigate('Dashboard');
         } else {
-          Alert.alert('Error', 'Could not load save file.');
+          showAlert('Error', 'Could not load save file.');
         }
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error loading game:', error);
-        Alert.alert('Error', 'Failed to load game. The save file may be corrupted.');
+        showAlert('Error', 'Failed to load game. The save file may be corrupted.');
       } finally {
         setIsLoading(false);
       }
@@ -217,7 +218,7 @@ export function StaffDecisionScreenWrapper({
         })
       );
     } catch {
-      Alert.alert('Error', 'Failed to start game. Please try again.');
+      showAlert('Error', 'Failed to start game. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -225,24 +226,17 @@ export function StaffDecisionScreenWrapper({
 
   const handleCleanHouse = useCallback(() => {
     // Show confirmation dialog before proceeding
-    Alert.alert(
+    showConfirm(
       'Clean House?',
       'This will release all current coaching staff. They will be available to rehire from the candidate pool. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, Clean House',
-          style: 'destructive',
-          onPress: () => {
-            navigation.navigate('StaffHiring', {
-              teamCity: teamAbbrev,
-              gmName: route.params.gmName,
-              saveSlot,
-              formerStaffIds: coaches.map((c: Coach) => c.id),
-            });
-          },
-        },
-      ]
+      () => {
+        navigation.navigate('StaffHiring', {
+          teamCity: teamAbbrev,
+          gmName: route.params.gmName,
+          saveSlot,
+          formerStaffIds: coaches.map((c: Coach) => c.id),
+        });
+      }
     );
   }, [navigation, teamAbbrev, route.params.gmName, saveSlot, coaches]);
 
@@ -395,7 +389,7 @@ export function StaffHiringScreenWrapper({
           })
         );
       } catch {
-        Alert.alert('Error', 'Failed to start game. Please try again.');
+        showAlert('Error', 'Failed to start game. Please try again.');
       } finally {
         setIsLoading(false);
       }

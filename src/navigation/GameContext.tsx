@@ -12,9 +12,10 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { Alert, AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import { GameState, updateLastSaved } from '../core/models/game/GameState';
 import { gameStorage } from '../services/storage/GameStorage';
+import { showAlert } from '../utils/alert';
 import { FiringRecord } from '../core/career/FiringMechanics';
 import { GameResult } from '../core/game/GameRunner';
 import { BoxScore } from '../core/game/BoxScoreGenerator';
@@ -151,13 +152,26 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
     setOtherGamesResults([]);
   }, []);
 
+  // Track whether we've already shown a save-failure alert to avoid spamming
+  const saveFailureShownRef = useRef(false);
+
   // Save game state to storage
   const saveGameState = useCallback(async (updatedState: GameState) => {
     try {
       await gameStorage.save(updatedState.saveSlot, updatedState);
+      // Reset failure flag on successful save
+      saveFailureShownRef.current = false;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error auto-saving game:', error);
+      // Show a user-visible warning once per failure streak
+      if (!saveFailureShownRef.current) {
+        saveFailureShownRef.current = true;
+        showAlert(
+          'Auto-Save Failed',
+          'Your game could not be saved. You may be running low on storage space. Try using "Save Game" from the menu to retry.'
+        );
+      }
     }
   }, []);
 
@@ -208,11 +222,11 @@ export function GameProvider({ children }: GameProviderProps): React.JSX.Element
       const updatedState = updateLastSaved(gameState);
       await gameStorage.save(gameState.saveSlot, updatedState);
       setGameState(updatedState);
-      Alert.alert('Success', 'Game saved successfully!');
+      showAlert('Success', 'Game saved successfully!');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving game:', error);
-      Alert.alert('Error', 'Failed to save game.');
+      showAlert('Error', 'Failed to save game. You may be running low on storage space.');
     } finally {
       setIsLoading(false);
     }
