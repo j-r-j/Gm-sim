@@ -1,21 +1,48 @@
 /**
  * BigBoardScreen
- * Displays the team's big board with draft prospect rankings
+ * Displays the team's big board with draft prospect rankings.
+ * Features: search, sortable columns, enriched prospect data.
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { ScreenHeader } from '../components';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
+import { WorkoutBadge } from '../components/draft/WorkoutBadge';
+import { StockArrow } from '../components/draft/StockArrow';
 import {
   DraftTier,
   DraftBoardProspectView,
   DraftBoardViewModel,
 } from '../core/scouting/DraftBoardManager';
 import { NeedLevel, ProspectRanking } from '../core/scouting/BigBoardGenerator';
+
+/**
+ * Enriched prospect data from combine/pro day
+ */
+export interface EnrichedProspectData {
+  prospectId: string;
+  collegeName: string;
+  age: number;
+  workoutSource: 'combine' | 'pro_day' | 'both' | 'none';
+  fortyYardDash: number | null;
+  combineGrade: string | null;
+  collegeStatLine: string | null;
+  stockDirection: 'up' | 'down' | 'steady';
+  awards: string[];
+}
 
 /**
  * Props for BigBoardScreen
@@ -30,9 +57,22 @@ export interface BigBoardScreenProps {
   onUpdateRank?: (prospectId: string, newRank: number) => void;
   onToggleLock?: (prospectId: string) => void;
   onAddNotes?: (prospectId: string, notes: string) => void;
+  enrichedProspects?: EnrichedProspectData[];
 }
 
 type TabType = 'overall' | 'position' | 'tier' | 'needs';
+
+type SortKey =
+  | 'rank'
+  | 'name'
+  | 'position'
+  | 'college'
+  | 'age'
+  | 'projectedRound'
+  | 'fortyYardDash'
+  | 'combineGrade'
+  | 'confidence'
+  | 'stock';
 
 const POSITIONS = Object.values(Position);
 const TIERS: DraftTier[] = [
@@ -92,14 +132,58 @@ function getNeedColor(need: NeedLevel): string {
   return needColors[need];
 }
 
+/** Merge enriched data by prospect ID */
+function getEnrichedData(
+  prospectId: string,
+  enrichedMap: Map<string, EnrichedProspectData>
+): EnrichedProspectData | undefined {
+  return enrichedMap.get(prospectId);
+}
+
 /**
- * Prospect row component
+ * Sortable column header
+ */
+function SortableHeader({
+  label,
+  sortKey,
+  activeSortKey,
+  sortAsc,
+  onSort,
+  style,
+}: {
+  label: string;
+  sortKey: SortKey;
+  activeSortKey: SortKey;
+  sortAsc: boolean;
+  onSort: (key: SortKey) => void;
+  style?: object;
+}) {
+  const isActive = activeSortKey === sortKey;
+  return (
+    <TouchableOpacity
+      style={[styles.columnHeader, style]}
+      onPress={() => onSort(sortKey)}
+      accessibilityLabel={`Sort by ${label}${isActive ? (sortAsc ? ', ascending' : ', descending') : ''}`}
+      accessibilityRole="button"
+      hitSlop={accessibility.hitSlop}
+    >
+      <Text style={[styles.columnHeaderText, isActive && styles.columnHeaderActive]}>{label}</Text>
+      {isActive && (
+        <Ionicons name={sortAsc ? 'chevron-up' : 'chevron-down'} size={10} color={colors.primary} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Prospect row component with enriched data
  */
 function ProspectRow({
   prospect,
   rank,
   showNeed,
   needLevel,
+  enriched,
   onPress,
   onToggleLock,
 }: {
@@ -107,6 +191,7 @@ function ProspectRow({
   rank: number;
   showNeed?: boolean;
   needLevel?: NeedLevel;
+  enriched?: EnrichedProspectData;
   onPress: () => void;
   onToggleLock?: () => void;
 }): React.JSX.Element {
@@ -138,14 +223,37 @@ function ProspectRow({
               accessibilityRole="button"
               hitSlop={accessibility.hitSlop}
             >
-              <Text style={styles.lockText}>🔒</Text>
+              <Text style={styles.lockText}>
+                <Ionicons name="lock-closed" size={12} color={colors.warning} />
+              </Text>
             </TouchableOpacity>
           )}
+          {enriched && <StockArrow direction={enriched.stockDirection} size={12} />}
         </View>
         <Text style={styles.prospectPosition}>{prospect.position}</Text>
-        <Text style={styles.scoutInfo}>Scout: {prospect.latestScoutName}</Text>
-        {prospect.latestReportSummary && (
-          <Text style={styles.reportSummary}>{prospect.latestReportSummary}</Text>
+        {enriched && (
+          <View style={styles.enrichedRow}>
+            <WorkoutBadge source={enriched.workoutSource} />
+            {enriched.fortyYardDash != null && (
+              <Text style={styles.fortyTime}>{enriched.fortyYardDash.toFixed(2)}s</Text>
+            )}
+            {enriched.combineGrade && (
+              <Text style={styles.combineGrade}>{enriched.combineGrade}</Text>
+            )}
+          </View>
+        )}
+        {enriched?.collegeStatLine && (
+          <Text style={styles.statLine} numberOfLines={1}>
+            {enriched.collegeStatLine}
+          </Text>
+        )}
+        {!enriched && (
+          <>
+            <Text style={styles.scoutInfo}>Scout: {prospect.latestScoutName}</Text>
+            {prospect.latestReportSummary && (
+              <Text style={styles.reportSummary}>{prospect.latestReportSummary}</Text>
+            )}
+          </>
         )}
       </View>
 
@@ -181,8 +289,10 @@ function ProspectRow({
       )}
 
       <View style={styles.flagsColumn}>
-        {prospect.hasFocusReport && <Text style={styles.flagIcon}>🎯</Text>}
-        {prospect.needsMoreScouting && <Text style={styles.flagIcon}>📋</Text>}
+        {prospect.hasFocusReport && <Ionicons name="crosshair" size={14} color={colors.primary} />}
+        {prospect.needsMoreScouting && (
+          <Ionicons name="clipboard-outline" size={14} color={colors.textSecondary} />
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -198,18 +308,102 @@ export function BigBoardScreen({
   onBack,
   onProspectSelect,
   onToggleLock,
+  enrichedProspects,
 }: BigBoardScreenProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('overall');
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedTier, setSelectedTier] = useState<DraftTier | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('rank');
+  const [sortAsc, setSortAsc] = useState(true);
+
+  // Build enriched lookup map
+  const enrichedMap = useMemo(() => {
+    const map = new Map<string, EnrichedProspectData>();
+    if (enrichedProspects) {
+      for (const ep of enrichedProspects) {
+        map.set(ep.prospectId, ep);
+      }
+    }
+    return map;
+  }, [enrichedProspects]);
 
   const handleProspectPress = (prospectId: string) => {
     onProspectSelect?.(prospectId);
   };
 
-  // Filter prospects based on active tab and filters
-  const getFilteredProspects = (): DraftBoardProspectView[] => {
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(true);
+    }
+  };
+
+  // Sort prospects
+  const sortProspects = (prospects: DraftBoardProspectView[]): DraftBoardProspectView[] => {
+    if (sortKey === 'rank') {
+      // Default order from viewModel; just flip for descending
+      return sortAsc ? prospects : [...prospects].reverse();
+    }
+
+    return [...prospects].sort((a, b) => {
+      let cmp = 0;
+      const eA = enrichedMap.get(a.prospectId);
+      const eB = enrichedMap.get(b.prospectId);
+
+      switch (sortKey) {
+        case 'name':
+          cmp = a.prospectName.localeCompare(b.prospectName);
+          break;
+        case 'position':
+          cmp = a.position.localeCompare(b.position);
+          break;
+        case 'college':
+          cmp = (eA?.collegeName ?? '').localeCompare(eB?.collegeName ?? '');
+          break;
+        case 'age':
+          cmp = (eA?.age ?? 99) - (eB?.age ?? 99);
+          break;
+        case 'projectedRound':
+          cmp =
+            (parseInt(String(a.projectedRound)) || 99) - (parseInt(String(b.projectedRound)) || 99);
+          break;
+        case 'fortyYardDash':
+          cmp = (eA?.fortyYardDash ?? 99) - (eB?.fortyYardDash ?? 99);
+          break;
+        case 'combineGrade': {
+          const gradeOrder = ['Elite', 'Above Avg', 'Average', 'Below Avg', 'Poor'];
+          const idxA = gradeOrder.indexOf(eA?.combineGrade ?? 'Poor');
+          const idxB = gradeOrder.indexOf(eB?.combineGrade ?? 'Poor');
+          cmp = (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+          break;
+        }
+        case 'confidence':
+          cmp = (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0);
+          break;
+        case 'stock': {
+          const stockOrder = { up: 0, steady: 1, down: 2 };
+          cmp =
+            stockOrder[eA?.stockDirection ?? 'steady'] - stockOrder[eB?.stockDirection ?? 'steady'];
+          break;
+        }
+      }
+
+      return sortAsc ? cmp : -cmp;
+    });
+  };
+
+  // Filter prospects based on active tab, filters, and search
+  const filteredProspects = useMemo(() => {
     let filtered = [...viewModel.prospects];
+
+    // Search filter
+    if (searchText.trim()) {
+      const query = searchText.trim().toLowerCase();
+      filtered = filtered.filter((p) => p.prospectName.toLowerCase().includes(query));
+    }
 
     if (activeTab === 'position' && selectedPosition) {
       filtered = filtered.filter((p) => p.position === selectedPosition);
@@ -220,7 +414,6 @@ export function BigBoardScreen({
     }
 
     if (activeTab === 'needs') {
-      // Sort by need level importance
       const needOrder: NeedLevel[] = ['critical', 'high', 'moderate', 'low', 'none'];
       filtered.sort((a, b) => {
         const needA = positionalNeeds[a.position] || 'moderate';
@@ -229,10 +422,18 @@ export function BigBoardScreen({
       });
     }
 
-    return filtered;
-  };
-
-  const filteredProspects = getFilteredProspects();
+    return sortProspects(filtered);
+  }, [
+    viewModel.prospects,
+    searchText,
+    activeTab,
+    selectedPosition,
+    selectedTier,
+    positionalNeeds,
+    sortKey,
+    sortAsc,
+    enrichedMap,
+  ]);
 
   const tabs: { key: TabType; label: string }[] = [
     { key: 'overall', label: 'Overall' },
@@ -245,6 +446,32 @@ export function BigBoardScreen({
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <ScreenHeader title="Big Board" onBack={onBack} testID="big-board-header" />
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={16} color={colors.textLight} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search prospects..."
+          placeholderTextColor={colors.textLight}
+          value={searchText}
+          onChangeText={setSearchText}
+          accessibilityLabel="Search prospects by name"
+          accessibilityRole="search"
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setSearchText('')}
+            accessibilityLabel="Clear search"
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons name="close-circle" size={18} color={colors.textLight} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Summary Stats */}
       <View style={styles.summaryContainer}>
@@ -350,16 +577,44 @@ export function BigBoardScreen({
         </ScrollView>
       )}
 
-      {/* Column Headers */}
+      {/* Sortable Column Headers */}
       <View style={styles.columnHeaders}>
-        <Text style={[styles.columnHeader, styles.rankHeader]}>Rank</Text>
-        <Text style={[styles.columnHeader, styles.nameHeader]}>Player</Text>
-        <Text style={[styles.columnHeader, styles.gradeHeader]}>Grade</Text>
-        <Text style={[styles.columnHeader, styles.confHeader]}>OVR</Text>
+        <SortableHeader
+          label="Rank"
+          sortKey="rank"
+          activeSortKey={sortKey}
+          sortAsc={sortAsc}
+          onSort={handleSort}
+          style={styles.rankHeader}
+        />
+        <SortableHeader
+          label="Player"
+          sortKey="name"
+          activeSortKey={sortKey}
+          sortAsc={sortAsc}
+          onSort={handleSort}
+          style={styles.nameHeader}
+        />
+        <SortableHeader
+          label="Grade"
+          sortKey="projectedRound"
+          activeSortKey={sortKey}
+          sortAsc={sortAsc}
+          onSort={handleSort}
+          style={styles.gradeHeader}
+        />
+        <SortableHeader
+          label="OVR"
+          sortKey="confidence"
+          activeSortKey={sortKey}
+          sortAsc={sortAsc}
+          onSort={handleSort}
+          style={styles.confHeader}
+        />
         {activeTab === 'needs' && (
-          <Text style={[styles.columnHeader, styles.needHeader]}>Need</Text>
+          <Text style={[styles.columnHeaderText, styles.needHeader]}>Need</Text>
         )}
-        <Text style={[styles.columnHeader, styles.flagHeader]}>Info</Text>
+        <Text style={[styles.columnHeaderText, styles.flagHeader]}>Info</Text>
       </View>
 
       {/* Prospect List */}
@@ -368,11 +623,13 @@ export function BigBoardScreen({
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No Prospects</Text>
             <Text style={styles.emptySubtext}>
-              {activeTab === 'position' && selectedPosition
-                ? `No ${selectedPosition} prospects scouted yet`
-                : activeTab === 'tier' && selectedTier
-                  ? `No ${getTierLabel(selectedTier)} prospects`
-                  : 'Scout some prospects to build your board'}
+              {searchText.trim()
+                ? `No prospects matching "${searchText}"`
+                : activeTab === 'position' && selectedPosition
+                  ? `No ${selectedPosition} prospects scouted yet`
+                  : activeTab === 'tier' && selectedTier
+                    ? `No ${getTierLabel(selectedTier)} prospects`
+                    : 'Scout some prospects to build your board'}
             </Text>
           </View>
         ) : (
@@ -384,6 +641,7 @@ export function BigBoardScreen({
                 rank={index + 1}
                 showNeed={activeTab === 'needs'}
                 needLevel={positionalNeeds[prospect.position]}
+                enriched={getEnrichedData(prospect.prospectId, enrichedMap)}
                 onPress={() => handleProspectPress(prospect.prospectId)}
                 onToggleLock={onToggleLock ? () => onToggleLock(prospect.prospectId) : undefined}
               />
@@ -397,15 +655,15 @@ export function BigBoardScreen({
       {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <Text style={styles.legendIcon}>🎯</Text>
+          <Ionicons name="crosshair" size={12} color={colors.primary} />
           <Text style={styles.legendText}>Focus Report</Text>
         </View>
         <View style={styles.legendItem}>
-          <Text style={styles.legendIcon}>📋</Text>
+          <Ionicons name="clipboard-outline" size={12} color={colors.textSecondary} />
           <Text style={styles.legendText}>Needs Scouting</Text>
         </View>
         <View style={styles.legendItem}>
-          <Text style={styles.legendIcon}>🔒</Text>
+          <Ionicons name="lock-closed" size={12} color={colors.warning} />
           <Text style={styles.legendText}>Locked</Text>
         </View>
       </View>
@@ -418,30 +676,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  backButton: {
-    padding: spacing.xs,
+  searchIcon: {
+    marginRight: spacing.sm,
   },
-  backText: {
+  searchInput: {
+    flex: 1,
     fontSize: fontSize.md,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
     color: colors.text,
-  },
-  headerSpacer: {
-    width: 60,
+    paddingVertical: spacing.xs,
+    minHeight: 36,
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -522,12 +777,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    alignItems: 'center',
   },
   columnHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  columnHeaderText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
     textTransform: 'uppercase',
+  },
+  columnHeaderActive: {
+    color: colors.primary,
   },
   rankHeader: {
     width: 50,
@@ -537,11 +801,11 @@ const styles = StyleSheet.create({
   },
   gradeHeader: {
     width: 70,
-    textAlign: 'center',
+    justifyContent: 'center',
   },
   confHeader: {
     width: 50,
-    textAlign: 'center',
+    justifyContent: 'center',
   },
   needHeader: {
     width: 60,
@@ -597,6 +861,29 @@ const styles = StyleSheet.create({
   prospectPosition: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+  },
+  enrichedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: 2,
+  },
+  fortyTime: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  combineGrade: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  statLine: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    fontStyle: 'italic',
+    marginTop: 1,
   },
   scoutInfo: {
     fontSize: fontSize.xs,
@@ -691,9 +978,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  legendIcon: {
-    fontSize: fontSize.sm,
   },
   legendText: {
     fontSize: fontSize.xs,

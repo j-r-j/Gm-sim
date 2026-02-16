@@ -17,6 +17,7 @@ export type NewsFeedCategory =
   | 'performance'
   | 'milestone'
   | 'draft'
+  | 'predraft'
   | 'coaching'
   | 'rumor'
   | 'league';
@@ -79,6 +80,12 @@ export interface StoryContext {
   oldTeam?: string;
   age?: number;
   experience?: number;
+  fortyTime?: number;
+  combineGrade?: string;
+  stockDirection?: string;
+  quoteText?: string;
+  comparisonPlayer?: string;
+  collegeName?: string;
   [key: string]: string | number | undefined;
 }
 
@@ -525,6 +532,7 @@ export const TEMPLATES_BY_CATEGORY: Record<NewsFeedCategory, StoryTemplate[]> = 
   milestone: MILESTONE_TEMPLATES,
   draft: DRAFT_TEMPLATES,
   coaching: COACHING_TEMPLATES,
+  predraft: [], // Pre-draft stories use their own template system in PreDraftTemplates.ts
   rumor: [], // Rumors have their own generation system
   league: LEAGUE_TEMPLATES,
 };

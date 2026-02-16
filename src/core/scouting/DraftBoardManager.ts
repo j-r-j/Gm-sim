@@ -141,6 +141,17 @@ export interface DraftBoardProspectView {
   latestScoutId: string;
   latestScoutName: string;
   latestReportSummary: string;
+
+  // Enriched fields
+  collegeName?: string;
+  age?: number;
+  workoutSource?: 'combine' | 'pro_day' | 'both' | 'none';
+  fortyYardDash?: number | null;
+  combineGrade?: string | null;
+  stockDirection?: 'up' | 'down' | 'steady';
+  collegeStatLine?: string;
+  awards?: string[];
+  userTier?: string | null;
 }
 
 /**

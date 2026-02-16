@@ -325,3 +325,23 @@ export {
   processTeamProgression,
   generateDevelopmentNews,
 } from './PlayerProgression';
+
+// Rookie Development System
+export {
+  type DevelopmentTrack,
+  type FitLevel as RookieFitLevel,
+  type RookieDevelopmentPlan,
+  type RookiePersonalityProfile,
+  type FirstYearOutcome,
+  derivePersonalityFromTraits,
+  calculateMentorQuality,
+  calculateMentorChemistry,
+  createRookieDevelopmentPlan,
+  calculateFirstYearOutcome,
+} from './RookieDevelopment';
+
+// Rookie Development Tracker
+export {
+  type RookieGameStats,
+  updateRookieAfterGame,
+} from './RookieDevelopmentTracker';

@@ -108,7 +108,10 @@ import {
   classifyPickValue,
   generateStealReachAlert,
   generateUserTargetTaken,
+  generateTeamDraftGrade,
+  generateExpertReactions,
   WarRoomFeedEvent,
+  TeamDraftGrade,
 } from '../../core/draft/DraftDayNarrator';
 
 // Utility imports
@@ -116,7 +119,16 @@ import {
   convertProspectsToDraftBoard,
   sortProspectsByRank,
   DraftBoardEnrichment,
+  resolveWorkoutData,
 } from '../../utils/prospectUtils';
+
+// College stats formatter
+import { formatCollegeStatLine } from '../../utils/collegeStatsFormatter';
+
+// New screen imports
+import { DraftReportCardScreen } from '../../screens/DraftReportCardScreen';
+import { RookieDevelopmentPlanScreen } from '../../screens/RookieDevelopmentPlanScreen';
+import { DevelopmentTrack, FitLevel } from '../../core/career/RookieDevelopment';
 
 // ============================================
 // DRAFT BOARD SCREEN
@@ -305,9 +317,34 @@ function corePickToScreenPick(
 /**
  * Maps a Prospect to a DraftRoomProspect for display
  */
-function prospectToDisplayProspect(p: Prospect, index: number): DraftRoomProspect {
+function prospectToDisplayProspect(
+  p: Prospect,
+  index: number,
+  combineResults?: Record<string, CombineResults>,
+  proDayResults?: Record<string, import('../../core/draft/ProDaySimulator').ProDayResults>
+): DraftRoomProspect {
   const overallRank = getOverallRanking(p, 'consensus');
   const posRank = getPositionRanking(p, 'consensus');
+
+  // Enrich with combine/college data
+  const workout = resolveWorkoutData(p, combineResults, proDayResults);
+  const collegeStatLine = p.collegeStats?.positionStats
+    ? formatCollegeStatLine(p.collegeStats.positionStats)
+    : null;
+
+  // Calculate stock movement: compare current board rank vs original consensus
+  const consensusPickMid = p.consensusProjection?.projectedPickRange
+    ? (p.consensusProjection.projectedPickRange.min + p.consensusProjection.projectedPickRange.max) /
+      2
+    : null;
+  const currentRank = overallRank?.rank ?? index + 1;
+  let stockMovement: 'up' | 'down' | 'steady' = 'steady';
+  if (consensusPickMid !== null) {
+    const diff = consensusPickMid - currentRank;
+    if (diff > 10) stockMovement = 'up';
+    else if (diff < -10) stockMovement = 'down';
+  }
+
   return {
     id: p.id,
     name: `${p.player.firstName} ${p.player.lastName}`,
@@ -320,6 +357,10 @@ function prospectToDisplayProspect(p: Prospect, index: number): DraftRoomProspec
     positionRank: posRank?.rank ?? index + 1,
     overallRank: overallRank?.rank ?? index + 1,
     isDrafted: false,
+    combineForty: workout.fortyYardDash,
+    combineGrade: workout.combineGrade,
+    collegeStatLine,
+    stockMovement,
   };
 }
 
@@ -628,13 +669,39 @@ export function DraftRoomScreenWrapper({
       updatedGameState = draftTaskComplete;
     }
 
+    // Generate draft grades for all teams
+    const allTeamIds = Object.keys(gameState.teams);
+    const prospectProjections = new Map<
+      string,
+      { consensusRound: number | null; pickRange: { min: number; max: number } | null }
+    >();
+    for (const pickResult of state.picks) {
+      const proj = pickResult.prospect.consensusProjection;
+      prospectProjections.set(pickResult.prospect.id, {
+        consensusRound: proj?.projectedRound ?? null,
+        pickRange: proj?.projectedPickRange ?? null,
+      });
+    }
+
+    const draftGrades: Record<string, TeamDraftGrade> = {};
+    for (const teamId of allTeamIds) {
+      const teamPicks = state.picks.filter((p) => p.teamId === teamId);
+      draftGrades[teamId] = generateTeamDraftGrade(teamId, teamPicks, prospectProjections);
+    }
+
+    // Store grades in offseason data
+    updatedGameState = {
+      ...updatedGameState,
+      offseasonData: updatedGameState.offseasonData
+        ? { ...updatedGameState.offseasonData, draftGrades }
+        : undefined,
+    };
+
     setGameState(updatedGameState);
     saveGameState(updatedGameState);
 
-    // Use window.alert for web compatibility, then navigate back
-    // eslint-disable-next-line no-alert
-    window.alert('Draft Complete\n\nThe draft has concluded! All picks have been saved.');
-    navigation.goBack();
+    // Navigate to report card instead of alert
+    navigation.navigate('DraftReportCard');
   }, [draftStateRef.current?.status, gameState, setGameState, saveGameState, navigation]);
 
   // Derive draftState for hooks that need it (may be null during loading)
@@ -846,9 +913,11 @@ export function DraftRoomScreenWrapper({
     corePickToScreenPick(p as CoreDraftPick, gameState.teams, draftState.picks)
   );
 
-  // Map available prospects
+  // Map available prospects (enriched with combine data)
+  const combineData = gameState.offseasonData?.combineResults;
+  const proDayData = gameState.offseasonData?.proDayResults;
   const availableProspects: DraftRoomProspect[] = draftState.availableProspects.map((p, index) =>
-    prospectToDisplayProspect(p, index)
+    prospectToDisplayProspect(p, index, combineData, proDayData)
   );
 
   // Map trade offers
@@ -1146,6 +1215,10 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
   const prospects = Object.values(gameState.prospects || {});
   const draftYear = gameState.league.calendar.currentYear;
 
+  // Get combine/pro day data for enrichment
+  const bbCombineResults = gameState.offseasonData?.combineResults;
+  const bbProDayResults = gameState.offseasonData?.proDayResults;
+
   // Build prospect views from prospects
   const prospectViews: DraftBoardProspectView[] = prospects.slice(0, 100).map((prospect, index) => {
     const player = prospect.player;
@@ -1184,6 +1257,25 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
 
     const confidenceScore = prospect.scoutReportIds?.length > 0 ? 70 : 40;
 
+    // Enrich with combine/pro day data
+    const workout = resolveWorkoutData(prospect, bbCombineResults, bbProDayResults);
+    const collegeStatLine = prospect.collegeStats?.positionStats
+      ? formatCollegeStatLine(prospect.collegeStats.positionStats)
+      : undefined;
+
+    // Calculate stock direction from combine grade
+    let stockDirection: 'up' | 'down' | 'steady' = 'steady';
+    if (workout.combineGrade) {
+      const grade = workout.combineGrade;
+      if (grade === 'EXCEPTIONAL' || grade === 'ABOVE_AVERAGE') stockDirection = 'up';
+      else if (grade === 'BELOW_AVERAGE' || grade === 'POOR') stockDirection = 'down';
+    }
+
+    // Get awards
+    const awards = (prospect.collegeStats?.awards || [])
+      .filter((a) => a.prestige === 'national')
+      .map((a) => a.name);
+
     return {
       prospectId: prospect.id,
       prospectName: `${player.firstName} ${player.lastName}`,
@@ -1204,6 +1296,16 @@ export function BigBoardScreenWrapper({ navigation }: ScreenProps<'BigBoard'>): 
       latestScoutId: '',
       latestScoutName: 'Head Scout',
       latestReportSummary: `OVR ${overallMin}-${overallMax} | Rd ${projectedRound}`,
+      // New enriched fields
+      collegeName: prospect.collegeName,
+      age: player.age,
+      workoutSource: workout.source,
+      fortyYardDash: workout.fortyYardDash,
+      combineGrade: workout.combineGrade,
+      stockDirection,
+      collegeStatLine,
+      awards,
+      userTier: prospect.userTier || null,
     };
   });
 
@@ -1622,6 +1724,190 @@ export function CombineScreenWrapper({ navigation }: ScreenProps<'Combine'>): Re
       proDaySummary={proDaySummary}
       onBack={() => navigation.goBack()}
       onProspectSelect={(prospectId) => navigation.navigate('PlayerProfile', { prospectId })}
+    />
+  );
+}
+
+// ============================================
+// DRAFT REPORT CARD SCREEN
+// ============================================
+
+export function DraftReportCardScreenWrapper({
+  navigation,
+}: ScreenProps<'DraftReportCard'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading draft report card..." />;
+  }
+
+  const userTeamId = gameState.userTeamId;
+  const userTeam = gameState.teams[userTeamId];
+  const userTeamName = userTeam ? `${userTeam.city} ${userTeam.nickname}` : userTeamId;
+
+  // Get draft grades from offseason data
+  const draftGrades = gameState.offseasonData?.draftGrades ?? {};
+  const userTeamGrade: TeamDraftGrade = draftGrades[userTeamId] ?? {
+    teamId: userTeamId,
+    grade: 'C' as const,
+    score: 60,
+    picks: [],
+    bestPick: null,
+    worstPick: null,
+    summary: 'Draft results are being compiled.',
+    strengths: [],
+    weaknesses: [],
+  };
+
+  // Generate expert reactions for the user team
+  const expertReactions = generateExpertReactions(userTeamGrade, userTeamName);
+
+  // Build league-wide grades for comparison
+  const leagueGrades = Object.keys(gameState.teams).map((teamId) => {
+    const team = gameState.teams[teamId];
+    const grade = draftGrades[teamId];
+    return {
+      teamId,
+      teamName: team ? `${team.city} ${team.nickname}` : teamId,
+      grade: grade?.grade ?? ('C' as const),
+      score: grade?.score ?? 60,
+    };
+  });
+
+  const handleContinue = useCallback(() => {
+    // Auto-complete the draft phase task
+    let updatedState = gameState;
+    const taskComplete = tryCompleteOffseasonTask(updatedState, 'review_draft_results');
+    if (taskComplete) {
+      updatedState = taskComplete;
+      setGameState(updatedState);
+      saveGameState(updatedState);
+    }
+    navigation.navigate('Offseason');
+  }, [gameState, setGameState, saveGameState, navigation]);
+
+  return (
+    <DraftReportCardScreen
+      userTeamName={userTeamName}
+      userTeamGrade={userTeamGrade}
+      expertReactions={expertReactions}
+      leagueGrades={leagueGrades}
+      onContinue={handleContinue}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// ============================================
+// ROOKIE DEVELOPMENT PLAN SCREEN
+// ============================================
+
+export function RookieDevelopmentPlanScreenWrapper({
+  navigation,
+}: ScreenProps<'RookieDevelopmentPlan'>): React.JSX.Element {
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  if (!gameState) {
+    return <LoadingFallback message="Loading rookie development..." />;
+  }
+
+  const userTeamId = gameState.userTeamId;
+  const currentYear = gameState.league.calendar.currentYear;
+
+  // Find rookies: players on user team who were drafted this year
+  // Use rookieDevelopmentPlans if available, otherwise derive from draft selections
+  const rookiePlans = gameState.rookieDevelopmentPlans ?? {};
+  const userRookiePlans = Object.values(rookiePlans).filter(
+    (plan) => plan.teamId === userTeamId && plan.draftYear === currentYear
+  );
+
+  // Build display data for each rookie
+  const rookies = userRookiePlans.map((plan) => {
+    const player = gameState.players[plan.playerId];
+    const playerName = player
+      ? `${player.firstName} ${player.lastName}`
+      : plan.playerId;
+    const position = player?.position ?? 'UNK';
+
+    // Find mentor name
+    let mentorName: string | null = null;
+    if (plan.mentorId && gameState.players[plan.mentorId]) {
+      const mentor = gameState.players[plan.mentorId];
+      mentorName = `${mentor.firstName} ${mentor.lastName}`;
+    }
+
+    return {
+      playerId: plan.playerId,
+      playerName,
+      position: String(position),
+      draftRound: plan.draftRound,
+      overallPick: plan.draftRound, // approximation if overallPick not stored
+      currentTrack: plan.developmentTrack,
+      mentorName,
+      mentorQuality: plan.mentorQuality,
+      schemeFit: plan.schemeFitAtDraft,
+    };
+  });
+
+  // If no rookie plans exist yet, build from recently drafted players on the roster
+  const rookiesFallback = useMemo(() => {
+    if (rookies.length > 0) return rookies;
+
+    // Check draft selections from offseason data
+    const draftSelections = gameState.offseasonData?.draftSelections ?? [];
+    const userSelections = draftSelections.filter((s) => s.teamId === userTeamId);
+
+    return userSelections.map((sel) => {
+      const player = gameState.players[sel.prospectId] ?? gameState.players[sel.prospectId];
+      const playerName = player
+        ? `${player.firstName} ${player.lastName}`
+        : sel.playerName;
+      return {
+        playerId: sel.prospectId,
+        playerName,
+        position: sel.position,
+        draftRound: sel.round,
+        overallPick: sel.overallPick,
+        currentTrack: (sel.round <= 2 ? 'starter' : sel.round <= 4 ? 'rotational' : 'sit_and_develop') as DevelopmentTrack,
+        mentorName: null,
+        mentorQuality: 0,
+        schemeFit: 'neutral' as FitLevel,
+      };
+    });
+  }, [rookies, gameState.offseasonData?.draftSelections, gameState.players, userTeamId]);
+
+  const handleUpdateTrack = useCallback(
+    (playerId: string, track: DevelopmentTrack) => {
+      const existingPlans = gameState.rookieDevelopmentPlans ?? {};
+      const existingPlan = existingPlans[playerId];
+
+      if (existingPlan) {
+        const updatedPlan = {
+          ...existingPlan,
+          developmentTrack: track,
+          targetSnapPercentage: track === 'starter' ? 70 : track === 'rotational' ? 40 : 15,
+        };
+        const updatedState: GameState = {
+          ...gameState,
+          rookieDevelopmentPlans: {
+            ...existingPlans,
+            [playerId]: updatedPlan,
+          },
+        };
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    },
+    [gameState, setGameState, saveGameState]
+  );
+
+  const displayRookies = rookiesFallback;
+
+  return (
+    <RookieDevelopmentPlanScreen
+      rookies={displayRookies}
+      onUpdateTrack={handleUpdateTrack}
+      onBack={() => navigation.goBack()}
     />
   );
 }

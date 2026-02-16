@@ -6,7 +6,8 @@
 import { Prospect, getOverallRanking, getPositionRanking } from '../core/draft/Prospect';
 import { DraftBoardProspect, ProspectCombineData } from '../screens/DraftBoardScreen';
 import { SkillValue } from '../core/models/player/TechnicalSkills';
-import { CombineResults } from '../core/draft/CombineSimulator';
+import { CombineResults, CombineGrade } from '../core/draft/CombineSimulator';
+import { ProDayResults } from '../core/draft/ProDaySimulator';
 
 /**
  * Extra scouting data that can be passed when building the draft board
@@ -100,6 +101,51 @@ export function convertProspectsToDraftBoard(
   enrichment?: DraftBoardEnrichment
 ): DraftBoardProspect[] {
   return Object.values(prospects).map((p) => convertToDraftBoardProspect(p, enrichment));
+}
+
+/**
+ * Resolves workout data from combine and/or pro day results for a prospect.
+ * Prefers combine data when both sources are available.
+ */
+export function resolveWorkoutData(
+  prospect: Prospect,
+  combineResults?: Record<string, CombineResults>,
+  proDayResults?: Record<string, ProDayResults>
+): {
+  source: 'combine' | 'pro_day' | 'both' | 'none';
+  fortyYardDash: number | null;
+  combineGrade: CombineGrade | null;
+} {
+  const combineData = combineResults?.[prospect.id];
+  const proDayData = proDayResults?.[prospect.id];
+
+  const hasCombine = !!combineData?.participated;
+  const hasProDay = !!proDayData?.workoutResults;
+
+  let source: 'combine' | 'pro_day' | 'both' | 'none';
+  if (hasCombine && hasProDay) {
+    source = 'both';
+  } else if (hasCombine) {
+    source = 'combine';
+  } else if (hasProDay) {
+    source = 'pro_day';
+  } else {
+    source = 'none';
+  }
+
+  // Prefer combine forty time, fall back to pro day
+  let fortyYardDash: number | null = null;
+  if (hasCombine && combineData?.workoutResults?.fortyYardDash != null) {
+    fortyYardDash = combineData.workoutResults.fortyYardDash;
+  } else if (hasProDay && proDayData?.workoutResults?.fortyYardDash != null) {
+    fortyYardDash = proDayData.workoutResults.fortyYardDash;
+  }
+
+  // Combine grade only comes from combine
+  const combineGrade: CombineGrade | null =
+    hasCombine && combineData ? combineData.overallGrade : null;
+
+  return { source, fortyYardDash, combineGrade };
 }
 
 /**

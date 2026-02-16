@@ -161,6 +161,9 @@ export interface GameState {
 
   // Player career history (season logs, transactions, injuries, awards)
   playerHistory?: Record<string, import('../../history/PlayerHistoryTracker').PlayerCareerHistory>;
+
+  // Rookie development plans (first-year player tracking)
+  rookieDevelopmentPlans?: Record<string, import('../../career/RookieDevelopment').RookieDevelopmentPlan>;
 }
 
 /**

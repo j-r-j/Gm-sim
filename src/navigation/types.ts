@@ -141,6 +141,8 @@ export type RootStackParamList = {
     player2Id: string;
   };
   DraftTradeCalculator: undefined;
+  DraftReportCard: undefined;
+  RookieDevelopmentPlan: undefined;
 };
 
 /**
@@ -261,4 +263,6 @@ export const Routes = {
   HallOfFame: 'HallOfFame',
   PlayerComparison: 'PlayerComparison',
   DraftTradeCalculator: 'DraftTradeCalculator',
+  DraftReportCard: 'DraftReportCard',
+  RookieDevelopmentPlan: 'RookieDevelopmentPlan',
 } as const;

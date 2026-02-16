@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Animated } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../../styles';
 import { WarRoomFeedEvent, FeedEventType, FeedUrgency } from '../../core/draft/DraftDayNarrator';
@@ -18,6 +18,8 @@ export interface WarRoomFeedProps {
   events: WarRoomFeedEvent[];
   /** Maximum events to display */
   maxEvents?: number;
+  /** Compact ticker mode - shows single line */
+  compact?: boolean;
 }
 
 /**
@@ -157,12 +159,80 @@ function FeedEventItem({ event }: { event: WarRoomFeedEvent }): React.JSX.Elemen
 }
 
 /**
+ * Compact ticker showing only the latest event as a single-line strip.
+ * Pulses opacity for critical/high urgency events.
+ */
+function CompactTicker({ events }: { events: WarRoomFeedEvent[] }): React.JSX.Element {
+  const latestEvent = events.length > 0 ? events[0] : null;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isCritical = latestEvent
+    ? latestEvent.urgency === 'critical' || latestEvent.urgency === 'high'
+    : false;
+
+  useEffect(() => {
+    if (isCritical) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.4,
+            duration: 600,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 600,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isCritical, pulseAnim]);
+
+  if (!latestEvent) {
+    return (
+      <View
+        style={compactStyles.ticker}
+        accessibilityRole="text"
+        accessibilityLabel="War room ticker, waiting for events"
+      >
+        <Ionicons name="radio-outline" size={14} color={colors.textLight} />
+        <Text style={compactStyles.tickerTextEmpty}>Waiting for draft...</Text>
+      </View>
+    );
+  }
+
+  const urgencyColor = getUrgencyColor(latestEvent.urgency);
+
+  return (
+    <Animated.View
+      style={[compactStyles.ticker, { opacity: pulseAnim }]}
+      accessibilityRole="text"
+      accessibilityLabel={`Latest: ${latestEvent.headline}`}
+    >
+      <Ionicons
+        name={getEventIcon(latestEvent.type) as 'alert-circle'}
+        size={14}
+        color={urgencyColor}
+      />
+      <Text style={[compactStyles.tickerText, isCritical && { color: urgencyColor }]} numberOfLines={1}>
+        {latestEvent.headline}
+      </Text>
+      <View style={compactStyles.liveDotSmall} />
+    </Animated.View>
+  );
+}
+
+/**
  * WarRoomFeed Component
  */
-export function WarRoomFeed({ events, maxEvents = 50 }: WarRoomFeedProps): React.JSX.Element {
+export function WarRoomFeed({ events, maxEvents = 50, compact = false }: WarRoomFeedProps): React.JSX.Element {
   const flatListRef = useRef<FlatList>(null);
-
-  const displayEvents = events.slice(0, maxEvents);
 
   const renderEvent = useCallback(
     ({ item }: { item: WarRoomFeedEvent }) => <FeedEventItem event={item} />,
@@ -170,6 +240,12 @@ export function WarRoomFeed({ events, maxEvents = 50 }: WarRoomFeedProps): React
   );
 
   const keyExtractor = useCallback((item: WarRoomFeedEvent) => item.id, []);
+
+  if (compact) {
+    return <CompactTicker events={events} />;
+  }
+
+  const displayEvents = events.slice(0, maxEvents);
 
   return (
     <View style={feedStyles.container}>
@@ -314,6 +390,36 @@ const feedStyles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textLight,
     fontStyle: 'italic',
+  },
+});
+
+const compactStyles = StyleSheet.create({
+  ticker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryDark,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+    minHeight: 36,
+  },
+  tickerText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textOnDark,
+  },
+  tickerTextEmpty: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textLight,
+    fontStyle: 'italic',
+  },
+  liveDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.error,
   },
 });
 

@@ -33,6 +33,7 @@ import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../core/mode
 import { type TradeAsset } from '../components/draft';
 import { DraftLetterGrade, WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';
 import { getGradeColor } from '../utils/draftGradeUtils';
+import { WarRoomFeed } from '../components/draft/WarRoomFeed';
 
 /**
  * Draft pick information
@@ -80,6 +81,10 @@ export interface DraftRoomProspect {
   positionRank: number | null;
   overallRank: number | null;
   isDrafted: boolean;
+  combineForty?: number | null;
+  combineGrade?: string | null;
+  collegeStatLine?: string | null;
+  stockMovement?: 'up' | 'down' | 'steady';
 }
 
 /**
@@ -171,8 +176,8 @@ function CompactPickBanner({
 }) {
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    const sec = seconds % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
   const isLowTime = timeRemaining !== undefined && timeRemaining <= 30;
@@ -463,20 +468,31 @@ function DraftableProspectRow({
   prospect,
   isSelected,
   isUserPick,
+  compareMode,
+  isCompareSelected,
   onSelect,
   onView,
+  onCompareToggle,
 }: {
   prospect: DraftRoomProspect;
   isSelected: boolean;
   isUserPick: boolean;
+  compareMode?: boolean;
+  isCompareSelected?: boolean;
   onSelect: () => void;
   onView: () => void;
+  onCompareToggle?: () => void;
 }) {
   const pickRange = prospect.projectedPickRange
     ? `#${prospect.projectedPickRange.min}-${prospect.projectedPickRange.max}`
     : prospect.projectedRound
       ? `Rd ${prospect.projectedRound}`
       : '--';
+
+  const hasEnrichedData =
+    prospect.combineForty != null ||
+    prospect.combineGrade != null ||
+    prospect.collegeStatLine != null;
 
   return (
     <TouchableOpacity
@@ -486,6 +502,27 @@ function DraftableProspectRow({
       accessibilityRole="button"
       hitSlop={{ top: 2, bottom: 2, left: 0, right: 0 }}
     >
+      {/* Compare checkbox */}
+      {compareMode && onCompareToggle && (
+        <TouchableOpacity
+          style={s.compareCheckbox}
+          onPress={(e) => {
+            e.stopPropagation();
+            onCompareToggle();
+          }}
+          accessibilityLabel={`${isCompareSelected ? 'Deselect' : 'Select'} ${prospect.name} for comparison`}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: isCompareSelected }}
+          hitSlop={accessibility.hitSlop}
+        >
+          <Ionicons
+            name={isCompareSelected ? 'checkbox' : 'square-outline'}
+            size={20}
+            color={isCompareSelected ? colors.primary : colors.textLight}
+          />
+        </TouchableOpacity>
+      )}
+
       <Text style={s.prospectRank}>#{prospect.overallRank ?? '--'}</Text>
       <View style={s.prospectInfo}>
         <View style={s.prospectNameRow}>
@@ -501,8 +538,29 @@ function DraftableProspectRow({
           </Text>
           <Text style={s.prospectRange}>{pickRange}</Text>
         </View>
+        {/* Enriched data row */}
+        {hasEnrichedData && (
+          <View style={s.prospectEnrichedRow}>
+            {prospect.combineForty != null && (
+              <Text style={s.prospectEnrichedText}>{prospect.combineForty.toFixed(2)}s</Text>
+            )}
+            {prospect.combineForty != null && prospect.combineGrade != null && (
+              <Text style={s.prospectEnrichedDivider}>|</Text>
+            )}
+            {prospect.combineGrade != null && (
+              <Text style={s.prospectEnrichedText}>{prospect.combineGrade}</Text>
+            )}
+            {(prospect.combineForty != null || prospect.combineGrade != null) &&
+              prospect.collegeStatLine != null && <Text style={s.prospectEnrichedDivider}>|</Text>}
+            {prospect.collegeStatLine != null && (
+              <Text style={s.prospectEnrichedText} numberOfLines={1}>
+                {prospect.collegeStatLine}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
-      {isUserPick && (
+      {isUserPick && !compareMode && (
         <TouchableOpacity
           style={[s.selectBtn, isSelected && s.selectBtnSelected]}
           onPress={(e) => {
@@ -564,7 +622,7 @@ export function DraftRoomScreen({
   timeRemaining,
   isPaused,
   scoutRecommendations = [],
-  feedEvents: _feedEvents = [],
+  feedEvents = [],
   selectedProspectId,
   currentRound,
   totalPicks,
@@ -584,6 +642,9 @@ export function DraftRoomScreen({
 }: DraftRoomScreenProps): React.JSX.Element {
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+  const [feedExpanded, setFeedExpanded] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const isUserPick = currentPick.teamId === userTeamId;
   const pendingTradeOffers = (tradeOffers ?? []).filter((t) => t.status === 'pending');
@@ -624,6 +685,28 @@ export function DraftRoomScreen({
     [onHighlightProspect, selectedProspectId]
   );
 
+  // Handle compare toggle
+  const handleCompareToggle = useCallback((id: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((cid) => cid !== id);
+      }
+      if (prev.length >= 2) {
+        // Replace the second one
+        return [prev[0], id];
+      }
+      return [...prev, id];
+    });
+  }, []);
+
+  // When compare mode is toggled off, clear selections
+  const toggleCompareMode = useCallback(() => {
+    if (compareMode) {
+      setCompareIds([]);
+    }
+    setCompareMode(!compareMode);
+  }, [compareMode]);
+
   // Render prospect row
   const renderProspect = useCallback(
     ({ item }: { item: DraftRoomProspect }) => (
@@ -631,11 +714,22 @@ export function DraftRoomScreen({
         prospect={item}
         isSelected={item.id === selectedProspectId}
         isUserPick={isUserPick}
+        compareMode={compareMode}
+        isCompareSelected={compareIds.includes(item.id)}
         onSelect={() => handleHighlight(item.id)}
         onView={() => onViewProspect(item.id)}
+        onCompareToggle={() => handleCompareToggle(item.id)}
       />
     ),
-    [selectedProspectId, isUserPick, handleHighlight, onViewProspect]
+    [
+      selectedProspectId,
+      isUserPick,
+      handleHighlight,
+      onViewProspect,
+      compareMode,
+      compareIds,
+      handleCompareToggle,
+    ]
   );
 
   return (
@@ -661,6 +755,32 @@ export function DraftRoomScreen({
         picksCompleted={picksCompleted}
         totalPicks={totalPicks}
       />
+
+      {/* War Room Feed Ticker */}
+      {feedEvents.length > 0 && (
+        <TouchableOpacity
+          style={s.feedTicker}
+          onPress={() => setFeedExpanded(!feedExpanded)}
+          accessibilityLabel={feedExpanded ? 'Collapse war room feed' : 'Expand war room feed'}
+          accessibilityRole="button"
+          hitSlop={accessibility.hitSlop}
+        >
+          <Ionicons name="radio" size={14} color={colors.error} />
+          <Text style={s.feedTickerText} numberOfLines={1}>
+            {feedEvents[0].headline}
+          </Text>
+          <Ionicons
+            name={feedExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.textLight}
+          />
+        </TouchableOpacity>
+      )}
+      {feedExpanded && feedEvents.length > 0 && (
+        <View style={{ maxHeight: '40%' }}>
+          <WarRoomFeed events={feedEvents} maxEvents={20} />
+        </View>
+      )}
 
       {/* Trade Offer Banners */}
       {isUserPick &&
@@ -721,6 +841,49 @@ export function DraftRoomScreen({
         <ScoutRecBar recommendations={scoutRecommendations} onViewProspect={onViewProspect} />
       )}
 
+      {/* Compare Mode Toggle (user's turn only) */}
+      {isUserPick && (
+        <View style={s.compareModeBar}>
+          <TouchableOpacity
+            style={[s.compareModeBtn, compareMode && s.compareModeBtnActive]}
+            onPress={toggleCompareMode}
+            accessibilityLabel={compareMode ? 'Exit compare mode' : 'Enter compare mode'}
+            accessibilityRole="button"
+            hitSlop={accessibility.hitSlop}
+          >
+            <Ionicons
+              name="git-compare"
+              size={14}
+              color={compareMode ? colors.textOnPrimary : colors.primary}
+            />
+            <Text style={[s.compareModeText, compareMode && s.compareModeTextActive]}>
+              {compareMode ? `Compare (${compareIds.length}/2)` : 'Compare'}
+            </Text>
+          </TouchableOpacity>
+          {compareMode && compareIds.length === 2 && (
+            <TouchableOpacity
+              style={s.compareGoBtn}
+              onPress={() => {
+                const p1 = availableProspects.find((p) => p.id === compareIds[0]);
+                const p2 = availableProspects.find((p) => p.id === compareIds[1]);
+                if (p1 && p2) {
+                  const summary = `${p1.name} (${p1.position}) vs ${p2.name} (${p2.position})`;
+                  // Use window.alert for web compat
+                  if (typeof window !== 'undefined' && window.alert) {
+                    window.alert(summary);
+                  }
+                }
+              }}
+              accessibilityLabel="View comparison"
+              accessibilityRole="button"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Text style={s.compareGoText}>View</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Prospect List */}
       <FlatList
         data={filteredProspects}
@@ -738,7 +901,7 @@ export function DraftRoomScreen({
       />
 
       {/* Draft Action Button (bottom, when prospect selected) */}
-      {isUserPick && selectedProspect && onDraftSelectedProspect && (
+      {isUserPick && selectedProspect && onDraftSelectedProspect && !compareMode && (
         <DraftActionButton
           prospectName={selectedProspect.name}
           prospectPosition={selectedProspect.position}
@@ -822,6 +985,25 @@ const s = StyleSheet.create({
     color: colors.textOnDark,
     opacity: 0.7,
     fontVariant: ['tabular-nums'],
+  },
+
+  // Feed Ticker
+  feedTicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+    minHeight: accessibility.minTouchTarget,
+  },
+  feedTickerText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
   },
 
   // Trade Banner
@@ -1104,6 +1286,58 @@ const s = StyleSheet.create({
     marginLeft: spacing.sm,
   },
 
+  // Compare Mode Bar
+  compareModeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+  },
+  compareModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    minHeight: 32,
+  },
+  compareModeBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  compareModeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  compareModeTextActive: {
+    color: colors.textOnPrimary,
+  },
+  compareGoBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.success,
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  compareGoText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textOnPrimary,
+  },
+  compareCheckbox: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   // Prospect Row
   prospectList: {
     flex: 1,
@@ -1169,6 +1403,20 @@ const s = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textLight,
     fontVariant: ['tabular-nums'],
+  },
+  prospectEnrichedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xxs,
+  },
+  prospectEnrichedText: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+  },
+  prospectEnrichedDivider: {
+    fontSize: fontSize.xs,
+    color: colors.border,
   },
   selectBtn: {
     width: 36,

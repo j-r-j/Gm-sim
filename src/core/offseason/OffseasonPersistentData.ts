@@ -10,6 +10,8 @@ import type { PreseasonGame, PreseasonEvaluation, PreseasonInjury } from './phas
 import type { OTAReport, RookieIntegrationReport } from './phases/OTAsPhase';
 import type { SeasonRecap } from './OffSeasonPhaseManager';
 import type { Prospect } from '../draft/Prospect';
+import type { TeamDraftGrade } from '../draft/DraftDayNarrator';
+import type { PreDraftNewsItem } from '../draft/PreDraftNarrator';
 
 /**
  * User decision during OTAs phase
@@ -272,6 +274,12 @@ export interface OffseasonPersistentData {
   ownerExpectations: OwnerExpectations | null;
   mediaProjections: MediaProjection[];
   seasonGoals: SeasonGoal[];
+
+  // Post-draft grades
+  draftGrades?: Record<string, TeamDraftGrade>;
+
+  // Pre-draft storylines (persisted across phases)
+  preDraftStorylines?: PreDraftNewsItem[];
 
   // Metadata
   lastUpdatedPhase: string;

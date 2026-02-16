@@ -83,6 +83,7 @@ function getCategoryDisplay(category: NewsFeedCategory): string {
     coaching: 'Coaching',
     rumor: 'Rumors',
     league: 'League News',
+    predraft: 'Pre-Draft',
   };
   return categoryNames[category];
 }
@@ -101,6 +102,7 @@ function getCategoryIcon(category: NewsFeedCategory): string {
     coaching: '📣',
     rumor: '💬',
     league: '🏈',
+    predraft: '📰',
   };
   return categoryIcons[category];
 }

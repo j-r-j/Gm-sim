@@ -10,6 +10,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../../styles';
 import { Position } from '../../core/models/player/Position';
 import { Avatar } from '../avatar';
+import { WorkoutBadge } from './WorkoutBadge';
+import { StockArrow } from './StockArrow';
 
 export interface ProspectListItemProps {
   /** Prospect's unique ID */
@@ -40,6 +42,20 @@ export interface ProspectListItemProps {
   onLongPress?: () => void;
   /** Callback when flag is toggled */
   onToggleFlag?: () => void;
+  /** Age */
+  age?: number;
+  /** Workout data source */
+  workoutSource?: 'combine' | 'pro_day' | 'both' | 'none';
+  /** 40-yard dash time */
+  fortyYardDash?: number | null;
+  /** College stat summary line */
+  collegeStatLine?: string | null;
+  /** Combine grade */
+  combineGrade?: string | null;
+  /** Stock direction */
+  stockDirection?: 'up' | 'down' | 'steady';
+  /** Awards */
+  awards?: string[];
 }
 
 /**
@@ -83,6 +99,13 @@ export function ProspectListItem({
   onPress,
   onLongPress,
   onToggleFlag,
+  age: _age,
+  workoutSource,
+  fortyYardDash,
+  collegeStatLine,
+  combineGrade: _combineGrade,
+  stockDirection,
+  awards: _awards,
 }: ProspectListItemProps): React.JSX.Element {
   const roundColor = getRoundColor(projectedRound);
   const projection = formatProjection(projectedRound, projectedPickRange);
@@ -104,7 +127,10 @@ export function ProspectListItem({
 
       {/* Rank Column */}
       <View style={styles.rankColumn}>
-        {overallRank !== null && <Text style={styles.overallRank}>#{overallRank}</Text>}
+        <View style={styles.rankRow}>
+          {overallRank !== null && <Text style={styles.overallRank}>#{overallRank}</Text>}
+          {stockDirection && <StockArrow direction={stockDirection} size={12} />}
+        </View>
         {positionRank !== null && (
           <Text style={styles.positionRank}>
             {position} #{positionRank}
@@ -138,6 +164,19 @@ export function ProspectListItem({
         <Text style={styles.college} numberOfLines={1}>
           {collegeName}
         </Text>
+        {(workoutSource && workoutSource !== 'none' || fortyYardDash || collegeStatLine) && (
+          <View style={styles.enrichedRow}>
+            {workoutSource && workoutSource !== 'none' && (
+              <WorkoutBadge source={workoutSource} />
+            )}
+            {fortyYardDash != null && (
+              <Text style={styles.enrichedStat}>{fortyYardDash.toFixed(2)}s</Text>
+            )}
+            {collegeStatLine && (
+              <Text style={styles.enrichedStat} numberOfLines={1}>{collegeStatLine}</Text>
+            )}
+          </View>
+        )}
       </View>
 
       {/* User Tier */}
@@ -183,6 +222,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: spacing.sm,
   },
+  rankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   overallRank: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
@@ -220,6 +264,17 @@ const styles = StyleSheet.create({
   college: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+  },
+  enrichedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xxs,
+  },
+  enrichedStat: {
+    fontSize: fontSize.xs,
+    color: colors.textLight,
+    fontVariant: ['tabular-nums'],
   },
   tierBadge: {
     backgroundColor: colors.primary,

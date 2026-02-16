@@ -70,6 +70,8 @@ import {
   HallOfFameScreenWrapper,
   PlayerComparisonScreenWrapper,
   DraftTradeCalculatorScreenWrapper,
+  DraftReportCardScreenWrapper,
+  RookieDevelopmentPlanScreenWrapper,
 } from './wrappers';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -186,6 +188,8 @@ export function AppNavigator(): React.JSX.Element {
         <Stack.Screen name="HallOfFame" component={HallOfFameScreenWrapper} />
         <Stack.Screen name="PlayerComparison" component={PlayerComparisonScreenWrapper} />
         <Stack.Screen name="DraftTradeCalculator" component={DraftTradeCalculatorScreenWrapper} />
+        <Stack.Screen name="DraftReportCard" component={DraftReportCardScreenWrapper} />
+        <Stack.Screen name="RookieDevelopmentPlan" component={RookieDevelopmentPlanScreenWrapper} />
       </Stack.Navigator>
     </ErrorBoundary>
   );

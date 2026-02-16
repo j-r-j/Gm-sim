@@ -46,6 +46,8 @@ export {
   ProspectDetailScreenWrapper,
   CombineScreenWrapper,
   DraftTradeCalculatorScreenWrapper,
+  DraftReportCardScreenWrapper,
+  RookieDevelopmentPlanScreenWrapper,
 } from './DraftWrappers';
 
 // Roster wrappers

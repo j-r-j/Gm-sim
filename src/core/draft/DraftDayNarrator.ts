@@ -814,3 +814,100 @@ export function validateWarRoomFeedEvent(event: WarRoomFeedEvent): boolean {
   if (typeof event.timestamp !== 'number') return false;
   return true;
 }
+
+// ============================================================================
+// EXPERT REACTIONS
+// ============================================================================
+
+/**
+ * Expert reaction to a team's draft
+ */
+export interface ExpertReaction {
+  expertName: string;
+  outlet: string;
+  quote: string;
+  gradeGiven: DraftLetterGrade;
+  sentiment: 'positive' | 'neutral' | 'negative';
+}
+
+/**
+ * Fake analysts for expert reactions
+ */
+const ANALYSTS: Array<{ name: string; outlet: string }> = [
+  { name: 'Mel Kiper Jr.', outlet: 'ESPN' },
+  { name: 'Todd McShay', outlet: 'ESPN' },
+  { name: 'Daniel Jeremiah', outlet: 'NFL Network' },
+  { name: 'Mike Tannenbaum', outlet: 'ESPN' },
+  { name: 'Peter Schrager', outlet: 'NFL Network' },
+  { name: 'Matt Miller', outlet: 'Draft Scout' },
+];
+
+const POSITIVE_EXPERT_QUOTES: string[] = [
+  'This was an outstanding draft for {teamName}. They addressed needs while getting tremendous value.',
+  'I love what {teamName} did this weekend. Multiple picks that could become impact starters.',
+  '{teamName} absolutely nailed this draft. Every pick made sense and the value was exceptional.',
+  'If I could give a higher grade I would. {teamName} had the best draft in the league.',
+  'Superb work by {teamName}. They came in with a plan and executed it perfectly.',
+];
+
+const NEUTRAL_EXPERT_QUOTES: string[] = [
+  '{teamName} had a solid if unspectacular draft. Some good picks, but a couple of reaches too.',
+  'A mixed bag for {teamName}. I liked the early picks but question some of the Day 3 choices.',
+  '{teamName} played it safe and that is fine. Nothing flashy, but they filled roster holes.',
+  'Average draft for {teamName}. They did not help themselves as much as they could have.',
+];
+
+const NEGATIVE_EXPERT_QUOTES: string[] = [
+  'I am struggling to find much to like about {teamName}\'s draft. Too many reaches.',
+  '{teamName} left a lot of value on the board. This could set the franchise back.',
+  'A disappointing draft for {teamName}. They seemed to panic and overdraft at several spots.',
+  '{teamName} missed multiple opportunities. I expect some of these picks to haunt them.',
+];
+
+/**
+ * Generates 3-4 expert reactions to a team's draft
+ */
+export function generateExpertReactions(
+  teamGrade: TeamDraftGrade,
+  teamName: string
+): ExpertReaction[] {
+  const reactions: ExpertReaction[] = [];
+  const shuffledAnalysts = [...ANALYSTS].sort(() => Math.random() - 0.5);
+  const numReactions = 3 + (Math.random() < 0.5 ? 1 : 0);
+
+  for (let i = 0; i < numReactions && i < shuffledAnalysts.length; i++) {
+    const analyst = shuffledAnalysts[i];
+
+    // Each analyst may give a slightly different grade
+    const gradeVariance = Math.floor(Math.random() * 3) - 1; // -1, 0, or +1
+    const adjustedScore = Math.max(0, Math.min(100, teamGrade.score + gradeVariance * 5));
+    const expertGrade = scoreToGrade(adjustedScore);
+
+    let sentiment: 'positive' | 'neutral' | 'negative';
+    let quotePool: string[];
+
+    if (adjustedScore >= 80) {
+      sentiment = 'positive';
+      quotePool = POSITIVE_EXPERT_QUOTES;
+    } else if (adjustedScore >= 60) {
+      sentiment = 'neutral';
+      quotePool = NEUTRAL_EXPERT_QUOTES;
+    } else {
+      sentiment = 'negative';
+      quotePool = NEGATIVE_EXPERT_QUOTES;
+    }
+
+    const rawQuote = quotePool[Math.floor(Math.random() * quotePool.length)];
+    const quote = rawQuote.replace(/\{teamName\}/g, teamName);
+
+    reactions.push({
+      expertName: analyst.name,
+      outlet: analyst.outlet,
+      quote,
+      gradeGiven: expertGrade,
+      sentiment,
+    });
+  }
+
+  return reactions;
+}
