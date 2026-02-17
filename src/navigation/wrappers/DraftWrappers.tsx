@@ -334,7 +334,8 @@ function prospectToDisplayProspect(
 
   // Calculate stock movement: compare current board rank vs original consensus
   const consensusPickMid = p.consensusProjection?.projectedPickRange
-    ? (p.consensusProjection.projectedPickRange.min + p.consensusProjection.projectedPickRange.max) /
+    ? (p.consensusProjection.projectedPickRange.min +
+        p.consensusProjection.projectedPickRange.max) /
       2
     : null;
   const currentRank = overallRank?.rank ?? index + 1;
@@ -1824,9 +1825,7 @@ export function RookieDevelopmentPlanScreenWrapper({
   // Build display data for each rookie
   const rookies = userRookiePlans.map((plan) => {
     const player = gameState.players[plan.playerId];
-    const playerName = player
-      ? `${player.firstName} ${player.lastName}`
-      : plan.playerId;
+    const playerName = player ? `${player.firstName} ${player.lastName}` : plan.playerId;
     const position = player?.position ?? 'UNK';
 
     // Find mentor name
@@ -1859,16 +1858,18 @@ export function RookieDevelopmentPlanScreenWrapper({
 
     return userSelections.map((sel) => {
       const player = gameState.players[sel.prospectId] ?? gameState.players[sel.prospectId];
-      const playerName = player
-        ? `${player.firstName} ${player.lastName}`
-        : sel.playerName;
+      const playerName = player ? `${player.firstName} ${player.lastName}` : sel.playerName;
       return {
         playerId: sel.prospectId,
         playerName,
         position: sel.position,
         draftRound: sel.round,
         overallPick: sel.overallPick,
-        currentTrack: (sel.round <= 2 ? 'starter' : sel.round <= 4 ? 'rotational' : 'sit_and_develop') as DevelopmentTrack,
+        currentTrack: (sel.round <= 2
+          ? 'starter'
+          : sel.round <= 4
+            ? 'rotational'
+            : 'sit_and_develop') as DevelopmentTrack,
         mentorName: null,
         mentorQuality: 0,
         schemeFit: 'neutral' as FitLevel,

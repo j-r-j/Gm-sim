@@ -26,11 +26,7 @@ export function StockArrow({ direction, size = 14 }: StockArrowProps): React.JSX
   const config = ARROW_CONFIG[direction];
 
   return (
-    <View
-      style={styles.container}
-      accessibilityLabel={config.label}
-      accessibilityRole="image"
-    >
+    <View style={styles.container} accessibilityLabel={config.label} accessibilityRole="image">
       <Ionicons name={config.icon} size={size} color={config.color} />
     </View>
   );

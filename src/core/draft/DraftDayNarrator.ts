@@ -858,7 +858,7 @@ const NEUTRAL_EXPERT_QUOTES: string[] = [
 ];
 
 const NEGATIVE_EXPERT_QUOTES: string[] = [
-  'I am struggling to find much to like about {teamName}\'s draft. Too many reaches.',
+  "I am struggling to find much to like about {teamName}'s draft. Too many reaches.",
   '{teamName} left a lot of value on the board. This could set the franchise back.',
   'A disappointing draft for {teamName}. They seemed to panic and overdraft at several spots.',
   '{teamName} missed multiple opportunities. I expect some of these picks to haunt them.',

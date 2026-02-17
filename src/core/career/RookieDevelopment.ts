@@ -127,10 +127,16 @@ export function calculateMentorChemistry(
 ): number {
   let chemistry = 50;
 
-  if (mentorPositiveTraits.includes('leader') && rookieProfile.mentorAffinity === 'mentor_dependent') {
+  if (
+    mentorPositiveTraits.includes('leader') &&
+    rookieProfile.mentorAffinity === 'mentor_dependent'
+  ) {
     chemistry += 15;
   }
-  if (mentorPositiveTraits.includes('filmJunkie') && rookieProfile.learningSpeed === 'fast_learner') {
+  if (
+    mentorPositiveTraits.includes('filmJunkie') &&
+    rookieProfile.learningSpeed === 'fast_learner'
+  ) {
     chemistry += 10;
   }
   if (mentorPositiveTraits.includes('teamFirst')) {

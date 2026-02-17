@@ -23,7 +23,7 @@ export const COMBINE_STANDOUT_TEMPLATES: StoryTemplate[] = [
     bodies: [
       '{playerName} turned heads at the NFL Combine with an exceptional performance across the board. The {collegeName} {playerPosition} earned an {combineGrade} overall grade and solidified his status as a top prospect.',
       'All eyes were on {playerName} at the Combine, and the {playerPosition} out of {collegeName} did not disappoint. His {fortyTime} 40-yard dash time had scouts scrambling to update their boards.',
-      'The {collegeName} product {playerName} was arguably the biggest winner of this year\'s Combine. The {playerPosition} tested off the charts and could see his stock rise significantly heading into the draft.',
+      "The {collegeName} product {playerName} was arguably the biggest winner of this year's Combine. The {playerPosition} tested off the charts and could see his stock rise significantly heading into the draft.",
     ],
     priority: 'high',
     isPositive: true,
@@ -61,7 +61,7 @@ export const STOCK_RISER_TEMPLATES: StoryTemplate[] = [
     bodies: [
       '{playerName} is one of the biggest risers of the pre-draft process. The {collegeName} {playerPosition} has impressed at every turn and could go much higher than originally projected.',
       'League sources say {playerName} has been the talk of the scouting community. The {playerPosition} out of {collegeName} is making a strong case to be a Day 1 selection.',
-      'Don\'t be surprised if {playerName} goes earlier than expected. The {collegeName} {playerPosition} has been steadily climbing boards after an impressive showing during the evaluation process.',
+      "Don't be surprised if {playerName} goes earlier than expected. The {collegeName} {playerPosition} has been steadily climbing boards after an impressive showing during the evaluation process.",
     ],
     priority: 'medium',
     isPositive: true,
@@ -126,7 +126,7 @@ export const SLEEPER_ALERT_TEMPLATES: StoryTemplate[] = [
       "Don't Sleep on {playerName}",
       'Late-Round Gold? {playerName} Could Be a Steal',
       'Hidden Gem Alert: {playerName} from {collegeName}',
-      '{playerName} Could Be This Year\'s Best Value Pick',
+      "{playerName} Could Be This Year's Best Value Pick",
       'Sleeper Watch: {playerName}, {playerPosition}, {collegeName}',
     ],
     bodies: [
@@ -148,7 +148,7 @@ export const COACH_QUOTE_TEMPLATES: StoryTemplate[] = [
     category: 'draft',
     headlines: [
       "College Coach Raves: '{quoteText}'",
-      '{collegeName} Coach on {playerName}: \'Best Player I\'ve Coached\'',
+      "{collegeName} Coach on {playerName}: 'Best Player I've Coached'",
       "Coach's Corner: {playerName} Gets Glowing Review",
       'High Praise for {playerName} from {collegeName} Staff',
     ],
@@ -197,7 +197,7 @@ export const COMPARISON_TEMPLATES: StoryTemplate[] = [
       '{playerName} Reminds Scouts of {comparisonPlayer}',
       'NFL Comp: {playerName} Draws {comparisonPlayer} Comparisons',
       '{playerName}: The Next {comparisonPlayer}?',
-      'Scouts See {comparisonPlayer} in {playerName}\'s Game',
+      "Scouts See {comparisonPlayer} in {playerName}'s Game",
     ],
     bodies: [
       'The comparisons are flattering but not unfounded. {playerName} out of {collegeName} has drawn comparisons to {comparisonPlayer} for his style of play at {playerPosition}.',
@@ -223,9 +223,9 @@ export const POSITION_SCARCITY_TEMPLATES: StoryTemplate[] = [
       'Position Preview: {playerPosition} Class Breakdown',
     ],
     bodies: [
-      'This year\'s {playerPosition} class is one of the deepest in recent memory. Teams needing help at the position should find quality options throughout the draft.',
+      "This year's {playerPosition} class is one of the deepest in recent memory. Teams needing help at the position should find quality options throughout the draft.",
       'The {playerPosition} group is considered thin this year, which could force teams to reach early for top talent. Expect a run on {playerPosition} in the first two rounds.',
-      'Evaluators are split on this year\'s {playerPosition} class. While there is no consensus top prospect, the depth of the group means Day 2 and Day 3 could yield solid starters.',
+      "Evaluators are split on this year's {playerPosition} class. While there is no consensus top prospect, the depth of the group means Day 2 and Day 3 could yield solid starters.",
     ],
     priority: 'low',
     isPositive: true,

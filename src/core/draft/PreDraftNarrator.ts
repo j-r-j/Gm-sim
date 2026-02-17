@@ -194,7 +194,10 @@ function findCombineStandouts(
 function findStockMovers(
   prospects: Record<string, Prospect>,
   combineResults: Record<string, CombineResults>
-): { risers: Array<{ prospect: Prospect; results: CombineResults }>; fallers: Array<{ prospect: Prospect; results: CombineResults }> } {
+): {
+  risers: Array<{ prospect: Prospect; results: CombineResults }>;
+  fallers: Array<{ prospect: Prospect; results: CombineResults }>;
+} {
   const risers: Array<{ prospect: Prospect; results: CombineResults }> = [];
   const fallers: Array<{ prospect: Prospect; results: CombineResults }> = [];
 
@@ -311,7 +314,12 @@ function formatCombineGrade(grade: CombineGrade): string {
  * Creates a PreDraftNewsItem from a template and context
  */
 function createNewsItem(
-  template: { headlines: string[]; bodies: string[]; priority: 'breaking' | 'high' | 'medium' | 'low'; isPositive: boolean },
+  template: {
+    headlines: string[];
+    bodies: string[];
+    priority: 'breaking' | 'high' | 'medium' | 'low';
+    isPositive: boolean;
+  },
   context: StoryContext,
   prospectId?: string,
   teamId?: string
@@ -510,9 +518,7 @@ function generateDraftDayStories(
   }
 
   // User team connection stories (up to 2)
-  const userTargets = prospectList
-    .filter((p) => p.flagged || p.userTier !== null)
-    .slice(0, 2);
+  const userTargets = prospectList.filter((p) => p.flagged || p.userTier !== null).slice(0, 2);
 
   for (const prospect of userTargets) {
     const template = randomElement(TEAM_INTEREST_TEMPLATES);
