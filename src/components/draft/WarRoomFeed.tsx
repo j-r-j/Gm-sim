@@ -220,7 +220,10 @@ function CompactTicker({ events }: { events: WarRoomFeedEvent[] }): React.JSX.El
         size={14}
         color={urgencyColor}
       />
-      <Text style={[compactStyles.tickerText, isCritical && { color: urgencyColor }]} numberOfLines={1}>
+      <Text
+        style={[compactStyles.tickerText, isCritical && { color: urgencyColor }]}
+        numberOfLines={1}
+      >
         {latestEvent.headline}
       </Text>
       <View style={compactStyles.liveDotSmall} />
@@ -231,7 +234,11 @@ function CompactTicker({ events }: { events: WarRoomFeedEvent[] }): React.JSX.El
 /**
  * WarRoomFeed Component
  */
-export function WarRoomFeed({ events, maxEvents = 50, compact = false }: WarRoomFeedProps): React.JSX.Element {
+export function WarRoomFeed({
+  events,
+  maxEvents = 50,
+  compact = false,
+}: WarRoomFeedProps): React.JSX.Element {
   const flatListRef = useRef<FlatList>(null);
 
   const renderEvent = useCallback(

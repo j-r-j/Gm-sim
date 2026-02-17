@@ -164,16 +164,16 @@ export function ProspectListItem({
         <Text style={styles.college} numberOfLines={1}>
           {collegeName}
         </Text>
-        {(workoutSource && workoutSource !== 'none' || fortyYardDash || collegeStatLine) && (
+        {((workoutSource && workoutSource !== 'none') || fortyYardDash || collegeStatLine) && (
           <View style={styles.enrichedRow}>
-            {workoutSource && workoutSource !== 'none' && (
-              <WorkoutBadge source={workoutSource} />
-            )}
+            {workoutSource && workoutSource !== 'none' && <WorkoutBadge source={workoutSource} />}
             {fortyYardDash != null && (
               <Text style={styles.enrichedStat}>{fortyYardDash.toFixed(2)}s</Text>
             )}
             {collegeStatLine && (
-              <Text style={styles.enrichedStat} numberOfLines={1}>{collegeStatLine}</Text>
+              <Text style={styles.enrichedStat} numberOfLines={1}>
+                {collegeStatLine}
+              </Text>
             )}
           </View>
         )}

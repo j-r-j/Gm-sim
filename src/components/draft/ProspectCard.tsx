@@ -7,14 +7,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  accessibility,
-} from '../../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../../styles';
 import { Position } from '../../core/models/player/Position';
 import { WorkoutBadge } from './WorkoutBadge';
 import { StockArrow } from './StockArrow';
@@ -111,7 +104,11 @@ export function ProspectCard({
 
         {/* Key Stat */}
         {keyStat && (
-          <Text style={styles.keyStat} numberOfLines={1} accessibilityLabel={`Key stat: ${keyStat}`}>
+          <Text
+            style={styles.keyStat}
+            numberOfLines={1}
+            accessibilityLabel={`Key stat: ${keyStat}`}
+          >
             {keyStat}
           </Text>
         )}

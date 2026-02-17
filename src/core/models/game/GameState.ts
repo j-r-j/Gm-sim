@@ -163,7 +163,10 @@ export interface GameState {
   playerHistory?: Record<string, import('../../history/PlayerHistoryTracker').PlayerCareerHistory>;
 
   // Rookie development plans (first-year player tracking)
-  rookieDevelopmentPlans?: Record<string, import('../../career/RookieDevelopment').RookieDevelopmentPlan>;
+  rookieDevelopmentPlans?: Record<
+    string,
+    import('../../career/RookieDevelopment').RookieDevelopmentPlan
+  >;
 }
 
 /**

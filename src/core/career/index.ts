@@ -341,7 +341,4 @@ export {
 } from './RookieDevelopment';
 
 // Rookie Development Tracker
-export {
-  type RookieGameStats,
-  updateRookieAfterGame,
-} from './RookieDevelopmentTracker';
+export { type RookieGameStats, updateRookieAfterGame } from './RookieDevelopmentTracker';

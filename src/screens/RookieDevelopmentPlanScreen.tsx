@@ -5,14 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
-import {
-  colors,
-  spacing,
-  fontSize,
-  fontWeight,
-  borderRadius,
-  accessibility,
-} from '../styles';
+import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { DevelopmentTrack, FitLevel } from '../core/career/RookieDevelopment';
 
@@ -210,16 +203,12 @@ export function RookieDevelopmentPlanScreen({
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryCount, { color: colors.warning }]}>
-            {summary.rotational}
-          </Text>
+          <Text style={[styles.summaryCount, { color: colors.warning }]}>{summary.rotational}</Text>
           <Text style={styles.summaryLabel}>Rotational</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryCount, { color: colors.info }]}>
-            {summary.developmental}
-          </Text>
+          <Text style={[styles.summaryCount, { color: colors.info }]}>{summary.developmental}</Text>
           <Text style={styles.summaryLabel}>Developmental</Text>
         </View>
       </View>
@@ -231,15 +220,13 @@ export function RookieDevelopmentPlanScreen({
         renderItem={({ item }) => <RookieCard rookie={item} onUpdateTrack={onUpdateTrack} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No rookies on the roster</Text>
-        }
+        ListEmptyComponent={<Text style={styles.emptyText}>No rookies on the roster</Text>}
         ListFooterComponent={
           rookies.length > 0 ? (
             <View style={styles.footer}>
               <Text style={styles.footerText}>
-                Projected Impact: {summary.starters} day-one contributors,{' '}
-                {summary.rotational} role players, {summary.developmental} long-term projects
+                Projected Impact: {summary.starters} day-one contributors, {summary.rotational} role
+                players, {summary.developmental} long-term projects
               </Text>
             </View>
           ) : null

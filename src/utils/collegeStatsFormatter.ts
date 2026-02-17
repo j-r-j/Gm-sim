@@ -76,9 +76,7 @@ export function formatCollegeStatLine(stats: PositionCollegeStats): string {
     case 'KP': {
       const s = stats as KPCollegeStats;
       const fgPct =
-        s.fieldGoalAttempts > 0
-          ? Math.round((s.fieldGoalsMade / s.fieldGoalAttempts) * 100)
-          : 0;
+        s.fieldGoalAttempts > 0 ? Math.round((s.fieldGoalsMade / s.fieldGoalAttempts) * 100) : 0;
       return `${s.fieldGoalsMade}/${s.fieldGoalAttempts} FG (${fgPct}%), ${s.puntAverage.toFixed(1)} avg punt`;
     }
   }
@@ -92,9 +90,7 @@ export function getCollegeStatsHighlight(stats: PositionCollegeStats): CollegeSt
     case 'QB': {
       const s = stats as QBCollegeStats;
       const compPct =
-        s.passAttempts > 0
-          ? ((s.passCompletions / s.passAttempts) * 100).toFixed(1)
-          : '0.0';
+        s.passAttempts > 0 ? ((s.passCompletions / s.passAttempts) * 100).toFixed(1) : '0.0';
       return {
         primary: `${compPct}% completion`,
         secondary: `${formatNumber(s.passYards)} pass yds`,

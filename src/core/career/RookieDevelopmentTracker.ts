@@ -95,10 +95,7 @@ export function updateRookieAfterGame(
   // 6. Learning speed modifier
   if (personalityProfile.learningSpeed === 'fast_learner') {
     developmentScore += 1;
-  } else if (
-    personalityProfile.learningSpeed === 'slow_absorber' &&
-    seasonGamesPlayed <= 4
-  ) {
+  } else if (personalityProfile.learningSpeed === 'slow_absorber' && seasonGamesPlayed <= 4) {
     developmentScore -= 1;
   }
 
