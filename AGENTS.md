@@ -183,3 +183,21 @@ Manual nav via `currentScreen` state in App.tsx. All bidirectional. No orphaned 
 - Path aliases: `@core/*`, `@state/*`, `@services/*`, `@ui/*`, `@types/*`
 - Commands: `npm start`, `npm test`, `npm run lint`, `npm run typecheck`
 - Boolean gate pattern for feature validation before proceeding
+
+## Cursor Cloud specific instructions
+
+### Environment
+- Node.js 20.x is required (`.tool-versions` says 20.19.0, but >= 20.19.4 needed due to `@react-native/dev-middleware` peer dependency). The VM uses nvm; the update script handles version switching.
+- Package manager: **yarn** (classic 1.x). Lockfile is `yarn.lock`.
+- No external services, databases, or secrets needed — this is a fully self-contained client-side app.
+
+### Running the app
+- `yarn web` starts the Expo dev server on **port 8081** (Metro bundler). Open `http://localhost:8081` in Chrome.
+- For non-interactive CI mode, use `CI=1 expo start --web` (the `--non-interactive` flag is not supported).
+- The app renders a mobile-style UI in the browser; the game flow is: Start → New Game → Team Selection → Staff Decision → GM Dashboard.
+
+### Quality checks
+- `yarn lint` — ESLint (warnings for unused disable directives are expected, 0 errors)
+- `yarn typecheck` — TypeScript strict mode (`tsc --noEmit`)
+- `yarn test` — Jest with 142 suites / 4000+ tests (takes ~5 min; all pass)
+- `yarn format:check` — Prettier formatting validation
