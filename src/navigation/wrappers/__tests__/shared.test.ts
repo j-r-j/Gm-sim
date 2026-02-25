@@ -30,6 +30,7 @@ import {
   tryCompleteViewTask,
   validateOffseasonPhaseAdvance,
 } from '../shared';
+import { PlayoffSchedule } from '@core/season/PlayoffGenerator';
 
 // ============================================
 // HELPERS
@@ -232,6 +233,7 @@ describe('processWeekEnd', () => {
       const result = processWeekEnd(state);
       expect(result.state.league.calendar.currentWeek).toBe(19);
       expect(result.state.league.calendar.currentPhase).toBe('playoffs');
+      expect(result.state.league.schedule?.playoffs).not.toBeNull();
     });
 
     it('should stay in regularSeason when week <= 18', () => {
@@ -244,6 +246,42 @@ describe('processWeekEnd', () => {
       const state = createMinimalGameState({ week: 20, phase: 'playoffs' });
       const result = processWeekEnd(state);
       expect(result.state.league.calendar.currentPhase).toBe('playoffs');
+    });
+
+    it('should transition from super bowl week to offseason', () => {
+      const state = createMinimalGameState({ week: 22, phase: 'playoffs' });
+      const playoffSchedule: PlayoffSchedule = {
+        afcSeeds: new Map(),
+        nfcSeeds: new Map(),
+        wildCardRound: [],
+        divisionalRound: [],
+        conferenceChampionships: [],
+        superBowl: {
+          gameId: 'sb-test',
+          round: 'superBowl',
+          conference: 'neutral',
+          homeTeamId: state.userTeamId,
+          awayTeamId: state.userTeamId,
+          homeSeed: 1,
+          awaySeed: 1,
+          isComplete: true,
+          homeScore: 31,
+          awayScore: 17,
+          winnerId: state.userTeamId,
+        },
+        afcChampion: state.userTeamId,
+        nfcChampion: state.userTeamId,
+        superBowlChampion: null,
+      };
+      state.league.schedule = {
+        ...state.league.schedule!,
+        playoffs: playoffSchedule,
+      };
+
+      const result = processWeekEnd(state);
+      expect(result.state.league.calendar.currentPhase).toBe('offseason');
+      expect(result.state.league.calendar.currentWeek).toBe(1);
+      expect(result.state.league.calendar.offseasonPhase).toBe(1);
     });
   });
 

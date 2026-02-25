@@ -460,13 +460,59 @@ export function getUserTeamGame(
   week: number,
   userTeamId: string
 ): ScheduledGame | null {
-  // Check if user is on bye
-  if (isOnBye(userTeamId, week, schedule.byeWeeks)) {
-    return null;
+  // Regular season
+  if (week <= 18) {
+    // Check if user is on bye
+    if (isOnBye(userTeamId, week, schedule.byeWeeks)) {
+      return null;
+    }
+
+    const weekGames = getWeekGames(schedule, week);
+    return (
+      weekGames.find((g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId) || null
+    );
   }
 
-  const weekGames = getWeekGames(schedule, week);
-  return weekGames.find((g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId) || null;
+  // Playoffs (weeks 19-22)
+  const playoffs = schedule.playoffs;
+  if (!playoffs) return null;
+
+  const getRoundMatchups = () => {
+    switch (week) {
+      case 19:
+        return playoffs.wildCardRound;
+      case 20:
+        return playoffs.divisionalRound;
+      case 21:
+        return playoffs.conferenceChampionships;
+      case 22:
+        return playoffs.superBowl ? [playoffs.superBowl] : [];
+      default:
+        return [];
+    }
+  };
+
+  const matchup = getRoundMatchups().find(
+    (m) => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId
+  );
+
+  if (!matchup) return null;
+
+  return {
+    gameId: matchup.gameId,
+    week,
+    homeTeamId: matchup.homeTeamId,
+    awayTeamId: matchup.awayTeamId,
+    isDivisional: false,
+    isConference: matchup.conference !== 'neutral',
+    isRivalry: false,
+    component: 'E',
+    timeSlot: matchup.round === 'superBowl' ? 'sunday_night' : 'late_sunday',
+    isComplete: matchup.isComplete,
+    homeScore: matchup.homeScore,
+    awayScore: matchup.awayScore,
+    winnerId: matchup.winnerId,
+  };
 }
 
 /**

@@ -91,6 +91,44 @@ describe('WeekSimulator', () => {
         expect(game).toBeNull();
       }
     });
+
+    it('should return playoff matchup during playoff weeks', () => {
+      const userTeamId = teams[0].id;
+      const opponentId = teams[1].id;
+      schedule.playoffs = {
+        afcSeeds: new Map([
+          [1, userTeamId],
+          [2, opponentId],
+        ]),
+        nfcSeeds: new Map(),
+        wildCardRound: [
+          {
+            gameId: 'playoff-wc-test',
+            round: 'wildCard',
+            conference: 'afc',
+            homeTeamId: userTeamId,
+            awayTeamId: opponentId,
+            homeSeed: 2,
+            awaySeed: 7,
+            isComplete: false,
+            homeScore: null,
+            awayScore: null,
+            winnerId: null,
+          },
+        ],
+        divisionalRound: [],
+        conferenceChampionships: [],
+        superBowl: null,
+        afcChampion: null,
+        nfcChampion: null,
+        superBowlChampion: null,
+      };
+
+      const game = getUserTeamGame(schedule, 19, userTeamId);
+      expect(game).not.toBeNull();
+      expect(game?.gameId).toBe('playoff-wc-test');
+      expect(game?.homeTeamId).toBe(userTeamId);
+    });
   });
 
   describe('isUserOnBye', () => {

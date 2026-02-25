@@ -24,12 +24,18 @@ import { StatsScreen } from '../../screens/StatsScreen';
 import { RumorMillScreen } from '../../screens/RumorMillScreen';
 import { WeeklyDigestScreen } from '../../screens/WeeklyDigestScreen';
 import { GameState } from '../../core/models/game/GameState';
-import { getAllNews } from '../../core/news/NewsFeedManager';
+import {
+  getAllNews,
+  getAllActiveRumors,
+  getCurrentWeekNews,
+  getLatestWeeklyDigest,
+} from '../../core/news/NewsFeedManager';
 import { getUserTeamGame } from '../../core/season/WeekSimulator';
 import { Rumor } from '../../core/news/RumorMill';
-import { WeeklyDigest } from '../../core/news/WeeklyDigest';
+import { generateWeeklyDigest, WeeklyDigest } from '../../core/news/WeeklyDigest';
 import { NewsItem } from '../../core/news/NewsGenerators';
-import { NewsFeedCategory } from '../../core/news/StoryTemplates';
+import { getCurrentPlayoffRound } from '../../core/season/PlayoffGenerator';
+import { calculateStandings as calculateDetailedStandings } from '../../core/season/StandingsCalculator';
 
 // ============================================
 // SCHEDULE SCREEN
@@ -242,92 +248,106 @@ export function PlayoffBracketScreenWrapper({
     return <LoadingFallback message="Loading playoffs..." />;
   }
 
-  const generateSeeds = (conference: 'AFC' | 'NFC'): PlayoffSeed[] => {
-    const confTeams = Object.values(gameState.teams)
-      .filter((t) => t.conference === conference)
-      .sort((a, b) => {
-        if (b.currentRecord.wins !== a.currentRecord.wins) {
-          return b.currentRecord.wins - a.currentRecord.wins;
-        }
-        return b.currentRecord.losses - a.currentRecord.losses;
-      })
+  const playoffSchedule = gameState.league.schedule?.playoffs;
+  const completedRegularSeasonGames =
+    gameState.league.schedule?.regularSeason.filter((g) => g.isComplete) ?? [];
+
+  const getSeedEntries = (seedSource: unknown): Array<[number, string]> => {
+    if (seedSource instanceof Map) {
+      return Array.from(seedSource.entries()).filter(
+        (entry): entry is [number, string] =>
+          typeof entry[0] === 'number' && typeof entry[1] === 'string'
+      );
+    }
+
+    if (Array.isArray(seedSource)) {
+      return seedSource.filter(
+        (entry): entry is [number, string] =>
+          Array.isArray(entry) && typeof entry[0] === 'number' && typeof entry[1] === 'string'
+      );
+    }
+
+    if (seedSource && typeof seedSource === 'object') {
+      return Object.entries(seedSource as Record<string, unknown>)
+        .map(([seed, teamId]) => [Number(seed), teamId] as const)
+        .filter(
+          (entry): entry is [number, string] =>
+            Number.isFinite(entry[0]) && typeof entry[1] === 'string'
+        );
+    }
+
+    return [];
+  };
+
+  const toSeeds = (conference: 'AFC' | 'NFC'): PlayoffSeed[] => {
+    const source = conference === 'AFC' ? playoffSchedule?.afcSeeds : playoffSchedule?.nfcSeeds;
+    const entries = getSeedEntries(source).sort((a, b) => a[0] - b[0]);
+
+    if (entries.length > 0) {
+      return entries.map(([seed, teamId]) => ({
+        seed,
+        teamId,
+        record: gameState.teams[teamId]?.currentRecord ?? { wins: 0, losses: 0, ties: 0 },
+        conference,
+      }));
+    }
+
+    // Deterministic fallback if playoff bracket hasn't been generated yet
+    const standings = calculateDetailedStandings(
+      completedRegularSeasonGames,
+      Object.values(gameState.teams)
+    );
+    const confTeams = Object.values(standings[conference.toLowerCase() as 'afc' | 'nfc'])
+      .flat()
+      .sort((a, b) => a.conferenceRank - b.conferenceRank)
       .slice(0, 7);
 
-    return confTeams.map((team, index) => ({
+    return confTeams.map((standing, index) => ({
       seed: index + 1,
-      teamId: team.id,
-      record: team.currentRecord,
+      teamId: standing.teamId,
+      record: { wins: standing.wins, losses: standing.losses, ties: standing.ties },
       conference,
     }));
   };
 
-  const afcSeeds = generateSeeds('AFC');
-  const nfcSeeds = generateSeeds('NFC');
+  const afcSeeds = toSeeds('AFC');
+  const nfcSeeds = toSeeds('NFC');
 
-  const generateMatchups = (): PlayoffMatchup[] => {
-    const matchups: PlayoffMatchup[] = [];
-    const week = gameState.league.calendar.currentWeek;
+  const matchups: PlayoffMatchup[] = playoffSchedule
+    ? [
+        ...playoffSchedule.wildCardRound,
+        ...playoffSchedule.divisionalRound,
+        ...playoffSchedule.conferenceChampionships,
+        ...(playoffSchedule.superBowl ? [playoffSchedule.superBowl] : []),
+      ].map((matchup) => ({
+        gameId: matchup.gameId,
+        round: matchup.round,
+        conference:
+          matchup.conference === 'afc' ? 'AFC' : matchup.conference === 'nfc' ? 'NFC' : undefined,
+        homeSeed: matchup.homeSeed,
+        awaySeed: matchup.awaySeed,
+        homeTeamId: matchup.homeTeamId,
+        awayTeamId: matchup.awayTeamId,
+        homeScore: matchup.homeScore,
+        awayScore: matchup.awayScore,
+        winnerId: matchup.winnerId,
+        isComplete: matchup.isComplete,
+      }))
+    : [];
 
-    for (const conf of ['AFC', 'NFC'] as const) {
-      const seeds = conf === 'AFC' ? afcSeeds : nfcSeeds;
-
-      matchups.push({
-        gameId: `wc-${conf}-1`,
-        round: 'wildCard',
-        conference: conf,
-        homeSeed: 2,
-        awaySeed: 7,
-        homeTeamId: seeds[1]?.teamId || null,
-        awayTeamId: seeds[6]?.teamId || null,
-        homeScore: week > 19 ? 28 + Math.floor(Math.random() * 7) : null,
-        awayScore: week > 19 ? 21 + Math.floor(Math.random() * 7) : null,
-        winnerId: week > 19 ? seeds[1]?.teamId || null : null,
-        isComplete: week > 19,
-      });
-
-      matchups.push({
-        gameId: `wc-${conf}-2`,
-        round: 'wildCard',
-        conference: conf,
-        homeSeed: 3,
-        awaySeed: 6,
-        homeTeamId: seeds[2]?.teamId || null,
-        awayTeamId: seeds[5]?.teamId || null,
-        homeScore: week > 19 ? 24 + Math.floor(Math.random() * 10) : null,
-        awayScore: week > 19 ? 17 + Math.floor(Math.random() * 7) : null,
-        winnerId: week > 19 ? seeds[2]?.teamId || null : null,
-        isComplete: week > 19,
-      });
-
-      matchups.push({
-        gameId: `wc-${conf}-3`,
-        round: 'wildCard',
-        conference: conf,
-        homeSeed: 4,
-        awaySeed: 5,
-        homeTeamId: seeds[3]?.teamId || null,
-        awayTeamId: seeds[4]?.teamId || null,
-        homeScore: week > 19 ? 21 + Math.floor(Math.random() * 10) : null,
-        awayScore: week > 19 ? 14 + Math.floor(Math.random() * 14) : null,
-        winnerId: week > 19 ? seeds[3]?.teamId || null : null,
-        isComplete: week > 19,
-      });
-    }
-
-    return matchups;
-  };
-
-  const matchups = generateMatchups();
+  const activeRound = playoffSchedule ? getCurrentPlayoffRound(playoffSchedule) : null;
   const currentRound =
-    gameState.league.calendar.currentWeek <= 18
+    activeRound === 'wildCard'
       ? 'wildCard'
-      : gameState.league.calendar.currentWeek <= 20
+      : activeRound === 'divisional'
         ? 'divisional'
-        : gameState.league.calendar.currentWeek <= 21
+        : activeRound === 'conference'
           ? 'conference'
-          : gameState.league.calendar.currentWeek <= 22
+          : activeRound === 'superBowl'
             ? 'superBowl'
-            : 'complete';
+            : playoffSchedule?.superBowlChampion
+              ? 'complete'
+              : 'wildCard';
 
   return (
     <PlayoffBracketScreen
@@ -337,7 +357,7 @@ export function PlayoffBracketScreenWrapper({
       matchups={matchups}
       userTeamId={gameState.userTeamId}
       currentRound={currentRound}
-      championId={null}
+      championId={playoffSchedule?.superBowlChampion ?? null}
       onBack={() => navigation.goBack()}
     />
   );
@@ -376,93 +396,12 @@ export function RumorMillScreenWrapper({
     return <LoadingFallback message="Loading Rumor Mill..." />;
   }
 
-  const currentYear = gameState.league.calendar.currentYear;
-  const currentWeek = gameState.league.calendar.currentWeek;
-  const userTeam = gameState.teams[gameState.userTeamId];
-  const teamName = userTeam ? `${userTeam.city} ${userTeam.nickname}` : 'Your Team';
-
-  // Generate sample rumors for display
-  // In production, these would come from gameState.rumors or similar
-  const mockRumors: Rumor[] = [
-    {
-      id: 'rumor-1',
-      type: 'trade_interest',
-      headline: 'Report: Multiple Teams Interested in Trade',
-      body: 'According to league sources, several teams have expressed interest in acquiring key players before the deadline. No trade is imminent, but conversations have taken place.',
-      isTrue: true,
-      sourceConfidence: 'moderate',
-      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      priority: 'medium',
-      expiresAt: Date.now() + 5 * 24 * 60 * 60 * 1000,
-      isResolved: false,
-    },
-    {
-      id: 'rumor-2',
-      type: 'contract_demand',
-      headline: 'Star Player Seeking New Contract',
-      body: 'Sources indicate a key player is seeking a new contract extension. The player believes they have outperformed their current deal and wants to be paid among the top at their position.',
-      isTrue: false,
-      sourceConfidence: 'whisper',
-      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      priority: 'low',
-      expiresAt: Date.now() + 4 * 24 * 60 * 60 * 1000,
-      isResolved: false,
-    },
-    {
-      id: 'rumor-3',
-      type: 'coaching',
-      headline: `Hot Seat: ${teamName} Coach Under Pressure?`,
-      body: `Sources say the coaching position with ${teamName} could be in jeopardy if results don't improve. The pressure is mounting after recent struggles.`,
-      isTrue: false,
-      sourceConfidence: 'whisper',
-      timestamp: Date.now() - 5 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek > 1 ? currentWeek - 1 : currentWeek,
-      priority: 'medium',
-      expiresAt: Date.now() + 2 * 24 * 60 * 60 * 1000,
-      isResolved: true,
-      resolution: 'Reports of coaching changes were premature. The staff remains intact.',
-    },
-    {
-      id: 'rumor-4',
-      type: 'injury_recovery',
-      headline: 'Injured Star Making Rapid Progress',
-      body: 'Good news on the injury front: sources indicate an injured player is making excellent progress in rehab. An early return may be possible.',
-      isTrue: true,
-      sourceConfidence: 'strong',
-      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      priority: 'high',
-      expiresAt: Date.now() + 6 * 24 * 60 * 60 * 1000,
-      isResolved: false,
-    },
-    {
-      id: 'rumor-5',
-      type: 'locker_room',
-      headline: 'Sources: Tension Building in Locker Room',
-      body: 'Multiple sources describe tension in the locker room. The specifics are unclear, but chemistry may be becoming an issue for the team.',
-      isTrue: true,
-      sourceConfidence: 'moderate',
-      timestamp: Date.now() - 4 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek > 1 ? currentWeek - 1 : currentWeek,
-      priority: 'medium',
-      expiresAt: Date.now() - 1 * 24 * 60 * 60 * 1000, // Expired
-      isResolved: true,
-      resolution:
-        'Sources were right about locker room issues. The team has made roster changes to address the situation.',
-    },
-  ];
+  const rumors: Rumor[] = gameState.newsFeed ? getAllActiveRumors(gameState.newsFeed) : [];
 
   return (
     <RumorMillScreen
       gameState={gameState}
-      rumors={mockRumors}
+      rumors={rumors}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
@@ -485,129 +424,21 @@ export function WeeklyDigestScreenWrapper({
   const currentYear = gameState.league.calendar.currentYear;
   const currentWeek = gameState.league.calendar.currentWeek;
 
-  // Generate sample news items
-  const mockNews: NewsItem[] = [
-    {
-      id: 'news-1',
-      category: 'performance' as NewsFeedCategory,
-      headline: 'Star Quarterback Dominates in Week ' + currentWeek,
-      body: 'The franchise quarterback delivered another stellar performance, completing 28 of 35 passes for 320 yards and 3 touchdowns.',
-      priority: 'high',
-      isPositive: true,
-      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      isRead: false,
-      revealsTraitHint: false,
-    },
-    {
-      id: 'news-2',
-      category: 'injury' as NewsFeedCategory,
-      headline: 'Starting Linebacker Leaves Game with Knee Injury',
-      body: 'The team is awaiting MRI results after their starting linebacker went down with a non-contact knee injury in the third quarter.',
-      priority: 'breaking',
-      isPositive: false,
-      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      isRead: false,
-      revealsTraitHint: false,
-    },
-    {
-      id: 'news-3',
-      category: 'trade' as NewsFeedCategory,
-      headline: 'Teams Swap Mid-Round Draft Picks',
-      body: 'In a minor move, two teams exchanged mid-round draft picks as they continue to build for the future.',
-      priority: 'low',
-      isPositive: true,
-      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      isRead: true,
-      revealsTraitHint: false,
-    },
-    {
-      id: 'news-4',
-      category: 'performance' as NewsFeedCategory,
-      headline: 'Rookie Shows Surprising Work Ethic',
-      body: 'Sources say the first-round pick has been the first to arrive and last to leave practice every day. Coaches are impressed with his dedication.',
-      priority: 'medium',
-      isPositive: true,
-      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      isRead: false,
-      revealsTraitHint: true,
-      hintedTrait: 'hard_worker',
-    },
-    {
-      id: 'news-5',
-      category: 'coaching' as NewsFeedCategory,
-      headline: 'Defensive Coordinator Praises Unit After Shutout',
-      body: 'The defense held their opponent scoreless for the first time this season, with the coordinator crediting improved communication.',
-      priority: 'medium',
-      isPositive: true,
-      timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      isRead: true,
-      revealsTraitHint: false,
-    },
-  ];
+  const newsFeed = gameState.newsFeed;
+  const weekNews: NewsItem[] = newsFeed ? getCurrentWeekNews(newsFeed) : [];
+  const activeRumors: Rumor[] = newsFeed ? getAllActiveRumors(newsFeed) : [];
+  const latestDigest = newsFeed ? getLatestWeeklyDigest(newsFeed) : null;
 
-  // Generate sample rumors
-  const mockRumors: Rumor[] = [
-    {
-      id: 'rumor-1',
-      type: 'trade_interest',
-      headline: 'Report: Multiple Teams Interested in Trade',
-      body: 'League sources indicate several teams have made calls about potential trade targets.',
-      isTrue: true,
-      sourceConfidence: 'moderate',
-      timestamp: Date.now() - 2 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      priority: 'medium',
-      expiresAt: Date.now() + 5 * 24 * 60 * 60 * 1000,
-      isResolved: false,
-    },
-    {
-      id: 'rumor-2',
-      type: 'contract_demand',
-      headline: 'Star Player Seeking Extension',
-      body: 'Sources say negotiations have begun on a contract extension for a key player.',
-      isTrue: false,
-      sourceConfidence: 'whisper',
-      timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
-      season: currentYear,
-      week: currentWeek,
-      priority: 'low',
-      expiresAt: Date.now() + 4 * 24 * 60 * 60 * 1000,
-      isResolved: false,
-    },
-  ];
-
-  // Get unique categories
-  const categoriesWithNews = Array.from(
-    new Set(mockNews.map((n) => n.category))
-  ) as NewsFeedCategory[];
-
-  // Build digest
-  const digest: WeeklyDigest = {
-    id: `digest-s${currentYear}-w${currentWeek}`,
-    season: currentYear,
-    week: currentWeek,
-    headline: 'Busy Week Around the League',
-    summary: `Here's what you need to know from Week ${currentWeek}: 1 injury report was filed this week. We saw 2 noteworthy individual performances. Plus, 2 rumors are swirling around the league.`,
-    topStories: mockNews,
-    activeRumors: mockRumors,
-    traitHintingNews: mockNews.filter((n) => n.revealsTraitHint),
-    totalNewsCount: mockNews.length,
-    unreadCount: mockNews.filter((n) => !n.isRead).length,
-    categoriesWithNews,
-    timestamp: Date.now(),
-    isViewed: false,
-  };
+  const digest: WeeklyDigest =
+    latestDigest && latestDigest.season === currentYear && latestDigest.week === currentWeek
+      ? latestDigest
+      : generateWeeklyDigest(
+          weekNews,
+          activeRumors,
+          currentYear,
+          currentWeek,
+          newsFeed?.digestConfig
+        );
 
   return (
     <WeeklyDigestScreen
