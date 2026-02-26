@@ -218,10 +218,8 @@ export function OffseasonScreenWrapper({
       'Sim Remaining Offseason',
       'This will simulate all remaining offseason phases and start the new season. Are you sure?',
       async () => {
-        // Simulate through all remaining phases
-        const simmedState = simulateRemainingOffSeason(offseasonState!);
-
-        // Transition to new season
+        // Simulate through all remaining phases, then transition to new season
+        simulateRemainingOffSeason(offseasonState!);
         const transitionedState = transitionToNewSeason({
           ...gameState,
           offseasonState: undefined,
