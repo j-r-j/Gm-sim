@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
 import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
@@ -47,7 +47,7 @@ import { PlayoffMatchup as EnginePlayoffMatchup } from '../../core/season/Playof
 // ============================================
 
 export function CareerSummaryScreenWrapper({
-  navigation: _navigation,
+  navigation,
 }: ScreenProps<'CareerSummary'>): React.JSX.Element {
   const { gameState } = useGame();
 
@@ -55,13 +55,89 @@ export function CareerSummaryScreenWrapper({
     return <LoadingFallback message="Loading career summary..." />;
   }
 
-  // This screen is typically shown after firing, so we may not have firingRecord here
-  // For general career viewing, we'd need different data
+  const currentTeam = gameState.teams[gameState.userTeamId];
+  const currentTeamName = currentTeam
+    ? `${currentTeam.city} ${currentTeam.nickname}`
+    : 'Unknown Team';
+  const currentRecord = currentTeam?.currentRecord;
+  const calendar = gameState.league.calendar;
+  const careerStats = gameState.careerStats;
+  const totalGames = careerStats.totalWins + careerStats.totalLosses;
+  const winPct = totalGames > 0 ? ((careerStats.totalWins / totalGames) * 100).toFixed(1) : '0.0';
+
   return (
-    <View style={styles.fallbackContainer}>
-      <Text style={styles.fallbackText}>Career Summary</Text>
-      <Text style={styles.fallbackSubtext}>Coming soon...</Text>
-    </View>
+    <ScrollView style={styles.summaryContainer} contentContainerStyle={styles.summaryContent}>
+      <Text style={styles.summaryTitle}>Career Summary</Text>
+      <Text style={styles.summarySubtitle}>
+        {gameState.userName} • {currentTeamName}
+      </Text>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.cardTitle}>Current Season</Text>
+        <Text style={styles.cardValue}>
+          Year {calendar.currentYear} • Week {calendar.currentWeek}
+        </Text>
+        <Text style={styles.cardValue}>Phase: {calendar.currentPhase}</Text>
+        <Text style={styles.cardValue}>
+          Record: {currentRecord?.wins ?? 0}-{currentRecord?.losses ?? 0}
+          {(currentRecord?.ties ?? 0) > 0 ? `-${currentRecord?.ties ?? 0}` : ''}
+        </Text>
+      </View>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.cardTitle}>Career Totals</Text>
+        <Text style={styles.cardValue}>Seasons Completed: {careerStats.seasonsCompleted}</Text>
+        <Text style={styles.cardValue}>
+          Record: {careerStats.totalWins}-{careerStats.totalLosses} ({winPct}%)
+        </Text>
+        <Text style={styles.cardValue}>Playoff Appearances: {careerStats.playoffAppearances}</Text>
+        <Text style={styles.cardValue}>Championships: {careerStats.championships}</Text>
+      </View>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.cardTitle}>Team History</Text>
+        {careerStats.teamHistory.length === 0 ? (
+          <Text style={styles.cardMuted}>No completed tenures yet.</Text>
+        ) : (
+          careerStats.teamHistory
+            .slice(-5)
+            .reverse()
+            .map((entry) => (
+              <Text key={`${entry.teamId}-${entry.yearsStart}`} style={styles.cardValue}>
+                {entry.teamName}: {entry.record.wins}-{entry.record.losses} ({entry.yearsStart}-
+                {entry.yearsEnd ?? 'Present'})
+              </Text>
+            ))
+        )}
+      </View>
+
+      <View style={styles.summaryActions}>
+        <TouchableOpacity
+          style={styles.summaryButton}
+          onPress={() => navigation.navigate('CareerLegacy')}
+          accessibilityRole="button"
+          accessibilityLabel="View career legacy"
+        >
+          <Text style={styles.summaryButtonText}>View Legacy</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.summaryButton}
+          onPress={() => navigation.navigate('SeasonHistory')}
+          accessibilityRole="button"
+          accessibilityLabel="View season history"
+        >
+          <Text style={styles.summaryButtonText}>Season History</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.summaryButton}
+          onPress={() => navigation.navigate('HallOfFame')}
+          accessibilityRole="button"
+          accessibilityLabel="View hall of fame"
+        >
+          <Text style={styles.summaryButtonText}>Hall of Fame</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -846,5 +922,59 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     fontSize: fontSize.md,
     color: colors.textSecondary,
+  },
+  summaryContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  summaryContent: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  summaryTitle: {
+    fontSize: fontSize.xl,
+    color: colors.text,
+    fontWeight: '700',
+  },
+  summarySubtitle: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  cardTitle: {
+    fontSize: fontSize.md,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  cardValue: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  cardMuted: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  summaryActions: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  summaryButton: {
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  summaryButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.md,
+    fontWeight: '600',
   },
 });

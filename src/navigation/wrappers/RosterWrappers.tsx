@@ -38,6 +38,12 @@ import { PlayerContract, calculateDeadMoney, calculateCapSavings } from '../../c
 import { ContractAction } from '../../screens/ContractManagementScreen';
 import { ScoutReport } from '../../core/scouting/ScoutReportGenerator';
 import { OffensiveScheme, DefensiveScheme } from '../../core/models/player/SchemeFit';
+import {
+  applyContractRestructure,
+  applyPlayerCut,
+  getSelectedCutAnalysis,
+  mapPlayerForComparison,
+} from './rosterHelpers';
 
 // ============================================
 // ROSTER SCREEN
@@ -389,24 +395,8 @@ export function ContractManagementScreenWrapper({
             break;
           }
           case 'restructureContract': {
-            // Apply contract restructure - convert salary to signing bonus
-            const contract = Object.values(gameState.contracts).find(
-              (c) => c.id === action.contractId
-            );
-            if (contract) {
-              const restructuredContract: PlayerContract = {
-                ...contract,
-                notes: [
-                  ...(contract.notes || []),
-                  `Restructured: converted $${(action.amountToConvert / 1000).toFixed(1)}M${action.voidYears > 0 ? ` with ${action.voidYears} void year(s)` : ''}`,
-                ],
-                voidYears: contract.voidYears + action.voidYears,
-              };
-              const updatedContracts = {
-                ...gameState.contracts,
-                [contract.playerId]: restructuredContract,
-              };
-              const updatedState: GameState = { ...gameState, contracts: updatedContracts };
+            const updatedState = applyContractRestructure(gameState, action);
+            if (updatedState !== gameState) {
               setGameState(updatedState);
               await saveGameState(updatedState);
             }
@@ -415,11 +405,17 @@ export function ContractManagementScreenWrapper({
           }
           case 'cutPlayer': {
             const player = gameState.players[action.playerId];
+            const updatedState = applyPlayerCut(gameState, action.playerId, action.cutBreakdown);
+            const cutAnalysis = getSelectedCutAnalysis(action.cutBreakdown);
+            if (updatedState !== gameState) {
+              setGameState(updatedState);
+              await saveGameState(updatedState);
+            }
             showAlert(
-              'Cut Analysis',
+              'Player Released',
               `${player?.firstName} ${player?.lastName}\n\n` +
-                `Cap Savings: $${(action.cutBreakdown.standardCut.capSavings / 1000).toFixed(1)}M\n` +
-                `Dead Money: $${(action.cutBreakdown.standardCut.deadMoney / 1000).toFixed(1)}M`
+                `Cap Savings: $${(cutAnalysis.capSavings / 1000).toFixed(1)}M\n` +
+                `Dead Money: $${(cutAnalysis.deadMoney / 1000).toFixed(1)}M`
             );
             break;
           }
@@ -850,48 +846,10 @@ export function PlayerComparisonScreenWrapper({
     return <LoadingFallback message="Players not found..." />;
   }
 
-  const mapPlayerData = (player: typeof p1) => {
-    const skills: Record<string, number> = {};
-    for (const [key, skillVal] of Object.entries(player.skills || {})) {
-      if (skillVal && typeof skillVal === 'object' && 'perceivedValue' in skillVal) {
-        skills[key] = (skillVal as { perceivedValue: number }).perceivedValue;
-      }
-    }
-
-    const stats: Record<string, number> = {};
-    const seasonStats = gameState.seasonStats?.[player.id];
-    if (seasonStats) {
-      for (const [key, val] of Object.entries(seasonStats)) {
-        if (typeof val === 'number') stats[key] = val;
-      }
-    }
-
-    return {
-      name: `${player.firstName} ${player.lastName}`,
-      position: player.position,
-      age: player.age,
-      overall:
-        Object.values(skills).length > 0
-          ? Math.round(
-              Object.values(skills).reduce((a, b) => a + b, 0) / Object.values(skills).length
-            )
-          : 50,
-      skills,
-      stats,
-      contract:
-        player.experience > 0
-          ? {
-              yearsRemaining: Math.max(1, 4 - player.experience),
-              salary: 2000000 + player.experience * 1000000,
-            }
-          : undefined,
-    };
-  };
-
   return (
     <PlayerComparisonScreen
-      player1={mapPlayerData(p1)}
-      player2={mapPlayerData(p2)}
+      player1={mapPlayerForComparison(p1, gameState.seasonStats?.[p1.id])}
+      player2={mapPlayerForComparison(p2, gameState.seasonStats?.[p2.id])}
       onBack={() => navigation.goBack()}
     />
   );

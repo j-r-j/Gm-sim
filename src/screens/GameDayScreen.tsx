@@ -50,7 +50,7 @@ import {
   GamePrediction,
 } from '../core/gameflow';
 import { GameState } from '../core/models/game/GameState';
-import { ScheduledGame, updateGameResult } from '../core/season/ScheduleGenerator';
+import { ScheduledGame, SeasonSchedule, updateGameResult } from '../core/season/ScheduleGenerator';
 import { GameResult } from '../core/game/GameRunner';
 
 // ============================================================================
@@ -576,6 +576,59 @@ function PostGamePhase({
 // MAIN COMPONENT
 // ============================================================================
 
+function updateScheduleWithResult(
+  schedule: SeasonSchedule,
+  gameId: string,
+  homeScore: number,
+  awayScore: number,
+  currentPhase: GameState['league']['calendar']['currentPhase']
+): SeasonSchedule {
+  if (currentPhase !== 'playoffs' || !schedule.playoffs) {
+    return updateGameResult(schedule, gameId, homeScore, awayScore);
+  }
+
+  const updateMatchup = <T extends { gameId: string; homeTeamId: string; awayTeamId: string }>(
+    matchup: T
+  ): T & { isComplete: boolean; homeScore: number; awayScore: number; winnerId: string | null } => {
+    if (matchup.gameId !== gameId) {
+      return matchup as T & {
+        isComplete: boolean;
+        homeScore: number;
+        awayScore: number;
+        winnerId: string | null;
+      };
+    }
+
+    const winnerId =
+      homeScore > awayScore
+        ? matchup.homeTeamId
+        : awayScore > homeScore
+          ? matchup.awayTeamId
+          : null;
+
+    return {
+      ...matchup,
+      isComplete: true,
+      homeScore,
+      awayScore,
+      winnerId,
+    };
+  };
+
+  return {
+    ...schedule,
+    playoffs: {
+      ...schedule.playoffs,
+      wildCardRound: schedule.playoffs.wildCardRound.map((m) => updateMatchup(m)),
+      divisionalRound: schedule.playoffs.divisionalRound.map((m) => updateMatchup(m)),
+      conferenceChampionships: schedule.playoffs.conferenceChampionships.map((m) =>
+        updateMatchup(m)
+      ),
+      superBowl: schedule.playoffs.superBowl ? updateMatchup(schedule.playoffs.superBowl) : null,
+    },
+  };
+}
+
 export function GameDayScreen({
   game,
   gameState,
@@ -703,11 +756,12 @@ export function GameDayScreen({
       }
 
       // 1. Update the schedule with game result
-      const updatedSchedule = updateGameResult(
+      const updatedSchedule = updateScheduleWithResult(
         schedule,
         game.gameId,
         result.homeScore,
-        result.awayScore
+        result.awayScore,
+        originalGameState.league.calendar.currentPhase
       );
 
       // 2. Update team records

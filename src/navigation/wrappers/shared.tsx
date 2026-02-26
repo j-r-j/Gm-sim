@@ -14,6 +14,13 @@ import {
 } from '../../core/offseason/OffSeasonPhaseManager';
 import { advanceWeek } from '../../core/season/WeekSimulator';
 import {
+  generatePlayoffBracket,
+  simulatePlayoffRound,
+  advancePlayoffRound,
+  PlayoffRound,
+} from '../../core/season/PlayoffGenerator';
+import { calculateStandings as calculateDetailedStandings } from '../../core/season/StandingsCalculator';
+import {
   createNewsFeedState,
   generateAndAddLeagueNews,
   advanceNewsFeedWeek,
@@ -50,12 +57,73 @@ export interface ProcessWeekEndResult {
 export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
   let state = gameState;
   const { calendar, schedule } = state.league;
-  const newWeek = calendar.currentWeek + 1;
+  let newWeek = calendar.currentWeek + 1;
   let newPhase = calendar.currentPhase;
+  let updatedSchedule = schedule;
 
-  // Handle phase transitions
-  if (newPhase === 'regularSeason' && newWeek > 18) {
+  // Handle regular season -> playoffs transition
+  if (calendar.currentPhase === 'regularSeason' && newWeek > 18) {
+    newWeek = 19;
     newPhase = 'playoffs';
+
+    // Generate playoff bracket from completed regular-season results
+    if (schedule?.regularSeason) {
+      const completedGames = schedule.regularSeason.filter((g) => g.isComplete);
+      const standings = calculateDetailedStandings(completedGames, Object.values(state.teams));
+      const playoffBracket = generatePlayoffBracket(standings);
+      updatedSchedule = {
+        ...schedule,
+        playoffs: playoffBracket,
+      };
+    }
+  }
+
+  // Handle playoff round progression
+  if (calendar.currentPhase === 'playoffs' && schedule?.playoffs) {
+    const toSeedMap = (source: unknown): Map<number, string> => {
+      if (source instanceof Map) return source;
+      if (source && typeof source === 'object') {
+        return new Map(
+          Object.entries(source as Record<string, unknown>)
+            .map(([seed, teamId]) => [Number(seed), teamId] as const)
+            .filter(
+              (entry): entry is [number, string] =>
+                Number.isFinite(entry[0]) && typeof entry[1] === 'string'
+            )
+        );
+      }
+      return new Map();
+    };
+    const playoffsWithSeedMaps = {
+      ...schedule.playoffs,
+      afcSeeds: toSeedMap(schedule.playoffs.afcSeeds),
+      nfcSeeds: toSeedMap(schedule.playoffs.nfcSeeds),
+    };
+    const roundByWeek: Partial<Record<number, PlayoffRound>> = {
+      19: 'wildCard',
+      20: 'divisional',
+      21: 'conference',
+      22: 'superBowl',
+    };
+    const currentRound = roundByWeek[calendar.currentWeek];
+
+    if (currentRound) {
+      const roundResults = simulatePlayoffRound(playoffsWithSeedMaps, currentRound, state);
+      const advancedPlayoffs = advancePlayoffRound(playoffsWithSeedMaps, roundResults);
+      updatedSchedule = {
+        ...schedule,
+        playoffs: advancedPlayoffs,
+      };
+
+      // After Super Bowl, transition to offseason
+      if (currentRound === 'superBowl') {
+        newWeek = 1;
+        newPhase = 'offseason';
+      } else {
+        newWeek = calendar.currentWeek + 1;
+        newPhase = 'playoffs';
+      }
+    }
   }
 
   // 1. Process injury recovery
@@ -203,7 +271,7 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
 
   // 4. Process waiver wire
   let updatedWaiverWire = state.waiverWire;
-  if (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') {
+  if (newPhase === 'regularSeason' || newPhase === 'playoffs') {
     const intermediateState: GameState = {
       ...state,
       league: {
@@ -225,7 +293,7 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
 
   // 5. Generate trade offers
   let updatedTradeOffers = state.tradeOffers;
-  if (calendar.currentPhase === 'regularSeason' && newWeek <= 12) {
+  if (newPhase === 'regularSeason' && newWeek <= 12) {
     const intermediateState: GameState = {
       ...state,
       league: {
@@ -241,7 +309,7 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
 
   // 6. Generate weekly awards
   let updatedWeeklyAwards = state.weeklyAwards;
-  if (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') {
+  if (newPhase === 'regularSeason' || newPhase === 'playoffs') {
     const intermediateState: GameState = {
       ...state,
       league: {
@@ -255,6 +323,7 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
   }
 
   // 7. Build final state with advanced calendar
+  const offseasonPhase = newPhase === 'offseason' ? 1 : calendar.offseasonPhase;
   state = {
     ...state,
     league: {
@@ -263,8 +332,9 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
         ...calendar,
         currentWeek: newWeek,
         currentPhase: newPhase,
+        offseasonPhase,
       },
-      schedule: schedule,
+      schedule: updatedSchedule,
     },
     teams: updatedTeams,
     players: updatedPlayers,

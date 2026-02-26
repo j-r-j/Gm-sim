@@ -25,6 +25,7 @@ import {
   generatePlayoffBracket,
   simulatePlayoffRound,
   advancePlayoffRound,
+  getCurrentPlayoffRound,
   PlayoffRound,
 } from '../../core/season/PlayoffGenerator';
 import { calculateStandings as calculateDetailedStandings } from '../../core/season/StandingsCalculator';
@@ -77,21 +78,38 @@ export function DashboardScreenWrapper({
       return;
     }
 
-    // For regular season and playoffs, check if we need to show games popup or directly advance
-    if (
-      (calendar.currentPhase === 'regularSeason' || calendar.currentPhase === 'playoffs') &&
-      schedule.regularSeason
-    ) {
-      // Check if all games for current week are complete
+    // Regular season: route to weekly schedule if games remain
+    if (calendar.currentPhase === 'regularSeason' && schedule.regularSeason) {
       const weekGames = schedule.regularSeason.filter((g) => g.week === calendar.currentWeek);
       const allGamesComplete = weekGames.length > 0 && weekGames.every((g) => g.isComplete);
-
-      // If games still need to be played/simulated, go to WeeklySchedule
       if (!allGamesComplete) {
         navigation.navigate('WeeklySchedule');
         return;
       }
-      // Otherwise, fall through to advance the week directly
+    }
+
+    // Playoffs: route to playoff bracket if current round is not complete
+    if (calendar.currentPhase === 'playoffs' && schedule.playoffs) {
+      const currentRound = getCurrentPlayoffRound(schedule.playoffs);
+      if (currentRound) {
+        const roundMatchups =
+          currentRound === 'wildCard'
+            ? schedule.playoffs.wildCardRound
+            : currentRound === 'divisional'
+              ? schedule.playoffs.divisionalRound
+              : currentRound === 'conference'
+                ? schedule.playoffs.conferenceChampionships
+                : schedule.playoffs.superBowl
+                  ? [schedule.playoffs.superBowl]
+                  : [];
+
+        const allGamesComplete =
+          roundMatchups.length > 0 && roundMatchups.every((g) => g.isComplete);
+        if (!allGamesComplete) {
+          navigation.navigate('PlayoffBracket');
+          return;
+        }
+      }
     }
 
     // For other phases (offseason, preseason), use the original direct advance logic
@@ -107,8 +125,8 @@ export function DashboardScreenWrapper({
       const updatedSchedule = { ...schedule };
       let updatedPlayers = { ...gameState.players };
 
-      // Original simulation logic (kept for non-regular-season phases)
-      if ((newPhase === 'regularSeason' || newPhase === 'playoffs') && schedule.regularSeason) {
+      // Regular-season simulation logic
+      if (newPhase === 'regularSeason' && schedule.regularSeason) {
         const weekResults = simulateWeek(
           calendar.currentWeek,
           schedule,
@@ -379,7 +397,51 @@ export function DashboardScreenWrapper({
       if (newPhase === 'regularSeason' && newWeek > 18) {
         newWeek = 19;
         newPhase = 'playoffs';
-      } else if (newPhase === 'playoffs' && newWeek > 22) {
+
+        if (updatedSchedule.regularSeason) {
+          const completedGames = updatedSchedule.regularSeason.filter((g) => g.isComplete);
+          const teamsArray = Object.values(updatedTeams);
+          const finalStandings = calculateDetailedStandings(completedGames, teamsArray);
+          updatedSchedule.playoffs = generatePlayoffBracket(finalStandings);
+        }
+      } else if (newPhase === 'playoffs' && updatedSchedule.playoffs) {
+        const toSeedMap = (source: unknown): Map<number, string> => {
+          if (source instanceof Map) return source;
+          if (source && typeof source === 'object') {
+            return new Map(
+              Object.entries(source as Record<string, unknown>)
+                .map(([seed, teamId]) => [Number(seed), teamId] as const)
+                .filter(
+                  (entry): entry is [number, string] =>
+                    Number.isFinite(entry[0]) && typeof entry[1] === 'string'
+                )
+            );
+          }
+          return new Map();
+        };
+        const playoffsWithSeedMaps = {
+          ...updatedSchedule.playoffs,
+          afcSeeds: toSeedMap(updatedSchedule.playoffs.afcSeeds),
+          nfcSeeds: toSeedMap(updatedSchedule.playoffs.nfcSeeds),
+        };
+        const roundByWeek: Partial<Record<number, PlayoffRound>> = {
+          19: 'wildCard',
+          20: 'divisional',
+          21: 'conference',
+          22: 'superBowl',
+        };
+        const completedRound = roundByWeek[calendar.currentWeek];
+        if (completedRound) {
+          const roundResults = simulatePlayoffRound(
+            playoffsWithSeedMaps,
+            completedRound,
+            gameState
+          );
+          updatedSchedule.playoffs = advancePlayoffRound(playoffsWithSeedMaps, roundResults);
+        }
+      }
+
+      if (newPhase === 'playoffs' && newWeek > 22) {
         newWeek = 1;
         newPhase = 'offseason';
         offseasonPhase = 1;

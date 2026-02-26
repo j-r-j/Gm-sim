@@ -729,11 +729,26 @@ export function WeekSummaryScreenWrapper({
       if (newPhase === 'playoffs' && calendar.currentPhase === 'regularSeason') {
         // Just entered playoffs - check if user team made playoffs
         const playoffBracket = newState.league.schedule?.playoffs;
+        const getSeedTeamIds = (seedSource: unknown): string[] => {
+          if (seedSource instanceof Map) {
+            return Array.from(seedSource.values());
+          }
+          if (seedSource && typeof seedSource === 'object') {
+            return Object.values(seedSource as Record<string, unknown>).filter(
+              (value): value is string => typeof value === 'string'
+            );
+          }
+          return [];
+        };
+        const seededTeams = playoffBracket
+          ? [...getSeedTeamIds(playoffBracket.afcSeeds), ...getSeedTeamIds(playoffBracket.nfcSeeds)]
+          : [];
         const userInPlayoffs =
           playoffBracket &&
-          (playoffBracket.wildCardRound?.some(
-            (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
-          ) ||
+          (seededTeams.includes(userTeamId) ||
+            playoffBracket.wildCardRound?.some(
+              (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
+            ) ||
             playoffBracket.divisionalRound?.some(
               (g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId
             ));
@@ -744,6 +759,10 @@ export function WeekSummaryScreenWrapper({
         } else {
           navigation.navigate('PlayoffBracket');
         }
+      } else if (newPhase === 'playoffs') {
+        navigation.navigate('PlayoffBracket');
+      } else if (newPhase === 'offseason' && calendar.currentPhase === 'playoffs') {
+        navigation.navigate('Offseason');
       } else {
         navigation.navigate('Dashboard');
       }
