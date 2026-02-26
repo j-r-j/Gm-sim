@@ -497,7 +497,7 @@ export function OTAsScreen({
 
   const tabs: { key: TabType; label: string }[] = [
     { key: 'overview', label: 'Overview' },
-    { key: 'attendance', label: 'Attendance' },
+    { key: 'attendance', label: 'Notable Players' },
     { key: 'rookies', label: 'Rookies' },
     { key: 'battles', label: 'Battles' },
   ];
@@ -560,7 +560,7 @@ export function OTAsScreen({
 
         {activeTab === 'attendance' && (
           <>
-            <Text style={styles.sectionTitle}>Player Attendance</Text>
+            <Text style={styles.sectionTitle}>Notable Players</Text>
             {allReports.map((report) => (
               <AttendanceItem
                 key={report.playerId}

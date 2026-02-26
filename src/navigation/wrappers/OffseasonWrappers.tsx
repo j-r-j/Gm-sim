@@ -31,6 +31,8 @@ import {
   completeTask as completeOffseasonTask,
   advancePhase as advanceOffseasonPhase,
   canAdvancePhase,
+  simulateRemainingOffSeason,
+  getCurrentPhaseTasks,
   PHASE_ORDER,
   TaskTargetScreen,
 } from '../../core/offseason/OffSeasonPhaseManager';
@@ -85,6 +87,23 @@ export function OffseasonScreenWrapper({
     }
   }, [gameState?.offseasonState]);
 
+  // Auto-complete any 'auto' type tasks when the phase changes
+  useEffect(() => {
+    if (!gameState?.offseasonState) return;
+    const os = gameState.offseasonState;
+    const tasks = getCurrentPhaseTasks(os);
+    const autoTasksToComplete = tasks.filter((t) => t.actionType === 'auto' && !t.isComplete);
+    if (autoTasksToComplete.length === 0) return;
+
+    let updatedOS = os;
+    for (const task of autoTasksToComplete) {
+      updatedOS = completeOffseasonTask(updatedOS, task.id);
+    }
+    const updatedState: GameState = { ...gameState, offseasonState: updatedOS };
+    setGameState(updatedState);
+    saveGameState(updatedState);
+  }, [gameState?.offseasonState?.currentPhase]);
+
   if (!gameState) {
     return <LoadingFallback message="Loading offseason..." />;
   }
@@ -100,57 +119,41 @@ export function OffseasonScreenWrapper({
   const rosterSize = userTeam?.rosterPlayerIds?.length ?? 0;
 
   /**
-   * Handle task action - navigate to appropriate screen
+   * Handle task action - navigate to appropriate screen and mark task complete
    */
   const handleTaskAction = (taskId: string, targetScreen: TaskTargetScreen) => {
     // Map target screens to navigation routes
-    switch (targetScreen) {
-      case 'DraftBoard':
-        navigation.navigate('DraftBoard');
-        break;
-      case 'DraftRoom':
-        navigation.navigate('DraftRoom');
-        break;
-      case 'FreeAgency':
-        navigation.navigate('FreeAgency');
-        break;
-      case 'Staff':
-        navigation.navigate('Staff');
-        break;
-      case 'Finances':
-        navigation.navigate('Finances');
-        break;
-      case 'ContractManagement':
-        navigation.navigate('ContractManagement');
-        break;
-      case 'Roster':
-        navigation.navigate('Roster');
-        break;
-      case 'FinalCuts':
-        navigation.navigate('FinalCuts');
-        break;
-      case 'OTAs':
-        navigation.navigate('OTAs');
-        break;
-      case 'TrainingCamp':
-        navigation.navigate('TrainingCamp');
-        break;
-      case 'Preseason':
-        navigation.navigate('Preseason');
-        break;
-      case 'SeasonRecap':
-        navigation.navigate('SeasonRecap');
-        break;
-      case 'OwnerRelations':
-        navigation.navigate('OwnerRelations');
-        break;
-      case 'Combine':
-        navigation.navigate('Combine');
-        break;
-      default:
-        // Unknown screen - just complete the task
+    const screenMap: Record<string, () => void> = {
+      DraftBoard: () => navigation.navigate('DraftBoard'),
+      DraftRoom: () => navigation.navigate('DraftRoom'),
+      FreeAgency: () => navigation.navigate('FreeAgency'),
+      Staff: () => navigation.navigate('Staff'),
+      Finances: () => navigation.navigate('Finances'),
+      ContractManagement: () => navigation.navigate('ContractManagement'),
+      Roster: () => navigation.navigate('Roster'),
+      FinalCuts: () => navigation.navigate('FinalCuts'),
+      OTAs: () => navigation.navigate('OTAs'),
+      TrainingCamp: () => navigation.navigate('TrainingCamp'),
+      Preseason: () => navigation.navigate('Preseason'),
+      SeasonRecap: () => navigation.navigate('SeasonRecap'),
+      OwnerRelations: () => navigation.navigate('OwnerRelations'),
+      Combine: () => navigation.navigate('Combine'),
+    };
+
+    const navigateFn = screenMap[targetScreen];
+    if (navigateFn) {
+      navigateFn();
+      // Auto-complete navigate-type tasks when user taps to visit the screen
+      // (view-type tasks are completed by the target screen's useEffect)
+      const task = offseasonState!.phaseTasks[offseasonState!.currentPhase]?.tasks.find(
+        (t) => t.id === taskId
+      );
+      if (task && task.actionType === 'navigate' && !task.isComplete) {
         handleCompleteTask(taskId);
-        return;
+      }
+    } else {
+      // Unknown screen - just complete the task
+      handleCompleteTask(taskId);
     }
   };
 
@@ -210,6 +213,28 @@ export function OffseasonScreenWrapper({
     }
   };
 
+  const handleSimOffseason = async () => {
+    showConfirm(
+      'Sim Remaining Offseason',
+      'This will simulate all remaining offseason phases and start the new season. Are you sure?',
+      async () => {
+        // Simulate through all remaining phases
+        const simmedState = simulateRemainingOffSeason(offseasonState!);
+
+        // Transition to new season
+        const transitionedState = transitionToNewSeason({
+          ...gameState,
+          offseasonState: undefined,
+          offseasonData: undefined,
+        });
+        setGameState(transitionedState);
+        await saveGameState(transitionedState);
+        showAlert('Offseason Complete', 'The new season begins!');
+        navigation.goBack();
+      }
+    );
+  };
+
   return (
     <OffseasonScreen
       offseasonState={offseasonState}
@@ -218,6 +243,7 @@ export function OffseasonScreenWrapper({
       onTaskAction={handleTaskAction}
       onCompleteTask={handleCompleteTask}
       onAdvancePhase={handleAdvanceOffseasonPhase}
+      onSimOffseason={handleSimOffseason}
       onBack={() => navigation.goBack()}
     />
   );
