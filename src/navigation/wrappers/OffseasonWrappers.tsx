@@ -34,6 +34,7 @@ import {
   simulateRemainingOffSeason,
   getCurrentPhaseTasks,
   PHASE_ORDER,
+  PHASE_NUMBERS,
   TaskTargetScreen,
 } from '../../core/offseason/OffSeasonPhaseManager';
 import { enterPhase, initializeOffseason } from '../../core/offseason/OffseasonOrchestrator';
@@ -65,6 +66,17 @@ import {
   getFinalCutsSummary,
   isPracticeSquadEligible,
 } from '../../core/offseason/phases/FinalCutsPhase';
+
+/**
+ * Builds a "Phase X of 12" label from the current offseason state.
+ * Used as a subtitle in phase sub-screens for context.
+ */
+function getPhaseLabel(gameState: GameState): string | undefined {
+  const os = gameState.offseasonState;
+  if (!os) return undefined;
+  const phaseNum = PHASE_NUMBERS[os.currentPhase];
+  return `Phase ${phaseNum} of ${PHASE_ORDER.length}`;
+}
 
 // ============================================
 // OFFSEASON SCREEN
@@ -381,6 +393,7 @@ export function SeasonRecapScreenWrapper({
     <SeasonRecapScreen
       recap={recap}
       teamName={teamName}
+      phaseLabel={getPhaseLabel(gameState)}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
@@ -545,6 +558,7 @@ export function OTAsScreenWrapper({ navigation }: ScreenProps<'OTAs'>): React.JS
     <OTAsScreen
       gameState={gameState}
       summary={summary}
+      phaseLabel={getPhaseLabel(gameState)}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
@@ -679,6 +693,7 @@ export function TrainingCampScreenWrapper({
     <TrainingCampScreen
       gameState={gameState}
       summary={summary}
+      phaseLabel={getPhaseLabel(gameState)}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
@@ -805,6 +820,7 @@ export function PreseasonScreenWrapper({
     <PreseasonScreen
       gameState={gameState}
       summary={summary}
+      phaseLabel={getPhaseLabel(gameState)}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
     />
@@ -1063,6 +1079,7 @@ export function FinalCutsScreenWrapper({
       maxRosterSize={53}
       practiceSquadSize={evaluationData.practiceSquadSize}
       maxPracticeSquadSize={16}
+      phaseLabel={getPhaseLabel(gameState)}
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
       onCutPlayer={handleCutPlayer}

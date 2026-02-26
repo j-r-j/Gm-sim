@@ -25,6 +25,7 @@ export interface FinalCutsScreenProps {
   maxRosterSize: number;
   practiceSquadSize: number;
   maxPracticeSquadSize: number;
+  phaseLabel?: string;
   onBack: () => void;
   onPlayerSelect?: (playerId: string) => void;
   onCutPlayer?: (playerId: string) => void;
@@ -361,6 +362,7 @@ export function FinalCutsScreen({
   maxRosterSize,
   practiceSquadSize,
   maxPracticeSquadSize,
+  phaseLabel,
   onBack,
   onPlayerSelect,
   onCutPlayer,
@@ -403,7 +405,12 @@ export function FinalCutsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <ScreenHeader title="Final Cuts" onBack={onBack} testID="final-cuts-header" />
+      <ScreenHeader
+        title="Final Cuts"
+        subtitle={phaseLabel}
+        onBack={onBack}
+        testID="final-cuts-header"
+      />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

@@ -21,6 +21,7 @@ import {
 export interface OTAsScreenProps {
   gameState: GameState;
   summary: OTASummary;
+  phaseLabel?: string;
   onBack: () => void;
   onPlayerSelect?: (playerId: string) => void;
 }
@@ -479,6 +480,7 @@ function BattleCard({
  */
 export function OTAsScreen({
   summary,
+  phaseLabel,
   onBack,
   onPlayerSelect,
 }: OTAsScreenProps): React.JSX.Element {
@@ -505,7 +507,7 @@ export function OTAsScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <ScreenHeader title="OTAs" onBack={onBack} testID="otas-header" />
+      <ScreenHeader title="OTAs" subtitle={phaseLabel} onBack={onBack} testID="otas-header" />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

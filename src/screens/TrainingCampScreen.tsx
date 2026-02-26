@@ -22,6 +22,7 @@ import {
 export interface TrainingCampScreenProps {
   gameState: GameState;
   summary: TrainingCampSummary;
+  phaseLabel?: string;
   onBack: () => void;
   onPlayerSelect?: (playerId: string) => void;
 }
@@ -451,6 +452,7 @@ function InjuryCard({
  */
 export function TrainingCampScreen({
   summary,
+  phaseLabel,
   onBack,
   onPlayerSelect,
 }: TrainingCampScreenProps): React.JSX.Element {
@@ -470,7 +472,12 @@ export function TrainingCampScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <ScreenHeader title="Training Camp" onBack={onBack} testID="training-camp-header" />
+      <ScreenHeader
+        title="Training Camp"
+        subtitle={phaseLabel}
+        onBack={onBack}
+        testID="training-camp-header"
+      />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

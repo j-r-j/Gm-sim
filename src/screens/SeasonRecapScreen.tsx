@@ -12,6 +12,7 @@ import { SeasonRecap, PlayerStatImprovement } from '../core/offseason/OffSeasonP
 interface SeasonRecapScreenProps {
   recap: SeasonRecap;
   teamName: string;
+  phaseLabel?: string;
   onBack: () => void;
   onPlayerSelect?: (playerId: string) => void;
 }
@@ -54,6 +55,7 @@ function getOrdinalSuffix(n: number): string {
 export function SeasonRecapScreen({
   recap,
   teamName,
+  phaseLabel,
   onBack,
   onPlayerSelect,
 }: SeasonRecapScreenProps): React.JSX.Element {
@@ -82,7 +84,7 @@ export function SeasonRecapScreen({
       {/* Header */}
       <ScreenHeader
         title={`${year} Season Recap`}
-        subtitle={teamName}
+        subtitle={phaseLabel ? `${teamName} · ${phaseLabel}` : teamName}
         onBack={onBack}
         testID="season-recap-header"
       />
