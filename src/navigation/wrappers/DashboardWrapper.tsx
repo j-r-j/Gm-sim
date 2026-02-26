@@ -517,19 +517,24 @@ export function DashboardScreenWrapper({
             });
             setGameState(transitionedState);
             await saveGameState(transitionedState);
-            showAlert('Offseason Complete', 'Preseason begins!');
+            showAlert('Offseason Complete', 'The new season begins!');
             setIsLoading(false);
             return;
           } else {
+            // Use orchestrator to enter the new phase and auto-generate data
+            const phaseResult = enterPhase(
+              { ...gameState, offseasonState: newOffseasonState },
+              newOffseasonState.currentPhase
+            );
+
             // Sync calendar.offseasonPhase with offseasonState
             const phaseIndex = PHASE_ORDER.indexOf(newOffseasonState.currentPhase);
             offseasonPhase = phaseIndex + 1;
 
             const updatedState: GameState = {
-              ...gameState,
-              offseasonState: newOffseasonState,
+              ...phaseResult.gameState,
               league: {
-                ...gameState.league,
+                ...phaseResult.gameState.league,
                 calendar: {
                   ...calendar,
                   currentWeek: newWeek,

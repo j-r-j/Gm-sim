@@ -117,7 +117,8 @@ export type TaskTargetScreen =
   | 'TrainingCamp'
   | 'Preseason'
   | 'SeasonRecap'
-  | 'OwnerRelations';
+  | 'OwnerRelations'
+  | 'Combine';
 
 /**
  * Completion conditions for validate tasks
@@ -415,11 +416,11 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
       {
         id: 'view_prospects',
         name: 'View Top Prospects',
-        description: 'Scout the top draft prospects',
+        description: 'Scout the top draft prospects at the combine',
         isRequired: true,
         isComplete: false,
         actionType: 'view',
-        targetScreen: 'DraftBoard',
+        targetScreen: 'Combine',
         completionCondition: 'visited',
       },
       {
@@ -429,7 +430,7 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
         isRequired: false,
         isComplete: false,
         actionType: 'view',
-        targetScreen: 'DraftBoard',
+        targetScreen: 'Combine',
         completionCondition: 'optional',
       },
       {
@@ -446,33 +447,22 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
     free_agency: [
       {
         id: 'review_market',
-        name: 'Review Free Agent Market',
-        description: 'Evaluate available free agents',
+        name: 'Free Agency Period',
+        description: 'AI teams sign available free agents based on team needs',
         isRequired: true,
         isComplete: false,
-        actionType: 'view',
-        targetScreen: 'FreeAgency',
-        completionCondition: 'visited',
+        actionType: 'auto',
+        completionCondition: 'optional',
       },
       {
         id: 'make_offers',
-        name: 'Make Offers',
-        description: 'Submit contract offers to free agents',
+        name: 'Review Signings',
+        description: 'View free agent signings around the league',
         isRequired: false,
         isComplete: false,
         actionType: 'navigate',
         targetScreen: 'FreeAgency',
         completionCondition: 'optional',
-      },
-      {
-        id: 'sign_players',
-        name: 'Sign Free Agents',
-        description: 'Complete free agent signings',
-        isRequired: false,
-        isComplete: false,
-        actionType: 'navigate',
-        targetScreen: 'FreeAgency',
-        completionCondition: 'hasSigned',
       },
     ],
     draft: [
@@ -500,18 +490,17 @@ function createPhaseTasks(phase: OffSeasonPhaseType): OffSeasonTask[] {
     udfa: [
       {
         id: 'review_udfa',
-        name: 'Review UDFA Pool',
-        description: 'Evaluate undrafted free agents',
+        name: 'UDFA Signing Period',
+        description: 'Undrafted free agents sign with teams across the league',
         isRequired: true,
         isComplete: false,
-        actionType: 'view',
-        targetScreen: 'FreeAgency',
-        completionCondition: 'visited',
+        actionType: 'auto',
+        completionCondition: 'optional',
       },
       {
         id: 'sign_udfa',
-        name: 'Sign UDFAs',
-        description: 'Sign undrafted free agents',
+        name: 'Review UDFA Signings',
+        description: 'View undrafted free agent signings',
         isRequired: false,
         isComplete: false,
         actionType: 'navigate',

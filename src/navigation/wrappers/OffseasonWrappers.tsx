@@ -7,6 +7,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 
+import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';
 import {
@@ -143,6 +144,9 @@ export function OffseasonScreenWrapper({
       case 'OwnerRelations':
         navigation.navigate('OwnerRelations');
         break;
+      case 'Combine':
+        navigation.navigate('Combine');
+        break;
       default:
         // Unknown screen - just complete the task
         handleCompleteTask(taskId);
@@ -166,8 +170,7 @@ export function OffseasonScreenWrapper({
     // Validate phase-specific requirements
     const validationError = validateOffseasonPhaseAdvance(gameState);
     if (validationError) {
-      // eslint-disable-next-line no-alert
-      window.alert(validationError);
+      showAlert('Cannot Advance', validationError);
       return;
     }
 
@@ -182,8 +185,7 @@ export function OffseasonScreenWrapper({
       });
       setGameState(transitionedState);
       await saveGameState(transitionedState);
-      // eslint-disable-next-line no-alert
-      window.alert('Offseason Complete! Preseason begins!');
+      showAlert('Offseason Complete', 'The new season begins!');
       navigation.goBack();
     } else {
       // Use orchestrator to enter the new phase and auto-generate data
@@ -989,6 +991,42 @@ export function FinalCutsScreenWrapper({
     saveGameState(updatedState);
   };
 
+  const handleSignToPS = (playerId: string) => {
+    if (!gameState) return;
+    const userTeam = gameState.teams[gameState.userTeamId];
+    if (!userTeam) return;
+
+    // Check practice squad capacity (max 16)
+    if (userTeam.practiceSquadIds.length >= 16) return;
+
+    // Remove player from active roster, add to practice squad
+    const updatedRoster = userTeam.rosterPlayerIds.filter((id) => id !== playerId);
+    const updatedPS = [...userTeam.practiceSquadIds, playerId];
+
+    let updatedState: GameState = {
+      ...gameState,
+      teams: {
+        ...gameState.teams,
+        [gameState.userTeamId]: {
+          ...userTeam,
+          rosterPlayerIds: updatedRoster,
+          practiceSquadIds: updatedPS,
+        },
+      },
+    };
+
+    // If roster is now at or below 53, auto-complete the cut_to_53 task
+    if (updatedRoster.length <= 53) {
+      const cutTaskState = tryCompleteOffseasonTask(updatedState, 'cut_to_53');
+      if (cutTaskState) {
+        updatedState = cutTaskState;
+      }
+    }
+
+    setGameState(updatedState);
+    saveGameState(updatedState);
+  };
+
   if (!gameState || !evaluationData) {
     return <LoadingFallback message="Loading Final Cuts..." />;
   }
@@ -1004,6 +1042,7 @@ export function FinalCutsScreenWrapper({
       onBack={() => navigation.goBack()}
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
       onCutPlayer={handleCutPlayer}
+      onSignToPS={handleSignToPS}
       onAutoCut={handleAutoCut}
     />
   );

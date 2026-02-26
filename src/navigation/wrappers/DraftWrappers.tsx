@@ -1599,7 +1599,18 @@ export function ProspectDetailScreenWrapper({
 // ============================================
 
 export function CombineScreenWrapper({ navigation }: ScreenProps<'Combine'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState } = useGame();
+
+  // Auto-complete offseason view task when Combine screen is visited
+  useEffect(() => {
+    if (gameState) {
+      const updatedState = tryCompleteViewTask(gameState, 'Combine');
+      if (updatedState) {
+        setGameState(updatedState);
+        saveGameState(updatedState);
+      }
+    }
+  }, []); // Only run on mount
 
   if (!gameState) {
     return <LoadingFallback message="Loading Combine Results..." />;
