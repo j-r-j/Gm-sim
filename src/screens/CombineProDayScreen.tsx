@@ -3,8 +3,16 @@
  * Displays combine and pro day results for draft prospects
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  FlatList,
+  SafeAreaView,
+  TouchableOpacity,
+} from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { GameState } from '../core/models/game/GameState';
@@ -609,6 +617,78 @@ export function CombineProDayScreen({
 
   const positions = [...new Set(prospects.map((p) => p.player.position))].sort();
 
+  // Pro Day tab: prospects with pro day results
+  const proDayProspects = filteredProspects.filter((p) => proDayResults.has(p.id));
+
+  const keyExtractor = useCallback((item: Prospect) => item.id, []);
+
+  const renderProspectItem = useCallback(
+    ({ item }: { item: Prospect }) => (
+      <ProspectCombineCard
+        prospect={item}
+        combineResult={combineResults.get(item.id)}
+        proDayResult={proDayResults.get(item.id)}
+        onPress={onProspectSelect ? () => onProspectSelect(item.id) : undefined}
+      />
+    ),
+    [combineResults, proDayResults, onProspectSelect]
+  );
+
+  const listFooterComponent = useCallback(
+    () => <View style={styles.listFooter} />,
+    []
+  );
+
+  const renderEmptyProspects = useCallback(
+    () => (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>No combine results available</Text>
+      </View>
+    ),
+    []
+  );
+
+  const renderEmptyProDay = useCallback(
+    () => (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>No pro day results available</Text>
+      </View>
+    ),
+    []
+  );
+
+  const combineListHeader = useCallback(
+    () => (
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>
+          Combine Invites ({invitedProspects.length})
+        </Text>
+      </View>
+    ),
+    [invitedProspects.length]
+  );
+
+  const proDayListHeader = useCallback(
+    () => (
+      <View style={styles.section}>
+        {proDaySummary && (
+          <View style={styles.proDaySummary}>
+            <Text style={styles.proDaySummaryText}>
+              {proDaySummary.totalProDays} Pro Days • Avg Grade:{' '}
+              {proDaySummary.averageGrade.toFixed(1)}/10
+            </Text>
+            <Text style={styles.proDaySummaryText}>
+              {proDaySummary.fullWorkouts} Full • {proDaySummary.positionWorkouts}{' '}
+              Position • {proDaySummary.privateWorkoutsRequested} Private Requests
+            </Text>
+          </View>
+        )}
+        <Text style={styles.sectionHeader}>Pro Day Results</Text>
+      </View>
+    ),
+    [proDaySummary]
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader title="Combine & Pro Day" onBack={onBack} testID="combine-pro-day-header" />
@@ -701,62 +781,43 @@ export function CombineProDayScreen({
         ))}
       </ScrollView>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* Combine Tab */}
-        {activeTab === 'combine' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionHeader}>Combine Invites ({invitedProspects.length})</Text>
-            {invitedProspects.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No combine results available</Text>
-              </View>
-            ) : (
-              invitedProspects.map((prospect) => (
-                <ProspectCombineCard
-                  key={prospect.id}
-                  prospect={prospect}
-                  combineResult={combineResults.get(prospect.id)}
-                  proDayResult={proDayResults.get(prospect.id)}
-                  onPress={onProspectSelect ? () => onProspectSelect(prospect.id) : undefined}
-                />
-              ))
-            )}
-          </View>
-        )}
+      {/* Combine Tab */}
+      {activeTab === 'combine' && (
+        <FlatList
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          data={invitedProspects}
+          keyExtractor={keyExtractor}
+          renderItem={renderProspectItem}
+          ListHeaderComponent={combineListHeader}
+          ListEmptyComponent={renderEmptyProspects}
+          ListFooterComponent={listFooterComponent}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={15}
+          windowSize={7}
+        />
+      )}
 
-        {/* Pro Day Tab */}
-        {activeTab === 'proday' && (
-          <View style={styles.section}>
-            {proDaySummary && (
-              <View style={styles.proDaySummary}>
-                <Text style={styles.proDaySummaryText}>
-                  {proDaySummary.totalProDays} Pro Days • Avg Grade:{' '}
-                  {proDaySummary.averageGrade.toFixed(1)}/10
-                </Text>
-                <Text style={styles.proDaySummaryText}>
-                  {proDaySummary.fullWorkouts} Full • {proDaySummary.positionWorkouts} Position •{' '}
-                  {proDaySummary.privateWorkoutsRequested} Private Requests
-                </Text>
-              </View>
-            )}
-            <Text style={styles.sectionHeader}>Pro Day Results</Text>
-            {filteredProspects
-              .filter((p) => proDayResults.has(p.id))
-              .slice(0, 50)
-              .map((prospect) => (
-                <ProspectCombineCard
-                  key={prospect.id}
-                  prospect={prospect}
-                  combineResult={combineResults.get(prospect.id)}
-                  proDayResult={proDayResults.get(prospect.id)}
-                  onPress={onProspectSelect ? () => onProspectSelect(prospect.id) : undefined}
-                />
-              ))}
-          </View>
-        )}
+      {/* Pro Day Tab */}
+      {activeTab === 'proday' && (
+        <FlatList
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          data={proDayProspects}
+          keyExtractor={keyExtractor}
+          renderItem={renderProspectItem}
+          ListHeaderComponent={proDayListHeader}
+          ListEmptyComponent={renderEmptyProDay}
+          ListFooterComponent={listFooterComponent}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={15}
+          windowSize={7}
+        />
+      )}
 
-        {/* Leaderboard Tab */}
-        {activeTab === 'leaderboard' && (
+      {/* Leaderboard Tab */}
+      {activeTab === 'leaderboard' && (
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           <View style={styles.section}>
             {getLeaderboard().map((leaderboard) => (
               <View key={leaderboard.name} style={styles.leaderboardSection}>
@@ -787,8 +848,8 @@ export function CombineProDayScreen({
               </View>
             ))}
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -890,6 +951,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.md,
+  },
+  listFooter: {
+    height: spacing.md,
   },
   section: {
     gap: spacing.md,

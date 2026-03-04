@@ -4,8 +4,16 @@
  * Uses the full HiringCandidate system with budget validation and narrative tags
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  SafeAreaView,
+  TouchableOpacity,
+  ListRenderItemInfo,
+} from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
 import { CoachRole } from '../core/models/staff/StaffSalary';
@@ -326,6 +334,60 @@ export function CoachHiringScreen({
       ? candidates.filter((c) => c.expectedSalary <= coachingBudgetRemaining).length
       : candidates.length;
 
+  const keyExtractor = useCallback((item: HiringCandidate) => item.coach.id, []);
+
+  const renderItem = useCallback(
+    ({ item: candidate }: ListRenderItemInfo<HiringCandidate>) => {
+      const isOverBudget =
+        coachingBudgetRemaining !== undefined &&
+        candidate.expectedSalary > coachingBudgetRemaining;
+
+      return (
+        <CandidateCard
+          candidate={candidate}
+          isSelected={selectedCandidateId === candidate.coach.id}
+          isOverBudget={isOverBudget}
+          onSelect={() =>
+            setSelectedCandidateId(
+              selectedCandidateId === candidate.coach.id ? null : candidate.coach.id
+            )
+          }
+          onHire={() => onHire(candidate)}
+        />
+      );
+    },
+    [
+      coachingBudgetRemaining,
+      selectedCandidateId,
+      onHire,
+    ]
+  );
+
+  const ListHeader = useCallback(
+    () => (
+      <>
+        <Text style={styles.sectionHeader}>Available Candidates</Text>
+        <Text style={styles.sectionHint}>
+          {affordableCount < candidates.length
+            ? `${affordableCount} of ${candidates.length} candidates within your budget. Tap to see details.`
+            : 'Tap a candidate to see details and make an offer'}
+        </Text>
+      </>
+    ),
+    [affordableCount, candidates.length]
+  );
+
+  const ListEmpty = useCallback(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No candidates available</Text>
+      </View>
+    ),
+    []
+  );
+
+  const ListFooter = useCallback(() => <View style={styles.listFooter} />, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader title="Hire Coach" onBack={onBack} testID="coach-hiring-header" />
@@ -341,35 +403,22 @@ export function CoachHiringScreen({
         )}
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.sectionHeader}>Available Candidates</Text>
-        <Text style={styles.sectionHint}>
-          {affordableCount < candidates.length
-            ? `${affordableCount} of ${candidates.length} candidates within your budget. Tap to see details.`
-            : 'Tap a candidate to see details and make an offer'}
-        </Text>
-
-        {candidates.map((candidate) => {
-          const isOverBudget =
-            coachingBudgetRemaining !== undefined &&
-            candidate.expectedSalary > coachingBudgetRemaining;
-
-          return (
-            <CandidateCard
-              key={candidate.coach.id}
-              candidate={candidate}
-              isSelected={selectedCandidateId === candidate.coach.id}
-              isOverBudget={isOverBudget}
-              onSelect={() =>
-                setSelectedCandidateId(
-                  selectedCandidateId === candidate.coach.id ? null : candidate.coach.id
-                )
-              }
-              onHire={() => onHire(candidate)}
-            />
-          );
-        })}
-      </ScrollView>
+      <FlatList
+        data={candidates}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        ListFooterComponent={ListFooter}
+        contentContainerStyle={[
+          styles.contentContainer,
+          candidates.length === 0 && styles.contentContainerEmpty,
+        ]}
+        style={styles.content}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+      />
     </SafeAreaView>
   );
 }
@@ -428,6 +477,20 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.md,
+  },
+  contentContainerEmpty: {
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+  },
+  listFooter: {
+    height: spacing.lg,
   },
   sectionHeader: {
     fontSize: fontSize.lg,

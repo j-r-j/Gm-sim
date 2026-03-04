@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  FlatList,
+  SafeAreaView,
+  TouchableOpacity,
+  ListRenderItemInfo,
+} from 'react-native';
 import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { Player } from '../core/models/player/Player';
@@ -16,6 +25,7 @@ import {
   SLOT_INFO,
   DepthChartV2,
   DepthChartSlotView,
+  DepthChartSubcategoryView,
   generateCategoryView,
   generateDepthChartV2,
   assignPlayerToSlot,
@@ -464,6 +474,44 @@ export function DepthChartScreenV2({
     return getEligiblePlayersForSlot(gameState, depthChart.teamId, selectionSlot);
   }, [gameState, depthChart.teamId, selectionSlot]);
 
+  // FlatList callbacks for standard view
+  const keyExtractor = useCallback((item: DepthChartSubcategoryView) => item.name, []);
+
+  const renderSubcategoryItem = useCallback(
+    ({ item }: ListRenderItemInfo<DepthChartSubcategoryView>) => (
+      <SubcategorySection
+        name={item.name}
+        slots={item.slots}
+        gameState={gameState}
+        selectedPlayerId={selectedPlayerId}
+        selectedSlot={selectedSlot}
+        onSlotPress={handleSlotPress}
+        onSlotLongPress={handleSlotLongPress}
+      />
+    ),
+    [
+      gameState,
+      selectedPlayerId,
+      selectedSlot,
+      handleSlotPress,
+      handleSlotLongPress,
+    ]
+  );
+
+  const listEmptyComponent = useCallback(
+    () => (
+      <View style={styles.emptyStateContainer}>
+        <Text style={styles.noPackagesText}>No depth chart positions for this category</Text>
+      </View>
+    ),
+    []
+  );
+
+  const listFooterComponent = useCallback(
+    () => <View style={styles.bottomPadding} />,
+    []
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -555,21 +603,18 @@ export function DepthChartScreenV2({
           onCancel={clearSelection}
         />
       ) : viewMode === 'standard' ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {categoryView.subcategories.map((subcategory) => (
-            <SubcategorySection
-              key={subcategory.name}
-              name={subcategory.name}
-              slots={subcategory.slots}
-              gameState={gameState}
-              selectedPlayerId={selectedPlayerId}
-              selectedSlot={selectedSlot}
-              onSlotPress={handleSlotPress}
-              onSlotLongPress={handleSlotLongPress}
-            />
-          ))}
-          <View style={styles.bottomPadding} />
-        </ScrollView>
+        <FlatList
+          data={categoryView.subcategories}
+          keyExtractor={keyExtractor}
+          renderItem={renderSubcategoryItem}
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          ListEmptyComponent={listEmptyComponent}
+          ListFooterComponent={listFooterComponent}
+        />
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {activeTab === 'Offense' ? (
@@ -1005,6 +1050,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textSecondary,
     textAlign: 'center',
+    paddingVertical: spacing.xl,
+  },
+  emptyStateContainer: {
     paddingVertical: spacing.xl,
   },
 });

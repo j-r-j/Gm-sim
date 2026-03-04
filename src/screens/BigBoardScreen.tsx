@@ -4,12 +4,13 @@
  * Features: search, sortable columns, enriched prospect data.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   SafeAreaView,
   TouchableOpacity,
   TextInput,
@@ -435,6 +436,27 @@ export function BigBoardScreen({
     enrichedMap,
   ]);
 
+  // FlatList callbacks
+  const prospectKeyExtractor = useCallback(
+    (item: DraftBoardProspectView) => item.prospectId,
+    []
+  );
+
+  const renderProspectItem = useCallback(
+    ({ item, index }: { item: DraftBoardProspectView; index: number }) => (
+      <ProspectRow
+        prospect={item}
+        rank={index + 1}
+        showNeed={activeTab === 'needs'}
+        needLevel={positionalNeeds[item.position]}
+        enriched={getEnrichedData(item.prospectId, enrichedMap)}
+        onPress={() => handleProspectPress(item.prospectId)}
+        onToggleLock={onToggleLock ? () => onToggleLock(item.prospectId) : undefined}
+      />
+    ),
+    [activeTab, positionalNeeds, enrichedMap, onToggleLock]
+  );
+
   const tabs: { key: TabType; label: string }[] = [
     { key: 'overall', label: 'Overall' },
     { key: 'position', label: 'By Position' },
@@ -617,9 +639,17 @@ export function BigBoardScreen({
         <Text style={[styles.columnHeaderText, styles.flagHeader]}>Info</Text>
       </View>
 
-      {/* Prospect List */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredProspects.length === 0 ? (
+      {/* Prospect List - Virtualized */}
+      <FlatList
+        data={filteredProspects}
+        keyExtractor={prospectKeyExtractor}
+        renderItem={renderProspectItem}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={15}
+        windowSize={7}
+        ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No Prospects</Text>
             <Text style={styles.emptySubtext}>
@@ -632,25 +662,9 @@ export function BigBoardScreen({
                     : 'Scout some prospects to build your board'}
             </Text>
           </View>
-        ) : (
-          <>
-            {filteredProspects.map((prospect, index) => (
-              <ProspectRow
-                key={prospect.prospectId}
-                prospect={prospect}
-                rank={index + 1}
-                showNeed={activeTab === 'needs'}
-                needLevel={positionalNeeds[prospect.position]}
-                enriched={getEnrichedData(prospect.prospectId, enrichedMap)}
-                onPress={() => handleProspectPress(prospect.prospectId)}
-                onToggleLock={onToggleLock ? () => onToggleLock(prospect.prospectId) : undefined}
-              />
-            ))}
-          </>
-        )}
-
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+        }
+        ListFooterComponent={<View style={styles.bottomPadding} />}
+      />
 
       {/* Legend */}
       <View style={styles.legend}>

@@ -5,8 +5,16 @@
  * This is a reward screen players earn after completing the draft.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  SafeAreaView,
+  TouchableOpacity,
+  ListRenderItemInfo,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   colors,
@@ -39,6 +47,22 @@ export interface DraftReportCardScreenProps {
   onContinue: () => void;
   onBack?: () => void;
 }
+
+type LeagueGradeItem = {
+  teamId: string;
+  teamName: string;
+  grade: DraftLetterGrade;
+  score: number;
+};
+
+type DraftReportListItem =
+  | { type: 'section'; id: string; title: string; icon: 'list' | 'chatbubbles' | 'trophy' }
+  | { type: 'pick'; data: PickGrade }
+  | { type: 'expert'; data: ExpertReaction; index: number }
+  | {
+      type: 'league_table';
+      teams: Array<{ team: LeagueGradeItem; rank: number; isUser: boolean }>;
+    };
 
 /**
  * Returns a background color for the hero card based on grade letter
@@ -226,47 +250,83 @@ export function DraftReportCardScreen({
 }: DraftReportCardScreenProps): React.JSX.Element {
   const sortedLeague = [...leagueGrades].sort((a, b) => b.score - a.score);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScreenHeader title="Draft Report Card" onBack={onBack} testID="draft-report-card-header" />
+  const listData: DraftReportListItem[] = [];
+  if (userTeamGrade.picks.length > 0) {
+    listData.push({
+      type: 'section',
+      id: 'picks',
+      title: 'Pick-by-Pick Analysis',
+      icon: 'list',
+    });
+    userTeamGrade.picks.forEach((pick) => listData.push({ type: 'pick', data: pick }));
+  }
+  if (expertReactions.length > 0) {
+    listData.push({
+      type: 'section',
+      id: 'experts',
+      title: 'Expert Reactions',
+      icon: 'chatbubbles',
+    });
+    expertReactions.forEach((r, i) => listData.push({ type: 'expert', data: r, index: i }));
+  }
+  if (sortedLeague.length > 0) {
+    listData.push({
+      type: 'section',
+      id: 'league',
+      title: 'League-Wide Draft Grades',
+      icon: 'trophy',
+    });
+    listData.push({
+      type: 'league_table',
+      teams: sortedLeague.map((team, idx) => ({
+        team,
+        rank: idx + 1,
+        isUser: team.teamId === userTeamGrade.teamId,
+      })),
+    });
+  }
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Hero Grade Card */}
-        <HeroGradeCard grade={userTeamGrade} teamName={userTeamName} />
+  const keyExtractor = useCallback((item: DraftReportListItem, index: number): string => {
+    switch (item.type) {
+      case 'section':
+        return `section-${item.id}`;
+      case 'pick':
+        return `pick-${item.data.pickNumber}`;
+      case 'expert':
+        return `expert-${item.index}`;
+      case 'league_table':
+        return 'league-table';
+      default:
+        return `item-${index}`;
+    }
+  }, []);
 
-        {/* Pick-by-Pick Analysis */}
-        {userTeamGrade.picks.length > 0 && (
+  const renderItem = useCallback(({ item }: ListRenderItemInfo<DraftReportListItem>) => {
+    switch (item.type) {
+      case 'section':
+        return (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="list" size={18} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Pick-by-Pick Analysis</Text>
+              <Ionicons name={item.icon} size={18} color={colors.primary} />
+              <Text style={styles.sectionTitle}>{item.title}</Text>
             </View>
-            {userTeamGrade.picks.map((pick) => (
-              <PickCard key={`pick-${pick.pickNumber}`} pick={pick} />
-            ))}
           </View>
-        )}
-
-        {/* Expert Reactions */}
-        {expertReactions.length > 0 && (
+        );
+      case 'pick':
+        return (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="chatbubbles" size={18} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Expert Reactions</Text>
-            </View>
-            {expertReactions.map((reaction, idx) => (
-              <ExpertQuoteCard key={`expert-${idx}`} reaction={reaction} />
-            ))}
+            <PickCard pick={item.data} />
           </View>
-        )}
-
-        {/* League-Wide Grades */}
-        {sortedLeague.length > 0 && (
+        );
+      case 'expert':
+        return (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="trophy" size={18} color={colors.primary} />
-              <Text style={styles.sectionTitle}>League-Wide Draft Grades</Text>
-            </View>
+            <ExpertQuoteCard reaction={item.data} />
+          </View>
+        );
+      case 'league_table':
+        return (
+          <View style={styles.section}>
             <View style={styles.leagueTable}>
               <View style={styles.leagueTableHeader}>
                 <Text style={[styles.leagueHeaderText, { width: 32 }]}>#</Text>
@@ -278,20 +338,50 @@ export function DraftReportCardScreen({
                   Pts
                 </Text>
               </View>
-              {sortedLeague.map((team, idx) => (
-                <LeagueGradeRow
-                  key={team.teamId}
-                  team={team}
-                  rank={idx + 1}
-                  isUser={team.teamId === userTeamGrade.teamId}
-                />
+              {item.teams.map(({ team, rank, isUser }) => (
+                <LeagueGradeRow key={team.teamId} team={team} rank={rank} isUser={isUser} />
               ))}
             </View>
           </View>
-        )}
+        );
+      default:
+        return null;
+    }
+  }, []);
 
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
+  const ListHeader = useCallback(
+    () => <HeroGradeCard grade={userTeamGrade} teamName={userTeamName} />,
+    [userTeamGrade, userTeamName]
+  );
+
+  const ListFooter = useCallback(() => <View style={styles.bottomSpacer} />, []);
+
+  const ListEmpty = useCallback(
+    () => (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>No draft analysis available yet.</Text>
+      </View>
+    ),
+    []
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScreenHeader title="Draft Report Card" onBack={onBack} testID="draft-report-card-header" />
+
+      <FlatList
+        style={styles.content}
+        data={listData}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={ListFooter}
+        ListEmptyComponent={ListEmpty}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        showsVerticalScrollIndicator={false}
+      />
 
       {/* Continue Button */}
       <View style={styles.continueContainer}>
