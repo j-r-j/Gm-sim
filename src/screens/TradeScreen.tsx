@@ -25,7 +25,7 @@ import {
   accessibility,
 } from '../styles';
 import { Player } from '../core/models/player/Player';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Avatar } from '../components/avatar';
 import { Team } from '../core/models/team/Team';
 import { DraftPick } from '../core/models/league/DraftPick';

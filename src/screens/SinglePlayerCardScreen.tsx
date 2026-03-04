@@ -28,7 +28,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import { SkillValue, SKILL_NAMES_BY_POSITION } from '../core/models/player/TechnicalSkills';

@@ -28,7 +28,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../core/models/player/Position';
 import { type TradeAsset } from '../components/draft';
 import { DraftLetterGrade, WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';

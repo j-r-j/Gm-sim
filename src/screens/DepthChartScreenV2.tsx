@@ -18,7 +18,7 @@ import { showAlert, showConfirm } from '../utils/alert';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { GameState } from '../core/models/game/GameState';
 import {
   DepthChartSlot,

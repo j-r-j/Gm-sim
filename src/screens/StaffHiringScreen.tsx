@@ -25,7 +25,7 @@ import {
   UIManager,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Coach } from '../core/models/staff/Coach';
 import { CoachRole, COACH_SALARY_RANGES } from '../core/models/staff/StaffSalary';
 import { getReputationTier, ReputationTier } from '../core/models/staff/CoachAttributes';

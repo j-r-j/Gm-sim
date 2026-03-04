@@ -23,7 +23,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { GameState } from '../core/models/game/GameState';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';

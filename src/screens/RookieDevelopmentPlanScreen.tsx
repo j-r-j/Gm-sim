@@ -6,7 +6,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { DevelopmentTrack, FitLevel } from '../core/career/RookieDevelopment';
 
 export interface RookieDevelopmentPlanScreenProps {

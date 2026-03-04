@@ -32,7 +32,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Position } from '../core/models/player/Position';
 import { SkillValue } from '../core/models/player/TechnicalSkills';
 import { PhysicalAttributes } from '../core/models/player/PhysicalAttributes';

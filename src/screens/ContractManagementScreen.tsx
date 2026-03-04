@@ -16,7 +16,7 @@ import {
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Avatar } from '../components/avatar';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Player } from '../core/models/player/Player';
 import { Position } from '../core/models/player/Position';
 import {

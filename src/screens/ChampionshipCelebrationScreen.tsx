@@ -14,7 +14,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 
 interface ChampionshipCelebrationScreenProps {
   teamName: string;

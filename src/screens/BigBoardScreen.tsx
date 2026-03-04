@@ -18,7 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import { WorkoutBadge } from '../components/draft/WorkoutBadge';

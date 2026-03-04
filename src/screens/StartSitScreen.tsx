@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import {
   colors,
   spacing,

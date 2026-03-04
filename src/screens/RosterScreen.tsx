@@ -24,7 +24,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader, Button } from '../components';
+import { ScreenHeader, Button } from '../components/common';
 import { Player } from '../core/models/player/Player';
 import { getInjuryDisplayString } from '../core/models/player/InjuryStatus';
 import {

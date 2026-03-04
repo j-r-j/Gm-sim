@@ -26,7 +26,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Position } from '../core/models/player/Position';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';

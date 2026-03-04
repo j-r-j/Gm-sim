@@ -15,7 +15,7 @@ import {
   ListRenderItemInfo,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { CoachRole } from '../core/models/staff/StaffSalary';
 import { Avatar } from '../components/avatar';
 import { HiringCandidate, CandidateTag } from '../core/coaching/NewGameCandidateGenerator';
