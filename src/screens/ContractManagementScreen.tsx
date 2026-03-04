@@ -5,14 +5,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useDeferredValue } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  SafeAreaView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Avatar } from '../components/avatar';
@@ -753,10 +746,7 @@ export function ContractManagementScreen({
     [onAction]
   );
 
-  const contractKeyExtractor = useCallback(
-    (item: PlayerContract) => item.id,
-    []
-  );
+  const contractKeyExtractor = useCallback((item: PlayerContract) => item.id, []);
 
   const renderContractItem = useCallback(
     ({ item }: { item: PlayerContract }) => (

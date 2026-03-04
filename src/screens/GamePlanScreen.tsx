@@ -6,14 +6,7 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  FlatList,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   colors,
@@ -51,7 +44,6 @@ type GamePlanListItem =
   | { itemType: 'sectionHeader'; id: string; title: string; subtitle: string }
   | { itemType: 'practice'; id: string; area: PracticeFocusArea }
   | { itemType: 'emphasis'; id: string; emphasis: GamePlanEmphasis };
-
 
 export function GamePlanScreen({
   week,
@@ -119,11 +111,7 @@ export function GamePlanScreen({
         const isFirstSection = index === 0;
         return (
           <View
-            style={[
-              styles.card,
-              styles.cardSectionHeader,
-              !isFirstSection && styles.cardSpacer,
-            ]}
+            style={[styles.card, styles.cardSectionHeader, !isFirstSection && styles.cardSpacer]}
           >
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
@@ -134,46 +122,41 @@ export function GamePlanScreen({
         const practiceIndex = listData.findIndex((i) => i.id === item.id);
         const isLastPractice = practiceIndex === 8;
         return (
-          <View
-            style={[
-              styles.cardSectionRow,
-              isLastPractice && styles.cardSectionRowLast,
-            ]}
-          >
+          <View style={[styles.cardSectionRow, isLastPractice && styles.cardSectionRowLast]}>
             <View style={[styles.focusRow, isLastPractice && styles.focusRowLast]}>
-            <Text style={styles.focusLabel}>{PRACTICE_FOCUS_LABELS[item.area]}</Text>
-            <View style={styles.focusControls}>
-              <TouchableOpacity
-                style={styles.focusButton}
-                onPress={() => handleFocusChange(item.area, -5)}
-                accessibilityLabel={`Decrease ${PRACTICE_FOCUS_LABELS[item.area]}`}
-                accessibilityRole="button"
-                hitSlop={accessibility.hitSlop}
-              >
-                <Ionicons name="remove" size={18} color={colors.text} />
-              </TouchableOpacity>
-              <View style={styles.focusValueContainer}>
-                <View
-                  style={[
-                    styles.focusBar,
-                    { width: `${plan.practiceFocus[item.area]}%` },
-                    plan.practiceFocus[item.area] > 15 && styles.focusBarHigh,
-                    plan.practiceFocus[item.area] < 10 && styles.focusBarLow,
-                  ]}
-                />
-                <Text style={styles.focusValue}>{plan.practiceFocus[item.area]}%</Text>
+              <Text style={styles.focusLabel}>{PRACTICE_FOCUS_LABELS[item.area]}</Text>
+              <View style={styles.focusControls}>
+                <TouchableOpacity
+                  style={styles.focusButton}
+                  onPress={() => handleFocusChange(item.area, -5)}
+                  accessibilityLabel={`Decrease ${PRACTICE_FOCUS_LABELS[item.area]}`}
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
+                >
+                  <Ionicons name="remove" size={18} color={colors.text} />
+                </TouchableOpacity>
+                <View style={styles.focusValueContainer}>
+                  <View
+                    style={[
+                      styles.focusBar,
+                      { width: `${plan.practiceFocus[item.area]}%` },
+                      plan.practiceFocus[item.area] > 15 && styles.focusBarHigh,
+                      plan.practiceFocus[item.area] < 10 && styles.focusBarLow,
+                    ]}
+                  />
+                  <Text style={styles.focusValue}>{plan.practiceFocus[item.area]}%</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.focusButton}
+                  onPress={() => handleFocusChange(item.area, 5)}
+                  accessibilityLabel={`Increase ${PRACTICE_FOCUS_LABELS[item.area]}`}
+                  accessibilityRole="button"
+                  hitSlop={accessibility.hitSlop}
+                >
+                  <Ionicons name="add" size={18} color={colors.text} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.focusButton}
-                onPress={() => handleFocusChange(item.area, 5)}
-                accessibilityLabel={`Increase ${PRACTICE_FOCUS_LABELS[item.area]}`}
-                accessibilityRole="button"
-                hitSlop={accessibility.hitSlop}
-              >
-                <Ionicons name="add" size={18} color={colors.text} />
-              </TouchableOpacity>
             </View>
-          </View>
           </View>
         );
       }
@@ -184,30 +167,30 @@ export function GamePlanScreen({
           <TouchableOpacity
             style={[
               styles.emphasisOption,
-            plan.gamePlanEmphasis === item.emphasis && styles.emphasisOptionSelected,
-          ]}
-          onPress={() => handleEmphasisSelect(item.emphasis)}
-          accessibilityLabel={`${GAME_PLAN_EMPHASIS_LABELS[item.emphasis]}: ${GAME_PLAN_EMPHASIS_DESCRIPTIONS[item.emphasis]}`}
-          accessibilityRole="button"
-          accessibilityState={{ selected: plan.gamePlanEmphasis === item.emphasis }}
-        >
-          <View style={styles.emphasisHeader}>
-            <Text
-              style={[
-                styles.emphasisTitle,
-                plan.gamePlanEmphasis === item.emphasis && styles.emphasisTitleSelected,
-              ]}
-            >
-              {GAME_PLAN_EMPHASIS_LABELS[item.emphasis]}
+              plan.gamePlanEmphasis === item.emphasis && styles.emphasisOptionSelected,
+            ]}
+            onPress={() => handleEmphasisSelect(item.emphasis)}
+            accessibilityLabel={`${GAME_PLAN_EMPHASIS_LABELS[item.emphasis]}: ${GAME_PLAN_EMPHASIS_DESCRIPTIONS[item.emphasis]}`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: plan.gamePlanEmphasis === item.emphasis }}
+          >
+            <View style={styles.emphasisHeader}>
+              <Text
+                style={[
+                  styles.emphasisTitle,
+                  plan.gamePlanEmphasis === item.emphasis && styles.emphasisTitleSelected,
+                ]}
+              >
+                {GAME_PLAN_EMPHASIS_LABELS[item.emphasis]}
+              </Text>
+              {plan.gamePlanEmphasis === item.emphasis && (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              )}
+            </View>
+            <Text style={styles.emphasisDesc}>
+              {GAME_PLAN_EMPHASIS_DESCRIPTIONS[item.emphasis]}
             </Text>
-            {plan.gamePlanEmphasis === item.emphasis && (
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-            )}
-          </View>
-          <Text style={styles.emphasisDesc}>
-            {GAME_PLAN_EMPHASIS_DESCRIPTIONS[item.emphasis]}
-          </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
         </View>
       );
     },
@@ -301,7 +284,8 @@ export function GamePlanScreen({
     ({ leadingItem }: { leadingItem: GamePlanListItem }) => {
       const isLastPractice =
         leadingItem.itemType === 'practice' &&
-        leadingItem.id === `practice-${ALL_PRACTICE_FOCUS_AREAS[ALL_PRACTICE_FOCUS_AREAS.length - 1]}`;
+        leadingItem.id ===
+          `practice-${ALL_PRACTICE_FOCUS_AREAS[ALL_PRACTICE_FOCUS_AREAS.length - 1]}`;
       if (isLastPractice) {
         return <View style={styles.itemSeparator} />;
       }

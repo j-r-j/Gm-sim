@@ -742,15 +742,9 @@ export function WeeklySchedulePopup({
     ]
   );
 
-  const itemSeparator = useCallback(
-    () => <View style={styles.itemSeparator} />,
-    []
-  );
+  const itemSeparator = useCallback(() => <View style={styles.itemSeparator} />, []);
 
-  const listFooter = useCallback(
-    () => <View style={styles.bottomSpacer} />,
-    []
-  );
+  const listFooter = useCallback(() => <View style={styles.bottomSpacer} />, []);
 
   return (
     <SafeAreaView style={styles.container}>

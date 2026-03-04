@@ -372,10 +372,7 @@ export function FreeAgencyScreen({
         hitSlop={accessibility.hitSlop}
       >
         <Text
-          style={[
-            styles.filterChipText,
-            positionFilter === item && styles.filterChipTextActive,
-          ]}
+          style={[styles.filterChipText, positionFilter === item && styles.filterChipTextActive]}
         >
           {item === 'all' ? 'All' : item}
         </Text>

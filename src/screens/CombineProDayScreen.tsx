@@ -634,10 +634,7 @@ export function CombineProDayScreen({
     [combineResults, proDayResults, onProspectSelect]
   );
 
-  const listFooterComponent = useCallback(
-    () => <View style={styles.listFooter} />,
-    []
-  );
+  const listFooterComponent = useCallback(() => <View style={styles.listFooter} />, []);
 
   const renderEmptyProspects = useCallback(
     () => (
@@ -660,9 +657,7 @@ export function CombineProDayScreen({
   const combineListHeader = useCallback(
     () => (
       <View style={styles.section}>
-        <Text style={styles.sectionHeader}>
-          Combine Invites ({invitedProspects.length})
-        </Text>
+        <Text style={styles.sectionHeader}>Combine Invites ({invitedProspects.length})</Text>
       </View>
     ),
     [invitedProspects.length]
@@ -678,8 +673,8 @@ export function CombineProDayScreen({
               {proDaySummary.averageGrade.toFixed(1)}/10
             </Text>
             <Text style={styles.proDaySummaryText}>
-              {proDaySummary.fullWorkouts} Full • {proDaySummary.positionWorkouts}{' '}
-              Position • {proDaySummary.privateWorkoutsRequested} Private Requests
+              {proDaySummary.fullWorkouts} Full • {proDaySummary.positionWorkouts} Position •{' '}
+              {proDaySummary.privateWorkoutsRequested} Private Requests
             </Text>
           </View>
         )}

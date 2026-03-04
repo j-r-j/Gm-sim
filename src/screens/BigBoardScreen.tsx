@@ -439,10 +439,7 @@ export function BigBoardScreen({
   ]);
 
   // FlatList callbacks
-  const prospectKeyExtractor = useCallback(
-    (item: DraftBoardProspectView) => item.prospectId,
-    []
-  );
+  const prospectKeyExtractor = useCallback((item: DraftBoardProspectView) => item.prospectId, []);
 
   const renderProspectItem = useCallback(
     ({ item, index }: { item: DraftBoardProspectView; index: number }) => (

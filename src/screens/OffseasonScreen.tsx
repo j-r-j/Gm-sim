@@ -27,7 +27,12 @@ import {
   getProgress,
   getNextPhase,
 } from '../core/offseason/OffSeasonPhaseManager';
-import { Button, ScreenHeader, OffseasonProgressBar, type OffseasonPhase } from '../components/common';
+import {
+  Button,
+  ScreenHeader,
+  OffseasonProgressBar,
+  type OffseasonPhase,
+} from '../components/common';
 
 /**
  * Phase icons for visual identification

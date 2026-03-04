@@ -489,13 +489,7 @@ export function DepthChartScreenV2({
         onSlotLongPress={handleSlotLongPress}
       />
     ),
-    [
-      gameState,
-      selectedPlayerId,
-      selectedSlot,
-      handleSlotPress,
-      handleSlotLongPress,
-    ]
+    [gameState, selectedPlayerId, selectedSlot, handleSlotPress, handleSlotLongPress]
   );
 
   const listEmptyComponent = useCallback(
@@ -507,10 +501,7 @@ export function DepthChartScreenV2({
     []
   );
 
-  const listFooterComponent = useCallback(
-    () => <View style={styles.bottomPadding} />,
-    []
-  );
+  const listFooterComponent = useCallback(() => <View style={styles.bottomPadding} />, []);
 
   return (
     <SafeAreaView style={styles.container}>

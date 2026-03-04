@@ -339,8 +339,7 @@ export function CoachHiringScreen({
   const renderItem = useCallback(
     ({ item: candidate }: ListRenderItemInfo<HiringCandidate>) => {
       const isOverBudget =
-        coachingBudgetRemaining !== undefined &&
-        candidate.expectedSalary > coachingBudgetRemaining;
+        coachingBudgetRemaining !== undefined && candidate.expectedSalary > coachingBudgetRemaining;
 
       return (
         <CandidateCard
@@ -356,11 +355,7 @@ export function CoachHiringScreen({
         />
       );
     },
-    [
-      coachingBudgetRemaining,
-      selectedCandidateId,
-      onHire,
-    ]
+    [coachingBudgetRemaining, selectedCandidateId, onHire]
   );
 
   const ListHeader = useCallback(

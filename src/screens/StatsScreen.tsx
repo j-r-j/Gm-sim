@@ -927,8 +927,7 @@ function PlayerStatsView({
               {item.player.firstName} {item.player.lastName}
             </Text>
             <Text style={styles.playerMeta}>
-              {team?.abbreviation || 'FA'} - {item.player.position} - {item.stats.gamesPlayed}{' '}
-              GP
+              {team?.abbreviation || 'FA'} - {item.player.position} - {item.stats.gamesPlayed} GP
             </Text>
           </View>
           <Text style={styles.playerStats}>{getPositionStats(item.player, item.stats)}</Text>
