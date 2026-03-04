@@ -1064,11 +1064,12 @@ export function StaffHiringScreen({
             data={sortedCandidates}
             keyExtractor={(item) => item.candidate.coach.id}
             renderItem={renderCandidate}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={5}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             initialNumToRender={5}
-            maxToRenderPerBatch={3}
-            windowSize={5}
           />
         </>
       )}

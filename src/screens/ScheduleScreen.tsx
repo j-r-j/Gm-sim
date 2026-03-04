@@ -3,7 +3,7 @@
  * Displays the team's game schedule for the season
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
@@ -224,6 +224,23 @@ export function ScheduleScreen({
 
   const userTeam = teams[userTeamId];
 
+  const renderGameItem = useCallback(
+    ({ item }: { item: DisplayGame }) => (
+      <GameCard
+        game={item}
+        onPress={
+          item.isCurrent && !item.isBye && onSelectGame
+            ? () => {
+                const originalGame = schedule.find((g) => g.gameId === item.gameId);
+                if (originalGame) onSelectGame(originalGame);
+              }
+            : undefined
+        }
+      />
+    ),
+    [schedule, onSelectGame]
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -244,19 +261,10 @@ export function ScheduleScreen({
       <FlatList
         data={displayGames}
         keyExtractor={(item) => item.gameId}
-        renderItem={({ item }) => (
-          <GameCard
-            game={item}
-            onPress={
-              item.isCurrent && !item.isBye && onSelectGame
-                ? () => {
-                    const originalGame = schedule.find((g) => g.gameId === item.gameId);
-                    if (originalGame) onSelectGame(originalGame);
-                  }
-                : undefined
-            }
-          />
-        )}
+        renderItem={renderGameItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />

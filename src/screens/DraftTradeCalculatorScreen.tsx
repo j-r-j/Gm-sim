@@ -3,7 +3,7 @@
  * Simple pick value chart and two-panel trade evaluator
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -300,6 +300,19 @@ export function DraftTradeCalculatorScreen({
 
   const fairness = getFairnessLabel(sideAValue, sideBValue);
 
+  const renderChartRow = useCallback(
+    ({ item }: { item: { round: number; pickInRound: number; value: number } }) => (
+      <PickValueRow round={item.round} pickInRound={item.pickInRound} value={item.value} />
+    ),
+    []
+  );
+
+  const chartKeyExtractor = useCallback(
+    (item: { round: number; pickInRound: number; value: number }) =>
+      `r${item.round}-p${item.pickInRound}`,
+    []
+  );
+
   // Generate chart data for display (first 3 rounds in detail, summary for 4-7)
   const chartData = useMemo(() => {
     const data: { round: number; pickInRound: number; value: number }[] = [];
@@ -401,10 +414,11 @@ export function DraftTradeCalculatorScreen({
       ) : (
         <FlatList
           data={chartData}
-          keyExtractor={(item) => `r${item.round}-p${item.pickInRound}`}
-          renderItem={({ item }) => (
-            <PickValueRow round={item.round} pickInRound={item.pickInRound} value={item.value} />
-          )}
+          keyExtractor={chartKeyExtractor}
+          renderItem={renderChartRow}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           style={styles.content}
           contentContainerStyle={styles.chartContainer}
           ListHeaderComponent={

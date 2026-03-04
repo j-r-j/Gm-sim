@@ -3,7 +3,7 @@
  * Displays and manages the team roster
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -761,6 +761,55 @@ export function RosterScreen({
     };
   }, [rosterPlayers, psPlayers, irPlayers]);
 
+  const renderIRItem = useCallback(
+    ({ item }: { item: Player }) => (
+      <IRPlayerCard
+        player={item}
+        onPress={() => onSelectPlayer?.(item.id)}
+        onActivate={onActivateFromIR ? () => handleActivateFromIR(item) : undefined}
+      />
+    ),
+    [onSelectPlayer, onActivateFromIR, handleActivateFromIR]
+  );
+
+  const renderPSItem = useCallback(
+    ({ item }: { item: Player }) => (
+      <PSPlayerCard
+        player={item}
+        onPress={() => onSelectPlayer?.(item.id)}
+        onPromote={onPromoteFromPS ? () => handlePromoteFromPS(item) : undefined}
+      />
+    ),
+    [onSelectPlayer, onPromoteFromPS, handlePromoteFromPS]
+  );
+
+  const renderRosterItem = useCallback(
+    ({ item }: { item: Player }) => (
+      <RosterPlayerCard
+        player={item}
+        onPress={() => onSelectPlayer?.(item.id)}
+        onCut={() => handleCutPress(item)}
+        onExtend={() => handleExtendPress(item)}
+        canExtend={isExtensionEligible?.(item.id) ?? false}
+        onPlaceOnIR={
+          onPlaceOnIR &&
+          item.injuryStatus.severity !== 'none' &&
+          item.injuryStatus.severity !== 'questionable'
+            ? () => handlePlaceOnIR(item)
+            : undefined
+        }
+      />
+    ),
+    [
+      onSelectPlayer,
+      onPlaceOnIR,
+      isExtensionEligible,
+      handleCutPress,
+      handleExtendPress,
+      handlePlaceOnIR,
+    ]
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -848,13 +897,10 @@ export function RosterScreen({
         <FlatList
           data={irPlayers}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <IRPlayerCard
-              player={item}
-              onPress={() => onSelectPlayer?.(item.id)}
-              onActivate={onActivateFromIR ? () => handleActivateFromIR(item) : undefined}
-            />
-          )}
+          renderItem={renderIRItem}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           contentContainerStyle={[
             styles.listContent,
             irPlayers.length === 0 && styles.emptyListContent,
@@ -872,13 +918,10 @@ export function RosterScreen({
         <FlatList
           data={psPlayers}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <PSPlayerCard
-              player={item}
-              onPress={() => onSelectPlayer?.(item.id)}
-              onPromote={onPromoteFromPS ? () => handlePromoteFromPS(item) : undefined}
-            />
-          )}
+          renderItem={renderPSItem}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           contentContainerStyle={[
             styles.listContent,
             psPlayers.length === 0 && styles.emptyListContent,
@@ -898,22 +941,10 @@ export function RosterScreen({
         <FlatList
           data={filteredPlayers}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <RosterPlayerCard
-              player={item}
-              onPress={() => onSelectPlayer?.(item.id)}
-              onCut={() => handleCutPress(item)}
-              onExtend={() => handleExtendPress(item)}
-              canExtend={isExtensionEligible?.(item.id) ?? false}
-              onPlaceOnIR={
-                onPlaceOnIR &&
-                item.injuryStatus.severity !== 'none' &&
-                item.injuryStatus.severity !== 'questionable'
-                  ? () => handlePlaceOnIR(item)
-                  : undefined
-              }
-            />
-          )}
+          renderItem={renderRosterItem}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           contentContainerStyle={[
             styles.listContent,
             filteredPlayers.length === 0 && styles.emptyListContent,

@@ -3,7 +3,7 @@
  * Screen for setting up rookie development tracks during OTAs phase.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
@@ -191,6 +191,15 @@ export function RookieDevelopmentPlanScreen({
     return { starters, rotational, developmental };
   }, [rookies]);
 
+  const renderRookieItem = useCallback(
+    ({ item }: { item: RookieDevelopmentPlanScreenProps['rookies'][number] }) => (
+      <RookieCard rookie={item} onUpdateTrack={onUpdateTrack} />
+    ),
+    [onUpdateTrack]
+  );
+
+  const keyExtractor = useCallback((item: { playerId: string }) => item.playerId, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader title="ROOKIE DEVELOPMENT" onBack={onBack} testID="rookie-dev-header" />
@@ -216,8 +225,11 @@ export function RookieDevelopmentPlanScreen({
       {/* Rookie list */}
       <FlatList
         data={rookies}
-        keyExtractor={(item) => item.playerId}
-        renderItem={({ item }) => <RookieCard rookie={item} onUpdateTrack={onUpdateTrack} />}
+        keyExtractor={keyExtractor}
+        renderItem={renderRookieItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={<Text style={styles.emptyText}>No rookies on the roster</Text>}

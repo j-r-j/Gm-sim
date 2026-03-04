@@ -4,7 +4,7 @@
  * Supports filtering by team, conference, division, and league-wide
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -582,6 +582,25 @@ function LeagueLeadersView({
       .slice(0, 25);
   }, [filteredPlayers, gameState, selectedStatCategory]);
 
+  const renderLeaderItem = useCallback(
+    ({ item, index }: { item: (typeof leaders)[number]; index: number }) => {
+      const team = item.player.teamId ? gameState.teams[item.player.teamId] : null;
+      return (
+        <LeaderCard
+          rank={index + 1}
+          playerName={`${item.player.firstName} ${item.player.lastName}`}
+          teamAbbr={team?.abbreviation || 'FA'}
+          position={item.player.position}
+          value={selectedStatCategory.format(selectedStatCategory.getValue(item.stats))}
+          statLabel={selectedStatCategory.label}
+          isUserTeam={item.player.teamId === gameState.userTeamId}
+          onPress={() => onPlayerSelect?.(item.player.id)}
+        />
+      );
+    },
+    [gameState, selectedStatCategory, onPlayerSelect]
+  );
+
   return (
     <View style={styles.viewContainer}>
       {/* Category selector */}
@@ -624,21 +643,10 @@ function LeagueLeadersView({
       <FlatList
         data={leaders}
         keyExtractor={(item) => item.player.id}
-        renderItem={({ item, index }) => {
-          const team = item.player.teamId ? gameState.teams[item.player.teamId] : null;
-          return (
-            <LeaderCard
-              rank={index + 1}
-              playerName={`${item.player.firstName} ${item.player.lastName}`}
-              teamAbbr={team?.abbreviation || 'FA'}
-              position={item.player.position}
-              value={selectedStatCategory.format(selectedStatCategory.getValue(item.stats))}
-              statLabel={selectedStatCategory.label}
-              isUserTeam={item.player.teamId === gameState.userTeamId}
-              onPress={() => onPlayerSelect?.(item.player.id)}
-            />
-          );
-        }}
+        renderItem={renderLeaderItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No qualifying players found</Text>
@@ -697,6 +705,19 @@ function TeamStatsView({
     }
   }, [filteredTeams, gameState, statType]);
 
+  const renderTeamStatsItem = useCallback(
+    ({ item, index }: { item: (typeof rankedTeams)[number]; index: number }) => (
+      <TeamStatsRow
+        rank={index + 1}
+        team={item.team}
+        stats={item.stats}
+        isUserTeam={item.team.id === gameState.userTeamId}
+        statType={statType}
+      />
+    ),
+    [gameState.userTeamId, statType]
+  );
+
   return (
     <View style={styles.viewContainer}>
       {/* Offense/Defense toggle */}
@@ -748,15 +769,10 @@ function TeamStatsView({
       <FlatList
         data={rankedTeams}
         keyExtractor={(item) => item.team.id}
-        renderItem={({ item, index }) => (
-          <TeamStatsRow
-            rank={index + 1}
-            team={item.team}
-            stats={item.stats}
-            isUserTeam={item.team.id === gameState.userTeamId}
-            statType={statType}
-          />
-        )}
+        renderItem={renderTeamStatsItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         contentContainerStyle={styles.listContent}
       />
     </View>
@@ -892,6 +908,36 @@ function PlayerStatsView({
     }
   };
 
+  const renderPlayerItem = useCallback(
+    ({ item }: { item: (typeof sortedPlayers)[number] }) => {
+      const team = item.player.teamId ? gameState.teams[item.player.teamId] : null;
+      return (
+        <TouchableOpacity
+          style={[
+            styles.playerRow,
+            item.player.teamId === gameState.userTeamId && styles.playerRowHighlight,
+          ]}
+          onPress={() => onPlayerSelect?.(item.player.id)}
+          activeOpacity={0.7}
+          accessibilityLabel={`${item.player.firstName} ${item.player.lastName}, ${team?.abbreviation || 'FA'} ${item.player.position}`}
+          accessibilityRole="button"
+        >
+          <View style={styles.playerInfo}>
+            <Text style={styles.playerName}>
+              {item.player.firstName} {item.player.lastName}
+            </Text>
+            <Text style={styles.playerMeta}>
+              {team?.abbreviation || 'FA'} - {item.player.position} - {item.stats.gamesPlayed}{' '}
+              GP
+            </Text>
+          </View>
+          <Text style={styles.playerStats}>{getPositionStats(item.player, item.stats)}</Text>
+        </TouchableOpacity>
+      );
+    },
+    [gameState, onPlayerSelect]
+  );
+
   return (
     <View style={styles.viewContainer}>
       {/* Position filter */}
@@ -938,32 +984,10 @@ function PlayerStatsView({
       <FlatList
         data={sortedPlayers}
         keyExtractor={(item) => item.player.id}
-        renderItem={({ item }) => {
-          const team = item.player.teamId ? gameState.teams[item.player.teamId] : null;
-          return (
-            <TouchableOpacity
-              style={[
-                styles.playerRow,
-                item.player.teamId === gameState.userTeamId && styles.playerRowHighlight,
-              ]}
-              onPress={() => onPlayerSelect?.(item.player.id)}
-              activeOpacity={0.7}
-              accessibilityLabel={`${item.player.firstName} ${item.player.lastName}, ${team?.abbreviation || 'FA'} ${item.player.position}`}
-              accessibilityRole="button"
-            >
-              <View style={styles.playerInfo}>
-                <Text style={styles.playerName}>
-                  {item.player.firstName} {item.player.lastName}
-                </Text>
-                <Text style={styles.playerMeta}>
-                  {team?.abbreviation || 'FA'} - {item.player.position} - {item.stats.gamesPlayed}{' '}
-                  GP
-                </Text>
-              </View>
-              <Text style={styles.playerStats}>{getPositionStats(item.player, item.stats)}</Text>
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={renderPlayerItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No players found</Text>

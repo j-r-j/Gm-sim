@@ -3,7 +3,7 @@
  * Displays league news and headlines
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { ScreenHeader } from '../components';
@@ -171,6 +171,33 @@ export function NewsScreen({
     'freeAgency',
   ];
 
+  const renderFilterItem = useCallback(
+    ({ item }: { item: CategoryFilter }) => (
+      <TouchableOpacity
+        style={[styles.filterButton, filter === item && styles.filterActive]}
+        onPress={() => setFilter(item)}
+        accessibilityLabel={`Filter by ${CATEGORY_LABELS[item]}${filter === item ? ', currently selected' : ''}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
+        <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>
+          {CATEGORY_LABELS[item]}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [filter]
+  );
+
+  const renderNewsItem = useCallback(
+    ({ item }: { item: NewsItem }) => (
+      <NewsCard item={item} onPress={() => onMarkRead?.(item.id)} />
+    ),
+    [onMarkRead]
+  );
+
+  const keyExtractorFilter = useCallback((item: CategoryFilter) => item, []);
+  const keyExtractorNews = useCallback((item: NewsItem) => item.id, []);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -194,22 +221,13 @@ export function NewsScreen({
         <FlatList
           horizontal
           data={filterButtons}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.filterButton, filter === item && styles.filterActive]}
-              onPress={() => setFilter(item)}
-              accessibilityLabel={`Filter by ${CATEGORY_LABELS[item]}${filter === item ? ', currently selected' : ''}`}
-              accessibilityRole="button"
-              hitSlop={accessibility.hitSlop}
-            >
-              <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>
-                {CATEGORY_LABELS[item]}
-              </Text>
-            </TouchableOpacity>
-          )}
+          keyExtractor={keyExtractorFilter}
+          renderItem={renderFilterItem}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterList}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
         />
       </View>
 
@@ -219,10 +237,13 @@ export function NewsScreen({
       ) : (
         <FlatList
           data={filteredNews}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <NewsCard item={item} onPress={() => onMarkRead?.(item.id)} />}
+          keyExtractor={keyExtractorNews}
+          renderItem={renderNewsItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
         />
       )}
     </SafeAreaView>
