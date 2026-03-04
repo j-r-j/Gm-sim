@@ -732,6 +732,8 @@ export function DraftRoomScreen({
     ]
   );
 
+  const keyExtractor = useCallback((item: DraftRoomProspect) => item.id, []);
+
   return (
     <SafeAreaView style={s.container}>
       {/* Header */}
@@ -887,8 +889,11 @@ export function DraftRoomScreen({
       {/* Prospect List */}
       <FlatList
         data={filteredProspects}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         renderItem={renderProspect}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         style={s.prospectList}
         contentContainerStyle={selectedProspect ? s.prospectListContentWithAction : undefined}
         ListEmptyComponent={
