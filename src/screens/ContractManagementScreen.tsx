@@ -4,7 +4,7 @@
  * including franchise tag management and contract restructuring.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useDeferredValue } from 'react';
 import {
   View,
   Text,
@@ -671,13 +671,15 @@ export function ContractManagementScreen({
 }: ContractManagementScreenProps): React.JSX.Element {
   const [sortBy, setSortBy] = useState<SortOption>('capHit');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const deferredSortBy = useDeferredValue(sortBy);
+  const deferredFilterBy = useDeferredValue(filterBy);
 
   // Sort and filter contracts
   const displayedContracts = useMemo(() => {
     let filtered = [...contracts];
 
-    // Apply filter
-    switch (filterBy) {
+    // Apply filter (uses deferred values for responsiveness)
+    switch (deferredFilterBy) {
       case 'expiring':
         filtered = filtered.filter((c) => isExpiringContract(c));
         break;
@@ -695,8 +697,8 @@ export function ContractManagementScreen({
         break;
     }
 
-    // Apply sort
-    switch (sortBy) {
+    // Apply sort (uses deferred values for responsiveness)
+    switch (deferredSortBy) {
       case 'capHit':
         filtered.sort(
           (a, b) => (b.yearlyBreakdown[0]?.capHit || 0) - (a.yearlyBreakdown[0]?.capHit || 0)
@@ -714,7 +716,7 @@ export function ContractManagementScreen({
     }
 
     return filtered;
-  }, [contracts, sortBy, filterBy]);
+  }, [contracts, deferredSortBy, deferredFilterBy]);
 
   const currentYear = gameState.league.calendar.currentYear;
 

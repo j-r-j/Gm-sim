@@ -668,7 +668,7 @@ export function SinglePlayerCardScreen({
               <View style={styles.notesEditContainer}>
                 <TextInput
                   style={styles.notesInput}
-                  value={notesValue}
+                  defaultValue={notesValue}
                   onChangeText={setNotesValue}
                   placeholder="Add your notes about this prospect..."
                   placeholderTextColor={colors.textLight}

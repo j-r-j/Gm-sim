@@ -4,7 +4,7 @@
  * Features: search, sortable columns, enriched prospect data.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useDeferredValue, useRef } from 'react';
 import {
   View,
   Text,
@@ -315,6 +315,8 @@ export function BigBoardScreen({
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedTier, setSelectedTier] = useState<DraftTier | null>(null);
   const [searchText, setSearchText] = useState('');
+  const deferredSearchText = useDeferredValue(searchText);
+  const searchInputRef = useRef<TextInput>(null);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -400,9 +402,9 @@ export function BigBoardScreen({
   const filteredProspects = useMemo(() => {
     let filtered = [...viewModel.prospects];
 
-    // Search filter
-    if (searchText.trim()) {
-      const query = searchText.trim().toLowerCase();
+    // Search filter (uses deferred value for responsiveness)
+    if (deferredSearchText.trim()) {
+      const query = deferredSearchText.trim().toLowerCase();
       filtered = filtered.filter((p) => p.prospectName.toLowerCase().includes(query));
     }
 
@@ -426,7 +428,7 @@ export function BigBoardScreen({
     return sortProspects(filtered);
   }, [
     viewModel.prospects,
-    searchText,
+    deferredSearchText,
     activeTab,
     selectedPosition,
     selectedTier,
@@ -473,10 +475,11 @@ export function BigBoardScreen({
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={16} color={colors.textLight} style={styles.searchIcon} />
         <TextInput
+          ref={searchInputRef}
           style={styles.searchInput}
           placeholder="Search prospects..."
           placeholderTextColor={colors.textLight}
-          value={searchText}
+          defaultValue=""
           onChangeText={setSearchText}
           accessibilityLabel="Search prospects by name"
           accessibilityRole="search"
@@ -485,7 +488,10 @@ export function BigBoardScreen({
         />
         {searchText.length > 0 && (
           <TouchableOpacity
-            onPress={() => setSearchText('')}
+            onPress={() => {
+              setSearchText('');
+              searchInputRef.current?.clear();
+            }}
             accessibilityLabel="Clear search"
             accessibilityRole="button"
             hitSlop={accessibility.hitSlop}
