@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
+import { CommonActions } from '@react-navigation/native';
 
 import { useGame } from '../GameContext';
 import { ScreenProps } from '../types';
@@ -183,8 +184,14 @@ export function OffseasonScreenWrapper({
       setGameState(transitionedState);
       await saveGameState(transitionedState);
       // eslint-disable-next-line no-alert
-      window.alert('Offseason Complete! Preseason begins!');
-      navigation.goBack();
+      window.alert('Offseason Complete! The new season begins!');
+      // Reset navigation stack to Dashboard so we don't go back to SeasonOver/Championship
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Dashboard' }],
+        })
+      );
     } else {
       // Use orchestrator to enter the new phase and auto-generate data
       const phaseResult = enterPhase(
