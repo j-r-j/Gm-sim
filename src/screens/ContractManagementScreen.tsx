@@ -4,12 +4,12 @@
  * including franchise tag management and contract restructuring.
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useCallback, useDeferredValue } from 'react';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
 import { Avatar } from '../components/avatar';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Player } from '../core/models/player/Player';
 import { Position } from '../core/models/player/Position';
 import {
@@ -664,13 +664,15 @@ export function ContractManagementScreen({
 }: ContractManagementScreenProps): React.JSX.Element {
   const [sortBy, setSortBy] = useState<SortOption>('capHit');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const deferredSortBy = useDeferredValue(sortBy);
+  const deferredFilterBy = useDeferredValue(filterBy);
 
   // Sort and filter contracts
   const displayedContracts = useMemo(() => {
     let filtered = [...contracts];
 
-    // Apply filter
-    switch (filterBy) {
+    // Apply filter (uses deferred values for responsiveness)
+    switch (deferredFilterBy) {
       case 'expiring':
         filtered = filtered.filter((c) => isExpiringContract(c));
         break;
@@ -688,8 +690,8 @@ export function ContractManagementScreen({
         break;
     }
 
-    // Apply sort
-    switch (sortBy) {
+    // Apply sort (uses deferred values for responsiveness)
+    switch (deferredSortBy) {
       case 'capHit':
         filtered.sort(
           (a, b) => (b.yearlyBreakdown[0]?.capHit || 0) - (a.yearlyBreakdown[0]?.capHit || 0)
@@ -707,37 +709,61 @@ export function ContractManagementScreen({
     }
 
     return filtered;
-  }, [contracts, sortBy, filterBy]);
+  }, [contracts, deferredSortBy, deferredFilterBy]);
 
   const currentYear = gameState.league.calendar.currentYear;
 
-  const handleCutAnalysis = (contract: PlayerContract) => {
-    const breakdown = getCutBreakdown(contract, currentYear);
-    if (onAction) {
-      onAction({ type: 'cutPlayer', playerId: contract.playerId, cutBreakdown: breakdown });
-    } else if (onCutPlayer) {
-      onCutPlayer(contract.playerId, breakdown);
-    }
-  };
+  const handleCutAnalysis = useCallback(
+    (contract: PlayerContract) => {
+      const breakdown = getCutBreakdown(contract, currentYear);
+      if (onAction) {
+        onAction({ type: 'cutPlayer', playerId: contract.playerId, cutBreakdown: breakdown });
+      } else if (onCutPlayer) {
+        onCutPlayer(contract.playerId, breakdown);
+      }
+    },
+    [currentYear, onAction, onCutPlayer]
+  );
 
-  const handleApplyTag = (playerId: string, position: Position) => {
-    onAction?.({ type: 'applyFranchiseTag', playerId, position });
-  };
+  const handleApplyTag = useCallback(
+    (playerId: string, position: Position) => {
+      onAction?.({ type: 'applyFranchiseTag', playerId, position });
+    },
+    [onAction]
+  );
 
-  const handleRemoveTag = (playerId: string) => {
-    onAction?.({ type: 'removeFranchiseTag', playerId });
-  };
+  const handleRemoveTag = useCallback(
+    (playerId: string) => {
+      onAction?.({ type: 'removeFranchiseTag', playerId });
+    },
+    [onAction]
+  );
 
-  const handleRestructure = (contractId: string, amount: number, voidYears: number) => {
-    onAction?.({ type: 'restructureContract', contractId, amountToConvert: amount, voidYears });
-  };
+  const handleRestructure = useCallback(
+    (contractId: string, amount: number, voidYears: number) => {
+      onAction?.({ type: 'restructureContract', contractId, amountToConvert: amount, voidYears });
+    },
+    [onAction]
+  );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <ScreenHeader title="Contract Management" onBack={onBack} />
+  const contractKeyExtractor = useCallback((item: PlayerContract) => item.id, []);
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+  const renderContractItem = useCallback(
+    ({ item }: { item: PlayerContract }) => (
+      <ContractItem
+        contract={item}
+        _player={gameState.players[item.playerId]}
+        currentYear={currentYear}
+        onPress={() => onPlayerSelect?.(item.playerId)}
+        onCutPress={() => handleCutAnalysis(item)}
+      />
+    ),
+    [gameState.players, currentYear, onPlayerSelect, handleCutAnalysis]
+  );
+
+  const listHeaderComponent = useMemo(
+    () => (
+      <>
         {/* Cap Overview */}
         <CapOverview capStatus={capStatus} />
 
@@ -771,23 +797,41 @@ export function ContractManagementScreen({
             Showing {displayedContracts.length} of {contracts.length} contracts
           </Text>
         </View>
+      </>
+    ),
+    [
+      capStatus,
+      contracts,
+      currentYear,
+      gameState.players,
+      handleApplyTag,
+      handleRemoveTag,
+      handleRestructure,
+      sortBy,
+      filterBy,
+      displayedContracts.length,
+    ]
+  );
 
-        {/* Contract List */}
-        <View style={styles.contractList}>
-          {displayedContracts.map((contract) => (
-            <ContractItem
-              key={contract.id}
-              contract={contract}
-              _player={gameState.players[contract.playerId]}
-              currentYear={currentYear}
-              onPress={() => onPlayerSelect?.(contract.playerId)}
-              onCutPress={() => handleCutAnalysis(contract)}
-            />
-          ))}
-        </View>
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <ScreenHeader title="Contract Management" onBack={onBack} />
 
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+      {/* Contract List - Virtualized */}
+      <FlatList
+        data={displayedContracts}
+        keyExtractor={contractKeyExtractor}
+        renderItem={renderContractItem}
+        ListHeaderComponent={listHeaderComponent}
+        style={styles.content}
+        contentContainerStyle={styles.contractList}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        ListFooterComponent={<View style={styles.bottomPadding} />}
+      />
     </SafeAreaView>
   );
 }

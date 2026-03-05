@@ -3,10 +3,10 @@
  * Displays and manages coaching staff and scouts
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Coach } from '../core/models/staff/Coach';
 import { Scout } from '../core/models/staff/Scout';
 import { Avatar } from '../components/avatar';
@@ -229,6 +229,23 @@ export function StaffScreen({
     return [...vacancies].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
   }, [vacancies]);
 
+  const renderCoachItem = useCallback(
+    ({ item }: { item: Coach }) => (
+      <CoachCard coach={item} onPress={() => onSelectStaff?.(item.id, 'coach')} />
+    ),
+    [onSelectStaff]
+  );
+
+  const renderScoutItem = useCallback(
+    ({ item }: { item: Scout }) => (
+      <ScoutCard scout={item} onPress={() => onSelectStaff?.(item.id, 'scout')} />
+    ),
+    [onSelectStaff]
+  );
+
+  const keyExtractorCoach = useCallback((item: Coach) => item.id, []);
+  const keyExtractorScout = useCallback((item: Scout) => item.id, []);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -266,12 +283,13 @@ export function StaffScreen({
       {activeTab === 'coaches' ? (
         <FlatList
           data={sortedCoaches}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <CoachCard coach={item} onPress={() => onSelectStaff?.(item.id, 'coach')} />
-          )}
+          keyExtractor={keyExtractorCoach}
+          renderItem={renderCoachItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           ListHeaderComponent={
             sortedVacancies.length > 0 ? (
               <View style={styles.vacanciesSection}>
@@ -298,12 +316,13 @@ export function StaffScreen({
       ) : (
         <FlatList
           data={scouts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ScoutCard scout={item} onPress={() => onSelectStaff?.(item.id, 'scout')} />
-          )}
+          keyExtractor={keyExtractorScout}
+          renderItem={renderScoutItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No scouts on staff</Text>

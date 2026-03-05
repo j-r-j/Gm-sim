@@ -3,7 +3,7 @@
  * Propose and complete trades with other teams
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ import {
   accessibility,
 } from '../styles';
 import { Player } from '../core/models/player/Player';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Avatar } from '../components/avatar';
 import { Team } from '../core/models/team/Team';
 import { DraftPick } from '../core/models/league/DraftPick';
@@ -104,28 +104,38 @@ function TeamSelector({
       .sort((a, b) => a.city.localeCompare(b.city));
   }, [teams, excludeTeamId]);
 
+  const renderTeamItem = useCallback(
+    ({ item }: { item: Team }) => (
+      <TouchableOpacity
+        style={[styles.teamChip, selectedTeamId === item.id && styles.teamChipActive]}
+        onPress={() => onSelect(item.id)}
+        accessibilityLabel={`Trade with ${item.city} ${item.nickname}`}
+        accessibilityRole="button"
+        hitSlop={accessibility.hitSlop}
+      >
+        <Text
+          style={[styles.teamChipText, selectedTeamId === item.id && styles.teamChipTextActive]}
+        >
+          {item.abbreviation}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [selectedTeamId, onSelect]
+  );
+
+  const keyExtractorTeam = useCallback((item: Team) => item.id, []);
+
   return (
     <FlatList
       horizontal
       showsHorizontalScrollIndicator={false}
       data={sortedTeams}
-      keyExtractor={(item) => item.id}
+      keyExtractor={keyExtractorTeam}
       contentContainerStyle={styles.teamSelectorContent}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={[styles.teamChip, selectedTeamId === item.id && styles.teamChipActive]}
-          onPress={() => onSelect(item.id)}
-          accessibilityLabel={`Trade with ${item.city} ${item.nickname}`}
-          accessibilityRole="button"
-          hitSlop={accessibility.hitSlop}
-        >
-          <Text
-            style={[styles.teamChipText, selectedTeamId === item.id && styles.teamChipTextActive]}
-          >
-            {item.abbreviation}
-          </Text>
-        </TouchableOpacity>
-      )}
+      renderItem={renderTeamItem}
+      removeClippedSubviews={true}
+      maxToRenderPerBatch={10}
+      windowSize={5}
     />
   );
 }

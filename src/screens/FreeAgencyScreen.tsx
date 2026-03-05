@@ -3,7 +3,7 @@
  * Browse and sign free agents
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Position } from '../core/models/player/Position';
 import { Player } from '../core/models/player/Player';
 import { Avatar } from '../components/avatar';
@@ -361,6 +361,43 @@ export function FreeAgencyScreen({
 
   const positionGroups = ['all', 'QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'CB', 'S'];
 
+  const renderFilterChip = useCallback(
+    ({ item }: { item: string }) => (
+      <TouchableOpacity
+        style={[styles.filterChip, positionFilter === item && styles.filterChipActive]}
+        onPress={() => setPositionFilter(item as PositionFilter)}
+        accessibilityLabel={`Filter by ${item === 'all' ? 'all positions' : item}`}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: positionFilter === item }}
+        hitSlop={accessibility.hitSlop}
+      >
+        <Text
+          style={[styles.filterChipText, positionFilter === item && styles.filterChipTextActive]}
+        >
+          {item === 'all' ? 'All' : item}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [positionFilter]
+  );
+
+  const renderAgentItem = useCallback(
+    ({ item }: { item: FreeAgent }) => (
+      <FreeAgentCard
+        agent={item}
+        onPress={() => {
+          setSelectedAgent(item);
+          setShowPlayerCard(true);
+        }}
+        onMakeOffer={() => {
+          setSelectedAgent(item);
+          setShowOfferModal(true);
+        }}
+      />
+    ),
+    []
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -378,25 +415,10 @@ export function FreeAgencyScreen({
           showsHorizontalScrollIndicator={false}
           data={positionGroups}
           keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.filterChip, positionFilter === item && styles.filterChipActive]}
-              onPress={() => setPositionFilter(item as PositionFilter)}
-              accessibilityLabel={`Filter by ${item === 'all' ? 'all positions' : item}`}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: positionFilter === item }}
-              hitSlop={accessibility.hitSlop}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  positionFilter === item && styles.filterChipTextActive,
-                ]}
-              >
-                {item === 'all' ? 'All' : item}
-              </Text>
-            </TouchableOpacity>
-          )}
+          renderItem={renderFilterChip}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
         />
       </View>
 
@@ -425,19 +447,10 @@ export function FreeAgencyScreen({
         data={filteredAgents}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <FreeAgentCard
-            agent={item}
-            onPress={() => {
-              setSelectedAgent(item);
-              setShowPlayerCard(true);
-            }}
-            onMakeOffer={() => {
-              setSelectedAgent(item);
-              setShowOfferModal(true);
-            }}
-          />
-        )}
+        renderItem={renderAgentItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No free agents available</Text>

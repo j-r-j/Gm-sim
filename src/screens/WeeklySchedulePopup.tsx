@@ -16,7 +16,7 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   Animated,
   Easing,
@@ -626,43 +626,25 @@ export function WeeklySchedulePopup({
 
   const userGameData = userGame ? simulatedGames.get(userGame.gameId) || userGame : null;
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={onBack}
-          style={styles.backBtn}
-          hitSlop={accessibility.hitSlop}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-        >
-          <Text style={styles.backBtnText}>←</Text>
-        </TouchableOpacity>
+  const keyExtractor = useCallback((item: WeeklyGame) => item.gameId, []);
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{weekTitle}</Text>
-          <View style={styles.progressPill}>
-            <View
-              style={[
-                styles.progressPillFill,
-                { width: `${(completedCount / totalCount) * 100}%` },
-              ]}
-            />
-            <Text style={styles.progressPillText}>
-              {completedCount}/{totalCount} Complete
-            </Text>
-          </View>
-        </View>
+  const renderItem = useCallback(
+    ({ item }: { item: WeeklyGame }) => {
+      const simulated = simulatedGames.get(item.gameId);
+      return (
+        <ScoreboardCard
+          game={simulated || item}
+          onPress={() => handleGamePress(item.gameId)}
+          isAnimating={animatingGameId === item.gameId}
+        />
+      );
+    },
+    [simulatedGames, handleGamePress, animatingGameId]
+  );
 
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+  const listHeader = useCallback(
+    () => (
+      <>
         {/* User's Game Section */}
         {!isUserOnBye && userGameData && (
           <View style={styles.section}>
@@ -735,28 +717,81 @@ export function WeeklySchedulePopup({
           </View>
         )}
 
-        {/* Other Games Scoreboard */}
+        {/* Other Games Section Label */}
         {otherGames.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>AROUND THE LEAGUE</Text>
-            <View style={styles.scoreboardGrid}>
-              {otherGames.map((game) => {
-                const simulated = simulatedGames.get(game.gameId);
-                return (
-                  <ScoreboardCard
-                    key={game.gameId}
-                    game={simulated || game}
-                    onPress={() => handleGamePress(game.gameId)}
-                    isAnimating={animatingGameId === game.gameId}
-                  />
-                );
-              })}
-            </View>
           </View>
         )}
+      </>
+    ),
+    [
+      isUserOnBye,
+      userGameData,
+      userTeamId,
+      simulatedGames,
+      userGame,
+      handleGamePress,
+      animatingGameId,
+      simPhase,
+      userGameAlreadyComplete,
+      otherGames.length,
+      handlePlayGame,
+      handleSimUserGame,
+      simulateOtherGames,
+    ]
+  );
 
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
+  const itemSeparator = useCallback(() => <View style={styles.itemSeparator} />, []);
+
+  const listFooter = useCallback(() => <View style={styles.bottomSpacer} />, []);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backBtn}
+          hitSlop={accessibility.hitSlop}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <Text style={styles.backBtnText}>←</Text>
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{weekTitle}</Text>
+          <View style={styles.progressPill}>
+            <View
+              style={[
+                styles.progressPillFill,
+                { width: `${(completedCount / totalCount) * 100}%` },
+              ]}
+            />
+            <Text style={styles.progressPillText}>
+              {completedCount}/{totalCount} Complete
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.headerRight} />
+      </View>
+
+      <FlatList
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        data={otherGames}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        ItemSeparatorComponent={itemSeparator}
+      />
 
       {/* Bottom Action */}
       {allComplete && (
@@ -1046,6 +1081,9 @@ const styles = StyleSheet.create({
   // Scoreboard Grid
   scoreboardGrid: {
     gap: spacing.sm,
+  },
+  itemSeparator: {
+    height: spacing.sm,
   },
 
   // Score Card
