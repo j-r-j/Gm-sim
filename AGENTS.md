@@ -183,3 +183,37 @@ Manual nav via `currentScreen` state in App.tsx. All bidirectional. No orphaned 
 - Path aliases: `@core/*`, `@state/*`, `@services/*`, `@ui/*`, `@types/*`
 - Commands: `npm start`, `npm test`, `npm run lint`, `npm run typecheck`
 - Boolean gate pattern for feature validation before proceeding
+
+## Cursor Cloud specific instructions
+
+### Services overview
+
+This is a fully client-side React Native/Expo app with **no backend services, databases, or external APIs**. The only service to run is the Expo/Metro dev server.
+
+### Running the app
+
+- `yarn web` starts the Expo web dev server on port 8081 (equivalent to `yarn start --web`).
+- The web target is the easiest to test in the cloud VM (no iOS/Android emulators available).
+- Game generation takes ~2-3 seconds; the "New Game" flow goes: Start → TeamSelection → StaffDecision → Dashboard.
+
+### Quality checks
+
+All standard dev commands are documented in `CLAUDE.md`. Key ones:
+
+| Check | Command |
+|---|---|
+| Lint | `yarn lint` |
+| Typecheck | `yarn typecheck` |
+| Tests | `yarn test` |
+| Format check | `yarn format:check` |
+
+### Node version
+
+The project requires Node.js 20.x (>= 20.19.4 due to `@react-native/dev-middleware` engine constraint). The `.tool-versions` file says 20.19.0 but that is slightly outdated — use `nvm use 20` to pick up the latest 20.x LTS.
+
+### Gotchas
+
+- Yarn Classic (v1) is used — do not use `yarn set version` or Yarn Berry features.
+- The full test suite (143 suites, ~4000 tests) takes ~5 minutes. Use `yarn test -- path/to/file.test.ts` for targeted runs.
+- ESLint v9 with flat config is used (`eslint.config.mjs`). A few unused-disable-directive warnings are expected and non-blocking.
+- Peer dependency warnings during `yarn install` (especially around Babel/core) are expected and harmless.
