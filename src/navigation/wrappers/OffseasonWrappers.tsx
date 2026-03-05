@@ -326,8 +326,17 @@ export function SeasonRecapScreenWrapper({
       };
     });
 
-    // Determine if team made playoffs (simplified: 10+ wins)
-    const madePlayoffs = teamRecord.wins >= 10;
+    const playoffBracket = gameState.league.playoffBracket;
+    const madePlayoffs = playoffBracket
+      ? [
+          ...playoffBracket.wildCardResults,
+          ...playoffBracket.divisionalResults,
+          ...playoffBracket.conferenceResults,
+          ...(playoffBracket.superBowl ? [playoffBracket.superBowl] : []),
+        ].some(
+          (g) => g.homeTeamId === gameState.userTeamId || g.awayTeamId === gameState.userTeamId
+        )
+      : false;
 
     recap = {
       year: gameState.league.calendar.currentYear,
