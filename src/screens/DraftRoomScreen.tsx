@@ -28,7 +28,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Position, OFFENSIVE_POSITIONS, DEFENSIVE_POSITIONS } from '../core/models/player/Position';
 import { type TradeAsset } from '../components/draft';
 import { DraftLetterGrade, WarRoomFeedEvent } from '../core/draft/DraftDayNarrator';
@@ -732,6 +732,8 @@ export function DraftRoomScreen({
     ]
   );
 
+  const keyExtractor = useCallback((item: DraftRoomProspect) => item.id, []);
+
   return (
     <SafeAreaView style={s.container}>
       {/* Header */}
@@ -887,8 +889,11 @@ export function DraftRoomScreen({
       {/* Prospect List */}
       <FlatList
         data={filteredProspects}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         renderItem={renderProspect}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         style={s.prospectList}
         contentContainerStyle={selectedProspect ? s.prospectListContentWithAction : undefined}
         ListEmptyComponent={

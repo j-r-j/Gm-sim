@@ -4,12 +4,13 @@
  * Features: search, sortable columns, enriched prospect data.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useDeferredValue, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   SafeAreaView,
   TouchableOpacity,
   TextInput,
@@ -17,7 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { GameState } from '../core/models/game/GameState';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import { WorkoutBadge } from '../components/draft/WorkoutBadge';
@@ -314,6 +315,8 @@ export function BigBoardScreen({
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedTier, setSelectedTier] = useState<DraftTier | null>(null);
   const [searchText, setSearchText] = useState('');
+  const deferredSearchText = useDeferredValue(searchText);
+  const searchInputRef = useRef<TextInput>(null);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -399,9 +402,9 @@ export function BigBoardScreen({
   const filteredProspects = useMemo(() => {
     let filtered = [...viewModel.prospects];
 
-    // Search filter
-    if (searchText.trim()) {
-      const query = searchText.trim().toLowerCase();
+    // Search filter (uses deferred value for responsiveness)
+    if (deferredSearchText.trim()) {
+      const query = deferredSearchText.trim().toLowerCase();
       filtered = filtered.filter((p) => p.prospectName.toLowerCase().includes(query));
     }
 
@@ -425,7 +428,7 @@ export function BigBoardScreen({
     return sortProspects(filtered);
   }, [
     viewModel.prospects,
-    searchText,
+    deferredSearchText,
     activeTab,
     selectedPosition,
     selectedTier,
@@ -434,6 +437,24 @@ export function BigBoardScreen({
     sortAsc,
     enrichedMap,
   ]);
+
+  // FlatList callbacks
+  const prospectKeyExtractor = useCallback((item: DraftBoardProspectView) => item.prospectId, []);
+
+  const renderProspectItem = useCallback(
+    ({ item, index }: { item: DraftBoardProspectView; index: number }) => (
+      <ProspectRow
+        prospect={item}
+        rank={index + 1}
+        showNeed={activeTab === 'needs'}
+        needLevel={positionalNeeds[item.position]}
+        enriched={getEnrichedData(item.prospectId, enrichedMap)}
+        onPress={() => handleProspectPress(item.prospectId)}
+        onToggleLock={onToggleLock ? () => onToggleLock(item.prospectId) : undefined}
+      />
+    ),
+    [activeTab, positionalNeeds, enrichedMap, onToggleLock]
+  );
 
   const tabs: { key: TabType; label: string }[] = [
     { key: 'overall', label: 'Overall' },
@@ -451,10 +472,11 @@ export function BigBoardScreen({
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={16} color={colors.textLight} style={styles.searchIcon} />
         <TextInput
+          ref={searchInputRef}
           style={styles.searchInput}
           placeholder="Search prospects..."
           placeholderTextColor={colors.textLight}
-          value={searchText}
+          defaultValue=""
           onChangeText={setSearchText}
           accessibilityLabel="Search prospects by name"
           accessibilityRole="search"
@@ -463,7 +485,10 @@ export function BigBoardScreen({
         />
         {searchText.length > 0 && (
           <TouchableOpacity
-            onPress={() => setSearchText('')}
+            onPress={() => {
+              setSearchText('');
+              searchInputRef.current?.clear();
+            }}
             accessibilityLabel="Clear search"
             accessibilityRole="button"
             hitSlop={accessibility.hitSlop}
@@ -617,9 +642,17 @@ export function BigBoardScreen({
         <Text style={[styles.columnHeaderText, styles.flagHeader]}>Info</Text>
       </View>
 
-      {/* Prospect List */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredProspects.length === 0 ? (
+      {/* Prospect List - Virtualized */}
+      <FlatList
+        data={filteredProspects}
+        keyExtractor={prospectKeyExtractor}
+        renderItem={renderProspectItem}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={15}
+        windowSize={7}
+        ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No Prospects</Text>
             <Text style={styles.emptySubtext}>
@@ -632,25 +665,9 @@ export function BigBoardScreen({
                     : 'Scout some prospects to build your board'}
             </Text>
           </View>
-        ) : (
-          <>
-            {filteredProspects.map((prospect, index) => (
-              <ProspectRow
-                key={prospect.prospectId}
-                prospect={prospect}
-                rank={index + 1}
-                showNeed={activeTab === 'needs'}
-                needLevel={positionalNeeds[prospect.position]}
-                enriched={getEnrichedData(prospect.prospectId, enrichedMap)}
-                onPress={() => handleProspectPress(prospect.prospectId)}
-                onToggleLock={onToggleLock ? () => onToggleLock(prospect.prospectId) : undefined}
-              />
-            ))}
-          </>
-        )}
-
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+        }
+        ListFooterComponent={<View style={styles.bottomPadding} />}
+      />
 
       {/* Legend */}
       <View style={styles.legend}>

@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
 import { OwnerViewModel, OwnerDemand, getSecondaryTraitDescription } from '../core/models/owner';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { PatienceViewModel } from '../core/career/PatienceMeterManager';
 
 /**

@@ -3,7 +3,7 @@
  * Modal for selecting a scout to assign for focus scouting on a prospect
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -211,6 +211,20 @@ export function AssignScoutModal({
 
   const availableCount = scouts.filter((s) => canAssignFocusPlayer(s, prospectId)).length;
 
+  const renderScoutItem = useCallback(
+    ({ item }: { item: Scout }) => (
+      <ScoutRow
+        scout={item}
+        prospectId={prospectId}
+        prospectPosition={prospectPosition}
+        onSelect={() => onAssign(item.id)}
+      />
+    ),
+    [prospectId, prospectPosition, onAssign]
+  );
+
+  const keyExtractor = useCallback((item: Scout) => item.id, []);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.container}>
@@ -246,15 +260,11 @@ export function AssignScoutModal({
         {/* Scout List */}
         <FlatList
           data={sortedScouts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ScoutRow
-              scout={item}
-              prospectId={prospectId}
-              prospectPosition={prospectPosition}
-              onSelect={() => onAssign(item.id)}
-            />
-          )}
+          keyExtractor={keyExtractor}
+          renderItem={renderScoutItem}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={

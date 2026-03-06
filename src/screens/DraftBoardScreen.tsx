@@ -8,7 +8,7 @@
  * - Skills shown as ranges in detail views
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useDeferredValue } from 'react';
 import {
   View,
   Text,
@@ -32,7 +32,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Position } from '../core/models/player/Position';
 import { SkillValue } from '../core/models/player/TechnicalSkills';
 import { PhysicalAttributes } from '../core/models/player/PhysicalAttributes';
@@ -280,6 +280,8 @@ export function DraftBoardScreen({
   onBack,
 }: DraftBoardScreenProps): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const searchInputRef = useRef<TextInput>(null);
   const [positionFilter, setPositionFilter] = useState('all');
   const [sortKey, setSortKey] = useState<SortKey>('overallRank');
   const [sortAsc, setSortAsc] = useState(true);
@@ -306,8 +308,8 @@ export function DraftBoardScreen({
   const filteredProspects = useMemo(() => {
     let result = [...prospects];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (deferredSearchQuery) {
+      const query = deferredSearchQuery.toLowerCase();
       result = result.filter(
         (p) => p.name.toLowerCase().includes(query) || p.collegeName.toLowerCase().includes(query)
       );
@@ -332,7 +334,7 @@ export function DraftBoardScreen({
     });
 
     return result;
-  }, [prospects, searchQuery, positionFilter, sortKey, sortAsc, showFlaggedOnly]);
+  }, [prospects, deferredSearchQuery, positionFilter, sortKey, sortAsc, showFlaggedOnly]);
 
   // Sync horizontal scroll across header and all rows
   const handleHeaderScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -586,16 +588,20 @@ export function DraftBoardScreen({
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={16} color={colors.textLight} style={styles.searchIcon} />
         <TextInput
+          ref={searchInputRef}
           style={styles.searchInput}
           placeholder="Search name or college..."
           placeholderTextColor={colors.textLight}
-          value={searchQuery}
+          defaultValue=""
           onChangeText={setSearchQuery}
           accessibilityLabel="Search prospects"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity
-            onPress={() => setSearchQuery('')}
+            onPress={() => {
+              setSearchQuery('');
+              searchInputRef.current?.clear();
+            }}
             accessibilityLabel="Clear search"
             accessibilityRole="button"
             hitSlop={accessibility.hitSlop}

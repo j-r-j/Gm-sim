@@ -28,7 +28,7 @@ import {
   shadows,
   accessibility,
 } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Avatar } from '../components/avatar';
 import { Position } from '../core/models/player/Position';
 import { SkillValue, SKILL_NAMES_BY_POSITION } from '../core/models/player/TechnicalSkills';
@@ -668,7 +668,7 @@ export function SinglePlayerCardScreen({
               <View style={styles.notesEditContainer}>
                 <TextInput
                   style={styles.notesInput}
-                  value={notesValue}
+                  defaultValue={notesValue}
                   onChangeText={setNotesValue}
                   placeholder="Add your notes about this prospect..."
                   placeholderTextColor={colors.textLight}
