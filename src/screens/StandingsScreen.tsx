@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Team } from '../core/models/team/Team';
 import { ScheduledGame } from '../core/season/ScheduleGenerator';
 import { calculateStandings, StandingsEntry } from '../services/StandingsService';

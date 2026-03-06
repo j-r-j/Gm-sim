@@ -28,7 +28,7 @@ import { Team, getRecordString } from '../core/models/team/Team';
 import { createPatienceViewModel, PatienceViewModel } from '../core/career/PatienceMeterManager';
 import { OffSeasonPhaseType } from '../core/offseason/OffSeasonPhaseManager';
 import { ActionPrompt } from '../components/week-flow';
-import { LoadingScreen } from '../components';
+import { LoadingScreen } from '../components/common';
 import { NextActionPrompt, getWeekLabel } from '../core/simulation/WeekFlowState';
 import { getUserTeamGame, isUserOnBye } from '../core/season/WeekSimulator';
 

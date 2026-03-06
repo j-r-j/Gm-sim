@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 
 interface HallOfFameInductee {
   name: string;
