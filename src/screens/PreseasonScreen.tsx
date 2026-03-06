@@ -22,6 +22,7 @@ import {
 export interface PreseasonScreenProps {
   gameState: GameState;
   summary: PreseasonSummary;
+  phaseLabel?: string;
   onBack: () => void;
   onPlayerSelect?: (playerId: string) => void;
 }
@@ -421,6 +422,7 @@ function InjuryCard({
  */
 export function PreseasonScreen({
   summary,
+  phaseLabel,
   onBack,
   onPlayerSelect,
 }: PreseasonScreenProps): React.JSX.Element {
@@ -447,7 +449,12 @@ export function PreseasonScreen({
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <ScreenHeader title="Preseason" onBack={onBack} testID="preseason-header" />
+      <ScreenHeader
+        title="Preseason"
+        subtitle={phaseLabel}
+        onBack={onBack}
+        testID="preseason-header"
+      />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>

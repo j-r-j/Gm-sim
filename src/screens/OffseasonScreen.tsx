@@ -59,6 +59,7 @@ interface OffseasonScreenProps {
   onTaskAction: (taskId: string, targetScreen: TaskTargetScreen) => void;
   onCompleteTask: (taskId: string) => void;
   onAdvancePhase: () => void;
+  onSimOffseason?: () => void;
   onBack: () => void;
 }
 
@@ -112,36 +113,40 @@ function TaskCard({
   validationInfo?: string;
 }): React.JSX.Element {
   const isAutoTask = task.actionType === 'auto';
+  const isCompleteOrAuto = task.isComplete || isAutoTask;
   const buttonText = getTaskButtonText(task);
   const buttonStyle = getTaskButtonStyle(task);
 
   return (
-    <View style={[styles.taskCard, task.isComplete && styles.taskCardComplete]}>
+    <View style={[styles.taskCard, isCompleteOrAuto && styles.taskCardComplete]}>
       <View style={styles.taskContent}>
         <View style={styles.taskHeader}>
-          <Text style={[styles.taskName, task.isComplete && styles.taskNameComplete]}>
+          <Text style={[styles.taskName, isCompleteOrAuto && styles.taskNameComplete]}>
             {task.name}
           </Text>
-          {task.isRequired && !task.isComplete && (
+          {task.isRequired && !isCompleteOrAuto && (
             <View style={styles.requiredBadge}>
               <Text style={styles.requiredText}>Required</Text>
             </View>
           )}
         </View>
         <Text style={styles.taskDescription}>{task.description}</Text>
-        {validationInfo && !task.isComplete && (
+        {validationInfo && !isCompleteOrAuto && (
           <Text style={styles.validationInfo}>{validationInfo}</Text>
         )}
       </View>
-      {!task.isComplete ? (
+      {isAutoTask ? (
+        <View style={styles.checkmark} accessibilityLabel={`${task.name} completed automatically`}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          <Text style={styles.checkmarkText}>Auto</Text>
+        </View>
+      ) : !task.isComplete ? (
         <TouchableOpacity
           style={buttonStyle}
           onPress={onAction}
-          disabled={isAutoTask}
           accessibilityLabel={`${task.name}. ${buttonText}`}
           accessibilityRole="button"
           accessibilityHint={task.description}
-          accessibilityState={{ disabled: isAutoTask }}
           hitSlop={accessibility.hitSlop}
         >
           <Text style={styles.completeButtonText}>{buttonText}</Text>
@@ -165,6 +170,7 @@ export function OffseasonScreen({
   onTaskAction,
   onCompleteTask,
   onAdvancePhase,
+  onSimOffseason,
   onBack,
 }: OffseasonScreenProps): React.JSX.Element {
   const progress = useMemo(() => getProgress(offseasonState), [offseasonState]);
@@ -248,7 +254,6 @@ export function OffseasonScreen({
             {phaseName}
           </Text>
           <Text style={styles.phaseDescription}>{phaseDescription}</Text>
-          <Text style={styles.phaseDay}>Day {offseasonState.phaseDay}</Text>
         </View>
 
         {/* Required Tasks */}
@@ -329,15 +334,32 @@ export function OffseasonScreen({
             optionalTasks.some((t) => !t.isComplete) && (
               <Text style={styles.optionalHint}>Optional tasks can be completed or skipped</Text>
             )}
+
+          {/* Sim Remaining Offseason */}
+          {onSimOffseason && !progress.isComplete && (
+            <TouchableOpacity
+              style={styles.simOffseasonButton}
+              onPress={onSimOffseason}
+              accessibilityLabel="Simulate remaining offseason"
+              accessibilityRole="button"
+              accessibilityHint="Skips all remaining offseason phases and starts the new season"
+              hitSlop={accessibility.hitSlop}
+            >
+              <Ionicons name="play-forward" size={16} color={colors.textSecondary} />
+              <Text style={styles.simOffseasonText}>Sim Remaining Offseason</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Recent Events */}
-        {offseasonState.events.length > 0 && (
+        {/* Recent Events (filtered to current phase) */}
+        {offseasonState.events.filter((e) => e.phase === offseasonState.currentPhase).length >
+          0 && (
           <View style={styles.eventsSection}>
             <Text style={styles.sectionTitle} accessibilityRole="header">
               Recent Activity
             </Text>
             {offseasonState.events
+              .filter((e) => e.phase === offseasonState.currentPhase)
               .slice(-5)
               .reverse()
               .map((event) => (
@@ -524,12 +546,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
-  phaseDay: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-  },
+  // phaseDay style removed — phaseDay is not displayed
   phaseActionButton: {
     marginHorizontal: spacing.lg,
     marginVertical: spacing.md,
@@ -689,6 +706,19 @@ const styles = StyleSheet.create({
     color: colors.info,
     marginTop: spacing.sm,
     fontStyle: 'italic',
+  },
+  simOffseasonButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.lg,
+    gap: spacing.xs,
+  },
+  simOffseasonText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
   },
   nextPhasePreview: {
     backgroundColor: colors.surface,
