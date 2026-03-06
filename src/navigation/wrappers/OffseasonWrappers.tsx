@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
+import { CommonActions } from '@react-navigation/native';
 
 import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
@@ -201,7 +202,13 @@ export function OffseasonScreenWrapper({
       setGameState(transitionedState);
       await saveGameState(transitionedState);
       showAlert('Offseason Complete', 'The new season begins!');
-      navigation.goBack();
+      // Reset navigation stack to Dashboard so we don't go back to SeasonOver/Championship
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Dashboard' }],
+        })
+      );
     } else {
       // Use orchestrator to enter the new phase and auto-generate data
       const phaseResult = enterPhase(
@@ -240,7 +247,12 @@ export function OffseasonScreenWrapper({
         setGameState(transitionedState);
         await saveGameState(transitionedState);
         showAlert('Offseason Complete', 'The new season begins!');
-        navigation.goBack();
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Dashboard' }],
+          })
+        );
       }
     );
   };
@@ -364,8 +376,17 @@ export function SeasonRecapScreenWrapper({
       };
     });
 
-    // Determine if team made playoffs (simplified: 10+ wins)
-    const madePlayoffs = teamRecord.wins >= 10;
+    const playoffBracket = gameState.league.playoffBracket;
+    const madePlayoffs = playoffBracket
+      ? [
+          ...playoffBracket.wildCardResults,
+          ...playoffBracket.divisionalResults,
+          ...playoffBracket.conferenceResults,
+          ...(playoffBracket.superBowl ? [playoffBracket.superBowl] : []),
+        ].some(
+          (g) => g.homeTeamId === gameState.userTeamId || g.awayTeamId === gameState.userTeamId
+        )
+      : false;
 
     recap = {
       year: gameState.league.calendar.currentYear,

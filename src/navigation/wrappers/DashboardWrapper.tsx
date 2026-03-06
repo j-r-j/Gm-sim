@@ -900,8 +900,30 @@ export function DashboardScreenWrapper({
       setGameState(currentState);
       await saveGameState(currentState);
 
-      // Auto-navigate to offseason
-      navigation.navigate('Offseason');
+      // Check playoff results for appropriate navigation
+      const userTeamId = currentState.userTeamId;
+      const finalPlayoffs = currentState.league.schedule?.playoffs;
+
+      if (finalPlayoffs?.superBowlChampion === userTeamId) {
+        // User won the Super Bowl!
+        navigation.navigate('ChampionshipCelebration');
+      } else {
+        // Check if user was in playoffs at all
+        const userInPlayoffs =
+          finalPlayoffs &&
+          [
+            ...finalPlayoffs.wildCardRound,
+            ...finalPlayoffs.divisionalRound,
+            ...finalPlayoffs.conferenceChampionships,
+            ...(finalPlayoffs.superBowl ? [finalPlayoffs.superBowl] : []),
+          ].some((g) => g.homeTeamId === userTeamId || g.awayTeamId === userTeamId);
+
+        if (userInPlayoffs) {
+          navigation.navigate('SeasonOver');
+        } else {
+          navigation.navigate('SeasonOver');
+        }
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error simulating season:', error);
@@ -1128,7 +1150,7 @@ export function DashboardScreenWrapper({
         case 'draft':
           if (
             gameState?.league.calendar.currentPhase === 'offseason' &&
-            gameState?.league.calendar.offseasonPhase === 7
+            gameState?.offseasonState?.currentPhase === 'draft'
           ) {
             navigation.navigate('DraftRoom');
           } else {
