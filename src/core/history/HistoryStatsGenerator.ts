@@ -185,7 +185,10 @@ export function generateSeasonStats(
   // Defensive stats (DE, DT, OLB, ILB, CB, FS, SS)
   if (isDefensivePosition(pos)) {
     if (starter) {
-      log.tackles = Math.max(1, Math.round(gamesPlayed * getTacklesPerGame(pos, skill) + randomInt(-5, 5)));
+      log.tackles = Math.max(
+        1,
+        Math.round(gamesPlayed * getTacklesPerGame(pos, skill) + randomInt(-5, 5))
+      );
 
       if (pos === Position.DE || pos === Position.OLB || pos === Position.DT) {
         log.sacks = Math.max(
