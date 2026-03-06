@@ -51,7 +51,7 @@ jobs:
   build-android:
     needs: test
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android' }}
+    if: ${{ github.event_name == 'push' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android' }}
 
     steps:
       - name: Checkout repository
