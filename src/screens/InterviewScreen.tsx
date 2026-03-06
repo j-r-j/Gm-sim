@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import {
   InterviewRecord,
   OwnerPreview,

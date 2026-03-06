@@ -310,6 +310,7 @@ export function FreeAgencyScreenWrapper({
 
 export function RFAScreenWrapper({ navigation }: ScreenProps<'RFA'>): React.JSX.Element {
   const { gameState } = useGame();
+  const [activeTenders, setActiveTenders] = React.useState<TenderOffer[]>([]);
 
   if (!gameState) {
     return <LoadingFallback message="Loading RFA Management..." />;
@@ -352,17 +353,22 @@ export function RFAScreenWrapper({ navigation }: ScreenProps<'RFA'>): React.JSX.
       };
     });
 
-  // Mock active tenders (none submitted yet)
-  const activeTenders: TenderOffer[] = [];
+  // Update eligibleRFAs status based on active tenders
+  const updatedRFAs = eligibleRFAs.map((rfa) => {
+    const tender = activeTenders.find((t) => t.playerId === rfa.playerId);
+    if (tender) {
+      return { ...rfa, currentStatus: 'tendered' as const };
+    }
+    return rfa;
+  });
 
-  // Mock offer sheets
   const offerSheets: OfferSheet[] = [];
   const incomingOffers: OfferSheet[] = [];
 
   return (
     <RFAScreen
       gameState={gameState}
-      eligibleRFAs={eligibleRFAs}
+      eligibleRFAs={updatedRFAs}
       activeTenders={activeTenders}
       offerSheets={offerSheets}
       incomingOffers={incomingOffers}
@@ -371,13 +377,43 @@ export function RFAScreenWrapper({ navigation }: ScreenProps<'RFA'>): React.JSX.
       onPlayerSelect={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
       onSubmitTender={(playerId, level) => {
         const player = gameState.players[playerId];
+        if (!player) return;
+
+        const tenderSalaries: Record<string, number> = {
+          original_round: 2500000,
+          first_round: 5500000,
+          second_round: 4000000,
+        };
+        const salaryAmount = tenderSalaries[level] || 2500000;
+
+        const draftCompMap: Record<string, string | null> = {
+          original_round: 'original draft round',
+          first_round: '1st round',
+          second_round: '2nd round',
+        };
+
+        const newTender: TenderOffer = {
+          id: `tender-${playerId}-${gameState.league.calendar.currentYear}`,
+          playerId,
+          playerName: `${player.firstName} ${player.lastName}`,
+          teamId: gameState.userTeamId,
+          level: level as TenderOffer['level'],
+          salaryAmount,
+          draftCompensation: draftCompMap[level] || null,
+          year: gameState.league.calendar.currentYear,
+          status: 'active',
+        };
+
+        setActiveTenders((prev) => [...prev.filter((t) => t.playerId !== playerId), newTender]);
+
         showAlert(
           'Tender Submitted',
-          `A ${level.replace('_', ' ')} tender has been placed on ${player?.firstName} ${player?.lastName}.`
+          `A ${level.replace(/_/g, ' ')} tender has been placed on ${player.firstName} ${player.lastName}.`
         );
       }}
       onWithdrawTender={(tenderId) => {
-        showAlert('Tender Withdrawn', `Tender ${tenderId} has been withdrawn.`);
+        setActiveTenders((prev) => prev.filter((t) => t.id !== tenderId));
+        showAlert('Tender Withdrawn', 'The tender has been withdrawn.');
       }}
       onMatchOffer={(offerSheetId) => {
         showAlert('Offer Matched', `You have matched offer sheet ${offerSheetId}.`);
@@ -401,64 +437,116 @@ export function CompPickTrackerScreenWrapper({
   const currentYear = gameState.league.calendar.currentYear;
   const userTeamId = gameState.userTeamId;
 
-  // Generate mock losses (players who left in free agency)
-  const mockLosses: FADeparture[] = [
-    {
-      id: 'dep-1',
-      playerId: 'lost-player-1',
-      playerName: 'Marcus Williams',
-      position: Position.FS,
-      previousTeamId: userTeamId,
-      newTeamId: 'team-002',
-      contractAAV: 15000,
-      contractYears: 4,
-      contractTotal: 60000,
-      age: 27,
-      overallRating: 82,
-      year: currentYear,
-      qualifyingContract: true,
-    },
-    {
-      id: 'dep-2',
-      playerId: 'lost-player-2',
-      playerName: 'Derek Thompson',
-      position: Position.DE,
-      previousTeamId: userTeamId,
-      newTeamId: 'team-005',
-      contractAAV: 9500,
-      contractYears: 3,
-      contractTotal: 28500,
-      age: 29,
-      overallRating: 76,
-      year: currentYear,
-      qualifyingContract: true,
-    },
-  ];
+  // Build real FA departures from game state
+  const losses: FADeparture[] = [];
+  const gains: FAAcquisition[] = [];
 
-  // Generate mock gains (players signed in free agency)
-  const mockGains: FAAcquisition[] = [
-    {
-      id: 'acq-1',
-      playerId: 'signed-player-1',
-      playerName: 'James Carter',
-      position: Position.CB,
-      newTeamId: userTeamId,
-      previousTeamId: 'team-010',
-      contractAAV: 7000,
-      contractYears: 2,
-      contractTotal: 14000,
-      age: 28,
-      overallRating: 73,
+  // Check offseason data for contract decisions (cuts from user's team)
+  const contractDecisions = gameState.offseasonData?.contractDecisions || [];
+  for (const decision of contractDecisions) {
+    if (decision.teamId === userTeamId && decision.type === 'cut') {
+      const player = gameState.players[decision.playerId];
+      const skillEntries = player ? Object.values(player.skills) : [];
+      const overallRating =
+        skillEntries.length > 0
+          ? Math.round(
+              skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+                skillEntries.length
+            )
+          : 65;
+
+      losses.push({
+        id: `dep-${decision.playerId}`,
+        playerId: decision.playerId,
+        playerName: decision.playerName,
+        position: (player?.position || 'QB') as Position,
+        previousTeamId: userTeamId,
+        newTeamId: '',
+        contractAAV: decision.details.previousSalary || 5000,
+        contractYears: 1,
+        contractTotal: decision.details.previousSalary || 5000,
+        age: player?.age || 25,
+        overallRating,
+        year: currentYear,
+        qualifyingContract: (decision.details.previousSalary || 0) >= 2000,
+      });
+    }
+  }
+
+  // Also check for expired contracts — players no longer on the roster
+  // whose contracts expired (removed by SeasonTransitionService)
+  const expiredContracts = Object.values(gameState.contracts).filter(
+    (c) => c.status === 'expired' && c.teamId === userTeamId
+  );
+  for (const contract of expiredContracts) {
+    if (losses.some((l) => l.playerId === contract.playerId)) continue;
+
+    const player = gameState.players[contract.playerId];
+    if (!player) continue;
+
+    const skillEntries = Object.values(player.skills);
+    const overallRating =
+      skillEntries.length > 0
+        ? Math.round(
+            skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+              skillEntries.length
+          )
+        : 65;
+
+    losses.push({
+      id: `dep-exp-${contract.playerId}`,
+      playerId: contract.playerId,
+      playerName: contract.playerName,
+      position: player.position as Position,
+      previousTeamId: userTeamId,
+      newTeamId: '',
+      contractAAV: contract.averageAnnualValue || 5000,
+      contractYears: contract.totalYears,
+      contractTotal: contract.totalValue || 5000,
+      age: player.age,
+      overallRating,
       year: currentYear,
-      qualifyingContract: true,
-    },
-  ];
+      qualifyingContract: (contract.averageAnnualValue || 0) >= 2000,
+    });
+  }
+
+  // Check offseason data for FA signings by user team
+  const faSignings = gameState.offseasonData?.freeAgentSignings || [];
+  for (const signing of faSignings) {
+    if (signing.teamId === userTeamId) {
+      const player = gameState.players[signing.playerId];
+      const skillEntries = player ? Object.values(player.skills) : [];
+      const overallRating =
+        skillEntries.length > 0
+          ? Math.round(
+              skillEntries.reduce((acc, s) => acc + (s.perceivedMin + s.perceivedMax) / 2, 0) /
+                skillEntries.length
+            )
+          : 65;
+
+      gains.push({
+        id: `acq-${signing.playerId}`,
+        playerId: signing.playerId,
+        playerName: signing.playerName,
+        position: (player?.position || signing.position) as Position,
+        newTeamId: userTeamId,
+        previousTeamId: signing.previousTeamId || '',
+        contractAAV: Math.round(signing.totalValue / Math.max(1, signing.contractYears)),
+        contractYears: signing.contractYears,
+        contractTotal: signing.totalValue,
+        age: player?.age || 25,
+        overallRating,
+        year: currentYear,
+        qualifyingContract: signing.totalValue >= 2000,
+      });
+    }
+  }
 
   // Calculate entitlements and picks
-  const entitlements: CompPickEntitlement[] = mockLosses.map((loss) => {
+  const entitlements: CompPickEntitlement[] = losses.map((loss) => {
     const netValue = calculateCompValue(loss.contractAAV, loss.age, loss.overallRating);
     const projectedRound = determineCompPickRound(netValue);
-    const matchedGain = mockGains.find(
+    const matchedGain = gains.find(
       (g) => g.qualifyingContract && g.contractAAV >= loss.contractAAV * 0.8
     );
 
@@ -496,13 +584,13 @@ export function CompPickTrackerScreenWrapper({
   const summary: TeamCompPickSummary = {
     teamId: userTeamId,
     year: currentYear,
-    totalLosses: mockLosses.length,
-    totalGains: mockGains.length,
+    totalLosses: losses.length,
+    totalGains: gains.length,
     netLossValue:
-      mockLosses.reduce((acc, l) => acc + l.contractAAV, 0) -
-      mockGains.reduce((acc, g) => acc + g.contractAAV, 0),
-    qualifyingLosses: mockLosses.filter((l) => l.qualifyingContract),
-    qualifyingGains: mockGains.filter((g) => g.qualifyingContract),
+      losses.reduce((acc, l) => acc + l.contractAAV, 0) -
+      gains.reduce((acc, g) => acc + g.contractAAV, 0),
+    qualifyingLosses: losses.filter((l) => l.qualifyingContract),
+    qualifyingGains: gains.filter((g) => g.qualifyingContract),
     entitlements,
     awardedPicks,
   };

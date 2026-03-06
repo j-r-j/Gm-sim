@@ -12,7 +12,8 @@ import {
   TaskTargetScreen,
   getCurrentPhaseTasks,
 } from '../../core/offseason/OffSeasonPhaseManager';
-import { advanceWeek } from '../../core/season/WeekSimulator';
+import { simulateWeek, advanceWeek } from '../../core/season/WeekSimulator';
+import { updateSeasonStatsFromGame } from '../../core/game/SeasonStatsAggregator';
 import {
   generatePlayoffBracket,
   simulatePlayoffRound,
@@ -61,18 +62,91 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
   let newPhase = calendar.currentPhase;
   let updatedSchedule = schedule;
 
+  // Simulate any remaining incomplete games for the current week
+  if (calendar.currentPhase === 'regularSeason' && schedule?.regularSeason) {
+    const weekGames = schedule.regularSeason.filter((g) => g.week === calendar.currentWeek);
+    const incompleteGames = weekGames.filter((g) => !g.isComplete);
+
+    if (incompleteGames.length > 0) {
+      const weekResults = simulateWeek(
+        calendar.currentWeek,
+        schedule,
+        state,
+        state.userTeamId,
+        true
+      );
+
+      const updatedRegSeason = [...(updatedSchedule?.regularSeason || schedule.regularSeason)];
+      for (const simResult of weekResults.games) {
+        const gameIndex = updatedRegSeason.findIndex((g) => g.gameId === simResult.game.gameId);
+        if (gameIndex >= 0) {
+          updatedRegSeason[gameIndex] = simResult.game;
+        }
+      }
+      updatedSchedule = { ...schedule, regularSeason: updatedRegSeason };
+
+      const updatedTeams = { ...state.teams };
+      for (const simResult of weekResults.games) {
+        const { result, game } = simResult;
+        const homeTeam = updatedTeams[game.homeTeamId];
+        const awayTeam = updatedTeams[game.awayTeamId];
+        if (homeTeam && awayTeam) {
+          const homeWon = result.homeScore > result.awayScore;
+          const awayWon = result.awayScore > result.homeScore;
+          const tie = result.homeScore === result.awayScore;
+          updatedTeams[game.homeTeamId] = {
+            ...homeTeam,
+            currentRecord: {
+              ...homeTeam.currentRecord,
+              wins: homeTeam.currentRecord.wins + (homeWon ? 1 : 0),
+              losses: homeTeam.currentRecord.losses + (awayWon ? 1 : 0),
+              ties: homeTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: homeTeam.currentRecord.pointsFor + result.homeScore,
+              pointsAgainst: homeTeam.currentRecord.pointsAgainst + result.awayScore,
+            },
+          };
+          updatedTeams[game.awayTeamId] = {
+            ...awayTeam,
+            currentRecord: {
+              ...awayTeam.currentRecord,
+              wins: awayTeam.currentRecord.wins + (awayWon ? 1 : 0),
+              losses: awayTeam.currentRecord.losses + (homeWon ? 1 : 0),
+              ties: awayTeam.currentRecord.ties + (tie ? 1 : 0),
+              pointsFor: awayTeam.currentRecord.pointsFor + result.awayScore,
+              pointsAgainst: awayTeam.currentRecord.pointsAgainst + result.homeScore,
+            },
+          };
+        }
+      }
+
+      let updatedSeasonStats = state.seasonStats || {};
+      for (const simResult of weekResults.games) {
+        updatedSeasonStats = updateSeasonStatsFromGame(updatedSeasonStats, simResult.result);
+      }
+
+      state = {
+        ...state,
+        teams: updatedTeams,
+        league: { ...state.league, schedule: updatedSchedule },
+        seasonStats: updatedSeasonStats,
+      };
+    }
+  }
+
   // Handle regular season -> playoffs transition
   if (calendar.currentPhase === 'regularSeason' && newWeek > 18) {
     newWeek = 19;
     newPhase = 'playoffs';
 
     // Generate playoff bracket from completed regular-season results
-    if (schedule?.regularSeason) {
-      const completedGames = schedule.regularSeason.filter((g) => g.isComplete);
+    const scheduleBase = updatedSchedule || schedule;
+    const regSeason = scheduleBase?.regularSeason;
+    if (scheduleBase && regSeason) {
+      const completedGames = regSeason.filter((g) => g.isComplete);
       const standings = calculateDetailedStandings(completedGames, Object.values(state.teams));
       const playoffBracket = generatePlayoffBracket(standings);
       updatedSchedule = {
-        ...schedule,
+        ...scheduleBase,
         playoffs: playoffBracket,
       };
     }
@@ -322,6 +396,25 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
     updatedWeeklyAwards = processWeeklyAwards(intermediateState);
   }
 
+  // 6b. Update persistent standings
+  let updatedStandings = state.league.standings;
+  const standingsRegSeason = updatedSchedule?.regularSeason || schedule?.regularSeason;
+  if (standingsRegSeason) {
+    const completedGames = standingsRegSeason.filter((g) => g.isComplete);
+    const teamsArray = Object.values(updatedTeams);
+    const detailedStandings = calculateDetailedStandings(completedGames, teamsArray);
+
+    updatedStandings = {
+      afc: { north: [], south: [], east: [], west: [] },
+      nfc: { north: [], south: [], east: [], west: [] },
+    };
+    for (const conf of ['afc', 'nfc'] as const) {
+      for (const div of ['north', 'south', 'east', 'west'] as const) {
+        updatedStandings[conf][div] = detailedStandings[conf][div].map((s) => s.teamId);
+      }
+    }
+  }
+
   // 7. Build final state with advanced calendar
   const offseasonPhase = newPhase === 'offseason' ? 1 : calendar.offseasonPhase;
   state = {
@@ -335,6 +428,7 @@ export function processWeekEnd(gameState: GameState): ProcessWeekEndResult {
         offseasonPhase,
       },
       schedule: updatedSchedule,
+      standings: updatedStandings,
     },
     teams: updatedTeams,
     players: updatedPlayers,

@@ -3,10 +3,10 @@
  * Displays salary cap and financial information using real contract data
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, accessibility } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Team } from '../core/models/team/Team';
 import { Player } from '../core/models/player/Player';
 import { PlayerContract, getCapHitForYear, calculateDeadMoney } from '../core/contracts';
@@ -246,6 +246,15 @@ export function FinancesScreen({
       .sort((a, b) => b.amount - a.amount);
   }, [financials.contracts]);
 
+  const renderContractItem = useCallback(
+    ({ item }: { item: ContractSummary }) => (
+      <ContractRow contract={item} onPress={() => onSelectPlayer?.(item.playerId)} />
+    ),
+    [onSelectPlayer]
+  );
+
+  const keyExtractorContract = useCallback((item: ContractSummary) => item.playerId, []);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -316,12 +325,13 @@ export function FinancesScreen({
           </>
         }
         data={financials.contracts}
-        keyExtractor={(item) => item.playerId}
-        renderItem={({ item }) => (
-          <ContractRow contract={item} onPress={() => onSelectPlayer?.(item.playerId)} />
-        )}
+        keyExtractor={keyExtractorContract}
+        renderItem={renderContractItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
       />
     </SafeAreaView>
   );

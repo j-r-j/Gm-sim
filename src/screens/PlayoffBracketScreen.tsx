@@ -4,9 +4,9 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, borderRadius, shadows } from '../styles';
-import { ScreenHeader } from '../components';
+import { ScreenHeader } from '../components/common';
 import { Team } from '../core/models/team/Team';
 
 /**
@@ -56,6 +56,12 @@ export interface PlayoffBracketScreenProps {
   championId: string | null;
   /** Callback to go back */
   onBack: () => void;
+  /** Navigate to play user's playoff game */
+  onPlayGame?: () => void;
+  /** Simulate remaining non-user games in current round */
+  onSimRound?: () => void;
+  /** Advance to next round after all games complete */
+  onAdvanceRound?: () => void;
 }
 
 /**
@@ -288,12 +294,36 @@ export function PlayoffBracketScreen({
   currentRound,
   championId,
   onBack,
+  onPlayGame,
+  onSimRound,
+  onAdvanceRound,
 }: PlayoffBracketScreenProps): React.JSX.Element {
   const superBowlMatchup = useMemo(() => {
     return matchups.find((m) => m.round === 'superBowl');
   }, [matchups]);
 
   const championTeam = championId ? teams[championId] : null;
+
+  const currentRoundMatchups = useMemo(() => {
+    if (currentRound === 'complete') return [];
+    return matchups.filter((m) => m.round === currentRound);
+  }, [matchups, currentRound]);
+
+  const userHasIncompleteGame = useMemo(() => {
+    return currentRoundMatchups.some(
+      (m) => !m.isComplete && (m.homeTeamId === userTeamId || m.awayTeamId === userTeamId)
+    );
+  }, [currentRoundMatchups, userTeamId]);
+
+  const hasIncompleteNonUserGames = useMemo(() => {
+    return currentRoundMatchups.some(
+      (m) => !m.isComplete && m.homeTeamId !== userTeamId && m.awayTeamId !== userTeamId
+    );
+  }, [currentRoundMatchups, userTeamId]);
+
+  const allRoundGamesComplete = useMemo(() => {
+    return currentRoundMatchups.length > 0 && currentRoundMatchups.every((m) => m.isComplete);
+  }, [currentRoundMatchups]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -359,11 +389,62 @@ export function PlayoffBracketScreen({
         </View>
 
         {/* Season Complete Banner */}
-        {currentRound === 'complete' && (
+        {currentRound === 'complete' && !championId && (
           <View style={styles.completeContainer}>
             <Text style={styles.completeText}>Season Complete</Text>
           </View>
         )}
+
+        {/* Action Buttons */}
+        <View style={styles.actionArea}>
+          {userHasIncompleteGame && onPlayGame && (
+            <TouchableOpacity
+              style={styles.playGameButton}
+              onPress={onPlayGame}
+              accessibilityLabel="Play your playoff game"
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={styles.playGameButtonText}>Play Your Game</Text>
+            </TouchableOpacity>
+          )}
+
+          {hasIncompleteNonUserGames && !userHasIncompleteGame && onSimRound && (
+            <TouchableOpacity
+              style={styles.simRoundButton}
+              onPress={onSimRound}
+              accessibilityLabel="Simulate remaining games in this round"
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={styles.simRoundButtonText}>Sim Remaining Games</Text>
+            </TouchableOpacity>
+          )}
+
+          {allRoundGamesComplete && !championId && onAdvanceRound && (
+            <TouchableOpacity
+              style={styles.advanceButton}
+              onPress={onAdvanceRound}
+              accessibilityLabel="Advance to next round"
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={styles.advanceButtonText}>Advance to Next Round</Text>
+            </TouchableOpacity>
+          )}
+
+          {championId && onAdvanceRound && (
+            <TouchableOpacity
+              style={styles.advanceButton}
+              onPress={onAdvanceRound}
+              accessibilityLabel="Continue to offseason"
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={styles.advanceButtonText}>Continue to Offseason</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -654,6 +735,61 @@ const styles = StyleSheet.create({
   },
   seedTeamUser: {
     color: colors.secondary,
+    fontWeight: fontWeight.bold,
+  },
+  // Action area
+  actionArea: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  playGameButton: {
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+    minWidth: 220,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.md,
+  },
+  playGameButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+  },
+  simRoundButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+    minWidth: 220,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.md,
+  },
+  simRoundButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+  },
+  advanceButton: {
+    backgroundColor: colors.success,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+    minWidth: 220,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.md,
+  },
+  advanceButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
   },
   // Final score bar for completed matchups

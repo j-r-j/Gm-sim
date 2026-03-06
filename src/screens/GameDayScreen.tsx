@@ -29,7 +29,7 @@ import {
   FieldVisualization,
   type PlayItem,
 } from '../components/gamecast';
-import { LoadingScreen } from '../components';
+import { LoadingScreen } from '../components/common';
 import {
   colors,
   spacing,
