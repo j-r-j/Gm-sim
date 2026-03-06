@@ -6,7 +6,6 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { CommonActions } from '@react-navigation/native';
 
 import { showAlert, showConfirm } from '@utils/alert';
 import { useGame } from '../GameContext';
