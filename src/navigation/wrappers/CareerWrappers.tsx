@@ -570,17 +570,17 @@ export function ChampionshipCelebrationScreenWrapper({
       const bSkills = Object.values(b.skills || {});
       const aAvg =
         aSkills.length > 0
-          ? aSkills.reduce(
-              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
-              0
-            ) / aSkills.length
+          ? aSkills.reduce((sum: number, s: unknown) => {
+              const skill = s as { perceivedMin?: number; perceivedMax?: number };
+              return sum + ((skill.perceivedMin ?? 0) + (skill.perceivedMax ?? 0)) / 2;
+            }, 0) / aSkills.length
           : 0;
       const bAvg =
         bSkills.length > 0
-          ? bSkills.reduce(
-              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
-              0
-            ) / bSkills.length
+          ? bSkills.reduce((sum: number, s: unknown) => {
+              const skill = s as { perceivedMin?: number; perceivedMax?: number };
+              return sum + ((skill.perceivedMin ?? 0) + (skill.perceivedMax ?? 0)) / 2;
+            }, 0) / bSkills.length
           : 0;
       return bAvg - aAvg;
     });
@@ -723,17 +723,17 @@ export function SeasonOverScreenWrapper({
       const bSkills = Object.values(b.skills || {});
       const aAvg =
         aSkills.length > 0
-          ? aSkills.reduce(
-              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
-              0
-            ) / aSkills.length
+          ? aSkills.reduce((sum: number, s: unknown) => {
+              const skill = s as { perceivedMin?: number; perceivedMax?: number };
+              return sum + ((skill.perceivedMin ?? 0) + (skill.perceivedMax ?? 0)) / 2;
+            }, 0) / aSkills.length
           : 0;
       const bAvg =
         bSkills.length > 0
-          ? bSkills.reduce(
-              (sum: number, s: unknown) => sum + ((s as { trueValue?: number })?.trueValue || 0),
-              0
-            ) / bSkills.length
+          ? bSkills.reduce((sum: number, s: unknown) => {
+              const skill = s as { perceivedMin?: number; perceivedMax?: number };
+              return sum + ((skill.perceivedMin ?? 0) + (skill.perceivedMax ?? 0)) / 2;
+            }, 0) / bSkills.length
           : 0;
       return bAvg - aAvg;
     })

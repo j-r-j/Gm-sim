@@ -941,10 +941,13 @@ export function WaiverWireScreenWrapper({
       const skills = Object.values(p.skills || {});
       const skillValues = skills
         .filter(
-          (s: unknown): s is { trueValue: number } =>
-            s != null && typeof s === 'object' && 'trueValue' in (s as Record<string, unknown>)
+          (s: unknown): s is { perceivedMin: number; perceivedMax: number } =>
+            s != null &&
+            typeof s === 'object' &&
+            'perceivedMin' in (s as Record<string, unknown>) &&
+            'perceivedMax' in (s as Record<string, unknown>)
         )
-        .map((s) => s.trueValue);
+        .map((s) => (s.perceivedMin + s.perceivedMax) / 2);
       const rating =
         skillValues.length > 0
           ? Math.round(skillValues.reduce((a: number, b: number) => a + b, 0) / skillValues.length)
@@ -966,10 +969,13 @@ export function WaiverWireScreenWrapper({
       const skills = Object.values(p.skills || {});
       const skillValues = skills
         .filter(
-          (s: unknown): s is { trueValue: number } =>
-            s != null && typeof s === 'object' && 'trueValue' in (s as Record<string, unknown>)
+          (s: unknown): s is { perceivedMin: number; perceivedMax: number } =>
+            s != null &&
+            typeof s === 'object' &&
+            'perceivedMin' in (s as Record<string, unknown>) &&
+            'perceivedMax' in (s as Record<string, unknown>)
         )
-        .map((s) => s.trueValue);
+        .map((s) => (s.perceivedMin + s.perceivedMax) / 2);
       const rating =
         skillValues.length > 0
           ? Math.round(skillValues.reduce((a: number, b: number) => a + b, 0) / skillValues.length)

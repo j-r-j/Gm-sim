@@ -10,7 +10,7 @@ import React from 'react';
 import { useGame } from '../GameContext';
 import { showAlert } from '@utils/alert';
 import { ScreenProps } from '../types';
-import { LoadingFallback } from './shared';
+import { processWeekEnd, LoadingFallback } from './shared';
 import { ScheduleScreen } from '../../screens/ScheduleScreen';
 import { StandingsScreen } from '../../screens/StandingsScreen';
 import { NewsScreen } from '../../screens/NewsScreen';
@@ -34,7 +34,12 @@ import { getUserTeamGame } from '../../core/season/WeekSimulator';
 import { Rumor } from '../../core/news/RumorMill';
 import { generateWeeklyDigest, WeeklyDigest } from '../../core/news/WeeklyDigest';
 import { NewsItem } from '../../core/news/NewsGenerators';
-import { getCurrentPlayoffRound } from '../../core/season/PlayoffGenerator';
+import {
+  getCurrentPlayoffRound,
+  simulatePlayoffRound,
+  advancePlayoffRound,
+  PlayoffSchedule,
+} from '../../core/season/PlayoffGenerator';
 import { calculateStandings as calculateDetailedStandings } from '../../core/season/StandingsCalculator';
 
 // ============================================
@@ -239,10 +244,33 @@ export function GamecastScreenWrapper({ navigation }: ScreenProps<'Gamecast'>): 
 // PLAYOFF BRACKET SCREEN
 // ============================================
 
+function toSeedMap(source: unknown): Map<number, string> {
+  if (source instanceof Map) return source;
+  if (source && typeof source === 'object') {
+    return new Map(
+      Object.entries(source as Record<string, unknown>)
+        .map(([seed, teamId]) => [Number(seed), teamId] as const)
+        .filter(
+          (entry): entry is [number, string] =>
+            Number.isFinite(entry[0]) && typeof entry[1] === 'string'
+        )
+    );
+  }
+  return new Map();
+}
+
+function playoffScheduleWithSeedMaps(playoffs: PlayoffSchedule): PlayoffSchedule {
+  return {
+    ...playoffs,
+    afcSeeds: toSeedMap(playoffs.afcSeeds),
+    nfcSeeds: toSeedMap(playoffs.nfcSeeds),
+  };
+}
+
 export function PlayoffBracketScreenWrapper({
   navigation,
 }: ScreenProps<'PlayoffBracket'>): React.JSX.Element {
-  const { gameState } = useGame();
+  const { gameState, setGameState, saveGameState, setIsLoading } = useGame();
 
   if (!gameState) {
     return <LoadingFallback message="Loading playoffs..." />;
@@ -292,7 +320,6 @@ export function PlayoffBracketScreenWrapper({
       }));
     }
 
-    // Deterministic fallback if playoff bracket hasn't been generated yet
     const standings = calculateDetailedStandings(
       completedRegularSeasonGames,
       Object.values(gameState.teams)
@@ -349,6 +376,91 @@ export function PlayoffBracketScreenWrapper({
               ? 'complete'
               : 'wildCard';
 
+  const handlePlayGame = () => {
+    navigation.navigate('LiveGameSimulation');
+  };
+
+  const handleSimRound = async () => {
+    if (!playoffSchedule || !activeRound) return;
+
+    setIsLoading(true);
+    try {
+      const normalized = playoffScheduleWithSeedMaps(playoffSchedule);
+      const roundResults = simulatePlayoffRound(normalized, activeRound, gameState);
+
+      const allComplete = roundResults.every((m) => m.isComplete);
+      let updatedPlayoffs: PlayoffSchedule;
+      if (allComplete) {
+        updatedPlayoffs = advancePlayoffRound(normalized, roundResults);
+      } else {
+        updatedPlayoffs = { ...normalized };
+        switch (activeRound) {
+          case 'wildCard':
+            updatedPlayoffs.wildCardRound = roundResults;
+            break;
+          case 'divisional':
+            updatedPlayoffs.divisionalRound = roundResults;
+            break;
+          case 'conference':
+            updatedPlayoffs.conferenceChampionships = roundResults;
+            break;
+          case 'superBowl':
+            if (roundResults[0]) updatedPlayoffs.superBowl = roundResults[0];
+            break;
+        }
+      }
+
+      const newState: GameState = {
+        ...gameState,
+        league: {
+          ...gameState.league,
+          schedule: {
+            ...gameState.league.schedule!,
+            playoffs: updatedPlayoffs,
+          },
+        },
+      };
+      setGameState(newState);
+      await saveGameState(newState);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error simulating playoff round:', error);
+      showAlert('Error', 'Failed to simulate playoff round.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAdvanceRound = async () => {
+    setIsLoading(true);
+    try {
+      const weekEndResult = processWeekEnd(gameState);
+      const newState = weekEndResult.state;
+      setGameState(newState);
+      await saveGameState(newState);
+
+      if (weekEndResult.fired) {
+        navigation.navigate('Fired');
+        return;
+      }
+
+      const newPhase = newState.league.calendar.currentPhase;
+      if (newPhase === 'offseason') {
+        navigation.navigate('Offseason');
+      } else if (newPhase === 'playoffs') {
+        // Stay on PlayoffBracket — state update will re-render with the next round
+      } else {
+        navigation.navigate('Dashboard');
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error advancing playoff round:', error);
+      showAlert('Error', 'Failed to advance to the next round.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <PlayoffBracketScreen
       teams={gameState.teams}
@@ -359,6 +471,9 @@ export function PlayoffBracketScreenWrapper({
       currentRound={currentRound}
       championId={playoffSchedule?.superBowlChampion ?? null}
       onBack={() => navigation.goBack()}
+      onPlayGame={handlePlayGame}
+      onSimRound={handleSimRound}
+      onAdvanceRound={handleAdvanceRound}
     />
   );
 }

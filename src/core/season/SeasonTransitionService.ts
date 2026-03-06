@@ -194,10 +194,31 @@ function advanceAllContracts(state: GameState): GameState {
     }
   }
 
+  // Remove expired-contract players from team rosters (they become free agents)
+  const expiredSet = new Set(expiredPlayerIds);
+  const updatedTeams = { ...state.teams };
+
+  for (const [teamId, team] of Object.entries(updatedTeams)) {
+    const hadExpired =
+      team.rosterPlayerIds.some((id) => expiredSet.has(id)) ||
+      team.practiceSquadIds.some((id) => expiredSet.has(id)) ||
+      team.injuredReserveIds.some((id) => expiredSet.has(id));
+
+    if (hadExpired) {
+      updatedTeams[teamId] = {
+        ...team,
+        rosterPlayerIds: team.rosterPlayerIds.filter((id) => !expiredSet.has(id)),
+        practiceSquadIds: team.practiceSquadIds.filter((id) => !expiredSet.has(id)),
+        injuredReserveIds: team.injuredReserveIds.filter((id) => !expiredSet.has(id)),
+      };
+    }
+  }
+
   return {
     ...state,
     contracts: updatedContracts,
     players: updatedPlayers,
+    teams: updatedTeams,
   };
 }
 
